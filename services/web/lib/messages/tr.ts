@@ -684,6 +684,7 @@ const tr: Messages = {
   "player.surahAyah": "Sure {surah} · ayet {ayah}",
   "player.range": "Aralık",
   "player.rangeValue": "Ayetler {start}–{end}",
+  "player.showControls": "Kontrolleri göster",
   "mushafAudio.reciter": "Quran.Foundation kârisi",
   "mushafAudio.coverage": "{count}/114 sure",
   "mushafAudio.chooseAyah": "Bir ayet seçin",

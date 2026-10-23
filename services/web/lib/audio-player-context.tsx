@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import {
   SegmentedAudioPlayer,
 } from "../components/SegmentedAudioPlayer";
@@ -27,7 +27,15 @@ import { PlayerEqualizer } from "../components/PlayerEqualizer";
 import { api } from "./api";
 import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
-import { MOBILE_PLAYER_MEDIA_QUERY, adjacentSurah, miniPlayerReducer } from "./mini-player";
+import {
+  INITIAL_MINI_PLAYER_STATE,
+  MOBILE_PLAYER_MEDIA_QUERY,
+  PLAYER_CONTROL_SELECTOR,
+  SHEET_CLOSE_FALLBACK_MS,
+  adjacentSurah,
+  miniPlayerReducer,
+  sheetShown,
+} from "./mini-player";
 import {
   loadPlayerBackgroundId,
   playerBackgroundOptions,
@@ -61,8 +69,6 @@ const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 const NO_REMOTE_BACKGROUNDS: PlayerBackground[] = [];
 // Pages number their own requests from zero; a surah change from the player stays apart.
 const SURAH_REQUEST_ID_BASE = 1_000_000;
-// The full player sinks out of view for this long before it unmounts (app/mobile.css).
-const SHEET_CLOSE_MS = 260;
 
 export function AudioPlayerProvider({
   children,
@@ -100,8 +106,8 @@ export function AudioPlayerProvider({
   const [mobileParts, setMobileParts] = useState<MobilePlayerParts | null>(null);
   const [mobilePartsFailed, setMobilePartsFailed] = useState(false);
   const mobile = mobileWidth && mobileParts !== null;
-  const [view, dispatchView] = useReducer(miniPlayerReducer, "bar");
-  const [closing, setClosing] = useState(false);
+  const [player, dispatchView] = useReducer(miniPlayerReducer, INITIAL_MINI_PLAYER_STATE);
+  const { view, controlsHidden } = player;
   const [dragOffset, setDragOffset] = useState(0);
   const [surahChange, setSurahChange] = useState<{ busy: boolean; error: string | null }>({
     busy: false,
@@ -112,7 +118,6 @@ export function AudioPlayerProvider({
   const requestRef = useRef<AudioPlaybackRequest | null>(null);
   const isPlayingRef = useRef(false);
   const dockRef = useRef<HTMLDivElement>(null);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     requestRef.current = request;
@@ -174,26 +179,37 @@ export function AudioPlayerProvider({
   }, [request]);
 
   const fullOpen = mobile && view === "full";
+  // On screen while open and while it sinks away; only then does the dock wear the sheet's markup.
+  const sheetOpen = mobile && sheetShown(view);
   const collapsed = mobile && view === "collapsed";
 
   const closeFull = useCallback(() => {
-    if (closeTimerRef.current !== null) return;
     setDragOffset(0);
+    dispatchView({ type: "close-full" });
+  }, []);
+
+  // The sheet is gone once its sink animation ends (app/mobile.css); a fallback
+  // timer covers a skipped animation and reduced motion skips the wait. Leaving
+  // the closing state for any other reason, such as a tap that reopens the
+  // player, cancels both, so a late "closed" can never shut the reopened sheet.
+  useEffect(() => {
+    if (view !== "closing") return;
     if (reduceMotion) {
-      dispatchView({ type: "close-full" });
+      dispatchView({ type: "closed" });
       return;
     }
-    setClosing(true);
-    closeTimerRef.current = setTimeout(() => {
-      closeTimerRef.current = null;
-      setClosing(false);
-      dispatchView({ type: "close-full" });
-    }, SHEET_CLOSE_MS);
-  }, [reduceMotion]);
-
-  useEffect(() => () => {
-    if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current);
-  }, []);
+    const dock = dockRef.current;
+    const finish = () => dispatchView({ type: "closed" });
+    const onAnimationEnd = (event: AnimationEvent) => {
+      if (event.target === dock && event.animationName === "mobile-player-sink") finish();
+    };
+    dock?.addEventListener("animationend", onAnimationEnd);
+    const timer = setTimeout(finish, SHEET_CLOSE_FALLBACK_MS);
+    return () => {
+      dock?.removeEventListener("animationend", onAnimationEnd);
+      clearTimeout(timer);
+    };
+  }, [reduceMotion, view]);
 
   useEffect(() => {
     if (!fullOpen) return;
@@ -209,7 +225,7 @@ export function AudioPlayerProvider({
   // Like the pushed route in the app: the page under the player is out of
   // reach and does not scroll; closing returns focus to the bar.
   useEffect(() => {
-    if (!fullOpen) return;
+    if (!sheetOpen) return;
     const container = document.querySelector<HTMLElement>(".app-container");
     container?.setAttribute("inert", "");
     document.documentElement.classList.add("is-mobile-player-open");
@@ -219,7 +235,24 @@ export function AudioPlayerProvider({
       document.documentElement.classList.remove("is-mobile-player-open");
       dock?.querySelector<HTMLElement>(".mobile-player-open")?.focus({ preventScroll: true });
     };
-  }, [fullOpen]);
+  }, [sheetOpen]);
+
+  // Hiding the controls parks focus on the button that brings them back; showing
+  // them returns it to the back arrow, so the keyboard never loses its place.
+  useEffect(() => {
+    if (!fullOpen) return;
+    dockRef.current
+      ?.querySelector<HTMLElement>(controlsHidden ? ".mobile-player-reveal" : ".mobile-player-back")
+      ?.focus({ preventScroll: true });
+  }, [controlsHidden, fullOpen]);
+
+  // As in the app: a tap on the full player's empty body hides the controls and
+  // leaves the picture, the portrait and the sound bars; taps on controls do not.
+  const handleSheetClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!fullOpen || controlsHidden) return;
+    if ((event.target as Element).closest(PLAYER_CONTROL_SELECTOR)) return;
+    dispatchView({ type: "toggle-controls" });
+  };
 
   // The previous or next surah of the same recording, as the app's mini player.
   const changeSurah = useCallback((direction: -1 | 1) => {
@@ -262,7 +295,7 @@ export function AudioPlayerProvider({
   const compact = !expanded;
   const showPlayer = isAudioPage || request !== null;
   const showReciterControls = Boolean(reciterControls?.options.length);
-  const pictureShown = mobile ? fullOpen : expanded;
+  const pictureShown = mobile ? sheetOpen : expanded;
   const showBackground = pictureShown && background.image !== null;
   const modeActionLabel = expanded
     ? t("player.collapseWidget")
@@ -273,6 +306,7 @@ export function AudioPlayerProvider({
         parts: mobileParts,
         artworkUrl: request?.artworkUrl ?? null,
         buffering: isBuffering,
+        controlsHidden,
         onOpen: () => dispatchView({ type: "open-full" }),
         onCollapse: () => dispatchView({ type: "collapse" }),
         surah: { change: changeSurah, busy: surahChange.busy, error: surahChange.error },
@@ -282,7 +316,7 @@ export function AudioPlayerProvider({
       }
     : undefined;
   const dockClassName = mobile
-    ? `mobile-audio-player is-${view}${closing ? " is-closing" : ""}${showBackground ? " has-player-background" : ""}`
+    ? `mobile-audio-player is-${view}${controlsHidden ? " is-controls-hidden" : ""}${showBackground ? " has-player-background" : ""}`
     : `global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${showBackground ? " has-player-background" : ""}${mobilePartsFailed ? " is-fallback" : ""}`;
   const spacerClassName = mobile
     ? "global-audio-player-spacer is-mobile"
@@ -304,18 +338,23 @@ export function AudioPlayerProvider({
             ref={dockRef}
             className={dockClassName}
             style={dragStyle}
-            role={fullOpen ? "dialog" : "region"}
-            aria-modal={fullOpen ? true : undefined}
-            aria-label={fullOpen ? t("player.nowPlaying") : t("player.dockAria")}
+            role={sheetOpen ? "dialog" : "region"}
+            aria-modal={sheetOpen ? true : undefined}
+            aria-label={sheetOpen ? t("player.nowPlaying") : t("player.dockAria")}
             data-testid={mobile ? "mobile-audio-player" : "global-audio-player"}
             data-player-background={pictureShown ? background.id : undefined}
           >
             {showBackground && <PlayerBackdrop background={background} />}
-            <div className={mobile ? "mobile-player-sheet-body" : "global-audio-player-body"} inert={collapsed || undefined}>
+            <div
+              className={mobile ? "mobile-player-sheet-body" : "global-audio-player-body"}
+              inert={collapsed || undefined}
+              onClick={mobile ? handleSheetClick : undefined}
+            >
               {mobile ? (
-                fullOpen && mobileParts && (
+                sheetOpen && mobileParts && (
                   <mobileParts.FullHeader
                     subtitle={request?.album ?? null}
+                    hidden={controlsHidden}
                     onClose={closeFull}
                     onDragOffset={setDragOffset}
                     onDismiss={closeFull}
@@ -369,7 +408,7 @@ export function AudioPlayerProvider({
                 onPlayingChange={setIsPlaying}
                 onBufferingChange={setIsBuffering}
                 compact={compact}
-                presentation={mobile ? (fullOpen ? "full" : "mini") : "desktop"}
+                presentation={mobile ? (sheetOpen ? "full" : "mini") : "desktop"}
                 mobile={mobileProps}
               />
               {!mobile && compact && (
@@ -398,6 +437,14 @@ export function AudioPlayerProvider({
                   )}
                 </div>
               )}
+              {fullOpen && controlsHidden ? (
+                <button
+                  type="button"
+                  className="mobile-player-reveal"
+                  aria-label={t("player.showControls")}
+                  onClick={() => dispatchView({ type: "toggle-controls" })}
+                />
+              ) : null}
             </div>
             {collapsed && mobileParts && (
               <mobileParts.CollapsedButton playing={isPlaying} onExpand={() => dispatchView({ type: "expand" })} />

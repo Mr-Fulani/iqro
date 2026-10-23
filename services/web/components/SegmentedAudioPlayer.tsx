@@ -81,6 +81,8 @@ export type MobilePlayerProps = {
   parts: MobilePlayerParts | null;
   artworkUrl: string | null;
   buffering: boolean;
+  /** The full player's controls are hidden by a tap on its body; the parts go inert. */
+  controlsHidden: boolean;
   onOpen: () => void;
   onCollapse: () => void;
   surah: MobilePlayerSurahControls;
@@ -92,6 +94,7 @@ export type MobilePlayerProps = {
 export type MobilePlayerPartProps = { engine: MobilePlayerEngine; mobile: MobilePlayerProps };
 export type MobilePlayerHeaderProps = {
   subtitle: string | null;
+  hidden: boolean;
   onClose: () => void;
   onDragOffset: (offsetPx: number) => void;
   onDismiss: () => void;
