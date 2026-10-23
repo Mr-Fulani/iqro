@@ -187,6 +187,14 @@ class MoreToolsGrid extends StatelessWidget {
         onTap: () => context.push('/salah'),
       ),
       _ToolCard(
+        key: const ValueKey('more-tajweed'),
+        art: 'quran',
+        title: context.l10n.tajweedCourseTitle,
+        hint: context.l10n.tajweedCourseHint,
+        color: context.iqroColors.sand,
+        onTap: () => context.push('/tajweed'),
+      ),
+      _ToolCard(
         art: 'memorization',
         title: context.l10n.memorization,
         color: context.iqroColors.lavender,
@@ -226,6 +234,7 @@ class _ToolCard extends StatelessWidget {
     required this.art,
     required this.title,
     required this.color,
+    this.hint,
     this.onTap,
   });
 
@@ -234,6 +243,9 @@ class _ToolCard extends StatelessWidget {
   final String title;
   final Color color;
 
+  /// Read out by screen readers after the title.
+  final String? hint;
+
   /// Null for a section that is announced but not open yet: the card shows
   /// "Soon" instead of the arrow and does not react to taps.
   final VoidCallback? onTap;
@@ -241,7 +253,7 @@ class _ToolCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final soon = onTap == null;
-    return IqroCard(
+    final card = IqroCard(
       color: color,
       borderColor: Colors.transparent,
       onTap: onTap,
@@ -276,5 +288,6 @@ class _ToolCard extends StatelessWidget {
         ],
       ),
     );
+    return hint == null ? card : Semantics(hint: hint, child: card);
   }
 }

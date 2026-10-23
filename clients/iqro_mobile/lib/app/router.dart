@@ -29,6 +29,8 @@ import '../features/salah/salah_lesson_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/offline_storage_screen.dart';
 import '../features/share/share_screen.dart';
+import '../features/tajweed_course/tajweed_course_home_screen.dart';
+import '../features/tajweed_course/tajweed_lesson_screen.dart';
 import 'app_shell.dart';
 
 const _supportedWebLinkLocales = <String>{'ru', 'en', 'ar', 'tr'};
@@ -236,6 +238,24 @@ GoRouter createRouter({required bool onboardingComplete}) {
             lessonSlug: state.pathParameters['slug'] ?? '',
             stepSlug: state.pathParameters['step'],
           ),
+        ),
+      ),
+      // The course has no section of the audio boundary: its clips belong
+      // to the lesson, which stops them when it is left or covered.
+      GoRoute(
+        path: '/tajweed',
+        builder: (context, state) => const TajweedCourseHomeScreen(),
+      ),
+      GoRoute(
+        path: '/tajweed/lesson/:slug',
+        builder: (context, state) =>
+            TajweedLessonScreen(lessonSlug: state.pathParameters['slug'] ?? ''),
+      ),
+      GoRoute(
+        path: '/tajweed/lesson/:slug/step/:step',
+        builder: (context, state) => TajweedLessonScreen(
+          lessonSlug: state.pathParameters['slug'] ?? '',
+          stepSlug: state.pathParameters['step'],
         ),
       ),
       GoRoute(

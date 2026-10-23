@@ -2,6 +2,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { isEditionCode, isUuid } from "./public-content";
 import { isDuaCollectionSlug } from "./public-route-params";
 import { isSalahSlug } from "./salah";
+import { isTajweedLessonSlug } from "./tajweed-course";
 import { SUPPORTED_LOCALES } from "./i18n";
 
 const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -10,7 +11,7 @@ const AUDIO_ACTIONS = new Set(["published", "withdrawn"]);
 const RECITER_ACTIONS = new Set(["created", "updated"]);
 const DUA_ACTIONS = new Set(["published", "activated", "updated", "withdrawn"]);
 const SOCIAL_PROFILE_ACTIONS = new Set(["created", "updated", "deleted"]);
-const SALAH_ACTIONS = new Set(["published", "activated", "withdrawn"]);
+const COURSE_ACTIONS = new Set(["published", "activated", "withdrawn"]);
 const ANNOUNCEMENT_ACTIONS = new Set([
   "published",
   "withdrawn",
@@ -65,12 +66,20 @@ type SalahCourseChange = {
   version: string;
 };
 
+type TajweedCourseChange = {
+  type: "tajweed.course.changed";
+  action: string;
+  course: string;
+  version: string;
+};
+
 export type ContentChange =
   | QuranContentChange
   | AudioContentChange
   | ReciterContentChange
   | DuaContentChange
   | SalahCourseChange
+  | TajweedCourseChange
   | SocialProfilesChange
   | AnnouncementsChange;
 
@@ -161,13 +170,26 @@ export function parseContentChange(value: unknown): ContentChange | null {
     if (!hasExactKeys(value, ["type", "action", "course", "version"])) return null;
     if (
       typeof value.action !== "string" ||
-      !SALAH_ACTIONS.has(value.action) ||
+      !COURSE_ACTIONS.has(value.action) ||
       typeof value.course !== "string" ||
       !isSalahSlug(value.course) ||
       typeof value.version !== "string" ||
       !VERSION_PATTERN.test(value.version)
     ) return null;
     return value as SalahCourseChange;
+  }
+
+  if (value.type === "tajweed.course.changed") {
+    if (!hasExactKeys(value, ["type", "action", "course", "version"])) return null;
+    if (
+      typeof value.action !== "string" ||
+      !COURSE_ACTIONS.has(value.action) ||
+      typeof value.course !== "string" ||
+      !isTajweedLessonSlug(value.course) ||
+      typeof value.version !== "string" ||
+      !VERSION_PATTERN.test(value.version)
+    ) return null;
+    return value as TajweedCourseChange;
   }
 
   return null;
@@ -218,6 +240,14 @@ export function revalidateContentChange(change: ContentChange): void {
     for (const locale of SUPPORTED_LOCALES) expireTag(`salah:locale:${locale}`);
     revalidatePath("/[locale]/salah", "page");
     revalidatePath("/[locale]/salah/[lesson]", "page");
+    return;
+  }
+
+  if (change.type === "tajweed.course.changed") {
+    expireTag(`tajweed:course:${change.course}`);
+    for (const locale of SUPPORTED_LOCALES) expireTag(`tajweed:locale:${locale}`);
+    revalidatePath("/[locale]/tajweed", "page");
+    revalidatePath("/[locale]/tajweed/[lesson]", "page");
     return;
   }
 

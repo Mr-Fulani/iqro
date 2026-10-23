@@ -2346,4 +2346,108 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tajweedPreviousStep => 'Önceki adım';
+
+  @override
+  String get tajweedCourseTitle => 'Tecvid';
+
+  @override
+  String get tajweedCourseHint => 'Adım adım okuma kuralları';
+
+  @override
+  String tajweedCourseProgress(int completed, int total) {
+    return '$total dersten $completed';
+  }
+
+  @override
+  String get tajweedCourseStart => 'Kursa başla';
+
+  @override
+  String get tajweedCourseContinue => 'Devam et';
+
+  @override
+  String get tajweedCourseAllCompleted => 'Tüm dersler tamamlandı';
+
+  @override
+  String get tajweedCourseStatusCompleted => 'Tamamlandı';
+
+  @override
+  String get tajweedCourseStatusInProgress => 'Başlandı';
+
+  @override
+  String tajweedCourseStepOf(int current, int total) {
+    return 'Adım $current/$total';
+  }
+
+  @override
+  String get tajweedCourseRule => 'Kural';
+
+  @override
+  String get tajweedCourseLetters => 'Kuralın harfleri';
+
+  @override
+  String tajweedCourseExampleOf(int current, int total) {
+    return 'Örnek $current/$total';
+  }
+
+  @override
+  String tajweedCourseAyahReference(int surah, int ayah) {
+    return '$surah. sure, $ayah. ayet';
+  }
+
+  @override
+  String get tajweedCourseMoreExamples => 'Daha fazla örnek';
+
+  @override
+  String get tajweedCourseExamplesLoading => 'Kur\'an\'dan örnekler seçiliyor…';
+
+  @override
+  String get tajweedCourseExamplesError => 'Örnekler yüklenemedi.';
+
+  @override
+  String get tajweedCourseRetry => 'Tekrar dene';
+
+  @override
+  String get tajweedCourseFindTitle => 'Kuralı ayette bulun';
+
+  @override
+  String tajweedCourseFindPrompt(String rule) {
+    return '$rule bulunan kelimeye dokunun.';
+  }
+
+  @override
+  String tajweedCourseFindCorrect(String rule) {
+    return 'Doğru! Burada $rule var.';
+  }
+
+  @override
+  String get tajweedCourseFindWrong =>
+      'Bu kelimede yok — başka bir kelime deneyin.';
+
+  @override
+  String get tajweedCourseShowAnswer => 'Cevabı göster';
+
+  @override
+  String tajweedCourseAnswerShown(String rule) {
+    return '$rule burada.';
+  }
+
+  @override
+  String get tajweedCourseAnotherAyah => 'Başka bir ayet';
+
+  @override
+  String get tajweedCourseFinish => 'Dersi bitir';
+
+  @override
+  String get tajweedCourseLessonCompleted => 'Ders tamamlandı';
+
+  @override
+  String tajweedCourseNextLesson(String title) {
+    return 'Sonraki ders: $title';
+  }
+
+  @override
+  String get tajweedCourseAllLessons => 'Tüm dersler';
+
+  @override
+  String get tajweedCourseUnavailable => 'Kurs henüz kullanılamıyor.';
 }

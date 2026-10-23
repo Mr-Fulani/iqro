@@ -2384,4 +2384,108 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tajweedPreviousStep => 'Previous step';
+
+  @override
+  String get tajweedCourseTitle => 'Tajweed';
+
+  @override
+  String get tajweedCourseHint => 'Reading rules step by step';
+
+  @override
+  String tajweedCourseProgress(int completed, int total) {
+    return '$completed of $total lessons';
+  }
+
+  @override
+  String get tajweedCourseStart => 'Start the course';
+
+  @override
+  String get tajweedCourseContinue => 'Continue';
+
+  @override
+  String get tajweedCourseAllCompleted => 'All lessons completed';
+
+  @override
+  String get tajweedCourseStatusCompleted => 'Completed';
+
+  @override
+  String get tajweedCourseStatusInProgress => 'Started';
+
+  @override
+  String tajweedCourseStepOf(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get tajweedCourseRule => 'The rule';
+
+  @override
+  String get tajweedCourseLetters => 'Letters of the rule';
+
+  @override
+  String tajweedCourseExampleOf(int current, int total) {
+    return 'Example $current of $total';
+  }
+
+  @override
+  String tajweedCourseAyahReference(int surah, int ayah) {
+    return 'Surah $surah, ayah $ayah';
+  }
+
+  @override
+  String get tajweedCourseMoreExamples => 'More examples';
+
+  @override
+  String get tajweedCourseExamplesLoading => 'Finding examples in the Quran…';
+
+  @override
+  String get tajweedCourseExamplesError => 'Could not load the examples.';
+
+  @override
+  String get tajweedCourseRetry => 'Try again';
+
+  @override
+  String get tajweedCourseFindTitle => 'Find the rule in the ayah';
+
+  @override
+  String tajweedCourseFindPrompt(String rule) {
+    return 'Tap the word that has $rule.';
+  }
+
+  @override
+  String tajweedCourseFindCorrect(String rule) {
+    return 'Correct! This is $rule.';
+  }
+
+  @override
+  String get tajweedCourseFindWrong =>
+      'This word does not have it — try another one.';
+
+  @override
+  String get tajweedCourseShowAnswer => 'Show the answer';
+
+  @override
+  String tajweedCourseAnswerShown(String rule) {
+    return 'Here is $rule.';
+  }
+
+  @override
+  String get tajweedCourseAnotherAyah => 'Another ayah';
+
+  @override
+  String get tajweedCourseFinish => 'Finish the lesson';
+
+  @override
+  String get tajweedCourseLessonCompleted => 'Lesson completed';
+
+  @override
+  String tajweedCourseNextLesson(String title) {
+    return 'Next lesson: $title';
+  }
+
+  @override
+  String get tajweedCourseAllLessons => 'All lessons';
+
+  @override
+  String get tajweedCourseUnavailable => 'The course is not available yet.';
 }

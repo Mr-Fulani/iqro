@@ -1,0 +1,44 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'change' original.pk %}">{{ original }}</a>
+  &rsaquo; Новый черновик
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <form method="post">
+    {% csrf_token %}
+    <fieldset class="module aligned">
+      <div class="form-row">
+        <p>
+          Будет создан черновик — полная копия версии <b>{{ original.version }}</b>: тексты
+          и настройки уроков. Сама версия {{ original.version }} не изменится{% if original.status == "published" %}
+          и продолжит работать на сайте и в приложении, пока новый черновик не опубликуют{% endif %}.
+        </p>
+      </div>
+      <div class="form-row{% if error %} errors{% endif %}">
+        {% if error %}<ul class="errorlist"><li>{{ error }}</li></ul>{% endif %}
+        <div>
+          <label class="required" for="id_version">Имя новой версии:</label>
+          <input type="text" name="version" id="id_version" value="{{ name }}" maxlength="64" required
+                 pattern="[0-9A-Za-z][0-9A-Za-z._\-]{0,63}" aria-describedby="id_version_help">
+          <div class="help" id="id_version_help">
+            Обычно это дата: например, 2026-10-22. Латинские буквы, цифры, точка и дефис.
+          </div>
+        </div>
+      </div>
+    </fieldset>
+    <div class="submit-row">
+      <input type="submit" class="default" value="Создать черновик и открыть редактор">
+      <a class="button cancel-link" href="{% url opts|admin_urlname:'change' original.pk %}">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

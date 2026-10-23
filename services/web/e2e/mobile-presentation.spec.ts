@@ -69,7 +69,7 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await more.focus();
   await page.keyboard.press("Enter");
   await expect(navigation.locator(".mobile-more-panel")).toBeVisible();
-  await expect(navigation.locator(".mobile-more-links a")).toHaveCount(8);
+  await expect(navigation.locator(".mobile-more-links a")).toHaveCount(9);
   await expect(navigation.getByRole("link", { name: /^Что нового/ })).toHaveAttribute("href", "/ru/news");
   await expect(navigation.getByRole("link", { name: "Заметки", exact: true })).toHaveAttribute("href", "/ru/notes");
   const names = navigation.getByTestId("more-names-of-allah");

@@ -2,6 +2,22 @@
 // and the local progress the site shares with the app. The server compiles every
 // sequence, so nothing here knows fiqh: it only looks things up and orders them.
 
+import {
+  browserStorage,
+  parseCourseProgress,
+  readCourseProgress,
+  recordLessonStep,
+  resumeStepIndex,
+  stepIndex,
+  summarizeCourseProgress,
+  writeCourseProgress,
+  type CourseProgress,
+  type CourseSummary,
+  type LessonOutline,
+  type LessonProgress,
+  type LessonStatus,
+} from "./course-progress.ts";
+
 export const SALAH_COURSE_SLUG = "hanbali-umdah";
 export const SALAH_SCHEMA_VERSION = 1;
 
@@ -341,12 +357,9 @@ export function stepSlugFromLocation(hash: string, search: string): string | nul
 }
 
 /** The part of a lesson that progress needs, small enough to pass to client components. */
-export type SalahLessonOutline = { slug: string; steps: { slug: string }[] };
+export type SalahLessonOutline = LessonOutline;
 
-export function stepIndex(lesson: Pick<SalahLessonOutline, "steps">, stepSlug: string | null | undefined): number {
-  if (!stepSlug) return -1;
-  return lesson.steps.findIndex((step) => step.slug === stepSlug);
-}
+export { stepIndex };
 
 /** Where a formula's clip starts and stops in its audio file, in seconds. */
 export function formulaAudioRange(audio: SalahFormulaAudio): { start: number; end: number | null } {
@@ -367,23 +380,13 @@ export function stepRepeatTarget(step: SalahStep, formulas: Record<string, Salah
 }
 
 // ---------------------------------------------------------------------------
-// Progress. Same shape as the app's `app_state` value `salah.progress.<course>`:
-// {"lessons": {"<lesson>": {"status", "step_slug", "content_version", "updated_at"}}}
+// Progress (`course-progress.ts`). Same shape as the app's `app_state` value
+// `salah.progress.<course>`.
 
-export type SalahLessonStatus = "in_progress" | "completed";
-
-export type SalahLessonProgress = {
-  status: SalahLessonStatus;
-  step_slug: string;
-  content_version: string;
-  updated_at: string;
-};
-
-export type SalahProgress = {
-  lessons: Record<string, SalahLessonProgress>;
-};
-
-type ProgressStorage = Pick<Storage, "getItem" | "setItem">;
+export type SalahLessonStatus = LessonStatus;
+export type SalahLessonProgress = LessonProgress;
+export type SalahProgress = CourseProgress;
+export type SalahCourseSummary = CourseSummary;
 
 export const SALAH_PROGRESS_EVENT = "iqro:salah-progress";
 
@@ -391,138 +394,27 @@ export function salahProgressStorageKey(courseSlug: string = SALAH_COURSE_SLUG):
   return `salah.progress.${courseSlug}`;
 }
 
-function browserStorage(): ProgressStorage | null {
-  try {
-    return typeof window !== "undefined" ? window.localStorage : null;
-  } catch {
-    return null;
-  }
-}
-
 export function parseSalahProgress(raw: string | null): SalahProgress {
-  const empty: SalahProgress = { lessons: {} };
-  if (!raw) return empty;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return empty;
-  }
-  if (!isRecord(parsed) || !isRecord(parsed.lessons)) return empty;
-  const lessons: Record<string, SalahLessonProgress> = {};
-  for (const [slug, entry] of Object.entries(parsed.lessons)) {
-    if (
-      !isSalahSlug(slug)
-      || !isRecord(entry)
-      || (entry.status !== "in_progress" && entry.status !== "completed")
-      || typeof entry.step_slug !== "string"
-      || typeof entry.content_version !== "string"
-    ) continue;
-    lessons[slug] = {
-      status: entry.status,
-      step_slug: entry.step_slug,
-      content_version: entry.content_version,
-      updated_at: typeof entry.updated_at === "string" ? entry.updated_at : "",
-    };
-  }
-  return { lessons };
+  return parseCourseProgress(raw, isSalahSlug);
 }
 
 export function readSalahProgress(
   courseSlug: string = SALAH_COURSE_SLUG,
   storage: Pick<Storage, "getItem"> | null = browserStorage(),
 ): SalahProgress {
-  if (!storage) return { lessons: {} };
-  try {
-    return parseSalahProgress(storage.getItem(salahProgressStorageKey(courseSlug)));
-  } catch {
-    return { lessons: {} };
-  }
+  return readCourseProgress(salahProgressStorageKey(courseSlug), isSalahSlug, storage);
 }
 
 /** Records the current step. A completed lesson stays completed when it is reopened. */
-export function recordSalahStep(
-  progress: SalahProgress,
-  lessonSlug: string,
-  stepSlug: string,
-  contentVersion: string,
-  { completed = false, now = new Date() }: { completed?: boolean; now?: Date } = {},
-): SalahProgress {
-  const previous = progress.lessons[lessonSlug];
-  const status: SalahLessonStatus = completed || previous?.status === "completed" ? "completed" : "in_progress";
-  return {
-    lessons: {
-      ...progress.lessons,
-      [lessonSlug]: {
-        status,
-        step_slug: stepSlug,
-        content_version: contentVersion,
-        updated_at: now.toISOString(),
-      },
-    },
-  };
-}
+export const recordSalahStep = recordLessonStep;
 
 export function writeSalahProgress(
   progress: SalahProgress,
   courseSlug: string = SALAH_COURSE_SLUG,
-  storage: ProgressStorage | null = browserStorage(),
+  storage: Pick<Storage, "getItem" | "setItem"> | null = browserStorage(),
 ): void {
-  if (!storage) return;
-  try {
-    storage.setItem(salahProgressStorageKey(courseSlug), JSON.stringify(progress));
-  } catch {
-    // Progress stays best-effort when storage is blocked or full.
-    return;
-  }
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(SALAH_PROGRESS_EVENT));
+  writeCourseProgress(progress, salahProgressStorageKey(courseSlug), SALAH_PROGRESS_EVENT, storage);
 }
 
-/**
- * Step to open a lesson on: a valid step from the link wins, then the saved step
- * of an unfinished lesson. A step that no longer exists starts the lesson over.
- */
-export function resumeStepIndex(
-  lesson: SalahLesson,
-  saved: SalahLessonProgress | undefined,
-  linkedStepSlug: string | null,
-): number {
-  const linked = stepIndex(lesson, linkedStepSlug);
-  if (linked >= 0) return linked;
-  if (!saved || saved.status === "completed") return 0;
-  return Math.max(0, stepIndex(lesson, saved.step_slug));
-}
-
-export type SalahCourseSummary = {
-  completed: number;
-  total: number;
-  /** The unfinished lesson to continue: the latest one in progress, else the first not started. */
-  continueLesson: { slug: string; stepSlug: string | null } | null;
-};
-
-export function summarizeSalahProgress(
-  lessons: SalahLessonOutline[],
-  progress: SalahProgress,
-): SalahCourseSummary {
-  const known = lessons.filter((lesson) => progress.lessons[lesson.slug]);
-  const completed = known.filter((lesson) => progress.lessons[lesson.slug]!.status === "completed").length;
-  const inProgress = known
-    .filter((lesson) => progress.lessons[lesson.slug]!.status === "in_progress")
-    .sort((left, right) =>
-      progress.lessons[right.slug]!.updated_at.localeCompare(progress.lessons[left.slug]!.updated_at));
-  const current = inProgress[0];
-  if (current) {
-    const saved = progress.lessons[current.slug]!.step_slug;
-    return {
-      completed,
-      total: lessons.length,
-      continueLesson: { slug: current.slug, stepSlug: stepIndex(current, saved) >= 0 ? saved : null },
-    };
-  }
-  const next = lessons.find((lesson) => !progress.lessons[lesson.slug]);
-  return {
-    completed,
-    total: lessons.length,
-    continueLesson: next ? { slug: next.slug, stepSlug: null } : null,
-  };
-}
+export { resumeStepIndex };
+export const summarizeSalahProgress = summarizeCourseProgress;

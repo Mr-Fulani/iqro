@@ -93,6 +93,18 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expectHeaderWithoutOverlap(page);
 });
 
+test("the labelled desktop menu fits from 1001 to 1366 px in every language and direction", async ({ page }) => {
+  for (const locale of ["ru", "tr", "en", "ar"]) {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await page.goto(`/${locale}/login`);
+    await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    for (const width of [1366, 1280, 1250, 1100, 1024, 1001]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expectHeaderWithoutOverlap(page);
+    }
+  }
+});
+
 test("authenticated Russian header keeps navigation clear of account actions", async ({ page }) => {
   await page.unroute("**/api/web-auth/refresh");
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({
@@ -148,6 +160,7 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
     "/ru/audio",
     "/ru/prayer",
     "/ru/salah",
+    "/ru/tajweed",
     "/ru/calendar",
     "/ru/profile",
   ]);

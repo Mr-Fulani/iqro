@@ -28,6 +28,8 @@ urlpatterns = [
     path("api/v1/dua/", include("quran_backend.modules.dua.urls")),
     path("api/v1/", include("quran_backend.modules.dua.personal_urls")),
     path("api/v1/salah/", include("quran_backend.modules.salah.urls")),
+    path("api/v1/tajweed/", include("quran_backend.modules.tajweed.course_urls")),
+    path("api/v1/", include("quran_backend.modules.tajweed.personal_urls")),
     path("api/v1/site/", include("quran_backend.modules.website.urls")),
     path("api/v1/calendar/", include("quran_backend.modules.calendar.urls")),
     path("api/v1/", include("quran_backend.modules.reading.urls")),

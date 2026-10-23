@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib import admin
 
+from quran_backend.modules.tajweed import course_admin  # noqa: F401 - registers the course admin
 from quran_backend.modules.tajweed.models import AyahTajweed, TajweedEdition, TajweedEditionVersion
 
 

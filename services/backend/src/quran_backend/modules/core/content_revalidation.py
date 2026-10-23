@@ -96,6 +96,17 @@ def enqueue_salah_content_change(*, action: str, course: str, version: str) -> N
     )
 
 
+def enqueue_tajweed_content_change(*, action: str, course: str, version: str) -> None:
+    enqueue_content_revalidation(
+        {
+            "type": "tajweed.course.changed",
+            "action": action,
+            "course": course,
+            "version": version,
+        }
+    )
+
+
 def enqueue_social_profiles_change(*, action: str) -> None:
     enqueue_content_revalidation(
         {

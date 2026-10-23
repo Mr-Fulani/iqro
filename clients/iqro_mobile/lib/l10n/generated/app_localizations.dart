@@ -4307,6 +4307,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Previous step'**
   String get tajweedPreviousStep;
+
+  /// No description provided for @tajweedCourseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tajweed'**
+  String get tajweedCourseTitle;
+
+  /// No description provided for @tajweedCourseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading rules step by step'**
+  String get tajweedCourseHint;
+
+  /// No description provided for @tajweedCourseProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{completed} of {total} lessons'**
+  String tajweedCourseProgress(int completed, int total);
+
+  /// No description provided for @tajweedCourseStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the course'**
+  String get tajweedCourseStart;
+
+  /// No description provided for @tajweedCourseContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get tajweedCourseContinue;
+
+  /// No description provided for @tajweedCourseAllCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'All lessons completed'**
+  String get tajweedCourseAllCompleted;
+
+  /// No description provided for @tajweedCourseStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get tajweedCourseStatusCompleted;
+
+  /// No description provided for @tajweedCourseStatusInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Started'**
+  String get tajweedCourseStatusInProgress;
+
+  /// No description provided for @tajweedCourseStepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String tajweedCourseStepOf(int current, int total);
+
+  /// No description provided for @tajweedCourseRule.
+  ///
+  /// In en, this message translates to:
+  /// **'The rule'**
+  String get tajweedCourseRule;
+
+  /// No description provided for @tajweedCourseLetters.
+  ///
+  /// In en, this message translates to:
+  /// **'Letters of the rule'**
+  String get tajweedCourseLetters;
+
+  /// No description provided for @tajweedCourseExampleOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Example {current} of {total}'**
+  String tajweedCourseExampleOf(int current, int total);
+
+  /// No description provided for @tajweedCourseAyahReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Surah {surah}, ayah {ayah}'**
+  String tajweedCourseAyahReference(int surah, int ayah);
+
+  /// No description provided for @tajweedCourseMoreExamples.
+  ///
+  /// In en, this message translates to:
+  /// **'More examples'**
+  String get tajweedCourseMoreExamples;
+
+  /// No description provided for @tajweedCourseExamplesLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding examples in the Quran…'**
+  String get tajweedCourseExamplesLoading;
+
+  /// No description provided for @tajweedCourseExamplesError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the examples.'**
+  String get tajweedCourseExamplesError;
+
+  /// No description provided for @tajweedCourseRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get tajweedCourseRetry;
+
+  /// No description provided for @tajweedCourseFindTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the rule in the ayah'**
+  String get tajweedCourseFindTitle;
+
+  /// No description provided for @tajweedCourseFindPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the word that has {rule}.'**
+  String tajweedCourseFindPrompt(String rule);
+
+  /// No description provided for @tajweedCourseFindCorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct! This is {rule}.'**
+  String tajweedCourseFindCorrect(String rule);
+
+  /// No description provided for @tajweedCourseFindWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'This word does not have it — try another one.'**
+  String get tajweedCourseFindWrong;
+
+  /// No description provided for @tajweedCourseShowAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the answer'**
+  String get tajweedCourseShowAnswer;
+
+  /// No description provided for @tajweedCourseAnswerShown.
+  ///
+  /// In en, this message translates to:
+  /// **'Here is {rule}.'**
+  String tajweedCourseAnswerShown(String rule);
+
+  /// No description provided for @tajweedCourseAnotherAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Another ayah'**
+  String get tajweedCourseAnotherAyah;
+
+  /// No description provided for @tajweedCourseFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish the lesson'**
+  String get tajweedCourseFinish;
+
+  /// No description provided for @tajweedCourseLessonCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson completed'**
+  String get tajweedCourseLessonCompleted;
+
+  /// No description provided for @tajweedCourseNextLesson.
+  ///
+  /// In en, this message translates to:
+  /// **'Next lesson: {title}'**
+  String tajweedCourseNextLesson(String title);
+
+  /// No description provided for @tajweedCourseAllLessons.
+  ///
+  /// In en, this message translates to:
+  /// **'All lessons'**
+  String get tajweedCourseAllLessons;
+
+  /// No description provided for @tajweedCourseUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The course is not available yet.'**
+  String get tajweedCourseUnavailable;
 }
 
 class _AppLocalizationsDelegate

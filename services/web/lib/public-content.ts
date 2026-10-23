@@ -30,6 +30,7 @@ import {
   selectHomePopularReciters,
 } from "./reciter-catalog";
 import { parseSalahCourseDocument, type SalahCourseDocument } from "./salah";
+import { parseTajweedCourseDocument, type TajweedCourseDocument } from "./tajweed-course";
 
 export const PUBLIC_CONTENT_REVALIDATE_SECONDS = 3_600;
 
@@ -552,6 +553,16 @@ export const getPublishedSalahCourse = cache(
       [`salah:course:${slug}`, `salah:locale:${locale}`],
     );
     return parseSalahCourseDocument(document);
+  },
+);
+
+export const getPublishedTajweedCourse = cache(
+  async (locale: SupportedLocale, slug: string): Promise<TajweedCourseDocument> => {
+    const document = await fetchPublishedJson<unknown>(
+      `/api/v1/tajweed/courses/${encodeURIComponent(slug)}?language=${encodeURIComponent(locale)}`,
+      [`tajweed:course:${slug}`, `tajweed:locale:${locale}`],
+    );
+    return parseTajweedCourseDocument(document);
   },
 );
 

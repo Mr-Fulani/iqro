@@ -23,6 +23,7 @@ import '../features/audio/audio_models.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/audio/player_backgrounds.dart';
+import '../features/audio/reciter_catalog.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/dua/dua_topics.dart';
 import '../features/feedback/feedback_models.dart';
@@ -49,6 +50,9 @@ import '../features/share/share_repository.dart';
 import '../features/settings/offline_storage_repository.dart';
 import '../features/tajweed/tajweed_models.dart';
 import '../features/tajweed/tajweed_repository.dart';
+import '../features/tajweed_course/tajweed_course_models.dart';
+import '../features/tajweed_course/tajweed_course_progress.dart';
+import '../features/tajweed_course/tajweed_course_repository.dart';
 
 Never _missing(String name) => throw StateError('$name was not initialized');
 
@@ -981,6 +985,55 @@ final salahProgressProvider = FutureProvider.autoDispose
       ref.watch(activeAccountScopeKeyProvider);
       return ref.watch(salahProgressStoreProvider).read(course);
     });
+final tajweedCourseGatewayProvider = Provider<TajweedCourseRemoteGateway>(
+  (ref) => ApiTajweedCourseGateway(ref.watch(apiClientProvider)),
+);
+final tajweedCourseRepositoryProvider = Provider<TajweedCourseRepository>(
+  (ref) => TajweedCourseRepository(
+    remote: ref.watch(tajweedCourseGatewayProvider),
+    database: ref.watch(localDatabaseProvider),
+  ),
+);
+final tajweedCourseProvider =
+    FutureProvider.family<TajweedCourseDocument, String>((ref, slug) {
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      return ref.watch(tajweedCourseRepositoryProvider).course(slug, locale);
+    });
+final tajweedCourseProgressStoreProvider = Provider<TajweedCourseProgressStore>(
+  (ref) => TajweedCourseProgressStore(ref.watch(localDatabaseProvider)),
+);
+final tajweedCourseProgressProvider = FutureProvider.autoDispose
+    .family<TajweedCourseProgress, String>((ref, course) {
+      // Progress belongs to the account; switching it reads the new owner's.
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(tajweedCourseProgressStoreProvider).read(course);
+    });
+final tajweedProgressSyncProvider = Provider<TajweedProgressSync>(
+  (ref) => TajweedProgressSync(
+    remote: ref.watch(tajweedCourseGatewayProvider),
+    store: ref.watch(tajweedCourseProgressStoreProvider),
+    database: ref.watch(localDatabaseProvider),
+    session: () => ref.read(sessionProvider).valueOrNull,
+    onMerged: (course) => ref.invalidate(tajweedCourseProgressProvider(course)),
+  ),
+);
+
+/// Resolves the reciter whose timings play the course examples: the one
+/// chosen for the Mushaf, as in the tajweed cards, otherwise the default.
+final tajweedCourseRecitationProvider = Provider<Future<String?> Function()>(
+  (ref) => () async {
+    final recitations = await ref
+        .read(audioRepositoryProvider)
+        .recitationsForRole(AudioRecitationRole.ayahPlayback);
+    return preferredRecitation(
+      recitations,
+      preferredId: ref.read(appPreferencesProvider).mushafRecitationId,
+      role: AudioRecitationRole.ayahPlayback,
+    )?.id;
+  },
+);
 final salahDisplayProvider = StateProvider<SalahDisplay>(
   (ref) => const SalahDisplay(),
 );
