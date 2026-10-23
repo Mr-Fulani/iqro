@@ -576,12 +576,15 @@ final ayahsProvider = FutureProvider.family<List<QuranAyah>, int>((ref, surah) {
 final quranJuzProvider = FutureProvider<List<QuranDivision>>((ref) {
   return ref.watch(quranRepositoryProvider).juz();
 });
+
+/// Published catalog of Mushaf editions. A fresh local copy (under an hour
+/// old) answers without the network; only a missing or expired copy triggers
+/// a request, during which [cachedMushafRenditionsProvider] keeps the screen
+/// drawn, so opening the Quran tab never shows the catalog loading.
 final mushafRenditionsProvider = FutureProvider<List<NativeMushafEdition>>((
   ref,
 ) {
-  return ref
-      .watch(quranRepositoryProvider)
-      .mushafRenditions(forceRefresh: true);
+  return ref.watch(quranRepositoryProvider).mushafRenditions();
 });
 final cachedMushafRenditionsProvider =
     FutureProvider<List<NativeMushafEdition>>((ref) {
@@ -618,13 +621,18 @@ final selectedMushafIdentityProvider = Provider<MushafIdentity>((ref) {
 final mushafRepositoryProvider =
     Provider.family<QuranRepository, MushafIdentity>((ref, identity) {
       final repository = ref.watch(quranRepositoryProvider);
-      final version =
-          ref
-              .watch(availableMushafRenditionsProvider)
-              .where((edition) => edition.identity == identity)
-              .firstOrNull
-              ?.sourceChecksum ??
-          '';
+      // Only a changed source version rebuilds the repository: a refreshed
+      // catalog with the same checksum must not reload every open page.
+      final version = ref.watch(
+        availableMushafRenditionsProvider.select(
+          (catalog) =>
+              catalog
+                  .where((edition) => edition.identity == identity)
+                  .firstOrNull
+                  ?.sourceChecksum ??
+              '',
+        ),
+      );
       final selected = repository.forMushaf(identity);
       return identity.isFoundation
           ? selected.withFoundationVersion(version)
