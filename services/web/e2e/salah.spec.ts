@@ -51,21 +51,27 @@ test("course and lesson pages render indexable steps and Arabic on the server", 
 test("header and mobile navigation mark the prayer course without the prayer times", async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto("/ru/salah");
+  // The header has one entry for all courses; the course opens from its catalog.
   const header = page.locator(".app-menu");
-  await expect(header.getByRole("link", { name: "Обучение намазу" })).toHaveClass(/menu-link-active/);
+  await expect(header.getByRole("link", { name: "Курсы" })).toHaveClass(/menu-link-active/);
+  await expect(header.getByRole("link", { name: "Обучение намазу" })).toHaveCount(0);
   await expect(header.getByRole("link", { name: "Намаз", exact: true })).not.toHaveClass(/menu-link-active/);
 
   await page.setViewportSize({ width: 390, height: 844 });
   const navigation = page.locator(".mobile-navigation");
   await navigation.locator(".mobile-more > summary").click();
+  // «More» leads to the course through the catalog, as in the app.
   const more = navigation.locator(".mobile-more-links");
-  await expect(more.getByRole("link", { name: "Обучение намазу" })).toHaveAttribute("aria-current", "page");
+  await expect(more.getByRole("link", { name: "Курсы" })).toHaveAttribute("aria-current", "page");
+  await expect(more.getByRole("link", { name: "Обучение намазу" })).toHaveCount(0);
   await expect(more.getByRole("link", { name: "Намаз", exact: true })).not.toHaveAttribute("aria-current", "page");
-  for (const [locale, label] of [["en", "Learn to pray"], ["ar", "تعلّم الصلاة"], ["tr", "Namaz öğrenimi"]]) {
+  for (const [locale, label] of [["en", "Courses"], ["ar", "الدورات"], ["tr", "Kurslar"]]) {
     await page.goto(`/${locale}/salah`);
     await navigation.locator(".mobile-more > summary").click();
-    await expect(more.getByRole("link", { name: label })).toHaveAttribute("href", `/${locale}/salah`);
+    await expect(more.getByRole("link", { name: label })).toHaveAttribute("href", `/${locale}/courses`);
   }
+  // The footer keeps the direct way in.
+  await expect(page.locator("footer").getByRole("link", { name: "Namaz öğrenimi" })).toHaveAttribute("href", "/tr/salah");
 });
 
 test("the step player moves with buttons and arrow keys and keeps the step in the URL", async ({ page }) => {

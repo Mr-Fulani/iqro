@@ -31,6 +31,12 @@ import {
 } from "./reciter-catalog";
 import { parseSalahCourseDocument, type SalahCourseDocument } from "./salah";
 import { parseTajweedCourseDocument, type TajweedCourseDocument } from "./tajweed-course";
+import {
+  parseCourseDocument,
+  parseCourseList,
+  type CourseDocumentResult,
+  type CourseListItem,
+} from "./thematic-courses";
 
 export const PUBLIC_CONTENT_REVALIDATE_SECONDS = 3_600;
 
@@ -563,6 +569,26 @@ export const getPublishedTajweedCourse = cache(
       [`tajweed:course:${slug}`, `tajweed:locale:${locale}`],
     );
     return parseTajweedCourseDocument(document);
+  },
+);
+
+export const getPublishedCourses = cache(
+  async (locale: SupportedLocale): Promise<CourseListItem[]> => {
+    const list = await fetchPublishedJson<unknown>(
+      `/api/v1/courses?language=${encodeURIComponent(locale)}`,
+      ["courses:catalog"],
+    );
+    return parseCourseList(list);
+  },
+);
+
+export const getPublishedCourse = cache(
+  async (locale: SupportedLocale, slug: string): Promise<CourseDocumentResult> => {
+    const document = await fetchPublishedJson<unknown>(
+      `/api/v1/courses/${encodeURIComponent(slug)}?language=${encodeURIComponent(locale)}`,
+      [`courses:course:${slug}`],
+    );
+    return parseCourseDocument(document);
   },
 );
 

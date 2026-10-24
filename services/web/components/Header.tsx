@@ -28,15 +28,15 @@ export function Header() {
       ? "ok"
       : "guest-online";
 
-  const navItems = [
+  const navItems: { href: string; label: string; icon: string; also?: string[] }[] = [
     { href: "/quran", label: t("nav.quran"), icon: "📖" },
     { href: "/memorization", label: t("nav.memorization"), icon: "🧠" },
     { href: "/planner", label: t("nav.planner"), icon: "🗓️" },
     { href: "/dua", label: t("nav.dua"), icon: "🤲" },
     { href: "/audio", label: t("nav.audio"), icon: "🎵" },
     { href: "/prayer", label: t("nav.prayer"), icon: "🕌" },
-    { href: "/salah", label: t("nav.salah"), icon: "🧎" },
-    { href: "/tajweed", label: t("nav.tajweed"), icon: "🎙️" },
+    // One entry for every course: the prayer and tajweed courses open from its catalog.
+    { href: "/courses", label: t("nav.courses"), icon: "📚", also: ["/salah", "/tajweed"] },
     { href: "/calendar", label: t("calendar.title"), icon: "☾" },
     { href: "/profile", label: t("nav.profile"), icon: "👤" },
   ];
@@ -55,8 +55,8 @@ export function Header() {
 
       <nav className="app-menu" aria-label={t("nav.aria")}>
         {navItems.map((item) => {
-          const isActive = routePathname === item.href
-            || (item.href !== "/" && routePathname.startsWith(item.href));
+          const isActive = [item.href, ...(item.also ?? [])].some((href) =>
+            routePathname === href || (href !== "/" && routePathname.startsWith(href)));
           return (
             <IntentPrefetchLink
               key={item.href}
