@@ -142,7 +142,9 @@ PR сайта с этими типами выкатывается **раньше
 Решение 5: на старте прогресс хранится только на устройстве. Формат совпадает с
 `lib/course-progress.ts`, чтобы синхронизация с аккаунтом потом включилась без переделки.
 
-- Сайт, `localStorage`: `courses.progress.<slug>` = `{"lessons": {"<lesson>": {"status": "done", "step_slug": null, "content_version": "<version>", "updated_at": "<ISO>"}}}`.
+- Сайт, `localStorage`: `courses.progress.<slug>` = `{"lessons": {"<lesson>": {"status": "completed", "step_slug": "", "content_version": "<version>", "updated_at": "<ISO>"}}}`.
+  `status` — `"in_progress"` (тема открыта) или `"completed"` (нажато «Тема изучена»); `step_slug` всегда
+  строка, у тематических курсов `""`. Это ровно формат `progressFromJson` в `lib/course-progress.ts`.
 - Приложение, `app_state`: тот же ключ и та же форма.
 - С этапа 2: `courses.position.<slug>` = `{"<lesson>": {"ms": 252000, "updated_at": "<ISO>"}}`.
 - «Продолжить» открывает первую непройденную тему последнего открытого курса.
