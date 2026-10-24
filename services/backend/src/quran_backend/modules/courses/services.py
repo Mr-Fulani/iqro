@@ -28,6 +28,7 @@ from quran_backend.modules.courses.document import (
     catalog_card,
     checksum,
     readiness,
+    shown_files,
 )
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
@@ -168,7 +169,7 @@ def sign_release(release: CourseRelease, user: Any, *, note: str = "") -> Course
     _expect(release, CourseReleaseStatus.IN_REVIEW, "Подписать можно только выпуск на проверке.")
     unwatched = new_videos(release) - set(release.watched_videos)
     if unwatched:
-        raise CourseReleaseError(["Отметьте «Просмотрено» у каждого нового видео."])
+        raise CourseReleaseError(["Отметьте «Просмотрено» у каждого нового видео и озвучки."])
     if settings.COURSES_STRICT_REVIEW and user.pk in release_authors(release):
         raise CourseReleaseError(
             ["Строгий режим: подписывает не тот, кто готовил выпуск или правил его темы."]
@@ -269,15 +270,27 @@ def roll_back(
     return target
 
 
+@transaction.atomic
+def mark_watched(release: CourseRelease, user: Any, *, sha256: str, watched: bool) -> CourseRelease:
+    """The reviewer's «Просмотрено» on one new video or dub of the release."""
+    _require(can_sign(user))
+    release = _locked_release(release)
+    _expect(release, CourseReleaseStatus.IN_REVIEW, "Отмечать можно только выпуск на проверке.")
+    if sha256 not in new_videos(release):
+        raise CourseReleaseError(["Этого файла нет среди новых видео и озвучек выпуска."])
+    marks = set(release.watched_videos) - {sha256}
+    if watched:
+        marks.add(sha256)
+    release.watched_videos = sorted(marks)
+    release.save(update_fields=["watched_videos", "updated_at"])
+    return release
+
+
 def new_videos(release: CourseRelease) -> set[str]:
-    """SHA-256 of the videos this release adds or replaces; none before stage 2."""
-    old = release.based_on.snapshot["lessons"] if release.based_on else []
-    before = {lesson["video"]["sha256"] for lesson in old if lesson.get("video")}
-    return {
-        lesson["video"]["sha256"]
-        for lesson in release.snapshot["lessons"]
-        if lesson.get("video") and lesson["video"]["sha256"] not in before
-    }
+    """SHA-256 of the video and dub files students of the release get anew."""
+    old = release.based_on
+    before = shown_files(old.snapshot, old.languages) if old is not None else set()
+    return shown_files(release.snapshot, release.languages) - before
 
 
 def release_authors(release: CourseRelease) -> set[Any]:

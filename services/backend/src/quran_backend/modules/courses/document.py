@@ -22,6 +22,7 @@ from quran_backend.modules.courses.models import (
     MAX_NOTES_CHARS,
     MAX_SOURCES_CHARS,
     Course,
+    CourseVideo,
 )
 
 SCHEMA_VERSION = 1
@@ -38,7 +39,6 @@ CHANGED = {
     "sources": "изменены источники",
     "minutes": "изменены минуты",
     "slug": "изменён адрес",
-    "video": "заменено видео",
 }
 
 
@@ -66,12 +66,12 @@ def build_snapshot(course: Course) -> dict[str, Any]:
             "height": course.cover_height,
         }
     lessons = []
-    for lesson in course.lessons.order_by("position", "created_at"):
+    for lesson in course.lessons.order_by("position", "created_at").select_related("video"):
         item: dict[str, Any] = {
             "id": str(lesson.pk),
             "slug": lesson.slug,
             "minutes": lesson.minutes,
-            "video": None,
+            "video": video_snapshot(lesson.video),
         }
         for field in LESSON_TEXTS:
             item[field] = {language: lesson.text(field, language) for language in COURSE_LANGUAGES}
@@ -88,6 +88,61 @@ def build_snapshot(course: Course) -> dict[str, Any]:
         },
         "lessons": lessons,
     }
+
+
+def video_snapshot(video: CourseVideo | None) -> dict[str, Any] | None:
+    """The lesson's video file, its poster and the current dub of each other language."""
+    if video is None:
+        return None
+    return {
+        "sha256": video.sha256,
+        "object_key": video.object_key,
+        "bytes": video.bytes,
+        "duration_ms": video.duration_ms,
+        "width": video.width,
+        "height": video.height,
+        "spoken_language": video.spoken_language,
+        "poster": {
+            "object_key": video.poster_object_key,
+            "small_object_key": video.poster_small_object_key,
+            "width": video.poster_width,
+            "height": video.poster_height,
+        },
+        "dubs": {
+            dub.language: {
+                "sha256": dub.sha256,
+                "object_key": dub.object_key,
+                "bytes": dub.bytes,
+                "duration_ms": dub.duration_ms,
+            }
+            for dub in video.dubs.filter(retired_at__isnull=True).order_by("language")
+        },
+    }
+
+
+def snapshot_files(snapshot: dict[str, Any]) -> set[str]:
+    """SHA-256 of every video and dub file the snapshot's lessons show."""
+    found: set[str] = set()
+    for lesson in snapshot.get("lessons", []):
+        video = lesson.get("video")
+        if video:
+            found.add(video["sha256"])
+            found.update(dub["sha256"] for dub in video.get("dubs", {}).values())
+    return found
+
+
+def shown_files(snapshot: dict[str, Any], languages: list[str]) -> set[str]:
+    """SHA-256 of the files the documents of these languages give students."""
+    found: set[str] = set()
+    for lesson in snapshot.get("lessons", []):
+        video = lesson.get("video")
+        if video:
+            dubs = video.get("dubs", {})
+            found.update(
+                dubs[language]["sha256"] if language in dubs else video["sha256"]
+                for language in languages
+            )
+    return found
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,11 +210,37 @@ def cover_payload(cover: dict[str, Any] | None) -> dict[str, Any] | None:
     }
 
 
-def lesson_minutes(lesson: dict[str, Any], blocks: list[dict[str, Any]]) -> int:
+def video_payload(video: dict[str, Any] | None, language: str) -> dict[str, Any] | None:
+    """The file students of this language get: its dub if there is one, else the video."""
+    if not video:
+        return None
+    dub = video.get("dubs", {}).get(language)
+    file = dub or video
+    poster = video["poster"]
+    return {
+        "url": public_audio_url(file["object_key"]),
+        "bytes": file["bytes"],
+        "duration_ms": file["duration_ms"],
+        "width": video["width"],
+        "height": video["height"],
+        "spoken_language": language if dub else video["spoken_language"],
+        "poster": {
+            "url": public_audio_url(poster["object_key"]),
+            "small_url": public_audio_url(poster["small_object_key"]),
+            "width": poster["width"],
+            "height": poster["height"],
+        },
+    }
+
+
+def lesson_minutes(
+    lesson: dict[str, Any], blocks: list[dict[str, Any]], video: dict[str, Any] | None
+) -> int:
     if lesson["minutes"]:
         return int(lesson["minutes"])
     words = len(plain_text(blocks).split())
-    return max(1, math.ceil(words / WORDS_PER_MINUTE))
+    video_minutes = video["duration_ms"] / 60_000 if video else 0
+    return max(1, math.ceil(video_minutes + words / WORDS_PER_MINUTE))
 
 
 def build_document(
@@ -170,14 +251,15 @@ def build_document(
     lessons = []
     for number, lesson in enumerate(snapshot["lessons"], start=1):
         blocks = parse_notes(lesson["notes"][language])
+        video = video_payload(lesson["video"], language)
         lessons.append(
             {
                 "slug": lesson["slug"],
                 "number": number,
                 "title": lesson["title"][language].strip(),
                 "summary": lesson["summary"][language].strip(),
-                "minutes": lesson_minutes(lesson, blocks),
-                "video": None,
+                "minutes": lesson_minutes(lesson, blocks, video),
+                "video": video,
                 "notes": blocks,
                 "sources": [
                     line.strip()
@@ -215,8 +297,10 @@ def catalog_card(document: dict[str, Any]) -> dict[str, Any]:
         "cover": course["cover"],
         "lesson_count": len(lessons),
         "minutes": sum(lesson["minutes"] for lesson in lessons),
-        # Rounded up from the videos' milliseconds; no videos before stage 2.
-        "video_minutes": 0,
+        # The videos' milliseconds summed, then rounded up.
+        "video_minutes": math.ceil(
+            sum(lesson["video"]["duration_ms"] for lesson in lessons if lesson["video"]) / 60_000
+        ),
     }
 
 
@@ -247,11 +331,8 @@ def changes(old: dict[str, Any] | None, new: dict[str, Any]) -> list[str]:
             for field in LESSON_TEXTS
             if (languages := _changed_languages(before[field], lesson[field]))
         ]
-        parts += [
-            CHANGED[field]
-            for field in ("slug", "minutes", "video")
-            if before[field] != lesson[field]
-        ]
+        parts += [CHANGED[field] for field in ("slug", "minutes") if before[field] != lesson[field]]
+        parts += video_changes(before["video"], lesson["video"])
         found.append(f"{name}: {'; '.join(parts)}")
     found.extend(
         f"Удалена тема «{lesson['title']['ru'] or lesson['slug']}»"
@@ -261,6 +342,35 @@ def changes(old: dict[str, Any] | None, new: dict[str, Any]) -> list[str]:
     kept_old = [lesson["id"] for lesson in old["lessons"] if lesson["id"] in new_ids]
     if kept_old != [lesson_id for lesson_id in new_ids if lesson_id in old_lessons]:
         found.append("Изменён порядок тем")
+    return found
+
+
+def video_changes(old: dict[str, Any] | None, new: dict[str, Any] | None) -> list[str]:
+    if old is None or new is None:
+        return [] if old == new else ["добавлено видео" if old is None else "убрано видео"]
+    if old["sha256"] != new["sha256"]:
+        return ["заменено видео"]
+    found = []
+    if old["poster"] != new["poster"]:
+        found.append("заменена обложка видео")
+    if old["spoken_language"] != new["spoken_language"]:
+        found.append("изменён язык речи видео")
+    old_dubs, new_dubs = old.get("dubs", {}), new["dubs"]
+    for change, languages in (
+        ("добавлена озвучка", [code for code in new_dubs if code not in old_dubs]),
+        (
+            "заменена озвучка",
+            [
+                code
+                for code in new_dubs
+                if code in old_dubs and old_dubs[code]["sha256"] != new_dubs[code]["sha256"]
+            ],
+        ),
+        ("удалена озвучка", [code for code in old_dubs if code not in new_dubs]),
+    ):
+        ordered = [code for code in editor_languages() if code in languages]
+        if ordered:
+            found.append(f"{change} ({', '.join(ordered)})")
     return found
 
 

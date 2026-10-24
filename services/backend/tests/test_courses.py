@@ -26,10 +26,13 @@ from quran_backend.modules.courses.models import (
     CourseLesson,
     CourseRelease,
     CourseReleaseStatus,
+    CourseVideo,
 )
 from quran_backend.modules.courses.services import (
     CourseReleaseError,
     hide_course,
+    mark_watched,
+    new_videos,
     prepare_release,
     publish_release,
     return_for_rework,
@@ -42,6 +45,7 @@ from quran_backend.modules.courses.services import (
 DOCS = Path(__file__).resolve().parents[3] / "docs" / "courses"
 MEDIA = "https://media.iqro.forum"
 PUBLISHED_AT = datetime(2027, 1, 12, 10, 0, tzinfo=UTC)
+VIDEO_SHA = "abcdef0123456789abcd" + "0" * 44
 
 LESSONS = [
     {
@@ -115,15 +119,42 @@ def ramadan(db: None) -> Course:
         cover_width=1280,
         cover_height=720,
     )
+    video = CourseVideo.objects.create(
+        course=course,
+        object_key="courses/videos/abcdef0123456789abcd.mp4",
+        sha256=VIDEO_SHA,
+        bytes=113246208,
+        duration_ms=588000,
+        width=1280,
+        height=720,
+        fps=30,
+        bitrate_kbps=1500,
+        video_codec="h264",
+        audio_codec="aac",
+        has_audio=True,
+        spoken_language="ru",
+        poster_object_key="courses/posters/abcdef0123456789abcd-0123456789ab-1280.webp",
+        poster_small_object_key="courses/posters/abcdef0123456789abcd-0123456789ab-640.webp",
+        poster_width=1280,
+        poster_height=720,
+    )
     for lesson in LESSONS:
-        CourseLesson.objects.create(course=course, **lesson)
+        CourseLesson.objects.create(
+            course=course, video=video if lesson["slug"] == "namerenie" else None, **lesson
+        )
     return course
 
 
 def release_course(course: Course, user: User, note: str = "Первый выпуск") -> CourseRelease:
     release = prepare_release(course, user, languages=["ru"], change_note=note)
+    watch_all(release, user)
     sign_release(release, user)
     return publish_release(release, user)
+
+
+def watch_all(release: CourseRelease, user: User) -> None:
+    for sha256 in new_videos(release):
+        mark_watched(release, user, sha256=sha256, watched=True)
 
 
 def _example(name: str) -> dict[str, Any]:
@@ -307,9 +338,11 @@ def test_every_operation_checks_the_right_on_the_server(ramadan: Course, owner: 
         lambda: withdraw_from_review(release, viewer),
         lambda: return_for_rework(release, editor, comment="x"),
         lambda: sign_release(release, editor),
+        lambda: mark_watched(release, editor, sha256=VIDEO_SHA, watched=True),
     ):
         with pytest.raises(PermissionDenied):
             operation()
+    watch_all(release, reviewer)
     sign_release(release, reviewer)
     with pytest.raises(PermissionDenied):
         publish_release(release, reviewer)
@@ -326,6 +359,7 @@ def test_every_operation_checks_the_right_on_the_server(ramadan: Course, owner: 
 @override_settings(COURSES_STRICT_REVIEW=True)
 def test_strict_review_refuses_the_author_as_signer(ramadan: Course, owner: User) -> None:
     release = prepare_release(ramadan, owner, languages=["ru"], change_note="Первый")
+    watch_all(release, owner)
     with pytest.raises(CourseReleaseError, match="Строгий режим"):
         sign_release(release, owner)
     reviewer = _user("second-reviewer@example.test", "sign_course")
@@ -336,6 +370,7 @@ def test_strict_review_refuses_the_author_as_signer(ramadan: Course, owner: User
 @pytest.mark.django_db
 def test_strict_review_is_off_by_default(ramadan: Course, owner: User) -> None:
     release = prepare_release(ramadan, owner, languages=["ru"], change_note="Первый")
+    watch_all(release, owner)
     sign_release(release, owner)
     assert CourseRelease.objects.get(pk=release.pk).status == CourseReleaseStatus.SIGNED
 

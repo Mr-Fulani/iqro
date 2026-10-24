@@ -11,5 +11,6 @@
   {% if nav.next %}<a href="{% url 'admin:courses_courselesson_change' nav.next.pk %}">Следующая тема →</a>{% else %}<span></span>{% endif %}
 </nav>
 {% endwith %}{% endif %}
+{% if video_block %}{% include "admin/courses/courselesson/video.html" with block=video_block %}{% endif %}
 {{ block.super }}
 {% endblock %}

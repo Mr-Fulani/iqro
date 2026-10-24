@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, ClassVar, cast
 
 from django import forms
@@ -21,6 +23,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.helpers import InlineAdminFormSet
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
+from django.core.files.uploadedfile import UploadedFile
 from django.db.models import QuerySet
 from django.forms.models import BaseInlineFormSet
 from django.http import (
@@ -29,11 +32,14 @@ from django.http import (
     HttpResponse,
     HttpResponseNotAllowed,
     HttpResponseRedirect,
+    JsonResponse,
 )
+from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
+from quran_backend.modules.audio.admin import _uploaded_file_path
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.editorial.diff import line_diff
 from quran_backend.modules.core.object_storage import ObjectStorageError
@@ -46,10 +52,12 @@ from quran_backend.modules.courses.document import (
     editor_languages,
     readiness,
     untranslated,
+    video_payload,
 )
 from quran_backend.modules.courses.media import CourseCoverError, upload_course_cover
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
+    SPOKEN_LANGUAGES,
     Course,
     CourseDocument,
     CourseLesson,
@@ -61,6 +69,8 @@ from quran_backend.modules.courses.services import (
     can_publish,
     can_sign,
     hide_course,
+    mark_watched,
+    new_videos,
     prepare_release,
     publish_release,
     return_for_rework,
@@ -68,6 +78,21 @@ from quran_backend.modules.courses.services import (
     show_course,
     sign_release,
     withdraw_from_review,
+)
+from quran_backend.modules.courses.video import (
+    MAX_DUB_MIB,
+    MAX_VIDEO_MIB,
+    SPEECH_NAMES,
+    CourseVideoError,
+    check_disk_space,
+    current_dubs,
+    delete_video_dub,
+    remove_lesson_video,
+    set_spoken_language,
+    set_video_poster,
+    upload_lesson_video,
+    upload_slot,
+    upload_video_dub,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,6 +111,9 @@ DIFF_FIELDS = (
     ("notes", "Конспект"),
     ("sources", "Источники"),
 )
+VIDEO_INSTRUCTION_URL = "https://github.com/Mr-Fulani/iqro/blob/main/docs/courses/video.md"
+# The multipart envelope around the file: field names, boundaries, the language.
+MULTIPART_ALLOWANCE_BYTES = 1024 * 1024
 CONFLICT = (
     "Ничего не сохранено: {what} изменили в другой вкладке. Ваш текст остался на экране — "
     "скопируйте его, откройте страницу заново и вставьте."
@@ -241,8 +269,8 @@ class CourseLessonInline(admin.TabularInline):  # type: ignore[type-arg]
     model = CourseLesson
     form = CourseLessonForm
     formset = CourseLessonFormSet
-    fields = ("position", "title_ru", "slug", "minutes", "ready", "revision")
-    readonly_fields = ("ready",)
+    fields = ("position", "title_ru", "slug", "minutes", "ready", "video_state", "revision")
+    readonly_fields = ("ready", "video_state")
     prepopulated_fields: ClassVar[dict[str, Sequence[str]]] = {"slug": ("title_ru",)}
     ordering = ("position", "created_at")
     show_change_link = True
@@ -263,6 +291,20 @@ class CourseLessonInline(admin.TabularInline):  # type: ignore[type-arg]
                 else "\u00a0—"
             )
             for language in editor_languages()
+        )
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[CourseLesson]:
+        return super().get_queryset(request).select_related("video")
+
+    @admin.display(description="Видео")
+    def video_state(self, obj: CourseLesson) -> str:
+        video = obj.video
+        if video is None:
+            return "—"
+        dubs = [dub.language for dub in current_dubs(video)]
+        speech = video.spoken_language or "без речи"
+        return " · ".join(
+            [clock(video.duration_ms), speech + (" + " + ", ".join(dubs) if dubs else "")]
         )
 
 
@@ -629,7 +671,7 @@ def preview_response(  # noqa: PLR0913 - the page needs each of them
     else:
         payload = build_document(snapshot, language=language, version=version, languages=available)
     lessons = [
-        lesson
+        {**lesson, "video_label": video_label(lesson["video"], language)}
         for lesson, source in zip(payload["lessons"], snapshot["lessons"], strict=True)
         if not lesson_id or source["id"] == lesson_id
     ]
@@ -662,6 +704,9 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     search_fields = ("title_ru", "slug")
     prepopulated_fields: ClassVar[dict[str, Sequence[str]]] = {"slug": ("title_ru",)}
     change_form_template = "admin/courses/courselesson/change_form.html"
+
+    class Media:
+        js = ("courses/admin/video.js",)
 
     def get_fieldsets(self, _request: HttpRequest, _obj: CourseLesson | None = None) -> Any:
         return [
@@ -713,6 +758,7 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "course": lesson.course,
                 "preview_url": reverse("admin:courses_courselesson_preview", args=[lesson.pk]),
             }
+            context["video_block"] = video_block(request, lesson)
         return super().change_view(request, object_id, form_url, context)
 
     def response_change(self, request: HttpRequest, obj: CourseLesson) -> HttpResponse:
@@ -723,14 +769,156 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return super().response_change(request, obj)
 
     def get_urls(self) -> list[Any]:
+        view = self.admin_site.admin_view
         return [
             path(
                 "<path:object_id>/preview/",
-                self.admin_site.admin_view(self.preview_view),
+                view(self.preview_view),
                 name="courses_courselesson_preview",
+            ),
+            path(
+                "<path:object_id>/video/upload/",
+                view(self.video_upload_view),
+                name="courses_courselesson_video_upload",
+            ),
+            path(
+                "<path:object_id>/video/poster/",
+                view(self.video_poster_view),
+                name="courses_courselesson_video_poster",
+            ),
+            path(
+                "<path:object_id>/video/language/",
+                view(self.video_language_view),
+                name="courses_courselesson_video_language",
+            ),
+            path(
+                "<path:object_id>/video/remove/",
+                view(self.video_remove_view),
+                name="courses_courselesson_video_remove",
+            ),
+            path(
+                "<path:object_id>/video/dubs/<str:language>/upload/",
+                view(self.dub_upload_view),
+                name="courses_courselesson_dub_upload",
+            ),
+            path(
+                "<path:object_id>/video/dubs/<str:language>/delete/",
+                view(self.dub_delete_view),
+                name="courses_courselesson_dub_delete",
             ),
             *super().get_urls(),
         ]
+
+    # Video block: JSON answers with the block drawn anew ----------------------
+
+    def video_upload_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        def run(lesson: CourseLesson) -> str:
+            with _received_file(request, MAX_VIDEO_MIB) as (uploaded, source):
+                video = upload_lesson_video(
+                    lesson,
+                    source,
+                    user=request.user,
+                    original_name=uploaded.name or "",
+                    spoken_language=str(request.POST.get("spoken_language", "ru")),
+                )
+            return (
+                f"Видео: загружено «{video.original_name}», {clock(video.duration_ms)}, "
+                f"{megabytes(video.bytes)}"
+            )
+
+        return self._video_action(request, object_id, ("add_coursevideo",), run)
+
+    def video_poster_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        def run(lesson: CourseLesson) -> str:
+            image = request.FILES.get("image")
+            raw = str(request.POST.get("second", "")).replace(",", ".").strip()
+            try:
+                second = float(raw) if raw else None
+            except ValueError:
+                second = None
+            set_video_poster(
+                lesson, request.POST.get("video"), user=request.user, second=second, image=image
+            )
+            if image is not None:
+                return f"Видео: обложка из картинки «{image.name}»"
+            return f"Видео: обложка — кадр на {raw} с"
+
+        return self._video_action(request, object_id, ("change_coursevideo",), run)
+
+    def video_language_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        def run(lesson: CourseLesson) -> str:
+            language = str(request.POST.get("spoken_language", ""))
+            set_spoken_language(lesson, request.POST.get("video"), language, user=request.user)
+            return f"Видео: язык речи — {SPEECH_NAMES.get(language, language)}"
+
+        return self._video_action(request, object_id, ("change_coursevideo",), run)
+
+    def video_remove_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        def run(lesson: CourseLesson) -> str:
+            remove_lesson_video(lesson, request.POST.get("video"), user=request.user)
+            return "Видео: убрано из темы"
+
+        return self._video_action(request, object_id, (), run)
+
+    def dub_upload_view(self, request: HttpRequest, object_id: str, language: str) -> HttpResponse:
+        def run(lesson: CourseLesson) -> str:
+            with _received_file(request, MAX_DUB_MIB) as (uploaded, source):
+                dub = upload_video_dub(
+                    lesson,
+                    request.POST.get("video"),
+                    language,
+                    source,
+                    user=request.user,
+                    original_name=uploaded.name or "",
+                )
+            return (
+                f"Видео: озвучка ({language}) «{dub.audio_original_name}», {clock(dub.duration_ms)}"
+            )
+
+        return self._video_action(request, object_id, ("add_coursevideodub",), run)
+
+    def dub_delete_view(self, request: HttpRequest, object_id: str, language: str) -> HttpResponse:
+        def run(lesson: CourseLesson) -> str:
+            delete_video_dub(lesson, request.POST.get("video"), language, user=request.user)
+            return f"Видео: удалена озвучка ({language})"
+
+        return self._video_action(request, object_id, ("delete_coursevideodub",), run)
+
+    def _video_action(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        permissions: tuple[str, ...],
+        run: Callable[[CourseLesson], str],
+    ) -> HttpResponse:
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        lesson = self.get_object(request, unquote(object_id))
+        if lesson is None:
+            raise Http404
+        if not self.has_change_permission(request, lesson) or not all(
+            request.user.has_perm(f"courses.{permission}") for permission in permissions
+        ):
+            raise PermissionDenied
+        try:
+            log = run(lesson)
+        except CourseVideoError as error:
+            return JsonResponse({"error": str(error)}, status=error.status)
+        except ImproperlyConfigured, ObjectStorageError, OSError:
+            logger.exception("Course video operation failed")
+            return JsonResponse({"error": "Хранилище недоступно, повторите."}, status=502)
+        # A list like the form's own messages: the strict review counts it as an edit.
+        self.log_change(request, lesson, [{"changed": {"fields": [log]}}])
+        lesson.refresh_from_db()
+        return JsonResponse(
+            {
+                "html": render_to_string(
+                    "admin/courses/courselesson/video.html",
+                    {"block": video_block(request, lesson)},
+                    request=request,
+                )
+            }
+        )
 
     def preview_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
         lesson = self.get_object(request, unquote(object_id))
@@ -746,6 +934,109 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             back=reverse("admin:courses_courselesson_change", args=[lesson.pk]),
             lesson_id=str(lesson.pk),
         )
+
+
+@contextmanager
+def _received_file(request: HttpRequest, limit_mib: int) -> Iterator[tuple[UploadedFile, Path]]:
+    """The uploaded file on disk, once the upload slot is ours and the disk has room.
+
+    Django writes the file out when `request.FILES` is first read, so the checks
+    come before that.
+    """
+    raw_length = str(request.META.get("CONTENT_LENGTH") or "0")
+    size_bytes = int(raw_length) if raw_length.isdigit() else 0
+    if size_bytes > limit_mib * 1024 * 1024 + MULTIPART_ALLOWANCE_BYTES:
+        raise CourseVideoError(f"Файл больше {limit_mib} МБ.")
+    with upload_slot():
+        check_disk_space(size_bytes)
+        uploaded = request.FILES.get("file")
+        if uploaded is None:
+            raise CourseVideoError("Файл не получен.")
+        with _uploaded_file_path(uploaded) as source:
+            yield uploaded, source
+
+
+def clock(milliseconds: int) -> str:
+    """«9:48», «1:02:05»."""
+    minutes, seconds = divmod(round(milliseconds / 1000), 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+
+
+def megabytes(size_bytes: int) -> str:
+    value = size_bytes / (1024 * 1024)
+    text = f"{value:.1f}".replace(".", ",") if value < 10 else str(round(value))
+    return f"{text} МБ"
+
+
+def video_label(video: dict[str, Any] | None, language: str) -> str:
+    """«9:48 · 108 МБ», and the language of the sound when it is not the page's."""
+    if not video:
+        return ""
+    label = f"{clock(video['duration_ms'])} · {megabytes(video['bytes'])}"
+    speech = video["spoken_language"]
+    if speech != language:
+        label += " · " + (f"видео на языке «{SPEECH_NAMES[speech]}»" if speech else "без речи")
+    return label
+
+
+def video_block(request: HttpRequest, lesson: CourseLesson) -> dict[str, Any]:
+    """The lesson's video, its poster and dubs, with the buttons the user may press."""
+    user = request.user
+    may_change = user.has_perm("courses.change_courselesson")
+
+    def url(name: str, *args: str) -> str:
+        return reverse(f"admin:courses_courselesson_{name}", args=[lesson.pk, *args])
+
+    block: dict[str, Any] = {
+        "instruction_url": VIDEO_INSTRUCTION_URL,
+        "languages": SPOKEN_LANGUAGES,
+        "max_video_mib": MAX_VIDEO_MIB,
+        "max_dub_mib": MAX_DUB_MIB,
+        "can_upload": may_change and user.has_perm("courses.add_coursevideo"),
+        "upload_url": url("video_upload"),
+        "video": None,
+    }
+    video = lesson.video
+    if video is None:
+        return block
+    dubs = {dub.language: dub for dub in current_dubs(video)}
+    block.update(
+        {
+            "video": video,
+            "url": public_audio_url(video.object_key),
+            "poster_url": public_audio_url(video.poster_small_object_key),
+            "duration": clock(video.duration_ms),
+            "size": megabytes(video.bytes),
+            "fps": f"{video.fps:g}".replace(".", ","),
+            "speech": SPEECH_NAMES[video.spoken_language],
+            "poster_second": min(3, video.duration_ms // 10_000),
+            "last_second": max(0, video.duration_ms // 1000 - 1),
+            "can_edit": may_change and user.has_perm("courses.change_coursevideo"),
+            "can_remove": may_change,
+            "can_dub": may_change and user.has_perm("courses.add_coursevideodub"),
+            "can_delete_dub": may_change and user.has_perm("courses.delete_coursevideodub"),
+            "poster_url_action": url("video_poster"),
+            "language_url": url("video_language"),
+            "remove_url": url("video_remove"),
+            "dubs": [
+                {
+                    "code": code,
+                    "label": LANGUAGE_NAMES[code],
+                    "tab": TAB_LABELS[code],
+                    "dub": dubs.get(code),
+                    "url": public_audio_url(dubs[code].object_key) if code in dubs else "",
+                    "duration": clock(dubs[code].duration_ms) if code in dubs else "",
+                    "size": megabytes(dubs[code].bytes) if code in dubs else "",
+                    "upload_url": url("dub_upload", code),
+                    "delete_url": url("dub_delete", code),
+                }
+                for code in editor_languages()
+                if code != video.spoken_language
+            ],
+        }
+    )
+    return block
 
 
 @admin.register(CourseRelease)
@@ -815,6 +1106,11 @@ class CourseReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 view(self.preview_view),
                 name="courses_courserelease_preview",
             ),
+            path(
+                "<path:object_id>/watched/<str:sha256>/",
+                view(self.watched_view),
+                name="courses_courserelease_watched",
+            ),
             *super().get_urls(),
         ]
 
@@ -851,6 +1147,27 @@ class CourseReleaseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             languages=list(release.languages),
             version=release.version,
             documents={document.language: document.payload for document in release.documents.all()},
+        )
+
+    def watched_view(self, request: HttpRequest, object_id: str, sha256: str) -> HttpResponse:
+        """«Просмотрено» on one new video or dub, or the mark taken back."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        release = self._release(request, object_id)
+        watched = request.POST.get("watched") != "0"
+        try:
+            mark_watched(release, request.user, sha256=sha256, watched=watched)
+        except CourseReleaseError as error:
+            for problem in error.problems:
+                messages.error(request, problem)
+        else:
+            self.log_change(
+                request,
+                release,
+                f"{'Просмотрено' if watched else 'Снята отметка «Просмотрено»'}: {sha256[:12]}",
+            )
+        return HttpResponseRedirect(
+            reverse("admin:courses_courserelease_change", args=[release.pk]) + "#videos"
         )
 
     def review_view(self, request: HttpRequest, object_id: str, operation: str) -> HttpResponse:
@@ -963,7 +1280,10 @@ def review_panel(request: HttpRequest, release: CourseRelease) -> dict[str, Any]
             }
         )
     in_review = release.status == CourseReleaseStatus.IN_REVIEW
+    videos = review_videos(release)
     return {
+        "videos": videos,
+        "all_watched": all(video["watched"] for video in videos),
         "changes": changes(old, release.snapshot),
         "diffs": diffs,
         "first": old is None,
@@ -985,6 +1305,42 @@ def review_panel(request: HttpRequest, release: CourseRelease) -> dict[str, Any]
             for operation in ("withdraw", "return", "sign", "publish")
         },
     }
+
+
+def review_videos(release: CourseRelease) -> list[dict[str, Any]]:
+    """Every new video and dub of the release, each with its own «Просмотрено»."""
+    new = new_videos(release)
+    watched = set(release.watched_videos)
+    found = []
+    for number, lesson in enumerate(release.snapshot["lessons"], start=1):
+        video = lesson.get("video")
+        if not video:
+            continue
+        name = f"Тема {number} «{lesson['title']['ru'] or lesson['slug']}»"
+        speech = SPEECH_NAMES[video["spoken_language"]]
+        files = [(video["sha256"], f"основное видео, {speech}", video_payload(video, ""))]
+        files += [
+            (dub["sha256"], f"озвучка, {LANGUAGE_NAMES[language]}", video_payload(video, language))
+            for language, dub in sorted(video.get("dubs", {}).items())
+        ]
+        for sha256, label, payload in files:
+            if sha256 not in new or payload is None:
+                continue
+            found.append(
+                {
+                    "name": f"{name}: {label}",
+                    "sha256": sha256,
+                    "url": payload["url"],
+                    "poster_url": payload["poster"]["small_url"],
+                    "duration": clock(payload["duration_ms"]),
+                    "size": megabytes(payload["bytes"]),
+                    "watched": sha256 in watched,
+                    "mark_url": reverse(
+                        "admin:courses_courserelease_watched", args=[release.pk, sha256]
+                    ),
+                }
+            )
+    return found
 
 
 @admin.register(CourseDocument)
