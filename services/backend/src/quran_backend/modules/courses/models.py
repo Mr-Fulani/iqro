@@ -104,6 +104,16 @@ class CourseLesson(BaseModel):
         blank=True,
         help_text="Пусто — посчитается само: видео плюс конспект из расчёта 180 слов в минуту.",
     )
+    # Set by the video block of the lesson page, never by the form. RESTRICT, not PROTECT:
+    # deleting the course deletes its lessons and videos together.
+    video = models.ForeignKey(
+        "CourseVideo",
+        null=True,
+        blank=True,
+        on_delete=models.RESTRICT,
+        related_name="+",
+        editable=False,
+    )
     title_ru = models.CharField(max_length=120, blank=True)
     title_en = models.CharField(max_length=120, blank=True)
     title_ar = models.CharField(max_length=120, blank=True)
@@ -150,6 +160,100 @@ class CourseLesson(BaseModel):
 
     def text(self, field: str, language: str) -> str:
         return str(getattr(self, f"{field}_{language}"))
+
+
+SPOKEN_LANGUAGES = [
+    ("ru", "русский"),
+    ("en", "английский"),
+    ("ar", "арабский"),
+    ("tr", "турецкий"),
+    ("", "без речи"),
+]
+
+
+class CourseVideo(BaseModel):
+    """A lesson video as stored in R2: the file never changes after the upload.
+
+    A row is deleted only while no release of the course mentions it; objects in
+    R2 are never deleted automatically (ADR 0001).
+    """
+
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="videos")
+    object_key = models.CharField(max_length=512, validators=[validate_relative_object_key])
+    sha256 = models.CharField(max_length=64, validators=[validate_sha256])
+    bytes = models.PositiveBigIntegerField()
+    duration_ms = models.PositiveIntegerField()
+    width = models.PositiveSmallIntegerField()
+    height = models.PositiveSmallIntegerField()
+    fps = models.FloatField()
+    bitrate_kbps = models.PositiveIntegerField()
+    video_codec = models.CharField(max_length=16)
+    audio_codec = models.CharField(max_length=16, blank=True)
+    has_audio = models.BooleanField()
+    spoken_language = models.CharField(
+        max_length=2, blank=True, default="ru", choices=SPOKEN_LANGUAGES
+    )
+    poster_object_key = models.CharField(max_length=512, validators=[validate_relative_object_key])
+    poster_small_object_key = models.CharField(
+        max_length=512, validators=[validate_relative_object_key]
+    )
+    poster_width = models.PositiveSmallIntegerField()
+    poster_height = models.PositiveSmallIntegerField()
+    original_name = models.CharField(max_length=255, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        db_table = "course_video"
+        ordering = ("course", "-created_at")
+        constraints = [
+            # The same file uploaded again reuses its row.
+            models.UniqueConstraint(fields=("course", "sha256"), name="course_video_unique_file"),
+        ]
+
+    def __str__(self) -> str:
+        return self.original_name or self.object_key
+
+
+class CourseVideoDub(BaseModel):
+    """The whole sound of the video on another language, joined with its picture.
+
+    One current dub per language; a replaced or deleted dub that went into a
+    release stays as a row with `retired_at`, like a video of an old release.
+    """
+
+    video = models.ForeignKey(CourseVideo, on_delete=models.CASCADE, related_name="dubs")
+    language = models.CharField(max_length=2, choices=SPOKEN_LANGUAGES[:4])
+    # The audio file the author uploaded.
+    audio_original_name = models.CharField(max_length=255, blank=True)
+    audio_sha256 = models.CharField(max_length=64, validators=[validate_sha256])
+    audio_bytes = models.PositiveBigIntegerField()
+    audio_codec = models.CharField(max_length=16)
+    audio_duration_ms = models.PositiveIntegerField()
+    # The MP4 students get: the video's picture with this sound.
+    object_key = models.CharField(max_length=512, validators=[validate_relative_object_key])
+    sha256 = models.CharField(max_length=64, validators=[validate_sha256])
+    bytes = models.PositiveBigIntegerField()
+    duration_ms = models.PositiveIntegerField()
+    retired_at = models.DateTimeField(null=True, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        db_table = "course_video_dub"
+        ordering = ("video", "language", "-created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("video", "language"),
+                condition=models.Q(retired_at__isnull=True),
+                name="course_video_dub_one_per_language",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.video} · {self.language}"
 
 
 class CourseReleaseStatus(models.TextChoices):

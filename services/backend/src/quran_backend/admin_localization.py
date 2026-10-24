@@ -466,6 +466,7 @@ FIELD_LABELS: dict[str, str] = {
     "portrait_object_key": "Ключ портрета",
     "image_object_key": "Ключ изображения",
     "video_object_key": "Ключ видео",
+    "video": "Видео",
     "show_equalizer": "Показывать эквалайзер",
     "prayer_event": "Намаз",
     "prayer_offset_minutes": "Смещение от намаза, минуты",

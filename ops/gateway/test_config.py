@@ -9,6 +9,8 @@ DOCKERFILE = Path(__file__).with_name("Dockerfile")
 SECURITY_HEADERS = Path(__file__).with_name("security-headers.conf")
 PRODUCTION_COMPOSE = CONFIG.parents[2] / "compose.production.yaml"
 NEXT_CONFIG = CONFIG.parents[2] / "services" / "web" / "next.config.mjs"
+PRODUCTION_CADDYFILE = CONFIG.parents[1] / "production" / "Caddyfile"
+STAGING_CADDYFILE = CONFIG.parents[1] / "staging" / "Caddyfile"
 
 
 def _font_sources(policy: str) -> set[str]:
@@ -100,6 +102,39 @@ class GatewayConfigTests(unittest.TestCase):
         production_compose = PRODUCTION_COMPOSE.read_text(encoding="utf-8")
         self.assertIn("TMPDIR: /var/tmp/iqro-uploads", production_compose)
         self.assertIn("- backend-uploads:/var/tmp/iqro-uploads", production_compose)
+
+    def test_admin_course_video_uploads_stream_to_a_disk_backed_backend(self) -> None:
+        route = self.config.split(
+            "location ~ ^/admin/courses/courselesson/[^/]+/video/(dubs/[a-z]+/)?upload/$ {",
+            maxsplit=1,
+        )[1].split("}", maxsplit=1)[0]
+        self.assertIn("client_max_body_size 500m;", route)
+        self.assertIn("proxy_request_buffering off;", route)
+        self.assertIn("proxy_send_timeout 600s;", route)
+        self.assertIn("proxy_read_timeout 600s;", route)
+        self.assertIn("proxy_pass http://quran_backend;", route)
+        self.assertIn("proxy_set_header X-Forwarded-Proto $quran_forwarded_proto;", route)
+        # Both uploads go through it, and nothing else of the admin does.
+        pattern = re.compile(r"^/admin/courses/courselesson/[^/]+/video/(dubs/[a-z]+/)?upload/$")
+        lesson = "/admin/courses/courselesson/0192f0c4-7a3e-7d2b-9a51-3c1e2f4d5a6b"
+        self.assertTrue(pattern.match(f"{lesson}/video/upload/"))
+        self.assertTrue(pattern.match(f"{lesson}/video/dubs/en/upload/"))
+        self.assertFalse(pattern.match(f"{lesson}/video/poster/"))
+        self.assertFalse(pattern.match(f"{lesson}/change/"))
+
+    def test_caddy_waits_for_admin_uploads_to_be_checked(self) -> None:
+        pattern = re.compile(
+            r"^/admin/(audio/recitationedition/[^/]+/surahs|courses/courselesson/[^/]+/video(/dubs/[a-z]+)?)/upload/$"
+        )
+        for caddyfile in (PRODUCTION_CADDYFILE, STAGING_CADDYFILE):
+            config = caddyfile.read_text(encoding="utf-8")
+            self.assertIn(f"@long_upload path_regexp {pattern.pattern}", config)
+            route = config.split("reverse_proxy @long_upload gateway:8080 {", maxsplit=1)[1]
+            self.assertIn("response_header_timeout 600s", route.split("}", maxsplit=1)[0])
+        self.assertTrue(pattern.match("/admin/audio/recitationedition/abc/surahs/upload/"))
+        self.assertTrue(pattern.match("/admin/courses/courselesson/abc/video/upload/"))
+        self.assertTrue(pattern.match("/admin/courses/courselesson/abc/video/dubs/tr/upload/"))
+        self.assertFalse(pattern.match("/admin/courses/courselesson/abc/video/poster/"))
 
     def test_large_uploads_have_writable_bounded_temp_storage(self) -> None:
         production_compose = PRODUCTION_COMPOSE.read_text(encoding="utf-8")

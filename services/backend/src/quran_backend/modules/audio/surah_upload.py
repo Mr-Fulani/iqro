@@ -20,6 +20,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
@@ -255,7 +256,8 @@ def _check_target(recitation: RecitationEdition, surah_number: int) -> None:
         raise SurahUploadError(f"Сура {surah_number} уже есть в этой записи.")
 
 
-def _probe(ffprobe: str, path: Path, size_bytes: int) -> _Probe:
+def ffprobe_report(ffprobe: str, path: Path, *options: str, unreadable: str) -> dict[str, Any]:
+    """ffprobe's JSON report of the format and the streams `options` select."""
     try:
         completed = subprocess.run(  # noqa: S603 - fixed program, no shell, our temp path
             [
@@ -266,8 +268,7 @@ def _probe(ffprobe: str, path: Path, size_bytes: int) -> _Probe:
                 "json",
                 "-show_format",
                 "-show_streams",
-                "-select_streams",
-                "a:0",
+                *options,
                 str(path),
             ],
             check=True,
@@ -280,7 +281,20 @@ def _probe(ffprobe: str, path: Path, size_bytes: int) -> _Probe:
     except subprocess.TimeoutExpired as exc:
         raise SurahUploadError("Файл проверялся слишком долго.") from exc
     except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:
-        raise SurahUploadError("Файл не читается как аудио. Загрузите MP3.") from exc
+        raise SurahUploadError(unreadable) from exc
+    if not isinstance(report, dict):
+        raise SurahUploadError(unreadable)
+    return report
+
+
+def _probe(ffprobe: str, path: Path, size_bytes: int) -> _Probe:
+    report = ffprobe_report(
+        ffprobe,
+        path,
+        "-select_streams",
+        "a:0",
+        unreadable="Файл не читается как аудио. Загрузите MP3.",
+    )
 
     streams = report.get("streams") or []
     file_format = report.get("format") or {}
