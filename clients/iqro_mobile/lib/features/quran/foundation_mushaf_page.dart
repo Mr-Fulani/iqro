@@ -145,6 +145,7 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
     this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
+    this.onPainted,
     super.key,
   });
   final FoundationMushafPage page;
@@ -157,6 +158,10 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
   final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
+
+  /// Called after the frame that first paints the page with its loaded
+  /// fonts or word images.
+  final VoidCallback? onPainted;
   @override
   ConsumerState<FoundationMushafPageContent> createState() =>
       _FoundationContentState();
@@ -166,6 +171,7 @@ class _FoundationContentState
     extends ConsumerState<FoundationMushafPageContent> {
   Future<FoundationPageResources>? _loading;
   FoundationPageResources? _resources;
+  FoundationPageResources? _painted;
   var _generation = 0;
   @override
   void initState() {
@@ -204,6 +210,14 @@ class _FoundationContentState
     super.dispose();
   }
 
+  void _reportPainted(FoundationPageResources resources) {
+    if (widget.onPainted == null || identical(_painted, resources)) return;
+    _painted = resources;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && identical(_resources, resources)) widget.onPainted?.call();
+    });
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<FoundationPageResources>(
     future: _loading,
@@ -220,6 +234,7 @@ class _FoundationContentState
           snapshot.data != _resources) {
         return const IqroLoading();
       }
+      _reportPainted(snapshot.data!);
       return FoundationPageCanvas(
         page: widget.page,
         resources: snapshot.data!,
