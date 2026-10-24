@@ -1,0 +1,16 @@
+<div class="cvid-upload{% if drop %} cvid-drop{% endif %}" data-video-upload="{{ kind }}" data-url="{% if kind == 'audio' %}{{ upload_url }}{% else %}{{ b.upload_url }}{% endif %}" data-max-mib="{% if kind == 'audio' %}{{ b.max_dub_mib }}{% else %}{{ b.max_video_mib }}{% endif %}"{% if b.video %} data-video="{{ b.video.pk }}" data-duration-ms="{{ b.video.duration_ms }}"{% endif %}>
+  {% if drop %}<p class="cvid-drop-hint">Перетащите файл сюда или выберите его.</p>{% endif %}
+  <div class="cp-row">
+    <label class="button cvid-file">{{ label }}<input type="file" {% if kind == "audio" %}accept="audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav,audio/flac,.mp3,.m4a,.aac,.wav,.flac"{% else %}accept="video/mp4,video/quicktime,.mp4,.mov"{% endif %} data-video-file></label>
+    {% if kind == "video" %}
+      <label>Язык речи
+        <select name="spoken_language" data-video-speech>
+          {% for code, name in b.languages %}<option value="{{ code }}"{% if b.video and code == b.video.spoken_language or not b.video and code == "ru" %} selected{% endif %}>{{ name }}</option>{% endfor %}
+        </select>
+      </label>
+    {% endif %}
+    <button type="button" class="button default" data-video-start hidden>Загрузить</button>
+  </div>
+  <p class="cvid-check" data-video-check aria-live="polite"></p>
+  <progress max="100" value="0" hidden data-video-progress></progress>
+</div>

@@ -18,6 +18,7 @@
   .cv-quote footer { color: var(--body-quiet-color, #666); margin-top: 6px; font-size: 14px; }
   .cv-note { margin: 0 0 12px; padding: 10px 16px; border: 1px solid #e0a800; border-radius: 6px; background: #fff8e1; color: #4d3800; }
   .cv-ar { font-family: "Amiri Quran", "Amiri", "Noto Naskh Arabic", "Geeza Pro", serif; font-size: 1.3em; line-height: 1.9; }
+  .cv-video { display: block; width: 100%; max-width: 720px; height: auto; border-radius: 8px; background: #000; margin: 0 0 4px; }
   .cv-cover { width: 100%; max-width: 720px; aspect-ratio: 16 / 9; border-radius: 8px; object-fit: cover; margin: 0 0 12px; }
   @media (prefers-color-scheme: dark) { .cv-note { background: #3a2f00; color: #ffe8a3; } }
 </style>
@@ -52,6 +53,10 @@
       <section class="cv-lesson">
         <h2>{{ lesson.number }}. {{ lesson.title|default:"Без названия" }}</h2>
         <p class="cv-meta">{{ lesson.minutes }} мин{% if lesson.summary %} · {{ lesson.summary }}{% endif %}</p>
+        {% if lesson.video %}
+          <video class="cv-video" controls playsinline preload="none" src="{{ lesson.video.url }}" poster="{{ lesson.video.poster.small_url }}" width="{{ lesson.video.poster.width }}" height="{{ lesson.video.poster.height }}"></video>
+          <p class="cv-meta">{{ lesson.video_label }}</p>
+        {% endif %}
         {% include "admin/courses/blocks.html" with blocks=lesson.notes %}
         {% if lesson.sources %}
           <h3 class="cv-heading">Источники</h3>
