@@ -19,6 +19,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from quran_backend.modules.alerts.services import course_release_event
 from quran_backend.modules.core.content_revalidation import enqueue_course_change
 from quran_backend.modules.courses.document import (
     MAX_DOCUMENT_BYTES,
@@ -131,6 +132,7 @@ def prepare_release(
             checksum_sha256=checksum(payload),
             bytes=len(encoded),
         )
+    course_release_event(release, "in_review", user, change_note)
     return release
 
 
@@ -206,6 +208,7 @@ def publish_release(release: CourseRelease, user: Any) -> CourseRelease:
     release.published_at = now
     release.save(update_fields=["status", "published_by", "published_at", "updated_at"])
     _go_live(course, release)
+    course_release_event(release, "published", user)
     return release
 
 
@@ -223,6 +226,7 @@ def hide_course(course: Course, user: Any, *, reason: str) -> Course:
     enqueue_course_change(
         action="withdrawn", course=course.slug, version=course.live_release.version
     )
+    course_release_event(course.live_release, "hidden", user, course.hidden_reason)
     return course
 
 
@@ -238,6 +242,7 @@ def show_course(course: Course, user: Any) -> Course:
     enqueue_course_change(
         action="activated", course=course.slug, version=course.live_release.version
     )
+    course_release_event(course.live_release, "shown", user)
     return course
 
 
@@ -267,6 +272,7 @@ def roll_back(
     target.end_reason = ""
     target.save(update_fields=["status", "ended_by", "ended_at", "end_reason", "updated_at"])
     _go_live(course, target)
+    course_release_event(target, "rolled_back", user, reason)
     return target
 
 
