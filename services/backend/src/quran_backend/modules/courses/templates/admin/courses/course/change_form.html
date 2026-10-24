@@ -1,0 +1,103 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% endblock %}
+
+{% block object-tools %}{{ block.super }}
+{% if course_panel %}{% with panel=course_panel %}
+<section class="cp" aria-label="Состояние курса">
+  <div class="cp-row">
+    {% if panel.live and panel.hidden %}
+      <span class="cp-badge cp-badge--hidden">Скрыт с сайта</span>
+      <span>Выпуск {{ panel.live.number }}. Причина: {{ original.hidden_reason }}</span>
+    {% elif panel.live %}
+      <span class="cp-badge cp-badge--live">На сайте выпуск {{ panel.live.number }}</span>
+      <span>опубликован {{ panel.live.published_at|date:"d.m.Y H:i" }}, языки: {{ panel.live.languages|join:", " }}</span>
+    {% else %}
+      <span class="cp-badge cp-badge--off">Курса ещё нет на сайте</span>
+    {% endif %}
+    <a class="button" href="{{ panel.preview_url }}">Предпросмотр</a>
+  </div>
+
+  {% if panel.returned %}
+    <div class="cp-error" role="note"><strong>Выпуск {{ panel.returned.number }} возвращён на доработку.</strong>
+      {% if panel.returned.review_note %}Комментарий рецензента: {{ panel.returned.review_note }}{% else %}Его отозвали с проверки.{% endif %}</div>
+  {% endif %}
+
+  {% if panel.pending %}
+    <div class="cp-row">
+      <span class="cp-badge cp-badge--review">Выпуск {{ panel.pending.number }} — {{ panel.pending.get_status_display|lower }}</span>
+      <a href="{{ panel.pending_url }}">Открыть выпуск {{ panel.pending.number }}</a>
+    </div>
+    {% if panel.pending_outdated %}<p>После подготовки выпуска {{ panel.pending.number }} курс правили: эти правки войдут в следующий выпуск.</p>{% endif %}
+  {% endif %}
+
+  {% if panel.live and panel.changes %}
+    <div class="cp-warning" role="note">
+      <strong>На сайте выпуск {{ panel.live.number }}. Правки увидят после выпуска {{ panel.next_number }}.</strong>
+      <ul>{% for item in panel.changes %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  <div>
+    <h2>Готовность по языкам</h2>
+    <div class="cp-langs">
+      {% for language in panel.languages %}
+        <span>{{ language.label }}</span>
+        {% if language.problems %}
+          <ul class="cp-missing">{% for problem in language.problems %}<li><a href="{{ problem.url }}">{{ problem.text }}</a></li>{% endfor %}</ul>
+        {% else %}
+          <span class="cp-ok">✓ готов</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="cp-row">
+    {% if panel.can_prepare %}
+      {% if panel.unchanged %}<span>Курс не менялся с выпуска {{ panel.live.number }}.</span>{% endif %}
+      <a class="button default" href="{{ panel.submit_url }}">Подготовить выпуск</a>
+    {% endif %}
+    {% if panel.can_publish and panel.live %}
+      {% if panel.hidden %}
+        <form method="post" action="{{ panel.show_url }}">{% csrf_token %}
+          <button type="submit" class="button">Вернуть на сайт</button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ panel.hide_url }}">{% csrf_token %}
+          <label>Причина <input type="text" name="reason" maxlength="300" required></label>
+          <button type="submit" class="button">Скрыть с сайта</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  {% if panel.releases %}
+    <details>
+      <summary>Выпуски ({{ panel.releases|length }})</summary>
+      <table>
+        <thead><tr><th>Выпуск</th><th>Состояние</th><th>Языки</th><th>Что изменилось</th><th></th></tr></thead>
+        <tbody>
+        {% for release in panel.releases %}
+          <tr>
+            <td><a href="{% url 'admin:courses_courserelease_change' release.pk %}">{{ release.number }}</a></td>
+            <td>{{ release.get_status_display }}{% if release.end_reason %} — {{ release.end_reason }}{% endif %}</td>
+            <td>{{ release.languages|join:", " }}</td>
+            <td>{{ release.change_note }}</td>
+            <td>
+              {% if panel.can_publish and release.status == "superseded" and panel.live %}
+                <form method="post" action="{% url 'admin:courses_course_rollback' original.pk release.pk %}">{% csrf_token %}
+                  <input type="text" name="reason" maxlength="300" required placeholder="Причина" aria-label="Причина">
+                  <label><input type="checkbox" name="faulty"> Больше не возвращать к выпуску {{ panel.live.number }}</label>
+                  <button type="submit" class="button">Вернуть выпуск {{ release.number }}</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  {% endif %}
+</section>
+{% endwith %}{% endif %}
+{% endblock %}

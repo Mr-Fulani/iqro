@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}
+<style>
+  .cv-tabs { display: flex; gap: 2px; flex-wrap: wrap; margin: 0 0 16px; border-bottom: 1px solid var(--border-color, #ccc); }
+  .cv-tabs a { padding: 8px 14px; border: 1px solid var(--border-color, #ccc); border-bottom: 0; border-radius: 4px 4px 0 0; background: var(--darkened-bg, #f8f8f8); color: var(--body-fg, #333); }
+  .cv-tabs a[aria-current="page"] { background: var(--body-bg, #fff); font-weight: 700; margin-bottom: -1px; border-bottom: 1px solid var(--body-bg, #fff); }
+  .cv { max-width: 720px; font-size: 16px; line-height: 1.6; }
+  .cv h1 { font-size: 26px; margin: 0 0 8px; }
+  .cv-lesson { border-top: 1px solid var(--hairline-color, #e8e8e8); padding-top: 16px; margin-top: 24px; }
+  .cv-lesson h2 { font-size: 21px; margin: 0 0 4px; background: none; color: var(--body-fg); padding: 0; }
+  .cv-meta { color: var(--body-quiet-color, #666); margin: 0 0 12px; }
+  .cv-heading { font-size: 18px; margin: 20px 0 8px; }
+  .cv p, .cv ul, .cv ol { margin: 0 0 12px; }
+  .cv-quote { margin: 0 0 12px; padding: 10px 16px; border-inline-start: 4px solid #8a6d3b; background: var(--darkened-bg, #f8f8f8); }
+  .cv-quote footer { color: var(--body-quiet-color, #666); margin-top: 6px; font-size: 14px; }
+  .cv-note { margin: 0 0 12px; padding: 10px 16px; border: 1px solid #e0a800; border-radius: 6px; background: #fff8e1; color: #4d3800; }
+  .cv-ar { font-family: "Amiri Quran", "Amiri", "Noto Naskh Arabic", "Geeza Pro", serif; font-size: 1.3em; line-height: 1.9; }
+  .cv-cover { width: 100%; max-width: 720px; aspect-ratio: 16 / 9; border-radius: 8px; object-fit: cover; margin: 0 0 12px; }
+  @media (prefers-color-scheme: dark) { .cv-note { background: #3a2f00; color: #ffe8a3; } }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Начало</a> &rsaquo; <a href="{{ back }}">Назад</a> &rsaquo; Предпросмотр</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <nav class="cv-tabs" aria-label="Язык">
+    {% for tab in tabs %}<a href="?language={{ tab.code }}"{% if tab.active %} aria-current="page"{% endif %}{% if tab.code == "ar" %} lang="ar"{% endif %}>{{ tab.label }}</a>{% endfor %}
+  </nav>
+  {% if missing %}
+    <div class="cp-warning" role="note"><strong>На этом языке курс ещё не готов к выпуску:</strong>
+      <ul>{% for problem in missing %}<li>{{ problem.text }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+  <article class="cv" lang="{{ language }}" dir="{{ direction }}">
+    {% if whole_course %}
+      {% if course.cover %}<img class="cv-cover" src="{{ course.cover.url }}" alt="" width="{{ course.cover.width }}" height="{{ course.cover.height }}">{% endif %}
+      <h1>{{ course.title|default:"Без названия" }}</h1>
+      <p>{{ course.summary }}</p>
+      {% if course.source %}<p class="cv-meta">{{ course.source }}</p>{% endif %}
+    {% endif %}
+    {% for lesson in lessons %}
+      <section class="cv-lesson">
+        <h2>{{ lesson.number }}. {{ lesson.title|default:"Без названия" }}</h2>
+        <p class="cv-meta">{{ lesson.minutes }} мин{% if lesson.summary %} · {{ lesson.summary }}{% endif %}</p>
+        {% include "admin/courses/blocks.html" with blocks=lesson.notes %}
+        {% if lesson.sources %}
+          <h3 class="cv-heading">Источники</h3>
+          <ul>{% for source in lesson.sources %}<li>{{ source }}</li>{% endfor %}</ul>
+        {% endif %}
+      </section>
+    {% empty %}
+      <p>В курсе пока нет тем.</p>
+    {% endfor %}
+  </article>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% for block in blocks %}
+  {% if block.type == "heading" %}
+    <h3 class="cv-heading" dir="{{ block.dir }}">{% include "admin/courses/segments.html" with segments=block.text %}</h3>
+  {% elif block.type == "paragraph" %}
+    <p dir="{{ block.dir }}">{% for line in block.lines %}{% include "admin/courses/segments.html" with segments=line %}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+  {% elif block.type == "list" %}
+    {% if block.ordered %}<ol dir="{{ block.dir }}">{% else %}<ul dir="{{ block.dir }}">{% endif %}
+      {% for item in block.items %}<li>{% include "admin/courses/segments.html" with segments=item %}</li>{% endfor %}
+    {% if block.ordered %}</ol>{% else %}</ul>{% endif %}
+  {% elif block.type == "quote" %}
+    <blockquote class="cv-quote" dir="{{ block.dir }}">
+      {% for line in block.lines %}{% include "admin/courses/segments.html" with segments=line %}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+      {% if block.source %}<footer>— <bdi>{{ block.source }}</bdi></footer>{% endif %}
+    </blockquote>
+  {% elif block.type == "note" %}
+    <aside class="cv-note" dir="{{ block.dir }}"><strong>Важно</strong><br>
+      {% for line in block.lines %}{% include "admin/courses/segments.html" with segments=line %}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+    </aside>
+  {% endif %}
+{% endfor %}
