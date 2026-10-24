@@ -24,6 +24,9 @@ import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/audio/player_backgrounds.dart';
 import '../features/audio/reciter_catalog.dart';
+import '../features/courses/course_models.dart';
+import '../features/courses/course_progress_store.dart';
+import '../features/courses/course_repository.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/dua/dua_topics.dart';
 import '../features/feedback/feedback_models.dart';
@@ -1038,6 +1041,49 @@ final tajweedProgressSyncProvider = Provider<TajweedProgressSync>(
     session: () => ref.read(sessionProvider).valueOrNull,
     onMerged: (course) => ref.invalidate(tajweedCourseProgressProvider(course)),
   ),
+);
+final courseGatewayProvider = Provider<CourseRemoteGateway>(
+  (ref) => ApiCourseGateway(ref.watch(apiClientProvider)),
+);
+final courseRepositoryProvider = Provider<CourseRepository>(
+  (ref) => CourseRepository(
+    remote: ref.watch(courseGatewayProvider),
+    database: ref.watch(localDatabaseProvider),
+  ),
+);
+
+/// The list is asked for each time the section is opened: a new version
+/// means a new document, a course gone from it is hidden.
+final courseCatalogProvider = FutureProvider.autoDispose<CourseCatalog>((ref) {
+  final locale = ref.watch(
+    appPreferencesProvider.select((value) => value.locale),
+  );
+  return ref.watch(courseRepositoryProvider).catalog(locale);
+});
+final courseDocumentProvider = FutureProvider.autoDispose
+    .family<CourseDocument, String>((ref, slug) async {
+      final locale = ref.watch(
+        appPreferencesProvider.select((value) => value.locale),
+      );
+      final catalog = await ref.watch(courseCatalogProvider.future);
+      final course = catalog.course(slug);
+      if (course == null) throw CourseUnavailable(slug);
+      return ref.watch(courseRepositoryProvider).document(course, locale);
+    });
+final courseProgressStoreProvider = Provider<CourseProgressStore>(
+  (ref) => CourseProgressStore(ref.watch(localDatabaseProvider)),
+);
+final courseProgressProvider = FutureProvider.autoDispose
+    .family<CourseProgress, String>((ref, course) {
+      // Progress belongs to the account; switching it reads the new owner's.
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(courseProgressStoreProvider).read(course);
+    });
+
+/// Course covers, kept in the image disk cache after the first view.
+final courseImageProvider = Provider<ImageProvider Function(String url)>(
+  (ref) =>
+      (url) => CachedNetworkImageProvider(url),
 );
 final tajweedPracticeStoreProvider = Provider<TajweedPracticeStore>(
   (ref) => TajweedPracticeStore(ref.watch(localDatabaseProvider)),

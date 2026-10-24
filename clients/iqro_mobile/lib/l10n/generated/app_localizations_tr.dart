@@ -2549,4 +2549,122 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tajweedPracticeAgain => 'Tekrar';
+
+  @override
+  String get coursesTitle => 'Kurslar';
+
+  @override
+  String get coursesSubtitle => 'Özetli konular';
+
+  @override
+  String get coursesOfflineBanner =>
+      'İnternet yok — kaydedilen kurslar gösteriliyor';
+
+  @override
+  String get coursesEmpty => 'Yeni kurslar burada görünecek.';
+
+  @override
+  String get coursesOfflineEmpty =>
+      'Henüz kaydedilmiş kurs yok. Bir kursu internetteyken açın, telefonunuzda kalır.';
+
+  @override
+  String get coursesLoadFailed => 'Kurslar yüklenemedi';
+
+  @override
+  String get coursesContinue => 'Devam et';
+
+  @override
+  String get coursesStart => 'Başla';
+
+  @override
+  String coursesLessonCount(num count) {
+    return '$count konu';
+  }
+
+  @override
+  String coursesHours(int hours) {
+    return '$hours sa';
+  }
+
+  @override
+  String coursesHoursMinutes(int hours, int minutes) {
+    return '$hours sa $minutes dk';
+  }
+
+  @override
+  String coursesStatusStarted(int done, int total) {
+    return 'Başlandı · $done/$total';
+  }
+
+  @override
+  String get coursesStatusCompleted => 'Tamamlandı';
+
+  @override
+  String coursesProgress(int done, int total) {
+    return 'Çalışılan konular: $done/$total';
+  }
+
+  @override
+  String coursesLessonOf(String course, int number, int total) {
+    return '$course · konu $number/$total';
+  }
+
+  @override
+  String get coursesSource => 'Yazar ve kaynaklar';
+
+  @override
+  String get coursesLessons => 'Konular';
+
+  @override
+  String get coursesNotes => 'Ders notu';
+
+  @override
+  String get coursesSources => 'Kaynaklar';
+
+  @override
+  String get coursesImportant => 'Önemli';
+
+  @override
+  String get coursesMarkDone => 'Çalıştım';
+
+  @override
+  String get coursesLessonDone => 'Konu çalışıldı';
+
+  @override
+  String get coursesUnmark => 'İşareti kaldır';
+
+  @override
+  String get coursesPrevious => 'Geri';
+
+  @override
+  String get coursesNext => 'İleri';
+
+  @override
+  String coursesPreviousTopic(String title) {
+    return 'Önceki: $title';
+  }
+
+  @override
+  String coursesNextTopic(String title) {
+    return 'Sonraki: $title';
+  }
+
+  @override
+  String get coursesAllLessons => 'Tüm konular';
+
+  @override
+  String get coursesCompleted => 'Kurs tamamlandı';
+
+  @override
+  String get coursesUpdateApp => 'Uygulamayı güncelleyin';
+
+  @override
+  String get coursesUpdateAppMessage =>
+      'Bu kurs IQRO\'nun daha yeni bir sürümünü gerektiriyor.';
+
+  @override
+  String get coursesUnavailable => 'Bu kurs şu anda kullanılamıyor';
+
+  @override
+  String get coursesLessonNotFound => 'Bu konu kursta yok';
 }

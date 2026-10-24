@@ -837,5 +837,50 @@
       "strokeLinecap": "round",
       "strokeLinejoin": "round"
     }
+  ],
+  "courses": [
+    {
+      "tag": "rect",
+      "x": 18,
+      "y": 8,
+      "width": 36,
+      "height": 42,
+      "rx": 4,
+      "fill": "#D6E5DA"
+    },
+    {
+      "tag": "rect",
+      "x": 10,
+      "y": 14,
+      "width": 36,
+      "height": 42,
+      "rx": 4,
+      "fill": "#0B5D4A"
+    },
+    {
+      "tag": "path",
+      "d": "M17 26 L39 26 M17 34 L39 34 M17 42 L29 42",
+      "fill": "none",
+      "stroke": "#91B4A5",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    },
+    {
+      "tag": "circle",
+      "cx": 46,
+      "cy": 48,
+      "r": 9,
+      "fill": "#D5A34C"
+    },
+    {
+      "tag": "path",
+      "d": "M42 48 L45 51 L50 45",
+      "fill": "none",
+      "stroke": "#FFFDF8",
+      "strokeWidth": 2,
+      "strokeLinecap": "round",
+      "strokeLinejoin": "round"
+    }
   ]
 }
