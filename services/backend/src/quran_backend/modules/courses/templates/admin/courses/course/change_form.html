@@ -16,6 +16,7 @@
       <span class="cp-badge cp-badge--off">Курса ещё нет на сайте</span>
     {% endif %}
     <a class="button" href="{{ panel.preview_url }}">Предпросмотр</a>
+    {% if perms.course_feedback.view_courseanalytics %}<a class="button" href="{% url 'admin:course_feedback_courseanalytics_change' original.pk %}">Аналитика</a>{% endif %}
   </div>
 
   {% if panel.returned %}

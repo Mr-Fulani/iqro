@@ -94,7 +94,15 @@ def test_home_shows_sections_in_order_with_app_groups(owner: User) -> None:
     assert "Разметка таджвида" in body
     # A group named like its section gets no heading of its own.
     feedback = body.split("app-section-feedback")[1].split("app-section-announcements")[0]
-    assert 'class="iqro-group"' not in feedback
+    group_headings = [
+        heading.strip()
+        for heading in re.findall(
+            r'<tr class="iqro-group">\s*<th[^>]*>\s*(?:<a [^>]*>)?([^<]+)', feedback
+        )
+    ]
+    assert "Обратная связь" not in group_headings
+    # Course statistics live in the same section under their own heading.
+    assert "Статистика курсов" in group_headings
     learning = body.split("app-section-learning")[1].split("app-section-feedback")[0]
     assert "/admin/courses/courserelease/" in learning
     assert "/admin/tajweed/tajweedcourseversion/" in learning

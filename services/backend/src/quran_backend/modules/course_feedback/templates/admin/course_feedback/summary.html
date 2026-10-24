@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+{% block extrastyle %}{{ block.super }}{% include "admin/course_feedback/styles.html" %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Начало</a> › Курсы: сводка</div>{% endblock %}
+{% block content %}
+<div class="ca">
+  {% include "admin/course_feedback/periods.html" %}
+  <section aria-label="Все курсы">
+    <table>
+      <thead><tr>
+        <th>Курс</th>
+        <th class="num">Открыли темы</th>
+        <th class="num">Изучили темы</th>
+        <th class="num">Начали курс</th>
+        <th class="num">Дошли до конца</th>
+        <th class="num">«Полезно»</th>
+        <th class="num">Оценка</th>
+        <th class="num">Замечания</th>
+      </tr></thead>
+      <tbody>
+      {% for row in report.rows %}
+        <tr>
+          <td><a href="{{ row.url }}?days={{ report.days }}">{{ row.course }}</a>{% if row.course.hidden_at %} <span class="ca-quiet">(скрыт)</span>{% elif not row.course.live_release_id %} <span class="ca-quiet">(не опубликован)</span>{% endif %}</td>
+          <td class="num">{{ row.opened }}</td>
+          <td class="num">{{ row.completed }}</td>
+          <td class="num">{{ row.started }}</td>
+          <td class="num">{{ row.finished }}{% if row.finished_share is not None %} ({{ row.finished_share }} %){% endif %}</td>
+          <td class="num">{% if row.helpful_share is not None %}{{ row.helpful_share }} % из {{ row.votes }}{% else %}—{% endif %}</td>
+          <td class="num">{% if row.rating_count %}{{ row.rating_average|floatformat:1 }} ★ ({{ row.rating_count }}){% else %}—{% endif %}</td>
+          <td class="num">{{ row.reports }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8">Курсов пока нет.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="ca-quiet">«Начали курс» — открыли первую тему, «Дошли до конца» — отметили изученной последнюю. Оценки — выставленные или изменённые за период.</p>
+  </section>
+</div>
+{% endblock %}

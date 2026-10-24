@@ -298,6 +298,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.share_referrals.apps.ShareReferralsConfig",
     "quran_backend.modules.announcements.apps.AnnouncementsConfig",
     "quran_backend.modules.courses.apps.CoursesConfig",
+    "quran_backend.modules.course_feedback.apps.CourseFeedbackConfig",
     "quran_backend.modules.alerts.apps.AlertsConfig",
 ]
 
@@ -583,6 +584,8 @@ REST_FRAMEWORK: dict[str, Any] = {
         "feedback_write": os.getenv("QURAN_FEEDBACK_WRITE_RATE", "20/hour"),
         "share_event": os.getenv("QURAN_SHARE_EVENT_RATE", "120/hour"),
         "announcement_event": os.getenv("QURAN_ANNOUNCEMENT_EVENT_RATE", "120/minute"),
+        "course_event": os.getenv("QURAN_COURSE_EVENT_RATE", "120/minute"),
+        "course_rating": os.getenv("QURAN_COURSE_RATING_RATE", "20/hour"),
         "referral_link": os.getenv("QURAN_REFERRAL_LINK_RATE", "30/hour"),
         "referral_redirect": os.getenv("QURAN_REFERRAL_REDIRECT_RATE", "300/hour"),
         "prayer_calculate": os.getenv("QURAN_PRAYER_CALCULATE_RATE", "60/minute"),

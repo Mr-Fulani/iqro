@@ -1,0 +1,7 @@
+<nav class="ca-periods" aria-label="Период">
+  <span>Период:</span>
+  {% for days in report.periods %}
+    <a href="?days={{ days }}"{% if days == report.days %} aria-current="page"{% endif %}>{{ days }} дней</a>
+  {% endfor %}
+  <span class="ca-quiet">с {{ report.since|date:"d.m.Y" }} по сегодня. Только суммы за день, без людей и устройств.</span>
+</nav>
