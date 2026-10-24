@@ -20,7 +20,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'course_test_data.dart';
 
 void main() {
-  testWidgets('the «More» tile opens the courses; prayer and tajweed stay', (
+  testWidgets('«More» opens the courses, which hold prayer and tajweed', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -48,8 +48,9 @@ void main() {
         theme: IqroTheme.light(),
       ),
     );
-    expect(find.text('Обучение намазу'), findsOneWidget);
-    expect(find.text('Таджвид'), findsOneWidget);
+    // Both courses open from the catalog, not from tiles of their own.
+    expect(find.text('Обучение намазу'), findsNothing);
+    expect(find.text('Таджвид'), findsNothing);
     final tile = find.byKey(const ValueKey('more-courses'));
     expect(
       tester.getSemantics(tile),

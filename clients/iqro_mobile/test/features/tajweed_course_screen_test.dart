@@ -11,7 +11,6 @@ import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
-import 'package:iqro_mobile/features/more/more_screen.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_home_screen.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_models.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_progress.dart';
@@ -23,50 +22,6 @@ import 'package:just_audio/just_audio.dart';
 import 'tajweed_course_test_data.dart';
 
 void main() {
-  testWidgets('the «More» tile after «Learn to pray» opens the course', (
-    tester,
-  ) async {
-    final semantics = tester.ensureSemantics();
-    final router = GoRouter(
-      routes: <RouteBase>[
-        GoRoute(
-          path: '/',
-          builder: (_, _) => const Scaffold(
-            body: SingleChildScrollView(child: MoreToolsGrid()),
-          ),
-        ),
-        GoRoute(
-          path: '/tajweed',
-          builder: (_, _) => const Scaffold(body: Text('tajweed-opened')),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-    await tester.pumpWidget(
-      MaterialApp.router(
-        routerConfig: router,
-        locale: const Locale('ru'),
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        theme: IqroTheme.light(),
-      ),
-    );
-    final tile = find.byKey(const ValueKey('more-tajweed'));
-    expect(
-      tester.getSemantics(tile),
-      isSemantics(hint: 'Правила чтения по шагам', hasTapAction: true),
-    );
-    final titles = tester
-        .widgetList<Text>(find.byType(Text))
-        .map((text) => text.data)
-        .toList();
-    expect(titles.indexOf('Таджвид'), titles.indexOf('Обучение намазу') + 1);
-    await tester.tap(tile);
-    await tester.pumpAndSettle();
-    expect(find.text('tajweed-opened'), findsOneWidget);
-    semantics.dispose();
-  });
-
   testWidgets('home shows progress and continues the right lesson', (
     tester,
   ) async {
