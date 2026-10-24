@@ -13,6 +13,20 @@ const _isolateEnd = '\u2069';
 /// Arabic script is drawn larger than the text around it, as on the site.
 const _arabicScale = 1.3;
 
+/// The first letter decides, as the server decides a block's `dir`.
+final _strongLetter = RegExp(
+  r'[A-Za-zÀ-ɏͰ-ϿЀ-ӿ'
+  r'؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]',
+);
+final _arabicLetter = RegExp(r'[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
+
+TextDirection _firstStrongDirection(String text) {
+  final letter = _strongLetter.firstMatch(text)?.group(0);
+  return letter != null && _arabicLetter.hasMatch(letter)
+      ? TextDirection.rtl
+      : TextDirection.ltr;
+}
+
 /// The blocks of a lesson's notes. The server has parsed the markup; this
 /// only draws the blocks, each in its own direction.
 class CourseNotesView extends StatelessWidget {
@@ -106,11 +120,17 @@ class _Block extends StatelessWidget {
               NoteText(lines, style: body),
               if (source != null && source.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 8),
-                Text(
-                  '— $source',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontFamilyFallback: const [IqroTheme.arabicFontFamily],
+                // At the block's start edge, in its own direction: «— Коран»
+                // under an Arabic verse keeps the dash before the name.
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    '— $source',
+                    textDirection: _firstStrongDirection(source),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontFamilyFallback: const [IqroTheme.arabicFontFamily],
+                    ),
                   ),
                 ),
               ],

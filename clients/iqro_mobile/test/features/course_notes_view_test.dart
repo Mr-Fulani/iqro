@@ -272,4 +272,34 @@ void main() {
     expect(opening.right, lessThanOrEqualTo(word.left + 1));
     expect(word.right, lessThanOrEqualTo(closing.left + 1));
   });
+  testWidgets('the source of an Arabic verse reads «— Коран»', (tester) async {
+    await _pump(
+      tester,
+      parseNoteBlocks([
+        {
+          'type': 'quote',
+          'dir': 'rtl',
+          'lines': [
+            [
+              {'text': 'نص الآية', 'lang': 'ar'},
+            ],
+          ],
+          'source': 'Коран, 2:183',
+        },
+      ]),
+    );
+    final source = find.text('— Коран, 2:183');
+    final paragraph = tester.renderObject<RenderParagraph>(source);
+    expect(paragraph.textDirection, TextDirection.ltr);
+    final dash = paragraph.getBoxesForSelection(
+      const TextSelection(baseOffset: 0, extentOffset: 1),
+    );
+    final name = paragraph.getBoxesForSelection(
+      const TextSelection(baseOffset: 2, extentOffset: 7),
+    );
+    expect(dash.single.right, lessThanOrEqualTo(name.first.left + 1));
+    // It stays at the start edge of the block, the right one.
+    final width = tester.getSize(find.byType(CourseNotesView)).width;
+    expect(tester.getRect(source).right, closeTo(width - 12, 1));
+  });
 }

@@ -5,7 +5,8 @@
 //     --dart-define=SCREENSHOT_DIR=/tmp/shots
 //
 // Real fonts come from the Flutter SDK (Roboto, Material icons), the app
-// (Amiri Quran) and macOS (SF Arabic for the Arabic interface).
+// (Amiri Quran) and macOS (Georgia for `serif`, SF Arabic for the Arabic
+// interface).
 // Without SCREENSHOT_DIR the test is skipped: CI checks behaviour elsewhere.
 import 'dart:async';
 import 'dart:io';
@@ -51,6 +52,10 @@ Future<void> _loadFonts() async {
       '$material/Roboto-$weight.ttf',
   ]);
   await family('MaterialIcons', ['$material/MaterialIcons-Regular.otf']);
+  await family('serif', <String>[
+    '/System/Library/Fonts/Supplemental/Georgia.ttf',
+    '/System/Library/Fonts/Supplemental/Georgia Bold.ttf',
+  ]);
   await family(IqroTheme.arabicFontFamily, [
     'assets/fonts/AmiriQuran-Regular.ttf',
   ]);
@@ -233,18 +238,22 @@ void main() {
     await _capture(tester, 'app-course-home-ru');
   }, skip: _directory.isEmpty);
 
-  testWidgets('lessons', (tester) async {
+  testWidgets('lesson', (tester) async {
     await _pump(tester, location: '/courses/ramadan/smysl-posta');
     await tester.tap(find.text('Источники'));
     await _capture(tester, 'app-course-lesson-ru');
+  }, skip: _directory.isEmpty);
 
+  testWidgets('studied lesson', (tester) async {
     await _pump(
       tester,
       location: '/courses/ramadan/namerenie',
       studied: {'smysl-posta', 'namerenie'},
     );
     await _capture(tester, 'app-course-lesson-done-ru');
+  }, skip: _directory.isEmpty);
 
+  testWidgets('lesson in the dark theme', (tester) async {
     await _pump(tester, location: '/courses/ramadan/taraviikh', dark: true);
     await _capture(tester, 'app-course-lesson-dark-ru');
   }, skip: _directory.isEmpty);
