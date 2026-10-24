@@ -400,3 +400,49 @@ def test_openapi_declares_device_inventory_and_deletion_lifecycle() -> None:
         "active_session_count",
         "is_current",
     } <= set(inventory_schema["required"])
+
+
+def test_openapi_declares_the_thematic_courses_contract() -> None:
+    schema = cast(
+        dict[str, Any],
+        SchemaGenerator().get_schema(public=True),  # type: ignore[no-untyped-call]
+    )
+
+    paths = schema["paths"]
+    catalog = paths["/api/v1/courses"]["get"]
+    document = paths["/api/v1/courses/{slug}"]["get"]
+    assert set(paths["/api/v1/courses"]) == {"get"}
+    assert set(paths["/api/v1/courses/{slug}"]) == {"get"}
+    assert catalog["parameters"][0]["schema"] == {
+        "type": "string",
+        "enum": ["ar", "en", "ru", "tr"],
+        "default": "ru",
+    }
+    assert set(catalog["responses"]) == {"200", "400"}
+    assert set(document["responses"]) == {"200", "400", "404"}
+    components = schema["components"]["schemas"]
+    assert {
+        "slug",
+        "version",
+        "title",
+        "summary",
+        "source",
+        "cover",
+        "lesson_count",
+        "minutes",
+        "video_minutes",
+        "published_at",
+    } == set(components["CourseCard"]["required"])
+    assert {"schema_version", "course", "lessons"} == set(components["CourseDocument"]["required"])
+    assert "checksum_sha256" in components["CourseHeader"]["required"]
+    lesson = components["CourseLesson"]
+    assert {"slug", "number", "title", "summary", "minutes", "video", "notes", "sources"} == set(
+        lesson["required"]
+    )
+    assert components["CourseNoteBlockTypeEnum"]["enum"] == [
+        "heading",
+        "paragraph",
+        "list",
+        "quote",
+        "note",
+    ]

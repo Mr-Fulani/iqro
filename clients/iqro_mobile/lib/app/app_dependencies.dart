@@ -24,6 +24,7 @@ import '../features/prayer/prayer_widget_service.dart';
 import '../features/quran/mushaf_edition.dart';
 import '../features/quran/quran_repository.dart';
 import '../features/quran/mushaf_offline_repository.dart';
+import '../features/quran/mushaf_thumbnail_cache.dart';
 import '../features/reminders/reminder_repository.dart';
 import '../features/share/share_repository.dart';
 import 'providers.dart';
@@ -38,6 +39,7 @@ class AppDependencies {
     required this.quran,
     required this.mushafRenditions,
     required this.offlineMushaf,
+    required this.mushafThumbnails,
     required this.audio,
     required this.offlineAudio,
     required this.playbackSync,
@@ -63,6 +65,7 @@ class AppDependencies {
   final QuranRepository quran;
   final List<NativeMushafEdition> mushafRenditions;
   final MushafOfflineRepository offlineMushaf;
+  final MushafThumbnailCache mushafThumbnails;
   final AudioRepository audio;
   final AudioOfflineRepository offlineAudio;
   final AudioPlaybackSyncService playbackSync;
@@ -127,6 +130,7 @@ class AppDependencies {
     final notifications = NotificationGateway(database: database);
     await notifications.initialize();
     final offlineMushaf = MushafOfflineRepository(api: api, database: database);
+    final mushafThumbnails = await MushafThumbnailCache.open();
     final offlineAudio = AudioOfflineRepository(api: api, database: database);
     final audio = AudioRepository(
       api: api,
@@ -166,6 +170,7 @@ class AppDependencies {
       quran: quran,
       mushafRenditions: mushafRenditions,
       offlineMushaf: offlineMushaf,
+      mushafThumbnails: mushafThumbnails,
       audio: audio,
       offlineAudio: offlineAudio,
       playbackSync: playbackSync,
@@ -198,6 +203,7 @@ class AppDependencies {
     quranRepositoryProvider.overrideWithValue(quran),
     cachedMushafRenditionsProvider.overrideWith((ref) => mushafRenditions),
     mushafOfflineRepositoryProvider.overrideWithValue(offlineMushaf),
+    mushafThumbnailCacheProvider.overrideWithValue(mushafThumbnails),
     audioRepositoryProvider.overrideWithValue(audio),
     audioOfflineRepositoryProvider.overrideWithValue(offlineAudio),
     audioPlaybackSyncProvider.overrideWithValue(playbackSync),

@@ -1,0 +1,61 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% endblock %}
+
+{% block content %}
+{% if review %}
+<section class="cp" aria-label="Проверка выпуска">
+  <div class="cp-row">
+    <span class="cp-badge cp-badge--review">Выпуск {{ original.number }} — {{ original.get_status_display|lower }}</span>
+    <a href="{{ review.course_url }}">К курсу</a>
+    <span>Как увидят ученики:</span>
+    {% for label, url in review.preview_urls %}<a class="button" href="{{ url }}">{{ label }}</a>{% endfor %}
+  </div>
+  <p><strong>Что изменилось:</strong> {{ original.change_note }}</p>
+  {% if review.first %}
+    <p>Это первый выпуск курса: проверьте все темы.</p>
+  {% elif review.changes %}
+    <ul>{% for item in review.changes %}<li>{{ item }}</li>{% endfor %}</ul>
+  {% else %}
+    <p>Тексты не изменились по сравнению с выпуском {{ original.based_on.number }}.</p>
+  {% endif %}
+
+  {% for lesson in review.diffs %}
+    <details{% if not review.first %} open{% endif %}>
+      <summary>{{ lesson.name }}</summary>
+      {% for field in lesson.fields %}
+        <div><strong>{{ field.label }}</strong></div>
+        <div class="cp-diff">{% for mark, line in field.rows %}{% if mark == "+" %}<div class="is-add">+ {{ line }}</div>{% elif mark == "-" %}<div class="is-del">− {{ line }}</div>{% elif mark == "…" %}<div class="is-gap">…</div>{% else %}<div>&nbsp; {{ line }}</div>{% endif %}{% endfor %}</div>
+      {% endfor %}
+    </details>
+  {% endfor %}
+
+  {% if review.can_review or review.can_withdraw or review.can_publish %}
+    <div class="cp-row">
+      {% if review.can_review %}
+        <form method="post" action="{{ review.urls.sign }}">{% csrf_token %}
+          <input type="text" name="text" maxlength="2000" placeholder="Примечание (необязательно)" aria-label="Примечание">
+          <button type="submit" class="button default">Подписать</button>
+        </form>
+        <form method="post" action="{{ review.urls.return }}">{% csrf_token %}
+          <input type="text" name="text" maxlength="2000" required placeholder="Что исправить" aria-label="Что исправить">
+          <button type="submit" class="button">Вернуть на доработку</button>
+        </form>
+      {% endif %}
+      {% if review.can_withdraw %}
+        <form method="post" action="{{ review.urls.withdraw }}">{% csrf_token %}
+          <button type="submit" class="button">Отозвать с проверки</button>
+        </form>
+      {% endif %}
+      {% if review.can_publish %}
+        <form method="post" action="{{ review.urls.publish }}">{% csrf_token %}
+          <button type="submit" class="button default">Опубликовать</button>
+        </form>
+      {% endif %}
+    </div>
+    {% if review.can_review and review.strict %}<p>Строгий режим: подписывает не тот, кто готовил выпуск или правил его темы.</p>{% endif %}
+  {% endif %}
+</section>
+{% endif %}
+{{ block.super }}
+{% endblock %}

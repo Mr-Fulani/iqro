@@ -46,6 +46,9 @@ class NativeMushafEdition {
   final bool stagingOnly;
   final int pagesCount;
   final int linesPerPage;
+
+  /// Version of the edition's pages: the source checksum of a Quran
+  /// Foundation edition, the published checksum of a raster one.
   final String sourceChecksum;
 
   static NativeMushafEdition? fromFoundation(Map<String, Object?> json) {
@@ -112,6 +115,7 @@ class NativeMushafEdition {
           if (e.value is String) e.key.toString(): e.value as String,
       },
       stagingOnly: json['staging_only'] == true,
+      sourceChecksum: json['checksum_sha256'] as String,
     );
   }
 

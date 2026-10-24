@@ -525,6 +525,103 @@ def test_view_permission_reads_the_course_and_change_permission_edits_it(
     assert _post(editor_client, draft, RUKU, form).status_code == 302
 
 
+VERSIONS = "/admin/salah/salahcourseversion/"
+DOCUMENTS = "/admin/salah/salahcompileddocument/"
+LIST_ACTIONS = ("sign_versions", "publish_versions", "recompile_versions")
+
+
+def _action(client: Client, action: str, version: SalahCourseVersion) -> Any:
+    """The action as the version list sends it, for one selected version."""
+    with (
+        patch(RESOLVER, FakeResolver),
+        patch("quran_backend.modules.salah.importer.enqueue_salah_content_change"),
+        patch("quran_backend.modules.salah.admin.enqueue_salah_content_change"),
+    ):
+        return client.post(
+            VERSIONS, {"action": action, "index": 0, "_selected_action": [version.pk]}
+        )
+
+
+@pytest.mark.django_db
+def test_list_actions_need_the_change_permission(draft: SalahCourseVersion) -> None:
+    reader = _staff_client("view_salahcourseversion")
+    page = reader.get(VERSIONS).content.decode()
+    assert not any(f'value="{action}"' in page for action in LIST_ACTIONS)
+    with patch("quran_backend.modules.salah.admin.compile_version") as recompile:
+        for action in LIST_ACTIONS:
+            _action(reader, action, draft)
+    recompile.assert_not_called()
+    draft.refresh_from_db()
+    assert not draft.is_signed
+
+    editor_client = _staff_client("view_salahcourseversion", "change_salahcourseversion")
+    page = editor_client.get(VERSIONS).content.decode()
+    assert all(f'value="{action}"' in page for action in LIST_ACTIONS)
+    assert _action(editor_client, "sign_versions", draft).status_code == 302
+    draft.refresh_from_db()
+    assert draft.reviewed_by == User.objects.get(
+        email="staff-view_salahcourseversion-change_salahcourseversion@example.test"
+    )
+    _action(editor_client, "publish_versions", draft)
+    draft.refresh_from_db()
+    assert draft.status == SalahPublicationStatus.PUBLISHED
+    with patch("quran_backend.modules.salah.admin.compile_version") as recompile:
+        _action(editor_client, "recompile_versions", draft)
+    recompile.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_a_signed_draft_is_not_signed_again(
+    draft: SalahCourseVersion, owner_client: Client
+) -> None:
+    _action(owner_client, "sign_versions", draft)
+    draft.refresh_from_db()
+    signed_at = draft.reviewed_at
+
+    other = _staff_client("view_salahcourseversion", "change_salahcourseversion")
+    _action(other, "sign_versions", draft)
+    draft.refresh_from_db()
+    assert draft.reviewed_by == User.objects.get(email="owner@example.test")
+    assert draft.reviewed_at == signed_at
+
+
+@pytest.mark.django_db
+def test_a_draft_is_deleted_only_with_the_delete_permission(draft: SalahCourseVersion) -> None:
+    delete = f"{VERSIONS}{draft.pk}/delete/"
+    # The documents' delete permission alone does not delete their version.
+    reader = _staff_client("view_salahcourseversion", "delete_salahcompileddocument")
+    assert 'value="delete_selected"' not in reader.get(VERSIONS).content.decode()
+    assert reader.post(delete, {"post": "yes"}).status_code == 403
+    assert SalahCourseVersion.objects.filter(pk=draft.pk).exists()
+
+    remover = _staff_client(
+        "view_salahcourseversion", "delete_salahcourseversion", "delete_salahcompileddocument"
+    )
+    assert remover.post(delete, {"post": "yes"}).status_code == 302
+    assert not SalahCourseVersion.objects.filter(pk=draft.pk).exists()
+
+
+@pytest.mark.django_db
+def test_documents_of_a_published_or_withdrawn_version_are_not_deleted(
+    draft: SalahCourseVersion, owner_client: Client
+) -> None:
+    document = draft.documents.get(language="ru")
+    assert owner_client.get(f"{DOCUMENTS}{document.pk}/delete/").status_code == 200
+
+    _action(owner_client, "sign_versions", draft)
+    _action(owner_client, "publish_versions", draft)
+    for status in (SalahPublicationStatus.PUBLISHED, SalahPublicationStatus.WITHDRAWN):
+        SalahCourseVersion.objects.filter(pk=draft.pk).update(status=status)
+        assert owner_client.post(f"{VERSIONS}{draft.pk}/delete/").status_code == 403
+        assert (
+            owner_client.post(f"{DOCUMENTS}{document.pk}/delete/", {"post": "yes"}).status_code
+            == 403
+        )
+        selected = {"action": "delete_selected", "_selected_action": [document.pk], "post": "yes"}
+        assert owner_client.post(DOCUMENTS, selected).status_code == 403
+    assert draft.documents.count() == len(SALAH_LANGUAGES)
+
+
 @pytest.mark.django_db
 def test_a_new_draft_copies_the_content_and_files_and_leaves_the_source(
     draft: SalahCourseVersion, owner_client: Client

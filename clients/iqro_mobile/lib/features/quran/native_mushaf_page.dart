@@ -84,6 +84,7 @@ class NativeMushafPage extends ConsumerStatefulWidget {
     this.showPageLabels = true,
     this.onTajweedWord,
     this.tajweedRecitation,
+    this.onPainted,
     super.key,
   });
 
@@ -112,6 +113,10 @@ class NativeMushafPage extends ConsumerStatefulWidget {
   /// The reciter whose timings play a word from a tajweed card.
   final TajweedRecitation? tajweedRecitation;
 
+  /// Called after the frame that first paints the page itself (its text or
+  /// picture), never its loading or error state.
+  final VoidCallback? onPainted;
+
   @override
   ConsumerState<NativeMushafPage> createState() => _NativeMushafPageState();
 }
@@ -125,6 +130,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
   String? _assetCacheKey;
   Future<File>? _assetFile;
   String? _resolutionRefreshKey;
+  String? _paintedRaster;
 
   @override
   void initState() {
@@ -164,6 +170,15 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     widget.controller._setZoom = null;
     _transformationController.dispose();
     super.dispose();
+  }
+
+  /// Raster pages report once their decoded picture is first painted.
+  void _reportPainted(String rasterIdentity) {
+    if (widget.onPainted == null || _paintedRaster == rasterIdentity) return;
+    _paintedRaster = rasterIdentity;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onPainted?.call();
+    });
   }
 
   void _applyZoom(double value) {
@@ -513,6 +528,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                                 : (ayah, position) =>
                                       _openTajweedWord(tajweed, ayah, position),
                             surahs: widget.surahs,
+                            onPainted: widget.onPainted,
                           ),
                         ),
                       ),
@@ -632,12 +648,15 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                                       child: MushafRaster(
                                         file: file,
                                         continuityKey: rasterIdentity,
-                                        builder: (image) => CustomPaint(
-                                          painter: MushafRasterPainter(
-                                            image: image,
-                                            layout: rasterLayout,
-                                          ),
-                                        ),
+                                        builder: (image) {
+                                          _reportPainted(rasterIdentity);
+                                          return CustomPaint(
+                                            painter: MushafRasterPainter(
+                                              image: image,
+                                              layout: rasterLayout,
+                                            ),
+                                          );
+                                        },
                                         fallback: IqroAsyncError(
                                           title: context.l10n.noQuranData,
                                           onRetry: () =>

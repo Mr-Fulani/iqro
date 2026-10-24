@@ -175,9 +175,11 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return False if obj is not None else super().has_change_permission(request, obj)
 
     def has_delete_permission(
-        self, _request: HttpRequest, obj: TajweedCourseVersion | None = None
+        self, request: HttpRequest, obj: TajweedCourseVersion | None = None
     ) -> bool:
-        return obj is None or obj.status == TajweedCourseStatus.DRAFT
+        return super().has_delete_permission(request, obj) and (
+            obj is None or obj.status == TajweedCourseStatus.DRAFT
+        )
 
     @admin.display(boolean=True, description="Подписана")
     def signed(self, obj: TajweedCourseVersion) -> bool:
@@ -571,13 +573,14 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return True
 
     # Actions -------------------------------------------------------------
+    # They change a version: like the editor's sign-off, they need the change permission.
 
-    @admin.action(description="Подписать: тексты проверены")
+    @admin.action(permissions=["change"], description="Подписать: тексты проверены")
     def sign_versions(self, request: HttpRequest, queryset: QuerySet[TajweedCourseVersion]) -> None:
         for version in queryset.filter(status=TajweedCourseStatus.DRAFT, reviewed_at=None):
             self._sign(request, version)
 
-    @admin.action(description="Опубликовать")
+    @admin.action(permissions=["change"], description="Опубликовать")
     def publish_versions(
         self, request: HttpRequest, queryset: QuerySet[TajweedCourseVersion]
     ) -> None:
@@ -589,7 +592,7 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             else:
                 self.message_user(request, f"{version}: опубликована.", messages.SUCCESS)
 
-    @admin.action(description="Пересобрать документы")
+    @admin.action(permissions=["change"], description="Пересобрать документы")
     def recompile_versions(
         self, request: HttpRequest, queryset: QuerySet[TajweedCourseVersion]
     ) -> None:
@@ -611,3 +614,12 @@ class TajweedCourseDocumentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         self, request: HttpRequest, obj: TajweedCourseDocument | None = None
     ) -> bool:
         return False if obj is not None else super().has_change_permission(request, obj)
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: TajweedCourseDocument | None = None
+    ) -> bool:
+        """A published or withdrawn version keeps its documents: the API serves them,
+        and only a draft's are compiled again."""
+        return super().has_delete_permission(request, obj) and (
+            obj is None or obj.version.status == TajweedCourseStatus.DRAFT
+        )
