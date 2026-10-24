@@ -119,14 +119,20 @@ class CourseCatalogScreen extends ConsumerWidget {
   }
 }
 
-class _ResumeCard extends StatelessWidget {
+class _ResumeCard extends ConsumerWidget {
   const _ResumeCard({required this.resume});
 
   final CourseResume resume;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final resumeAt = resume.lesson.video == null
+        ? null
+        : ref
+              .watch(coursePositionsProvider(resume.course.slug))
+              .valueOrNull
+              ?.of(resume.lesson.slug);
     return IqroCard(
       key: const ValueKey('courses-resume'),
       color: theme.colorScheme.primaryContainer,
@@ -142,6 +148,14 @@ class _ResumeCard extends StatelessWidget {
               fontFamilyFallback: const [IqroTheme.arabicFontFamily],
             ),
           ),
+          if (resumeAt != null) ...<Widget>[
+            const SizedBox(height: 3),
+            Text(
+              context.l10n.coursesVideoFrom(courseVideoTime(resumeAt)),
+              key: const ValueKey('courses-resume-video'),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: () => context.push(

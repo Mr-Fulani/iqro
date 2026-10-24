@@ -819,5 +819,16 @@
   "coursesUpdateApp": "Обновите приложение",
   "coursesUpdateAppMessage": "Этот курс сделан для новой версии IQRO.",
   "coursesUnavailable": "Курс сейчас недоступен",
-  "coursesLessonNotFound": "Такой темы нет в курсе"
+  "coursesLessonNotFound": "Такой темы нет в курсе",
+  "coursesVideoMeta": "{duration} · {size} МБ",
+  "coursesVideoWatch": "Смотреть видео «{title}», {meta}",
+  "coursesVideoResumeFrom": "Продолжить с {time}",
+  "coursesVideoFrom": "Видео с {time}",
+  "coursesVideoLanguage": "{language, select, ru{Видео на русском языке} en{Видео на английском языке} ar{Видео на арабском языке} tr{Видео на турецком языке} other{Видео на другом языке}}",
+  "coursesVideoFailed": "Видео не загрузилось",
+  "coursesVideoBack10": "Назад на 10 секунд",
+  "coursesVideoForward10": "Вперёд на 10 секунд",
+  "coursesVideoPosition": "Позиция видео",
+  "coursesVideoFullscreen": "Во весь экран",
+  "coursesVideoExitFullscreen": "Выйти из полноэкранного режима"
 }

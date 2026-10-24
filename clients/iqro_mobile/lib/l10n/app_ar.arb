@@ -815,5 +815,16 @@
   "coursesUpdateApp": "حدّث التطبيق",
   "coursesUpdateAppMessage": "تحتاج هذه الدورة إلى إصدار أحدث من IQRO.",
   "coursesUnavailable": "هذه الدورة غير متاحة حاليًا",
-  "coursesLessonNotFound": "هذا الموضوع غير موجود في الدورة"
+  "coursesLessonNotFound": "هذا الموضوع غير موجود في الدورة",
+  "coursesVideoMeta": "{duration} · {size} ميغابايت",
+  "coursesVideoWatch": "مشاهدة فيديو «{title}»، {meta}",
+  "coursesVideoResumeFrom": "المتابعة من {time}",
+  "coursesVideoFrom": "الفيديو من {time}",
+  "coursesVideoLanguage": "{language, select, ru{الفيديو باللغة الروسية} en{الفيديو باللغة الإنجليزية} ar{الفيديو باللغة العربية} tr{الفيديو باللغة التركية} other{الفيديو بلغة أخرى}}",
+  "coursesVideoFailed": "تعذّر تحميل الفيديو",
+  "coursesVideoBack10": "رجوع 10 ثوانٍ",
+  "coursesVideoForward10": "تقديم 10 ثوانٍ",
+  "coursesVideoPosition": "موضع الفيديو",
+  "coursesVideoFullscreen": "ملء الشاشة",
+  "coursesVideoExitFullscreen": "الخروج من ملء الشاشة"
 }

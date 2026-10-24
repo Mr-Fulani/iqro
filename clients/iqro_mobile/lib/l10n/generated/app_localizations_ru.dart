@@ -2737,4 +2737,54 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get coursesLessonNotFound => 'Такой темы нет в курсе';
+
+  @override
+  String coursesVideoMeta(String duration, int size) {
+    return '$duration · $size МБ';
+  }
+
+  @override
+  String coursesVideoWatch(String title, String meta) {
+    return 'Смотреть видео «$title», $meta';
+  }
+
+  @override
+  String coursesVideoResumeFrom(String time) {
+    return 'Продолжить с $time';
+  }
+
+  @override
+  String coursesVideoFrom(String time) {
+    return 'Видео с $time';
+  }
+
+  @override
+  String coursesVideoLanguage(String language) {
+    String _temp0 = intl.Intl.selectLogic(language, {
+      'ru': 'Видео на русском языке',
+      'en': 'Видео на английском языке',
+      'ar': 'Видео на арабском языке',
+      'tr': 'Видео на турецком языке',
+      'other': 'Видео на другом языке',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get coursesVideoFailed => 'Видео не загрузилось';
+
+  @override
+  String get coursesVideoBack10 => 'Назад на 10 секунд';
+
+  @override
+  String get coursesVideoForward10 => 'Вперёд на 10 секунд';
+
+  @override
+  String get coursesVideoPosition => 'Позиция видео';
+
+  @override
+  String get coursesVideoFullscreen => 'Во весь экран';
+
+  @override
+  String get coursesVideoExitFullscreen => 'Выйти из полноэкранного режима';
 }

@@ -1275,6 +1275,12 @@ class AudioController extends StateNotifier<IqroAudioState> {
     return _pauseForNavigation();
   }
 
+  /// A lesson video starts: reading, dua and prayer audio all pause.
+  Future<void> pauseForLessonVideo() {
+    _navigationEpoch += 1;
+    return _pauseForNavigation();
+  }
+
   Future<void> pauseForQuranExit() => _pauseContextOnExit(
     (current) =>
         current.standalone == null &&

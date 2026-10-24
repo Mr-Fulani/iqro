@@ -2667,4 +2667,54 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get coursesLessonNotFound => 'Bu konu kursta yok';
+
+  @override
+  String coursesVideoMeta(String duration, int size) {
+    return '$duration · $size MB';
+  }
+
+  @override
+  String coursesVideoWatch(String title, String meta) {
+    return '«$title» videosunu izle, $meta';
+  }
+
+  @override
+  String coursesVideoResumeFrom(String time) {
+    return '$time konumundan devam et';
+  }
+
+  @override
+  String coursesVideoFrom(String time) {
+    return 'Video $time konumundan';
+  }
+
+  @override
+  String coursesVideoLanguage(String language) {
+    String _temp0 = intl.Intl.selectLogic(language, {
+      'ru': 'Rusça video',
+      'en': 'İngilizce video',
+      'ar': 'Arapça video',
+      'tr': 'Türkçe video',
+      'other': 'Başka dilde video',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get coursesVideoFailed => 'Video yüklenemedi';
+
+  @override
+  String get coursesVideoBack10 => '10 saniye geri';
+
+  @override
+  String get coursesVideoForward10 => '10 saniye ileri';
+
+  @override
+  String get coursesVideoPosition => 'Video konumu';
+
+  @override
+  String get coursesVideoFullscreen => 'Tam ekran';
+
+  @override
+  String get coursesVideoExitFullscreen => 'Tam ekrandan çık';
 }

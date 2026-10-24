@@ -4847,6 +4847,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This topic is not in the course'**
   String get coursesLessonNotFound;
+
+  /// No description provided for @coursesVideoMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'{duration} · {size} MB'**
+  String coursesVideoMeta(String duration, int size);
+
+  /// No description provided for @coursesVideoWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the video «{title}», {meta}'**
+  String coursesVideoWatch(String title, String meta);
+
+  /// No description provided for @coursesVideoResumeFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue from {time}'**
+  String coursesVideoResumeFrom(String time);
+
+  /// No description provided for @coursesVideoFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Video from {time}'**
+  String coursesVideoFrom(String time);
+
+  /// No description provided for @coursesVideoLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'{language, select, ru{Video in Russian} en{Video in English} ar{Video in Arabic} tr{Video in Turkish} other{Video in another language}}'**
+  String coursesVideoLanguage(String language);
+
+  /// No description provided for @coursesVideoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The video did not load'**
+  String get coursesVideoFailed;
+
+  /// No description provided for @coursesVideoBack10.
+  ///
+  /// In en, this message translates to:
+  /// **'Back 10 seconds'**
+  String get coursesVideoBack10;
+
+  /// No description provided for @coursesVideoForward10.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward 10 seconds'**
+  String get coursesVideoForward10;
+
+  /// No description provided for @coursesVideoPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Video position'**
+  String get coursesVideoPosition;
+
+  /// No description provided for @coursesVideoFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get coursesVideoFullscreen;
+
+  /// No description provided for @coursesVideoExitFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit full screen'**
+  String get coursesVideoExitFullscreen;
 }
 
 class _AppLocalizationsDelegate

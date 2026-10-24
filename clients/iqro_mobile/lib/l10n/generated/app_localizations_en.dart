@@ -2711,4 +2711,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coursesLessonNotFound => 'This topic is not in the course';
+
+  @override
+  String coursesVideoMeta(String duration, int size) {
+    return '$duration · $size MB';
+  }
+
+  @override
+  String coursesVideoWatch(String title, String meta) {
+    return 'Watch the video «$title», $meta';
+  }
+
+  @override
+  String coursesVideoResumeFrom(String time) {
+    return 'Continue from $time';
+  }
+
+  @override
+  String coursesVideoFrom(String time) {
+    return 'Video from $time';
+  }
+
+  @override
+  String coursesVideoLanguage(String language) {
+    String _temp0 = intl.Intl.selectLogic(language, {
+      'ru': 'Video in Russian',
+      'en': 'Video in English',
+      'ar': 'Video in Arabic',
+      'tr': 'Video in Turkish',
+      'other': 'Video in another language',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get coursesVideoFailed => 'The video did not load';
+
+  @override
+  String get coursesVideoBack10 => 'Back 10 seconds';
+
+  @override
+  String get coursesVideoForward10 => 'Forward 10 seconds';
+
+  @override
+  String get coursesVideoPosition => 'Video position';
+
+  @override
+  String get coursesVideoFullscreen => 'Full screen';
+
+  @override
+  String get coursesVideoExitFullscreen => 'Exit full screen';
 }

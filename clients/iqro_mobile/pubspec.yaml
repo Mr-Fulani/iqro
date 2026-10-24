@@ -64,6 +64,7 @@ dependencies:
   workmanager: ^0.10.9
   home_widget: 0.9.4
   video_player: 2.11.1
+  wakelock_plus: 1.7.0
   geomag: ^0.3.0
   webview_flutter: ^4.14.1
   url_launcher: ^6.3.3

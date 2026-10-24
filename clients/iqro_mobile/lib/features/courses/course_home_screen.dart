@@ -88,7 +88,13 @@ class _CourseContents extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
           ],
-          _ProgressCard(document: document, progress: progress),
+          _ProgressCard(
+            document: document,
+            progress: progress,
+            positions:
+                ref.watch(coursePositionsProvider(info.slug)).valueOrNull ??
+                const CourseVideoPositions(),
+          ),
           const SizedBox(height: 24),
           IqroSectionHeader(title: context.l10n.coursesLessons),
           const SizedBox(height: 10),
@@ -108,10 +114,15 @@ class _CourseContents extends ConsumerWidget {
 }
 
 class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({required this.document, required this.progress});
+  const _ProgressCard({
+    required this.document,
+    required this.progress,
+    required this.positions,
+  });
 
   final CourseDocument document;
   final CourseProgress progress;
+  final CourseVideoPositions positions;
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +130,7 @@ class _ProgressCard extends StatelessWidget {
     final total = document.lessons.length;
     final done = progress.doneCount(document);
     final resume = progress.resumeLesson(document);
+    final resumeAt = resume?.video == null ? null : positions.of(resume!.slug);
     return IqroCard(
       color: theme.colorScheme.primaryContainer,
       borderColor: Colors.transparent,
@@ -148,7 +160,11 @@ class _ProgressCard extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.play_arrow_rounded),
                 label: Text(
-                  progress.isEmpty
+                  resumeAt != null
+                      ? context.l10n.coursesVideoResumeFrom(
+                          courseVideoTime(resumeAt),
+                        )
+                      : progress.isEmpty
                       ? context.l10n.coursesStart
                       : context.l10n.coursesContinue,
                 ),
