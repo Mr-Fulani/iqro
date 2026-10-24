@@ -528,11 +528,13 @@ def test_published_versions_are_read_only_in_the_admin(
     version, _ = imported
     model_admin = admin.site._registry[SalahCourseVersion]
     assert isinstance(model_admin, SalahCourseVersionAdmin)
+    request = RequestFactory().get("/admin/")
+    request.user = User.objects.create_superuser(email="owner@example.test", password="x" * 16)
     assert not model_admin.has_add_permission(None)  # type: ignore[arg-type]
     assert not model_admin.has_change_permission(None, version)  # type: ignore[arg-type]
-    assert model_admin.has_delete_permission(None, version)  # type: ignore[arg-type]
+    assert model_admin.has_delete_permission(request, version)
     version.status = SalahPublicationStatus.WITHDRAWN
-    assert not model_admin.has_delete_permission(None, version)  # type: ignore[arg-type]
+    assert not model_admin.has_delete_permission(request, version)
     assert "Начальный такбир" in model_admin.review_preview(version)
     assert SalahCompiledDocument.objects.filter(version=version).count() == 4
 
