@@ -206,9 +206,10 @@ def test_course_page_shows_readiness_and_changes_after_release(
     page = owner_client.get(f"/admin/courses/course/{course.pk}/change/").content.decode()
     assert "Курса ещё нет на сайте" in page
     assert "Подготовить выпуск" in page
-    assert "Нет названия курса." in page  # English is not written yet
+    assert "не переведён — на этом языке курса не видно" in page  # English is not written yet
+    assert "Добавить ещё одну тему" in page
     assert 'dir="rtl"' in page  # Arabic fields
-    assert "RU ✓ · العربية — · EN — · TR —" in page
+    assert "RU\u00a0✓ · AR\u00a0— · EN\u00a0— · TR\u00a0—" in page
 
     _published(course, owner)
     CourseLesson.objects.filter(slug="namerenie").update(notes_ru="Новое.")
@@ -219,6 +220,12 @@ def test_course_page_shows_readiness_and_changes_after_release(
     assert "Скрыть с сайта" in page
     # The address is fixed once a release exists.
     assert 'name="slug"' not in page.split("lessons-TOTAL_FORMS")[0]
+
+    prepare_release(course, owner, languages=["ru"], change_note="Тема 2")
+    page = owner_client.get(f"/admin/courses/course/{course.pk}/change/").content.decode()
+    assert "Выпуск 2 — на проверке" in page
+    assert "Правки увидят после выпуска 2" in page
+    assert "Подготовить выпуск" not in page
 
 
 @pytest.mark.django_db

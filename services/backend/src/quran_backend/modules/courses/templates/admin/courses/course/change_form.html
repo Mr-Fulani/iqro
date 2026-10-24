@@ -2,7 +2,7 @@
 
 {% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% endblock %}
 
-{% block object-tools %}{{ block.super }}
+{% block content %}
 {% if course_panel %}{% with panel=course_panel %}
 <section class="cp" aria-label="Состояние курса">
   <div class="cp-row">
@@ -43,7 +43,13 @@
     <div class="cp-langs">
       {% for language in panel.languages %}
         <span>{{ language.label }}</span>
-        {% if language.problems %}
+        {% if language.untranslated %}
+          <span>не переведён — на этом языке курса не видно</span>
+        {% elif language.problems|length > 3 %}
+          <details class="cp-missing"><summary>Не готов: замечаний {{ language.problems|length }}</summary>
+            <ul>{% for problem in language.problems %}<li><a href="{{ problem.url }}">{{ problem.text }}</a></li>{% endfor %}</ul>
+          </details>
+        {% elif language.problems %}
           <ul class="cp-missing">{% for problem in language.problems %}<li><a href="{{ problem.url }}">{{ problem.text }}</a></li>{% endfor %}</ul>
         {% else %}
           <span class="cp-ok">✓ готов</span>
@@ -100,4 +106,5 @@
   {% endif %}
 </section>
 {% endwith %}{% endif %}
+{{ block.super }}
 {% endblock %}

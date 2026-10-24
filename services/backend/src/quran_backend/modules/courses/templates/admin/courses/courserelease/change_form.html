@@ -2,7 +2,7 @@
 
 {% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% endblock %}
 
-{% block object-tools %}{{ block.super }}
+{% block content %}
 {% if review %}
 <section class="cp" aria-label="Проверка выпуска">
   <div class="cp-row">
@@ -57,4 +57,5 @@
   {% endif %}
 </section>
 {% endif %}
+{{ block.super }}
 {% endblock %}

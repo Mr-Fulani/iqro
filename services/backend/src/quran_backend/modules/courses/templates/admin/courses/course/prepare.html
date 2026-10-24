@@ -4,13 +4,13 @@
 {% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% endblock %}
 
 {% block breadcrumbs %}
-<div class="breadcrumbs">
-  <a href="{% url 'admin:index' %}">Начало</a>
-  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
-  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
-  &rsaquo; <a href="{% url opts|admin_urlname:'change' original.pk %}">{{ original }}</a>
-  &rsaquo; Подготовить выпуск
-</div>
+<ol class="breadcrumbs">
+<li><a href="{% url 'admin:index' %}">Начало</a></li>
+<li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a></li>
+<li><a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a></li>
+<li><a href="{% url opts|admin_urlname:'change' original.pk %}">{{ original }}</a></li>
+<li aria-current="page">Подготовить выпуск</li>
+</ol>
 {% endblock %}
 
 {% block content %}
@@ -32,7 +32,9 @@
             <input type="checkbox" name="languages" value="{{ language.code }}"{% if language.checked %} checked{% endif %}{% if not language.ready %} disabled{% endif %}>
             {{ language.label }}
           </label>
-          {% if not language.ready %}
+          {% if language.untranslated %}
+            <span>— не переведён</span>
+          {% elif not language.ready %}
             <ul class="cp-missing">{% for problem in language.problems %}<li>{{ problem.text }}</li>{% endfor %}</ul>
           {% endif %}
         </div>

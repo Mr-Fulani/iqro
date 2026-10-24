@@ -133,6 +133,13 @@ def readiness(snapshot: dict[str, Any]) -> dict[str, list[Problem]]:
     return result
 
 
+def untranslated(snapshot: dict[str, Any], language: str) -> bool:
+    """Nothing of the course is written on this language yet."""
+    texts = [snapshot["course"][field][language] for field in COURSE_TEXTS]
+    texts += [lesson[field][language] for lesson in snapshot["lessons"] for field in LESSON_TEXTS]
+    return not any(text.strip() for text in texts)
+
+
 def ready_languages(snapshot: dict[str, Any]) -> list[str]:
     return [language for language, problems in readiness(snapshot).items() if not problems]
 

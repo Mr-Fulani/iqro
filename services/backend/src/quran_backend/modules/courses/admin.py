@@ -10,6 +10,7 @@ only a hint.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable, Sequence
 from typing import Any, ClassVar, cast
@@ -17,6 +18,7 @@ from typing import Any, ClassVar, cast
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
+from django.contrib.admin.helpers import InlineAdminFormSet
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.db.models import QuerySet
@@ -43,6 +45,7 @@ from quran_backend.modules.courses.document import (
     checksum,
     editor_languages,
     readiness,
+    untranslated,
 )
 from quran_backend.modules.courses.media import CourseCoverError, upload_course_cover
 from quran_backend.modules.courses.models import (
@@ -226,6 +229,14 @@ class CourseLessonFormSet(BaseInlineFormSet):  # type: ignore[type-arg]
         return {**super().get_form_kwargs(index), "released": self._released}
 
 
+class LessonInlineAdminFormSet(InlineAdminFormSet):
+    def inline_formset_data(self) -> str:
+        # Django says «Добавить еще один Тема»; the lesson is feminine.
+        data = json.loads(super().inline_formset_data())
+        data["options"]["addText"] = "Добавить ещё одну тему"
+        return json.dumps(data, ensure_ascii=False)
+
+
 class CourseLessonInline(admin.TabularInline):  # type: ignore[type-arg]
     model = CourseLesson
     form = CourseLessonForm
@@ -244,8 +255,13 @@ class CourseLessonInline(admin.TabularInline):  # type: ignore[type-arg]
         if obj._state.adding:
             return "—"
         return " · ".join(
-            TAB_LABELS[language]
-            + (" ✓" if obj.text("title", language) and obj.text("notes", language) else " —")
+            language.upper()
+            # No-break spaces keep a code with its mark on one line.
+            + (
+                "\u00a0✓"
+                if obj.text("title", language) and obj.text("notes", language)
+                else "\u00a0—"
+            )
             for language in editor_languages()
         )
 
@@ -339,6 +355,12 @@ class CourseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def get_queryset(self, request: HttpRequest) -> QuerySet[Course]:
         return super().get_queryset(request).select_related("live_release")
 
+    def get_inline_formsets(self, *args: Any, **kwargs: Any) -> list[Any]:
+        formsets = super().get_inline_formsets(*args, **kwargs)
+        for formset in formsets:
+            formset.__class__ = LessonInlineAdminFormSet
+        return formsets
+
     # Status panel -------------------------------------------------------
 
     def change_view(
@@ -426,6 +448,7 @@ class CourseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                         "label": LANGUAGE_NAMES[language],
                         "ready": not missing[language],
                         "problems": missing[language],
+                        "untranslated": untranslated(snapshot, language),
                         "checked": language in chosen and not missing[language],
                     }
                     for language in editor_languages()
@@ -539,8 +562,12 @@ def course_panel(request: HttpRequest, course: Course) -> dict[str, Any]:
     returned = latest if latest and latest.status == CourseReleaseStatus.RETURNED else None
     change_url = reverse("admin:courses_course_change", args=[course.pk])
     missing = readiness(snapshot)
-    next_number = (latest.number if latest else 0) + 1
     draft_checksum = checksum(snapshot)
+    # The edits reach students with the release under review, or else with the next one.
+    if pending is not None and pending.checksum_sha256 == draft_checksum:
+        next_number = pending.number
+    else:
+        next_number = (latest.number if latest else 0) + 1
     return {
         "live": live,
         "hidden": course.hidden_at is not None,
@@ -557,6 +584,7 @@ def course_panel(request: HttpRequest, course: Course) -> dict[str, Any]:
             {
                 "label": LANGUAGE_NAMES[language],
                 "code": language,
+                "untranslated": untranslated(snapshot, language),
                 "problems": [
                     {
                         "text": problem.text,
@@ -676,6 +704,7 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if lesson is not None:
             siblings = list(lesson.course.lessons.order_by("position", "created_at"))
             index = next(i for i, item in enumerate(siblings) if item.pk == lesson.pk)
+            context["title"] = "Изменить тему"
             context["lesson_nav"] = {
                 "number": index + 1,
                 "count": len(siblings),
