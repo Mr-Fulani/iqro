@@ -1,13 +1,20 @@
+# Operator-facing text is intentionally Russian.
+# ruff: noqa: RUF001
 from __future__ import annotations
 
 from typing import Any
 
 from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.core.exceptions import ValidationError
+from django.db.models import QuerySet
 from django.http import HttpRequest
+from django.urls import reverse
+from django.utils.html import format_html
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
+from quran_backend.modules.courses.models import Course, CourseLesson
 from quran_backend.modules.feedback.models import (
     FeedbackAudit,
     FeedbackAuthorType,
@@ -90,6 +97,9 @@ class FeedbackContextInline(admin.StackedInline):  # type: ignore[type-arg]
         "recitation_id",
         "audio_track_id",
         "playback_ms",
+        "course_slug",
+        "lesson_slug",
+        "slide_number",
         "ad_campaign_id",
         "ad_creative_id",
         "route",
@@ -111,6 +121,64 @@ class FeedbackContextInline(admin.StackedInline):  # type: ignore[type-arg]
         return False
 
 
+class CourseFilter(admin.SimpleListFilter):
+    title = "курс"
+    parameter_name = "course"
+
+    def lookups(self, _request: HttpRequest, _model_admin: Any) -> list[tuple[str, str]]:
+        return [(course.slug, str(course)) for course in Course.objects.all()]
+
+    def queryset(
+        self, _request: HttpRequest, queryset: QuerySet[FeedbackTicket]
+    ) -> QuerySet[FeedbackTicket]:
+        value = self.value()
+        return queryset.filter(context__course_slug=value) if value else queryset
+
+
+def course_lesson_links(ticket: FeedbackTicket) -> str:
+    """Where a course report points: the lesson in the admin and on the site."""
+    context = getattr(ticket, "context", None)
+    if context is None or not context.course_slug:
+        return "—"
+    path = "/".join(part for part in (context.course_slug, context.lesson_slug) if part)
+    site = f"{settings.PUBLIC_SITE_URL}/{ticket.locale}/courses/{path}"
+    lesson = (
+        CourseLesson.objects.filter(
+            course__slug=context.course_slug, slug=context.lesson_slug
+        ).first()
+        if context.lesson_slug
+        else None
+    )
+    course = Course.objects.filter(slug=context.course_slug).first()
+    if lesson is not None:
+        admin_link = format_html(
+            '<a href="{}">Тема «{}» в админке</a>',
+            reverse("admin:courses_courselesson_change", args=[lesson.pk]),
+            lesson,
+        )
+    elif course is not None:
+        admin_link = format_html(
+            '<a href="{}">Курс «{}» в админке</a>',
+            reverse("admin:courses_course_change", args=[course.pk]),
+            course,
+        )
+    else:
+        admin_link = format_html("{}", "Курса или темы уже нет")
+    details = [
+        f"выпуск {context.content_version}" if context.content_version else "",
+        f"видео {context.playback_ms // 60000}:{context.playback_ms // 1000 % 60:02d}"
+        if context.playback_ms is not None
+        else "",
+        f"слайд {context.slide_number}" if context.slide_number else "",
+    ]
+    return format_html(
+        '{} · <a href="{}" target="_blank" rel="noopener">на сайте</a>{}',
+        admin_link,
+        site,
+        "".join(f" · {item}" for item in details if item),
+    )
+
+
 @admin.register(FeedbackTicket)
 class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     form = FeedbackTicketAdminForm
@@ -124,7 +192,7 @@ class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "sla_response_due_at",
         "created_at",
     )
-    list_filter = ("category", "status", "priority", "team", "channel", "locale")
+    list_filter = ("category", "status", "priority", "team", "channel", "locale", CourseFilter)
     search_fields = ("=public_id", "subject", "=reporter__id", "contact_email")
     ordering = ("-created_at",)
     list_select_related = ("reporter", "assignee")
@@ -147,6 +215,7 @@ class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "last_public_message_at",
         "created_at",
         "updated_at",
+        "course_lesson",
     )
     fieldsets = (
         (
@@ -187,6 +256,17 @@ class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
     inlines = (FeedbackContextInline,)
     actions = ("escalate_to_critical",)
+
+    def get_fieldsets(self, request: HttpRequest, obj: FeedbackTicket | None = None) -> Any:
+        fieldsets = super().get_fieldsets(request, obj)
+        context = getattr(obj, "context", None) if obj is not None else None
+        if context is None or not context.course_slug:
+            return fieldsets
+        return (("Тема курса", {"fields": ("course_lesson",)}), *fieldsets)
+
+    @admin.display(description="Где замечание")
+    def course_lesson(self, obj: FeedbackTicket) -> str:
+        return course_lesson_links(obj)
 
     def has_add_permission(self, _request: HttpRequest) -> bool:
         return False
