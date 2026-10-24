@@ -2761,4 +2761,83 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coursesVideoExitFullscreen => 'Exit full screen';
+
+  @override
+  String get coursesShare => 'Share';
+
+  @override
+  String get coursesVoteQuestion => 'Was this lesson helpful?';
+
+  @override
+  String get coursesVoteHelpful => 'Helpful';
+
+  @override
+  String get coursesVoteNotHelpful => 'Not really';
+
+  @override
+  String get coursesVoteThanks => 'Thank you for the feedback';
+
+  @override
+  String get coursesRatingQuestion => 'How helpful was the course?';
+
+  @override
+  String coursesRatingStars(int stars) {
+    return '$stars of 5';
+  }
+
+  @override
+  String get coursesRatingComment => 'Comment (optional)';
+
+  @override
+  String get coursesSend => 'Send';
+
+  @override
+  String coursesRatingThanks(int stars) {
+    return 'Thank you! Your rating: $stars of 5';
+  }
+
+  @override
+  String get coursesRatingChange => 'Change';
+
+  @override
+  String get coursesSendFailed => 'Could not send. Please try again.';
+
+  @override
+  String get coursesSendTooOften =>
+      'Too many attempts. Please try again later.';
+
+  @override
+  String get coursesReportError => 'Report an error';
+
+  @override
+  String get coursesReportType => 'Type of issue';
+
+  @override
+  String get coursesReportReligious => 'Error in religious content';
+
+  @override
+  String get coursesReportTypo => 'Typo or translation';
+
+  @override
+  String get coursesReportTechnical => 'The video or page does not work';
+
+  @override
+  String get coursesReportOther => 'Other';
+
+  @override
+  String get coursesReportMessage => 'Description of the issue';
+
+  @override
+  String get coursesReportMessageRequired => 'Describe the issue';
+
+  @override
+  String get coursesReportEmail => 'Email for a reply (optional)';
+
+  @override
+  String coursesReportThanks(String id) {
+    return 'Thank you! Request number $id';
+  }
+
+  @override
+  String get coursesReportOpen => 'Open the request';
 }

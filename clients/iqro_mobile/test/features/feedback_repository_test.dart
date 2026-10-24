@@ -37,6 +37,51 @@ void main() {
 
     expect(api.posted?['locale'], 'tr');
   });
+
+  test(
+    'a lesson report carries the course and the document language',
+    () async {
+      final sqlDatabase = await databaseFactoryFfi.openDatabase(
+        inMemoryDatabasePath,
+      );
+      addTearDown(sqlDatabase.close);
+      final accountScope = AccountScope.forTesting();
+      final api = _RecordingApi(
+        AuthRepository(config: _config, accountScope: accountScope),
+      );
+      final repository = FeedbackRepository(
+        api: api,
+        database: LocalDatabase.forTesting(
+          sqlDatabase,
+          accountScope: accountScope,
+        ),
+        locale: () => 'tr',
+      );
+
+      await repository.create(
+        category: 'religious_content',
+        subject: 'Рамадан · 2. Намерение',
+        message: 'Неверный аят',
+        route: '/courses/ramadan/namerenie',
+        locale: 'ru',
+        context: const <String, Object?>{
+          'course_slug': 'ramadan',
+          'lesson_slug': 'namerenie',
+          'content_version': '1',
+          'playback_ms': 252000,
+        },
+      );
+
+      expect(api.posted?['locale'], 'ru');
+      final context = api.posted?['context']! as Map<String, Object?>;
+      expect(context, containsPair('course_slug', 'ramadan'));
+      expect(context, containsPair('lesson_slug', 'namerenie'));
+      expect(context, containsPair('content_version', '1'));
+      expect(context, containsPair('playback_ms', 252000));
+      expect(context, containsPair('route', '/courses/ramadan/namerenie'));
+      expect(context, contains('client_platform'));
+    },
+  );
 }
 
 const _config = AppConfig(

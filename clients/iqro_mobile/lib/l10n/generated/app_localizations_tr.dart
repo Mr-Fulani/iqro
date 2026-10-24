@@ -2717,4 +2717,83 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get coursesVideoExitFullscreen => 'Tam ekrandan çık';
+
+  @override
+  String get coursesShare => 'Paylaş';
+
+  @override
+  String get coursesVoteQuestion => 'Bu konu faydalı oldu mu?';
+
+  @override
+  String get coursesVoteHelpful => 'Faydalı';
+
+  @override
+  String get coursesVoteNotHelpful => 'Pek değil';
+
+  @override
+  String get coursesVoteThanks => 'Geri bildiriminiz için teşekkürler';
+
+  @override
+  String get coursesRatingQuestion => 'Kurs ne kadar faydalı oldu?';
+
+  @override
+  String coursesRatingStars(int stars) {
+    return '5 üzerinden $stars';
+  }
+
+  @override
+  String get coursesRatingComment => 'Yorum (isteğe bağlı)';
+
+  @override
+  String get coursesSend => 'Gönder';
+
+  @override
+  String coursesRatingThanks(int stars) {
+    return 'Teşekkürler! Puanınız: 5 üzerinden $stars';
+  }
+
+  @override
+  String get coursesRatingChange => 'Değiştir';
+
+  @override
+  String get coursesSendFailed => 'Gönderilemedi. Lütfen tekrar deneyin.';
+
+  @override
+  String get coursesSendTooOften =>
+      'Çok sık denendi. Lütfen daha sonra tekrar deneyin.';
+
+  @override
+  String get coursesReportError => 'Hata bildir';
+
+  @override
+  String get coursesReportType => 'Bildirim türü';
+
+  @override
+  String get coursesReportReligious => 'Dini içerikte hata';
+
+  @override
+  String get coursesReportTypo => 'Yazım hatası veya çeviri';
+
+  @override
+  String get coursesReportTechnical => 'Video veya sayfa çalışmıyor';
+
+  @override
+  String get coursesReportOther => 'Diğer';
+
+  @override
+  String get coursesReportMessage => 'Bildirim metni';
+
+  @override
+  String get coursesReportMessageRequired => 'Bildirimi açıklayın';
+
+  @override
+  String get coursesReportEmail => 'Yanıt için e-posta (isteğe bağlı)';
+
+  @override
+  String coursesReportThanks(String id) {
+    return 'Teşekkürler! Talep numarası $id';
+  }
+
+  @override
+  String get coursesReportOpen => 'Talebi aç';
 }

@@ -61,10 +61,12 @@ class FeedbackRepository {
     required String message,
     String? contactEmail,
     String route = '/feedback',
+    String? locale,
+    Map<String, Object?> context = const <String, Object?>{},
     AccountScopeSnapshot? accountScope,
   }) async {
     final scope = accountScope ?? await _database.captureAccount();
-    final context = await _clientContext(route);
+    final client = await _clientContext(route);
     final payload = await _api.post(
       '/feedback/tickets',
       data: <String, Object?>{
@@ -73,10 +75,10 @@ class FeedbackRepository {
         'category': category,
         'subject': subject.trim(),
         'message': message.trim(),
-        'locale': _locale(),
+        'locale': locale ?? _locale(),
         if (contactEmail != null && contactEmail.trim().isNotEmpty)
           'contact_email': contactEmail.trim().toLowerCase(),
-        'context': context,
+        'context': <String, Object?>{...client, ...context},
       },
       accountScope: scope,
     );
