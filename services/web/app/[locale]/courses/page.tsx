@@ -140,6 +140,9 @@ export default async function CoursesPage({ params }: { params: Promise<RoutePar
                     {translate(locale, "courses.lessonCount", { count: format.format(course.lesson_count) })}
                     {" · "}
                     {translate(locale, "common.minutes", { count: format.format(course.minutes) })}
+                    {course.video_minutes
+                      ? ` · ${translate(locale, "courses.videoMinutes", { count: format.format(course.video_minutes) })}`
+                      : null}
                   </span>
                   {outline ? <CourseCardProgress course={outline} /> : null}
                 </span>

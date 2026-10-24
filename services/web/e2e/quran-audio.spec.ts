@@ -961,6 +961,33 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
   await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
 });
 
+test("a course lesson video and the recitation take turns", async ({ page }) => {
+  await page.goto("/audio");
+  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  const player = page.getByTestId("global-audio-player");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+
+  // Courses are not a reading section: the recitation goes on until the video starts.
+  await page.locator('.app-menu a[href="/ru/courses"]').click();
+  await page.locator('.courses-grid a[href="/ru/courses/ramadan"]').click();
+  await page.locator('.course-lesson-card[href="/ru/courses/ramadan/namerenie"]').click();
+  await expect(page).toHaveURL("/ru/courses/ramadan/namerenie");
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+
+  const lessonVideo = page.getByTestId("lesson-video");
+  await lessonVideo.getByRole("button").click();
+  const video = lessonVideo.locator("video");
+  await video.evaluate((element) => {
+    element.addEventListener("pause", () => element.setAttribute("data-paused-by-test", "true"));
+    void (element as HTMLVideoElement).play();
+  });
+  await expect(player.getByText("Воспроизводится", { exact: true })).toHaveCount(0);
+
+  await player.locator("audio").evaluate((element) => void (element as HTMLAudioElement).play());
+  await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
+  await expect(video).toHaveAttribute("data-paused-by-test", "true");
+});
+
 test("expanded player sound bars sway while the recitation plays and fade out otherwise", async ({ page }) => {
   await page.goto("/audio");
   await page.getByRole("button", { name: "Слушать", exact: true }).first().click();

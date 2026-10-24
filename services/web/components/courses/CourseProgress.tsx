@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { useMemo, useSyncExternalStore } from "react";
 
+import { formatClock } from "../../lib/audio-content";
 import { parseCourseProgress, type CourseProgress } from "../../lib/course-progress";
 import { useI18n } from "../../lib/i18n-context";
 import { localizedPath } from "../../lib/routing";
 import {
   continueTarget,
+  COURSES_POSITION_EVENT,
   COURSES_PROGRESS_EVENT,
   courseProgressStorageKey,
   isLessonSlug,
+  parseVideoPositions,
   summarizeThematicProgress,
+  videoPositionStorageKey,
   type CourseOutline,
 } from "../../lib/thematic-courses";
 import { useCourseProgress } from "../../lib/use-course-progress";
@@ -19,6 +23,31 @@ import { useCourseProgress } from "../../lib/use-course-progress";
 /** Local progress of a thematic course; `null` in server HTML and during hydration. */
 export function useThematicProgress(courseSlug: string): CourseProgress | null {
   return useCourseProgress(courseProgressStorageKey(courseSlug), COURSES_PROGRESS_EVENT, isLessonSlug);
+}
+
+function subscribePositions(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(COURSES_POSITION_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(COURSES_POSITION_EVENT, onChange);
+  };
+}
+
+/** Where the lesson's video stopped, in ms; `null` if nowhere, in server HTML and during hydration. */
+export function useVideoPosition(courseSlug: string, lessonSlug: string): number | null {
+  const raw = useSyncExternalStore(
+    subscribePositions,
+    () => {
+      try {
+        return window.localStorage.getItem(videoPositionStorageKey(courseSlug));
+      } catch {
+        return null;
+      }
+    },
+    () => null,
+  );
+  return useMemo(() => parseVideoPositions(raw)[lessonSlug]?.ms ?? null, [lessonSlug, raw]);
 }
 
 function subscribe(onChange: () => void) {
@@ -58,6 +87,7 @@ export function CourseContinueStrip({ courses }: { courses: CourseOutline[] }) {
   const slugs = useMemo(() => courses.map((course) => course.slug), [courses]);
   const progress = useThematicProgressOf(slugs);
   const target = progress ? continueTarget(courses, (slug) => progress.get(slug) ?? NO_PROGRESS) : null;
+  const position = useVideoPosition(target?.course.slug ?? "", target?.lesson.slug ?? "");
   if (!target) return null;
   const href = localizedPath(locale, `/courses/${target.course.slug}/${target.lesson.slug}`);
   return (
@@ -70,6 +100,7 @@ export function CourseContinueStrip({ courses }: { courses: CourseOutline[] }) {
             number: formatNumber(target.lesson.number),
             lesson: target.lesson.title,
           })}
+          {position ? ` · ${t("courses.continueFrom", { position: formatClock(position, (value) => formatNumber(value)) })}` : null}
         </p>
       </div>
       <Link href={href} className="btn btn-primary">{t("courses.continue")}</Link>
