@@ -9,6 +9,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/public_asset_uri.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'course_feedback.dart' show courseVideoWatchedShare;
 import 'course_models.dart';
 import 'course_progress_store.dart';
 import 'course_widgets.dart';
@@ -46,6 +47,9 @@ class LessonVideo extends ConsumerStatefulWidget {
     required this.lesson,
     required this.video,
     required this.language,
+    this.onStarted,
+    this.onWatched,
+    this.onPosition,
     super.key,
   });
 
@@ -55,6 +59,15 @@ class LessonVideo extends ConsumerStatefulWidget {
 
   /// The language of the document.
   final String language;
+
+  /// The video first played while the lesson is shown.
+  final VoidCallback? onStarted;
+
+  /// The video reached [courseVideoWatchedShare] of its length, once.
+  final VoidCallback? onWatched;
+
+  /// Where the video is now.
+  final ValueChanged<Duration>? onPosition;
 
   @override
   ConsumerState<LessonVideo> createState() => _LessonVideoState();
@@ -66,6 +79,8 @@ class _LessonVideoState extends ConsumerState<LessonVideo>
   var _failed = false;
   var _playing = false;
   var _fullscreen = false;
+  var _started = false;
+  var _watched = false;
   Timer? _saveTimer;
 
   /// Where a failed attempt stopped, for «Retry».
@@ -160,6 +175,7 @@ class _LessonVideoState extends ConsumerState<LessonVideo>
       _fail();
       return;
     }
+    _report(value);
     if (value.isPlaying == _playing) return;
     _playing = value.isPlaying;
     _keepScreenOn(_playing);
@@ -171,6 +187,22 @@ class _LessonVideoState extends ConsumerState<LessonVideo>
       _saveTimer = Timer.periodic(_savePeriod, (_) => _save(controller.value));
     } else {
       _save(value);
+    }
+  }
+
+  void _report(VideoPlayerValue value) {
+    if (value.isPlaying && !_started) {
+      _started = true;
+      widget.onStarted?.call();
+    }
+    if (!value.isInitialized || value.duration <= Duration.zero) return;
+    widget.onPosition?.call(value.position);
+    final watched =
+        value.position.inMilliseconds >=
+        value.duration.inMilliseconds * courseVideoWatchedShare;
+    if (watched && !_watched) {
+      _watched = true;
+      widget.onWatched?.call();
     }
   }
 

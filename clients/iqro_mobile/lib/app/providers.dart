@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/audio/audio_controller.dart';
 import '../core/audio/audio_playback_store.dart';
@@ -24,6 +25,7 @@ import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/audio/player_backgrounds.dart';
 import '../features/audio/reciter_catalog.dart';
+import '../features/courses/course_feedback.dart';
 import '../features/courses/course_models.dart';
 import '../features/courses/course_progress_store.dart';
 import '../features/courses/course_repository.dart';
@@ -1084,6 +1086,41 @@ final coursePositionsProvider = FutureProvider.autoDispose
       ref.watch(activeAccountScopeKeyProvider);
       return ref.watch(courseProgressStoreProvider).readPositions(course);
     });
+
+final courseFeedbackGatewayProvider = Provider<CourseFeedbackGateway>(
+  (ref) => ApiCourseFeedbackGateway(ref.watch(apiClientProvider)),
+);
+
+/// One queue for the app: it sends lesson counters once a minute and when
+/// the app goes to the background.
+final courseEventQueueProvider = Provider<CourseEventQueue>((ref) {
+  final queue = CourseEventQueue(
+    send: (platform, events) =>
+        ref.read(courseFeedbackGatewayProvider).sendEvents(platform, events),
+  );
+  WidgetsBinding.instance.addObserver(queue);
+  ref.onDispose(() => WidgetsBinding.instance.removeObserver(queue));
+  return queue;
+});
+final courseFeedbackStoreProvider = Provider<CourseFeedbackStore>(
+  (ref) => CourseFeedbackStore(ref.watch(localDatabaseProvider)),
+);
+final courseVotesProvider = FutureProvider.autoDispose
+    .family<Map<String, LessonVote>, String>((ref, course) {
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(courseFeedbackStoreProvider).votes(course);
+    });
+final courseRatingProvider = FutureProvider.autoDispose
+    .family<CourseRating?, String>((ref, course) {
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(courseFeedbackStoreProvider).rating(course);
+    });
+
+/// The system share sheet; tests put a fake in.
+final courseShareProvider = Provider<Future<void> Function(ShareParams params)>(
+  (ref) =>
+      (params) => SharePlus.instance.share(params),
+);
 
 /// Course covers, kept in the image disk cache after the first view.
 final courseImageProvider = Provider<ImageProvider Function(String url)>(
