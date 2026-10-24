@@ -8,9 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
+import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
+import 'package:iqro_mobile/features/courses/course_progress_store.dart';
+import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_home_screen.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_models.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_progress.dart';
@@ -19,6 +22,8 @@ import 'package:iqro_mobile/features/tajweed_course/tajweed_lesson_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'lesson_media_test_data.dart';
+import 'lesson_video_test_data.dart';
 import 'tajweed_course_test_data.dart';
 
 void main() {
@@ -357,6 +362,62 @@ void main() {
     });
   }
 
+  testWidgets('the media come first; the video pauses the sound and keeps '
+      'its place under the tajweed course', (tester) async {
+    final videos = FakeVideoFactory();
+    final positions = _Positions();
+    final harness = await _pump(
+      tester,
+      location: '/tajweed/lesson/izhar',
+      media: true,
+      videos: videos,
+      positions: positions,
+    );
+    expect(_label(tester), 'Шаг 1 из 6');
+    final facade = find.byKey(const ValueKey('lesson-video-facade'));
+    final slides = find.byKey(const ValueKey('lesson-media-slides'));
+    // Under the lesson's title, the video, the slides, then the rule.
+    expect(tester.getRect(facade).bottom, lessThan(tester.getRect(slides).top));
+    expect(
+      tester.getRect(slides).bottom,
+      lessThan(tester.getRect(find.text('Правило')).top),
+    );
+    expect(_text(tester, 'lesson-media-slide-counter'), '1 / 2');
+    expect(find.text('Шесть горловых букв изхара'), findsOneWidget);
+
+    // A clip of the course sounds; the video pauses it.
+    await harness.audio.loadStandalone(
+      id: 'tajweed-course:recitation-1:89:2:0',
+      url: 'https://cdn.example/89.mp3',
+      title: 'Изхар',
+      contentType: 'tajweed',
+    );
+    await _settle(tester);
+    expect(harness.engine.playing, isTrue);
+    await tester.tap(facade);
+    await _settle(tester);
+    expect(
+      videos.last.uri,
+      Uri.parse(
+        'https://media.iqro.forum/courses/videos/5555555555eeeeeeeeee.mp4',
+      ),
+    );
+    expect(videos.last.value.isPlaying, isTrue);
+    expect(harness.engine.playing, isFalse);
+    expect(harness.audio.state.standalone?.playing, isFalse);
+
+    // Turning the page stops the video and keeps where it stopped.
+    videos.last.playTo(const Duration(seconds: 30));
+    await _next(tester);
+    expect(_label(tester), 'Шаг 2 из 6');
+    expect(videos.last.disposed, isTrue);
+    expect(positions.saved, {'tajweed/izhar': const Duration(seconds: 30)});
+    await tester.tap(find.byKey(const ValueKey('tajweed-course-back')));
+    await _settle(tester);
+    expect(find.text('Продолжить с 0:30'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Arabic reads right to left; the arrow keys follow it', (
     tester,
   ) async {
@@ -406,12 +467,17 @@ Future<_Harness> _pump(
   TajweedCourseProgress progress = const TajweedCourseProgress(),
   Completer<void>? gate,
   int failures = 0,
+  bool media = false,
+  FakeVideoFactory? videos,
+  CourseProgressStore? positions,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
-  final document = TajweedCourseDocument.fromJson(tajweedCourseDocumentJson());
+  final document = TajweedCourseDocument.fromJson(
+    media ? tajweedCourseDocumentWithMediaJson() : tajweedCourseDocumentJson(),
+  );
   final store = _MemoryStore(progress);
   final repository = _FakeRepository(gate: gate, failures: failures);
   final sync = _CountingSync();
@@ -457,6 +523,23 @@ Future<_Harness> _pump(
         ),
         audioRepositoryProvider.overrideWithValue(_AudioRepository()),
         audioControllerProvider.overrideWith((ref) => audio),
+        // The lesson media: pictures that never arrive, a fake player.
+        appConfigProvider.overrideWithValue(
+          const AppConfig(
+            apiBaseUrl: 'https://iqro.forum',
+            fallbackDownloadUrl: 'https://iqro.forum',
+            environment: 'production',
+          ),
+        ),
+        ...lessonMediaOverrides(),
+        courseImageProvider.overrideWithValue((_) => PendingImage()),
+        lessonVideoControllerProvider.overrideWithValue(
+          (videos ?? FakeVideoFactory()).call,
+        ),
+        lessonVideoWakeProvider.overrideWithValue((_) async {}),
+        courseProgressStoreProvider.overrideWithValue(
+          positions ?? _Positions(),
+        ),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
@@ -596,6 +679,39 @@ class _MemoryStore implements TajweedCourseProgressStore {
       updatedAt: _now(),
     ),
   });
+}
+
+/// Video positions in memory, by `<course>/<lesson>`.
+class _Positions implements CourseProgressStore {
+  final saved = <String, Duration>{};
+
+  @override
+  Future<CourseVideoPositions> readPositions(String course) async =>
+      CourseVideoPositions({
+        for (final MapEntry(:key, :value) in saved.entries)
+          if (key.startsWith('$course/'))
+            key.substring(course.length + 1): (
+              position: value,
+              updatedAt: '2026-10-25T09:00:00.000Z',
+            ),
+      });
+
+  @override
+  Future<CourseVideoPositions> savePosition({
+    required String course,
+    required String lesson,
+    required Duration position,
+  }) async {
+    if (position > Duration.zero) {
+      saved['$course/$lesson'] = position;
+    } else {
+      saved.remove('$course/$lesson');
+    }
+    return readPositions(course);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _CountingSync implements TajweedProgressSync {

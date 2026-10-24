@@ -119,7 +119,8 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
             media: lesson.media,
             videoBuilder: (context, video) => LessonVideo(
               course: course.slug,
-              lesson: lesson,
+              lesson: lesson.slug,
+              lessonTitle: lesson.title,
               video: video,
               language: course.language,
             ),

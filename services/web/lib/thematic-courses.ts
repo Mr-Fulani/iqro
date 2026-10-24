@@ -128,9 +128,13 @@ export type CourseOutline = {
 };
 
 export class CourseDocumentError extends Error {
+  /** What is wrong, without the prefix: the tajweed course reports media errors as its own. */
+  readonly detail: string;
+
   constructor(message: string) {
     super(`Invalid course document: ${message}`);
     this.name = "CourseDocumentError";
+    this.detail = message;
   }
 }
 
@@ -241,6 +245,15 @@ function image(value: unknown, where: string): CourseImage | null {
  */
 function media(value: unknown, lessonVideo: CourseVideo | null, where: string): CourseMediaBlock[] {
   if (value === undefined || value === null) return lessonVideo ? [{ type: "video", video: lessonVideo }] : [];
+  return parseLessonMedia(value, where);
+}
+
+/**
+ * Media blocks of a lesson, shared with the tajweed course (docs/tajweed/course.md): no field is
+ * no media. A block of an unknown type, or with a file from another host, is left out.
+ */
+export function parseLessonMedia(value: unknown, where: string): CourseMediaBlock[] {
+  if (value === undefined || value === null) return [];
   const blocks: CourseMediaBlock[] = [];
   list(value, where).forEach((block, index) => {
     const at = `${where}[${index}]`;

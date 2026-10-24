@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
+import '../courses/course_models.dart' show LessonMedia;
 import '../dua/dua_repository.dart' show canUseUnverifiedDuaFallback;
 import 'tajweed_course_models.dart';
 import 'tajweed_practice.dart';
@@ -135,13 +138,18 @@ class TajweedCourseRepository {
   TajweedCourseRepository({
     required TajweedCourseRemoteGateway remote,
     required LocalDatabase database,
+    Future<void> Function(Iterable<LessonMedia> media)? keepMedia,
   }) : _remote = remote,
-       _database = database;
+       _database = database,
+       _keepMedia = keepMedia;
 
   static const _documentMaxAge = Duration(days: 30);
 
   final TajweedCourseRemoteGateway _remote;
   final LocalDatabase _database;
+
+  /// Keeps the pictures of the lessons for offline with the document.
+  final Future<void> Function(Iterable<LessonMedia> media)? _keepMedia;
 
   static String documentCacheKey(
     String slug,
@@ -173,6 +181,8 @@ class TajweedCourseRepository {
     final cached = await _cachedDocument(slug, language, version);
     if (cached != null) {
       await _rememberVersion(slug, language, version);
+      // Pictures that did not arrive with the document are fetched now.
+      _keepPictures(cached);
       return cached;
     }
 
@@ -186,7 +196,19 @@ class TajweedCourseRepository {
     final documentVersion = document.course.version;
     await _write(documentCacheKey(slug, language, documentVersion), payload);
     await _rememberVersion(slug, language, documentVersion);
+    _keepPictures(document);
     return document;
+  }
+
+  /// In the background: the course opens without waiting for its pictures.
+  void _keepPictures(TajweedCourseDocument document) {
+    final keep = _keepMedia;
+    if (keep == null) return;
+    unawaited(
+      Future<void>.sync(
+        () => keep(document.lessons.expand((lesson) => lesson.media)),
+      ).catchError((Object _) {}),
+    );
   }
 
   /// A page of a lesson's examples. They change with the markup, so they are

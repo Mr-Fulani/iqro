@@ -12,14 +12,15 @@ changes only in git. Signed and published versions are read-only.
 from __future__ import annotations
 
 import copy
+import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.db.models import QuerySet
 from django.http import (
     Http404,
@@ -27,27 +28,65 @@ from django.http import (
     HttpResponse,
     HttpResponseNotAllowed,
     HttpResponseRedirect,
+    JsonResponse,
 )
+from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django.utils.http import urlencode
 
+from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.core.object_storage import ObjectStorageError
+from quran_backend.modules.courses.admin import (
+    TAB_LABELS,
+    VIDEO_INSTRUCTION_URL,
+    _received_file,
+    clock,
+    megabytes,
+)
+from quran_backend.modules.courses.document import LANGUAGE_NAMES, video_payload
+from quran_backend.modules.courses.lesson_media import LessonMediaError
+from quran_backend.modules.courses.lesson_media_admin import (
+    Change,
+    MediaPage,
+    render_media,
+    run_media_action,
+)
+from quran_backend.modules.courses.models import SPOKEN_LANGUAGES
+from quran_backend.modules.courses.video import (
+    MAX_DUB_MIB,
+    MAX_VIDEO_MIB,
+    SPEECH_NAMES,
+    CourseVideoError,
+)
 from quran_backend.modules.tajweed.course import (
     COLOR,
     LESSON_TEXTS,
     VERSION_NAME,
     TajweedCourseError,
+    lesson_video,
     missing_texts,
     snapshot_json,
 )
 from quran_backend.modules.tajweed.course_publication import (
     compile_course_version,
     copy_tajweed_course,
+    mark_tajweed_watched,
+    new_videos,
     publish_tajweed_course,
     save_course_draft,
     sign_tajweed_course,
+)
+from quran_backend.modules.tajweed.lesson_media import (
+    change_lesson,
+    delete_dub,
+    remove_video,
+    set_poster,
+    set_spoken_language,
+    upload_dub,
+    upload_video,
 )
 from quran_backend.modules.tajweed.models import (
     TAJWEED_COURSE_LANGUAGES,
@@ -70,6 +109,8 @@ REVIEW_LABELS = {
     "reviewed": "Проверено преподавателем",
 }
 SHOWN_PROBLEMS = 12
+
+logger = logging.getLogger(__name__)
 
 
 def editor_languages() -> list[str]:
@@ -246,6 +287,26 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 view(self.review_view),
                 name="tajweed_tajweedcourseversion_review",
             ),
+            path(
+                "<path:object_id>/lessons/<slug:lesson>/media/",
+                view(self.lesson_media_view),
+                name="tajweed_tajweedcourseversion_media",
+            ),
+            path(
+                "<path:object_id>/lessons/<slug:lesson>/video/<str:operation>/",
+                view(self.lesson_video_view),
+                name="tajweed_tajweedcourseversion_video",
+            ),
+            path(
+                "<path:object_id>/lessons/<slug:lesson>/video/dubs/<str:language>/<str:operation>/",
+                view(self.lesson_video_view),
+                name="tajweed_tajweedcourseversion_dub",
+            ),
+            path(
+                "<path:object_id>/watched/<str:sha256>/",
+                view(self.watched_view),
+                name="tajweed_tajweedcourseversion_watched",
+            ),
             *super().get_urls(),
         ]
 
@@ -421,6 +482,11 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     ),
                 }
             )
+        media_block = (
+            render_media(media_page(request, version, item["slug"]), request)
+            if kind == "lesson"
+            else ""
+        )
         missing = missing_texts(snapshot)
         tree = [{"id": "course", "label": "Курс", "indent": 0}]
         tree += [
@@ -469,6 +535,8 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 ],
                 "can_copy": request.user.has_perm("tajweed.add_tajweedcourseversion"),
                 "can_review": request.user.has_perm("tajweed.change_tajweedcourseversion"),
+                "media_block": media_block,
+                "videos": review_videos(version, node_id) if version.status == "draft" else [],
             },
             status=400 if posted is not None else 200,
         )
@@ -478,6 +546,105 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if version.status == TajweedCourseStatus.DRAFT:
             return "Черновик, подписан" if version.is_signed else "Черновик"
         return str(TajweedCourseStatus(version.status).label)
+
+    # Lesson media -------------------------------------------------------
+    # JSON answers with the block drawn anew, as on a lesson of a thematic course.
+
+    def _draft(self, request: HttpRequest, object_id: str, lesson: str) -> TajweedCourseVersion:
+        version = self._version(request, object_id)
+        if _node(version.snapshot, f"lesson:{lesson}") is None:
+            raise Http404
+        if not editor_editable(request.user, version):
+            raise PermissionDenied
+        return version
+
+    def lesson_media_view(self, request: HttpRequest, object_id: str, lesson: str) -> HttpResponse:
+        """The «Медиа» block of a lesson: the button says what to do in `action`."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        version = self._draft(request, object_id, lesson)
+
+        def update(change: Change) -> None:
+            change_lesson(
+                version,
+                lesson,
+                lambda item: item.__setitem__("media", change(list(item.get("media") or []))),
+            )
+
+        def answer() -> str:
+            # The video block goes with its data: removing it removes the video.
+            return run_media_action(
+                request, media_page(request, version, lesson), update=update, remove_video=_keep
+            )
+
+        response = self._media_answer(request, version, lesson, answer)
+        if response is not None:
+            return response
+        if request.POST.get("action") == "texts":
+            return JsonResponse({"ok": True})
+        version.refresh_from_db()
+        return JsonResponse({"html": render_media(media_page(request, version, lesson), request)})
+
+    def lesson_video_view(
+        self, request: HttpRequest, object_id: str, lesson: str, operation: str, language: str = ""
+    ) -> HttpResponse:
+        """The video block of a lesson: upload, poster, language of speech, dubs."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        version = self._draft(request, object_id, lesson)
+        run = _video_operation(request, version, lesson, operation, language)
+        response = self._media_answer(request, version, lesson, run)
+        if response is not None:
+            return response
+        version.refresh_from_db()
+        return JsonResponse(
+            {
+                "html": render_to_string(
+                    "admin/courses/courselesson/video.html",
+                    {"block": video_block(request, version, lesson)},
+                    request=request,
+                )
+            }
+        )
+
+    def _media_answer(
+        self,
+        request: HttpRequest,
+        version: TajweedCourseVersion,
+        lesson: str,
+        run: Callable[[], str],
+    ) -> HttpResponse | None:
+        """Runs the change and logs it; an error is the answer, success gives None."""
+        try:
+            log = run()
+        except (LessonMediaError, CourseVideoError) as error:
+            return JsonResponse({"error": str(error)}, status=error.status)
+        except ImproperlyConfigured, ObjectStorageError, OSError:
+            logger.exception("Tajweed lesson media operation failed")
+            return JsonResponse({"error": "Хранилище недоступно, повторите."}, status=502)
+        self.log_change(request, version, f"Медиа урока {lesson}: {log}")
+        return None
+
+    def watched_view(self, request: HttpRequest, object_id: str, sha256: str) -> HttpResponse:
+        """«Просмотрено» on one new video or dub of the draft, or the mark taken back."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        version = self._version(request, object_id)
+        if not editor_editable(request.user, version):
+            raise PermissionDenied
+        watched = request.POST.get("watched") != "0"
+        try:
+            mark_tajweed_watched(version, sha256=sha256, watched=watched)
+        except TajweedCourseError as error:
+            messages.error(request, str(error))
+        else:
+            self.log_change(
+                request,
+                version,
+                f"{'Просмотрено' if watched else 'Снята отметка «Просмотрено»'}: {sha256[:12]}",
+            )
+        node = str(request.POST.get("node") or "course")
+        return HttpResponseRedirect(self._editor_url(version, node) + "#videos")
 
     # New draft, download, review ---------------------------------------
 
@@ -623,3 +790,196 @@ class TajweedCourseDocumentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return super().has_delete_permission(request, obj) and (
             obj is None or obj.version.status == TajweedCourseStatus.DRAFT
         )
+
+
+def _keep() -> None:
+    """Nothing to do apart: a tajweed lesson's video lives in its block."""
+
+
+def media_page(request: HttpRequest, version: TajweedCourseVersion, lesson: str) -> MediaPage:
+    item = next(entry for entry in version.snapshot["lessons"] if entry["slug"] == lesson)
+    return MediaPage(
+        media=item.get("media") or [],
+        has_video=lesson_video(item) is not None,
+        languages=editor_languages(),
+        action_url=reverse("admin:tajweed_tajweedcourseversion_media", args=[version.pk, lesson]),
+        can_edit=editor_editable(request.user, version),
+        video_html=render_to_string(
+            "admin/courses/courselesson/video.html",
+            {"block": video_block(request, version, lesson)},
+            request=request,
+        ),
+        prefix="courses",
+    )
+
+
+def video_block(request: HttpRequest, version: TajweedCourseVersion, lesson: str) -> dict[str, Any]:
+    """The lesson's video for the video block of thematic courses, which reads these names."""
+    editable = editor_editable(request.user, version)
+    item = next(entry for entry in version.snapshot["lessons"] if entry["slug"] == lesson)
+
+    def video_url(operation: str) -> str:
+        return reverse(
+            "admin:tajweed_tajweedcourseversion_video", args=[version.pk, lesson, operation]
+        )
+
+    def dub_url(code: str, operation: str) -> str:
+        return reverse(
+            "admin:tajweed_tajweedcourseversion_dub", args=[version.pk, lesson, code, operation]
+        )
+
+    block: dict[str, Any] = {
+        "instruction_url": VIDEO_INSTRUCTION_URL,
+        "languages": SPOKEN_LANGUAGES,
+        "max_video_mib": MAX_VIDEO_MIB,
+        "max_dub_mib": MAX_DUB_MIB,
+        "can_upload": editable,
+        "upload_url": video_url("upload"),
+        "video": None,
+    }
+    video = lesson_video(item)
+    if video is None:
+        return block
+    poster = video["poster"]
+    dubs = video["dubs"]
+    block.update(
+        {
+            "video": {
+                **video,
+                "pk": video["sha256"],
+                "poster_width": poster["width"],
+                "poster_height": poster["height"],
+            },
+            "url": public_audio_url(video["object_key"]),
+            "poster_url": public_audio_url(poster["small_object_key"]),
+            "duration": clock(video["duration_ms"]),
+            "size": megabytes(video["bytes"]),
+            "fps": f"{video['fps']:g}".replace(".", ","),
+            "speech": SPEECH_NAMES[video["spoken_language"]],
+            "poster_second": min(3, video["duration_ms"] // 10_000),
+            "last_second": max(0, video["duration_ms"] // 1000 - 1),
+            "can_edit": editable,
+            "can_remove": editable,
+            "can_dub": editable,
+            "can_delete_dub": editable,
+            "poster_url_action": video_url("poster"),
+            "language_url": video_url("language"),
+            "remove_url": video_url("remove"),
+            "dubs": [
+                {
+                    "code": code,
+                    "label": LANGUAGE_NAMES[code],
+                    "tab": TAB_LABELS[code],
+                    "dub": dubs.get(code),
+                    "url": public_audio_url(dubs[code]["object_key"]) if code in dubs else "",
+                    "duration": clock(dubs[code]["duration_ms"]) if code in dubs else "",
+                    "size": megabytes(dubs[code]["bytes"]) if code in dubs else "",
+                    "upload_url": dub_url(code, "upload"),
+                    "delete_url": dub_url(code, "delete"),
+                }
+                for code in editor_languages()
+                if code != video["spoken_language"]
+            ],
+        }
+    )
+    return block
+
+
+def _video_operation(
+    request: HttpRequest,
+    version: TajweedCourseVersion,
+    lesson: str,
+    operation: str,
+    language: str,
+) -> Callable[[], str]:
+    """What a button of the video block does, as a change that names itself for the log."""
+    post = request.POST
+    video_id = post.get("video")
+
+    def upload() -> str:
+        with _received_file(request, MAX_VIDEO_MIB) as (uploaded, source):
+            video = upload_video(
+                version,
+                lesson,
+                source,
+                spoken_language=str(post.get("spoken_language", "ru")),
+                original_name=uploaded.name or "",
+            )
+        return f"видео «{video['original_name']}», {clock(video['duration_ms'])}"
+
+    def poster() -> str:
+        image = request.FILES.get("image")
+        raw = str(post.get("second", "")).replace(",", ".").strip()
+        try:
+            second = float(raw) if raw else None
+        except ValueError:
+            second = None
+        set_poster(version, lesson, video_id, second=second, image=image)
+        return f"обложка из картинки «{image.name}»" if image else f"обложка — кадр на {raw} с"
+
+    def speech() -> str:
+        spoken = str(post.get("spoken_language", ""))
+        set_spoken_language(version, lesson, video_id, spoken)
+        return f"язык речи — {SPEECH_NAMES.get(spoken, spoken)}"
+
+    def remove() -> str:
+        remove_video(version, lesson, video_id)
+        return "видео убрано"
+
+    def dub() -> str:
+        with _received_file(request, MAX_DUB_MIB) as (uploaded, source):
+            upload_dub(
+                version, lesson, video_id, language, source, original_name=uploaded.name or ""
+            )
+        return f"озвучка ({language})"
+
+    def undub() -> str:
+        delete_dub(version, lesson, video_id, language)
+        return f"удалена озвучка ({language})"
+
+    operations: dict[str, Callable[[], str]] = (
+        {"upload": dub, "delete": undub}
+        if language
+        else {"upload": upload, "poster": poster, "language": speech, "remove": remove}
+    )
+    if operation not in operations:
+        raise Http404
+    return operations[operation]
+
+
+def review_videos(version: TajweedCourseVersion, node_id: str) -> list[dict[str, Any]]:
+    """Every new video and dub of the draft, each with its own «Просмотрено»."""
+    new = new_videos(version)
+    watched = set(version.watched_videos)
+    found = []
+    for lesson in version.snapshot.get("lessons", []):
+        video = lesson_video(lesson)
+        if video is None:
+            continue
+        name = f"Урок «{lesson['title'].get('ru') or lesson['slug']}»"
+        files = [(video["sha256"], f"основное видео, {SPEECH_NAMES[video['spoken_language']]}", "")]
+        files += [
+            (dub["sha256"], f"озвучка, {LANGUAGE_NAMES[code]}", code)
+            for code, dub in sorted(video["dubs"].items())
+        ]
+        for sha256, label, code in files:
+            if sha256 not in new:
+                continue
+            payload = video_payload(video, code)
+            assert payload is not None
+            found.append(
+                {
+                    "name": f"{name}: {label}",
+                    "sha256": sha256,
+                    "url": payload["url"],
+                    "poster_url": payload["poster"]["small_url"],
+                    "duration": clock(payload["duration_ms"]),
+                    "size": megabytes(payload["bytes"]),
+                    "watched": sha256 in watched,
+                    "mark_url": reverse(
+                        "admin:tajweed_tajweedcourseversion_watched", args=[version.pk, sha256]
+                    ),
+                    "node": node_id,
+                }
+            )
+    return found

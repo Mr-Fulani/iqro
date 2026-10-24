@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { LessonMedia } from "@/components/courses/LessonMedia";
 import { TajweedLessonPlayer } from "@/components/TajweedLessonPlayer";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { getPublishedTajweedCourse, PublicContentNotFoundError } from "@/lib/public-content";
@@ -10,6 +11,7 @@ import { createContentMetadata } from "@/lib/seo";
 import { isTajweedLessonSlug, nextTajweedLesson, TAJWEED_COURSE_SLUG } from "@/lib/tajweed-course";
 import { translate } from "@/lib/translate";
 import "../tajweed.css";
+import "@/components/courses/lesson-media.css";
 
 export const revalidate = 3_600;
 
@@ -81,6 +83,18 @@ export default async function TajweedLessonPage({ params }: { params: Promise<Ro
         target={document.targets[lesson.target]!}
         reviewPending={document.course.review_status === "pending_teacher_review"}
         nextLesson={next ? { slug: next.slug, title: next.title } : null}
+        // The rule step shows them above the explanation, as the app does; the video remembers
+        // its place under courses.position.tajweed, a slug no thematic course can have.
+        media={
+          <LessonMedia
+            blocks={lesson.media}
+            locale={route.locale}
+            language={document.course.language}
+            courseSlug={document.course.slug}
+            lessonSlug={lesson.slug}
+            title={lesson.title}
+          />
+        }
       />
     </div>
   );
