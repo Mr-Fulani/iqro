@@ -91,6 +91,7 @@ jobs:
             ops.recovery.test_retention \
             ops.monitoring.test_backup_status \
             ops.monitoring.test_heartbeat \
+            ops.monitoring.test_alerts \
             ops.systemd.test_units \
             ops.load.test_smoke \
             ops.load.test_capacity \
