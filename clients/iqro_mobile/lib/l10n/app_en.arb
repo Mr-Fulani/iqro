@@ -934,5 +934,21 @@
   "coursesUpdateApp": "Update the app",
   "coursesUpdateAppMessage": "This course needs a newer version of IQRO.",
   "coursesUnavailable": "This course is not available",
-  "coursesLessonNotFound": "This topic is not in the course"
+  "coursesLessonNotFound": "This topic is not in the course",
+  "coursesVideoMeta": "{duration} · {size} MB",
+  "@coursesVideoMeta": {"placeholders": {"duration": {"type": "String"}, "size": {"type": "int"}}},
+  "coursesVideoWatch": "Watch the video «{title}», {meta}",
+  "@coursesVideoWatch": {"placeholders": {"title": {"type": "String"}, "meta": {"type": "String"}}},
+  "coursesVideoResumeFrom": "Continue from {time}",
+  "@coursesVideoResumeFrom": {"placeholders": {"time": {"type": "String"}}},
+  "coursesVideoFrom": "Video from {time}",
+  "@coursesVideoFrom": {"placeholders": {"time": {"type": "String"}}},
+  "coursesVideoLanguage": "{language, select, ru{Video in Russian} en{Video in English} ar{Video in Arabic} tr{Video in Turkish} other{Video in another language}}",
+  "@coursesVideoLanguage": {"placeholders": {"language": {"type": "String"}}},
+  "coursesVideoFailed": "The video did not load",
+  "coursesVideoBack10": "Back 10 seconds",
+  "coursesVideoForward10": "Forward 10 seconds",
+  "coursesVideoPosition": "Video position",
+  "coursesVideoFullscreen": "Full screen",
+  "coursesVideoExitFullscreen": "Exit full screen"
 }

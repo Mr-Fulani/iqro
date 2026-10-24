@@ -226,6 +226,73 @@ class CourseInfo {
   final String publishedAt;
 }
 
+/// The poster of a lesson video, WebP 1280 and 640 px.
+@immutable
+class CourseVideoPoster {
+  const CourseVideoPoster({
+    required this.url,
+    required this.smallUrl,
+    required this.width,
+    required this.height,
+  });
+
+  factory CourseVideoPoster.fromJson(Object? value) {
+    final json = _map(value, 'poster');
+    return CourseVideoPoster(
+      url: _nonEmpty(json, 'url'),
+      smallUrl: _nonEmpty(json, 'small_url'),
+      width: _int(json, 'width', min: 1),
+      height: _int(json, 'height', min: 1),
+    );
+  }
+
+  final String url;
+  final String smallUrl;
+  final int width;
+  final int height;
+}
+
+/// The video of a lesson: the server already chose the file for the
+/// language of the document, a dub or the main one.
+@immutable
+class CourseVideo {
+  const CourseVideo({
+    required this.url,
+    required this.bytes,
+    required this.duration,
+    required this.width,
+    required this.height,
+    required this.spokenLanguage,
+    required this.poster,
+  });
+
+  static CourseVideo? fromJson(Object? value) {
+    if (value == null) return null;
+    final json = _map(value, 'video');
+    return CourseVideo(
+      url: _nonEmpty(json, 'url'),
+      bytes: _int(json, 'bytes', min: 1),
+      duration: Duration(milliseconds: _int(json, 'duration_ms', min: 1)),
+      width: _int(json, 'width', min: 1),
+      height: _int(json, 'height', min: 1),
+      spokenLanguage: _string(json, 'spoken_language'),
+      poster: CourseVideoPoster.fromJson(json['poster']),
+    );
+  }
+
+  final String url;
+  final int bytes;
+  final Duration duration;
+  final int width;
+  final int height;
+
+  /// The language of the sound, `""` for a video without speech.
+  final String spokenLanguage;
+  final CourseVideoPoster poster;
+
+  double get aspectRatio => width / height;
+}
+
 @immutable
 class CourseLesson {
   const CourseLesson({
@@ -236,6 +303,7 @@ class CourseLesson {
     required this.minutes,
     required this.notes,
     required this.sources,
+    this.video,
   });
 
   factory CourseLesson.fromJson(Object? value) {
@@ -246,7 +314,7 @@ class CourseLesson {
       title: _nonEmpty(json, 'title'),
       summary: _string(json, 'summary'),
       minutes: _int(json, 'minutes'),
-      // `video` comes with stage 2; until then it is null and not drawn.
+      video: CourseVideo.fromJson(json['video']),
       notes: parseNoteBlocks(json['notes']),
       sources: _strings(json['sources'], 'sources'),
     );
@@ -257,6 +325,7 @@ class CourseLesson {
   final String title;
   final String summary;
   final int minutes;
+  final CourseVideo? video;
   final List<NoteBlock> notes;
   final List<String> sources;
 }

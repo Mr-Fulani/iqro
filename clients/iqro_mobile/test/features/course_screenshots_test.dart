@@ -26,9 +26,11 @@ import 'package:iqro_mobile/features/courses/course_catalog_screen.dart';
 import 'package:iqro_mobile/features/courses/course_home_screen.dart';
 import 'package:iqro_mobile/features/courses/course_lesson_screen.dart';
 import 'package:iqro_mobile/features/courses/course_progress_store.dart';
+import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 import 'course_test_data.dart';
+import 'lesson_video_test_data.dart';
 
 const _directory = String.fromEnvironment('SCREENSHOT_DIR');
 const _size = Size(1080, 2340); // Redmi Note 7
@@ -85,6 +87,8 @@ Future<void> _pump(
   required String location,
   FakeCourseGateway? remote,
   Set<String> studied = const {},
+  Map<String, Duration> positions = const {},
+  FakeVideoFactory? videos,
   String locale = 'ru',
   bool dark = false,
 }) async {
@@ -106,6 +110,9 @@ Future<void> _pump(
         lesson: lesson,
         contentVersion: '1',
       );
+    }
+    for (final MapEntry(:key, :value) in positions.entries) {
+      await store.savePosition(course: 'ramadan', lesson: key, position: value);
     }
   });
   final router = GoRouter(
@@ -155,6 +162,13 @@ Future<void> _pump(
           // The examples' covers are not real files: the placeholder shows.
           courseImageProvider.overrideWithValue(
             (_) => MemoryImage(Uint8List(0)),
+          ),
+          lessonVideoControllerProvider.overrideWithValue(
+            (videos ?? FakeVideoFactory()).call,
+          ),
+          lessonVideoWakeProvider.overrideWithValue((_) async {}),
+          audioControllerProvider.overrideWith(
+            (ref) => RecordingAudioController(),
           ),
         ],
         child: MaterialApp.router(
@@ -251,6 +265,71 @@ void main() {
       studied: {'smysl-posta', 'namerenie'},
     );
     await _capture(tester, 'app-course-lesson-done-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('lesson with a video', (tester) async {
+    await _pump(
+      tester,
+      location: '/courses/ramadan/namerenie',
+      positions: {'namerenie': const Duration(minutes: 4, seconds: 12)},
+    );
+    await _capture(tester, 'app-course-video-facade-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('catalog continuing a video', (tester) async {
+    await _pump(
+      tester,
+      location: '/courses',
+      studied: {'smysl-posta'},
+      positions: {'namerenie': const Duration(minutes: 4, seconds: 12)},
+    );
+    await _capture(tester, 'app-courses-catalog-video-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('video playing', (tester) async {
+    final videos = FakeVideoFactory();
+    await _pump(tester, location: '/courses/ramadan/namerenie', videos: videos);
+    await tester.tap(find.byKey(const ValueKey('lesson-video-facade')));
+    await _settle(tester);
+    await videos.last.pause();
+    videos.last.playTo(const Duration(minutes: 4, seconds: 12));
+    await _capture(tester, 'app-course-video-player-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('video full screen', (tester) async {
+    final videos = FakeVideoFactory();
+    await _pump(tester, location: '/courses/ramadan/namerenie', videos: videos);
+    await tester.tap(find.byKey(const ValueKey('lesson-video-facade')));
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('lesson-video-fullscreen')));
+    // The test view does not turn by itself.
+    tester.view.physicalSize = _size.flipped;
+    await _settle(tester);
+    await videos.last.pause();
+    videos.last.playTo(const Duration(minutes: 4, seconds: 12));
+    await _capture(tester, 'app-course-video-fullscreen-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('video that did not load', (tester) async {
+    await _pump(
+      tester,
+      location: '/courses/ramadan/namerenie',
+      videos: FakeVideoFactory(fails: true),
+    );
+    await tester.tap(find.byKey(const ValueKey('lesson-video-facade')));
+    await _capture(tester, 'app-course-video-failed-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('video in another language, Arabic interface', (tester) async {
+    final document = courseDocumentJson();
+    (document['course']! as Map)['language'] = 'ar';
+    await _pump(
+      tester,
+      location: '/courses/ramadan/namerenie',
+      locale: 'ar',
+      remote: FakeCourseGateway(documents: {'1': document}),
+    );
+    await _capture(tester, 'app-course-video-language-ar');
   }, skip: _directory.isEmpty);
 
   testWidgets('lesson in the dark theme', (tester) async {

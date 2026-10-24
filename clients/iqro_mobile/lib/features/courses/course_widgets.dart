@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,6 +34,23 @@ String courseMetaLabel(BuildContext context, int lessons, int minutes) {
   final count = context.l10n.coursesLessonCount(lessons);
   return duration.isEmpty ? count : '$count · $duration';
 }
+
+/// «4:12», «1:02:05».
+String courseVideoTime(Duration value) {
+  final seconds = value.inSeconds;
+  final minutes = seconds ~/ 60;
+  String two(int part) => part.toString().padLeft(2, '0');
+  return minutes >= 60
+      ? '${minutes ~/ 60}:${two(minutes % 60)}:${two(seconds % 60)}'
+      : '$minutes:${two(seconds % 60)}';
+}
+
+/// «9:48 · 108 MB»: megabytes of 2^20 bytes, as in the contract example.
+String courseVideoMeta(BuildContext context, CourseVideo video) =>
+    context.l10n.coursesVideoMeta(
+      courseVideoTime(video.duration),
+      math.max(1, (video.bytes / (1024 * 1024)).round()),
+    );
 
 /// A 16:9 cover; the course's green with a book while it loads, when it
 /// cannot, and for a course without one.

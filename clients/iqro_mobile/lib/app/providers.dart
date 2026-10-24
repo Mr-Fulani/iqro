@@ -1079,6 +1079,11 @@ final courseProgressProvider = FutureProvider.autoDispose
       ref.watch(activeAccountScopeKeyProvider);
       return ref.watch(courseProgressStoreProvider).read(course);
     });
+final coursePositionsProvider = FutureProvider.autoDispose
+    .family<CourseVideoPositions, String>((ref, course) {
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(courseProgressStoreProvider).readPositions(course);
+    });
 
 /// Course covers, kept in the image disk cache after the first view.
 final courseImageProvider = Provider<ImageProvider Function(String url)>(

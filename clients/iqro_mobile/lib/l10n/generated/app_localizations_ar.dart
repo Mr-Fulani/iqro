@@ -2693,4 +2693,54 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get coursesLessonNotFound => 'هذا الموضوع غير موجود في الدورة';
+
+  @override
+  String coursesVideoMeta(String duration, int size) {
+    return '$duration · $size ميغابايت';
+  }
+
+  @override
+  String coursesVideoWatch(String title, String meta) {
+    return 'مشاهدة فيديو «$title»، $meta';
+  }
+
+  @override
+  String coursesVideoResumeFrom(String time) {
+    return 'المتابعة من $time';
+  }
+
+  @override
+  String coursesVideoFrom(String time) {
+    return 'الفيديو من $time';
+  }
+
+  @override
+  String coursesVideoLanguage(String language) {
+    String _temp0 = intl.Intl.selectLogic(language, {
+      'ru': 'الفيديو باللغة الروسية',
+      'en': 'الفيديو باللغة الإنجليزية',
+      'ar': 'الفيديو باللغة العربية',
+      'tr': 'الفيديو باللغة التركية',
+      'other': 'الفيديو بلغة أخرى',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get coursesVideoFailed => 'تعذّر تحميل الفيديو';
+
+  @override
+  String get coursesVideoBack10 => 'رجوع 10 ثوانٍ';
+
+  @override
+  String get coursesVideoForward10 => 'تقديم 10 ثوانٍ';
+
+  @override
+  String get coursesVideoPosition => 'موضع الفيديو';
+
+  @override
+  String get coursesVideoFullscreen => 'ملء الشاشة';
+
+  @override
+  String get coursesVideoExitFullscreen => 'الخروج من ملء الشاشة';
 }

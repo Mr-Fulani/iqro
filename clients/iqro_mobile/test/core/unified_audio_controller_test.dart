@@ -248,6 +248,47 @@ void main() {
     },
   );
 
+  test('a lesson video pauses Quran reading and keeps its track', () async {
+    final engine = _FakeAudioEngine();
+    final controller = AudioController(engine: engine);
+    addTearDown(controller.dispose);
+
+    await controller.loadPlayback(
+      playback: _playback,
+      reciter: _reciter,
+      surahName: 'Al-Fatiha',
+    );
+    engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+
+    await controller.pauseForLessonVideo();
+
+    expect(engine.pauseCalls, 1);
+    expect(controller.state.playing, isFalse);
+    expect(controller.state.track?.id, _playback.track.id);
+  });
+
+  test('a lesson video pauses Dua and prayer audio too', () async {
+    for (final type in ['dua', 'salah']) {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine);
+      addTearDown(controller.dispose);
+
+      await controller.loadStandalone(
+        id: '$type:1',
+        url: 'https://media.example.test/$type/1.mp3',
+        title: 'Morning remembrance',
+        contentType: type,
+      );
+      expect(controller.state.standalone?.playing, isTrue);
+
+      await controller.pauseForLessonVideo();
+
+      expect(engine.pauseCalls, 1, reason: type);
+      expect(controller.state.standalone?.playing, isFalse, reason: type);
+      expect(controller.state.standalone?.mediaItem.id, '$type:1');
+    }
+  });
+
   test('entering Dua preserves a currently playing Dua source', () async {
     final engine = _FakeAudioEngine();
     final controller = AudioController(engine: engine);

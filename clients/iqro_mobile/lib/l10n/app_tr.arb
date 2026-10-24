@@ -815,5 +815,16 @@
   "coursesUpdateApp": "Uygulamayı güncelleyin",
   "coursesUpdateAppMessage": "Bu kurs IQRO'nun daha yeni bir sürümünü gerektiriyor.",
   "coursesUnavailable": "Bu kurs şu anda kullanılamıyor",
-  "coursesLessonNotFound": "Bu konu kursta yok"
+  "coursesLessonNotFound": "Bu konu kursta yok",
+  "coursesVideoMeta": "{duration} · {size} MB",
+  "coursesVideoWatch": "«{title}» videosunu izle, {meta}",
+  "coursesVideoResumeFrom": "{time} konumundan devam et",
+  "coursesVideoFrom": "Video {time} konumundan",
+  "coursesVideoLanguage": "{language, select, ru{Rusça video} en{İngilizce video} ar{Arapça video} tr{Türkçe video} other{Başka dilde video}}",
+  "coursesVideoFailed": "Video yüklenemedi",
+  "coursesVideoBack10": "10 saniye geri",
+  "coursesVideoForward10": "10 saniye ileri",
+  "coursesVideoPosition": "Video konumu",
+  "coursesVideoFullscreen": "Tam ekran",
+  "coursesVideoExitFullscreen": "Tam ekrandan çık"
 }

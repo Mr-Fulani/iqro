@@ -53,7 +53,40 @@ class CourseProgress {
   };
 }
 
-/// Keeps course progress in `app_state` under `courses.progress.<course>`.
+/// Where each lesson video stopped:
+/// `{"<lesson>": {"ms": 252000, "updated_at": "<ISO>"}}`.
+@immutable
+class CourseVideoPositions {
+  const CourseVideoPositions([this.lessons = const {}]);
+
+  /// Entries that do not fit are dropped.
+  factory CourseVideoPositions.fromJson(Map<String, Object?>? json) =>
+      CourseVideoPositions({
+        for (final MapEntry(:key, :value) in (json ?? const {}).entries)
+          if (value case {
+            'ms': final int ms,
+            'updated_at': final String updatedAt,
+          } when ms > 0 && isCourseSlug(key))
+            key: (position: Duration(milliseconds: ms), updatedAt: updatedAt),
+      });
+
+  final Map<String, ({Duration position, String updatedAt})> lessons;
+
+  /// Where the video of [lesson] stopped, or null to start from the
+  /// beginning.
+  Duration? of(String lesson) => lessons[lesson]?.position;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    for (final MapEntry(:key, :value) in lessons.entries)
+      key: <String, Object?>{
+        'ms': value.position.inMilliseconds,
+        'updated_at': value.updatedAt,
+      },
+  };
+}
+
+/// Keeps course progress in `app_state` under `courses.progress.<course>`
+/// and video positions under `courses.position.<course>`.
 class CourseProgressStore {
   CourseProgressStore(this._database, {DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
@@ -66,8 +99,41 @@ class CourseProgressStore {
 
   static String stateKey(String course) => 'courses.progress.$course';
 
+  static String positionKey(String course) => 'courses.position.$course';
+
   Future<CourseProgress> read(String course) async =>
       CourseProgress.fromJson(await _database.readState(stateKey(course)));
+
+  Future<CourseVideoPositions> readPositions(String course) async =>
+      CourseVideoPositions.fromJson(
+        await _database.readState(positionKey(course)),
+      );
+
+  /// Where the video of [lesson] stopped; zero forgets it.
+  Future<CourseVideoPositions> savePosition({
+    required String course,
+    required String lesson,
+    required Duration position,
+  }) => _enqueue(() async {
+    final scope = await _database.captureAccount();
+    final current = CourseVideoPositions.fromJson(
+      await _database.readState(positionKey(course), accountScope: scope),
+    );
+    final lessons = {...current.lessons}..remove(lesson);
+    if (position > Duration.zero) {
+      lessons[lesson] = (
+        position: position,
+        updatedAt: tajweedProgressTime(_clock()),
+      );
+    }
+    final next = CourseVideoPositions(lessons);
+    await _database.writeState(
+      positionKey(course),
+      next.toJson(),
+      accountScope: scope,
+    );
+    return next;
+  });
 
   /// The lesson was opened. A studied lesson stays studied.
   Future<CourseProgress> recordOpen({
@@ -99,30 +165,32 @@ class CourseProgressStore {
     String lesson,
     String contentVersion,
     bool Function(TajweedLessonProgress? previous) completed,
-  ) {
-    final result = _queue.then((_) async {
-      final scope = await _database.captureAccount();
-      final current = CourseProgress.fromJson(
-        await _database.readState(stateKey(course), accountScope: scope),
-      );
-      final next = CourseProgress({
-        ...current.lessons,
-        lesson: TajweedLessonProgress(
-          status: completed(current.lessons[lesson])
-              ? TajweedLessonStatus.completed
-              : TajweedLessonStatus.inProgress,
-          stepSlug: '',
-          contentVersion: contentVersion,
-          updatedAt: tajweedProgressTime(_clock()),
-        ),
-      });
-      await _database.writeState(
-        stateKey(course),
-        next.toJson(),
-        accountScope: scope,
-      );
-      return next;
+  ) => _enqueue(() async {
+    final scope = await _database.captureAccount();
+    final current = CourseProgress.fromJson(
+      await _database.readState(stateKey(course), accountScope: scope),
+    );
+    final next = CourseProgress({
+      ...current.lessons,
+      lesson: TajweedLessonProgress(
+        status: completed(current.lessons[lesson])
+            ? TajweedLessonStatus.completed
+            : TajweedLessonStatus.inProgress,
+        stepSlug: '',
+        contentVersion: contentVersion,
+        updatedAt: tajweedProgressTime(_clock()),
+      ),
     });
+    await _database.writeState(
+      stateKey(course),
+      next.toJson(),
+      accountScope: scope,
+    );
+    return next;
+  });
+
+  Future<T> _enqueue<T>(Future<T> Function() write) {
+    final result = _queue.then((_) => write());
     _queue = result.then<void>((_) {}, onError: (Object _) {});
     return result;
   }
