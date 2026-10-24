@@ -3,6 +3,7 @@
 // The server compiles the notes into blocks; the site only draws them.
 
 import {
+  browserStorage,
   readCourseProgress,
   recordLessonStep,
   writeCourseProgress,
@@ -11,6 +12,7 @@ import {
 
 export const COURSES_SCHEMA_VERSION = 1;
 export const COURSES_PROGRESS_EVENT = "iqro:courses-progress";
+export const COURSES_POSITION_EVENT = "iqro:courses-position";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -65,12 +67,25 @@ export type NoteBlock =
   | { type: "quote"; dir: TextDirection; lines: Segment[][]; source: string | null }
   | { type: "note"; dir: TextDirection; lines: Segment[][] };
 
+/** One video per lesson; the server already chose the file with the sound of the document's language. */
+export type CourseVideo = {
+  url: string;
+  bytes: number;
+  duration_ms: number;
+  width: number;
+  height: number;
+  /** The language heard in the file; "" for a video without speech. */
+  spoken_language: string;
+  poster: { url: string; small_url: string; width: number; height: number };
+};
+
 export type CourseLesson = {
   slug: string;
   number: number;
   title: string;
   summary: string;
   minutes: number;
+  video: CourseVideo | null;
   notes: NoteBlock[];
   sources: string[];
 };
@@ -158,6 +173,34 @@ function cover(value: unknown, where: string): CourseCover | null {
     width: count(value.width, `${where}.width`),
     height: count(value.height, `${where}.height`),
   };
+}
+
+const VIDEO_HOST = "media.iqro.forum";
+
+/** Videos come only from the media host (or this site's /media proxy), as the app requires. */
+function video(value: unknown, where: string): CourseVideo | null {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) throw new CourseDocumentError(`${where} is not an object`);
+  const poster = value.poster;
+  if (!isRecord(poster)) throw new CourseDocumentError(`${where}.poster is not an object`);
+  const result: CourseVideo = {
+    url: mediaUrl(value.url, `${where}.url`),
+    bytes: count(value.bytes, `${where}.bytes`),
+    duration_ms: count(value.duration_ms, `${where}.duration_ms`),
+    width: count(value.width, `${where}.width`),
+    height: count(value.height, `${where}.height`),
+    spoken_language: text(value.spoken_language, `${where}.spoken_language`),
+    poster: {
+      url: mediaUrl(poster.url, `${where}.poster.url`),
+      small_url: mediaUrl(poster.small_url, `${where}.poster.small_url`),
+      width: count(poster.width, `${where}.poster.width`),
+      height: count(poster.height, `${where}.poster.height`),
+    },
+  };
+  const approved = [result.url, result.poster.url, result.poster.small_url]
+    .every((url) => url.startsWith("/") || new URL(url).host === VIDEO_HOST);
+  // A file from elsewhere is left out; the notes of the lesson still show.
+  return approved ? result : null;
 }
 
 function direction(value: unknown, where: string): TextDirection {
@@ -248,6 +291,7 @@ export function parseCourseDocument(value: unknown): CourseDocumentResult {
       title: text(lesson.title, `${at}.title`),
       summary: text(lesson.summary, `${at}.summary`),
       minutes: count(lesson.minutes, `${at}.minutes`),
+      video: video(lesson.video, `${at}.video`),
       notes: parseNoteBlocks(lesson.notes, `${at}.notes`),
       sources: list(lesson.sources, `${at}.sources`).map((source, item) => text(source, `${at}.sources[${item}]`)),
     };
@@ -277,6 +321,16 @@ export function courseOutline(document: CourseDocument): CourseOutline {
     title: document.course.title,
     lessons: document.lessons.map(({ slug, number, title }) => ({ slug, number, title })),
   };
+}
+
+/** Whole minutes of video, rounded up, as `courses[].video_minutes` in the list. */
+export function videoMinutes(lessons: Pick<CourseLesson, "video">[]): number {
+  return Math.ceil(lessons.reduce((total, lesson) => total + (lesson.video?.duration_ms ?? 0), 0) / 60_000);
+}
+
+/** The size on the video's cover, in the binary megabytes the contract example shows (108 МБ). */
+export function videoMegabytes(bytes: number): number {
+  return Math.max(1, Math.round(bytes / 1_048_576));
 }
 
 // Progress -------------------------------------------------------------------
@@ -356,4 +410,62 @@ export function continueTarget(
     }
   }
   return best ? { course: best.course, lesson: best.lesson } : null;
+}
+
+// Video positions ------------------------------------------------------------
+// `courses.position.<slug>` = {"<lesson>": {"ms": 252000, "updated_at": "<ISO>"}}, as in the app.
+
+export type VideoPositions = Record<string, { ms: number; updated_at: string }>;
+
+export function videoPositionStorageKey(courseSlug: string): string {
+  return `courses.position.${courseSlug}`;
+}
+
+/** Stored positions; entries that do not fit are dropped. */
+export function parseVideoPositions(raw: string | null): VideoPositions {
+  const positions: VideoPositions = {};
+  if (!raw) return positions;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return positions;
+  }
+  if (!isRecord(parsed)) return positions;
+  for (const [slug, entry] of Object.entries(parsed)) {
+    if (!isLessonSlug(slug) || !isRecord(entry)) continue;
+    const { ms } = entry;
+    if (typeof ms !== "number" || !Number.isInteger(ms) || ms <= 0) continue;
+    positions[slug] = { ms, updated_at: typeof entry.updated_at === "string" ? entry.updated_at : "" };
+  }
+  return positions;
+}
+
+export function readVideoPositions(courseSlug: string, storage = browserStorage()): VideoPositions {
+  try {
+    return parseVideoPositions(storage?.getItem(videoPositionStorageKey(courseSlug)) ?? null);
+  } catch {
+    return {};
+  }
+}
+
+/** Saves where the video stopped; `null` (watched to the end) forgets it. */
+export function writeVideoPosition(
+  courseSlug: string,
+  lessonSlug: string,
+  ms: number | null,
+  { storage = browserStorage(), now = new Date() }: { storage?: Pick<Storage, "getItem" | "setItem"> | null; now?: Date } = {},
+): void {
+  if (!storage) return;
+  const positions = readVideoPositions(courseSlug, storage);
+  const whole = ms === null ? 0 : Math.floor(ms);
+  if (whole > 0) positions[lessonSlug] = { ms: whole, updated_at: now.toISOString() };
+  else delete positions[lessonSlug];
+  try {
+    storage.setItem(videoPositionStorageKey(courseSlug), JSON.stringify(positions));
+  } catch {
+    // The position stays best-effort when storage is blocked or full.
+    return;
+  }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(COURSES_POSITION_EVENT));
 }
