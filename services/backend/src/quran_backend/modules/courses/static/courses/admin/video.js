@@ -383,4 +383,9 @@
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-course-video]").forEach(init);
   });
+
+  // The «Медиа» block draws this block anew with its own.
+  document.addEventListener("lesson-media:drawn", function (event) {
+    event.target.querySelectorAll("[data-course-video]").forEach(init);
+  });
 })();

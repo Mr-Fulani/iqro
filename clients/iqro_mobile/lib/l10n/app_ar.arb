@@ -826,5 +826,10 @@
   "coursesVideoForward10": "تقديم 10 ثوانٍ",
   "coursesVideoPosition": "موضع الفيديو",
   "coursesVideoFullscreen": "ملء الشاشة",
-  "coursesVideoExitFullscreen": "الخروج من ملء الشاشة"
+  "coursesVideoExitFullscreen": "الخروج من ملء الشاشة",
+  "lessonMediaSlides": "الشرائح",
+  "lessonMediaSlideOf": "الشريحة {current} من {total}",
+  "lessonMediaSlideCounter": "{current} / {total}",
+  "lessonMediaPreviousSlide": "الشريحة السابقة",
+  "lessonMediaNextSlide": "الشريحة التالية"
 }

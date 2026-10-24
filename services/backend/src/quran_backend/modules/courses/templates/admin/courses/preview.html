@@ -1,6 +1,6 @@
 {% extends "admin/base_site.html" %}
 
-{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}
 <style>
   .cv-tabs { display: flex; gap: 2px; flex-wrap: wrap; margin: 0 0 16px; border-bottom: 1px solid var(--border-color, #ccc); }
   .cv-tabs a { padding: 8px 14px; border: 1px solid var(--border-color, #ccc); border-bottom: 0; border-radius: 4px 4px 0 0; background: var(--darkened-bg, #f8f8f8); color: var(--body-fg, #333); }
@@ -53,10 +53,26 @@
       <section class="cv-lesson">
         <h2>{{ lesson.number }}. {{ lesson.title|default:"Без названия" }}</h2>
         <p class="cv-meta">{{ lesson.minutes }} мин{% if lesson.summary %} · {{ lesson.summary }}{% endif %}</p>
-        {% if lesson.video %}
-          <video class="cv-video" controls playsinline preload="none" src="{{ lesson.video.url }}" poster="{{ lesson.video.poster.small_url }}" width="{{ lesson.video.poster.width }}" height="{{ lesson.video.poster.height }}"></video>
-          <p class="cv-meta">{{ lesson.video_label }}</p>
-        {% endif %}
+        {% for item in lesson.media_blocks %}
+          {% if item.type == "video" %}
+            <video class="cv-video" controls playsinline preload="none" src="{{ item.video.url }}" poster="{{ item.video.poster.small_url }}" width="{{ item.video.poster.width }}" height="{{ item.video.poster.height }}"></video>
+            <p class="cv-meta">{{ lesson.video_label }}</p>
+          {% elif item.type == "slides" %}
+            <div class="cvm-strip" aria-label="Слайды">
+              {% for slide in item.slides %}
+                <figure>
+                  <img src="{{ slide.image.small_url }}" alt="{{ slide.alt }}" width="{{ slide.image.width }}" height="{{ slide.image.height }}" loading="lazy">
+                  <figcaption dir="{{ slide.dir }}">{{ forloop.counter }} / {{ item.slides|length }}{% if slide.caption %} · {{ slide.caption }}{% endif %}</figcaption>
+                </figure>
+              {% endfor %}
+            </div>
+          {% elif item.type == "banner" %}
+            <figure class="cvm-banner">
+              <img src="{{ item.image.url }}" alt="{{ item.alt }}" width="{{ item.image.width }}" height="{{ item.image.height }}">
+              {% if item.caption %}<figcaption dir="{{ item.dir }}">{{ item.caption }}</figcaption>{% endif %}
+            </figure>
+          {% endif %}
+        {% endfor %}
         {% include "admin/courses/blocks.html" with blocks=lesson.notes %}
         {% if lesson.sources %}
           <h3 class="cv-heading">Источники</h3>

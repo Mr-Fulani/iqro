@@ -9,6 +9,8 @@ import {
   courseProgressStorageKey,
   isCourseSlug,
   isQuizSlug,
+  lessonImageSrcSet,
+  mediaVideo,
   parseCourseDocument,
   parseCourseList,
   readThematicProgress,
@@ -22,6 +24,7 @@ import {
   writeThematicProgress,
   writeVideoPosition,
   type CourseDocument,
+  type CourseMediaBlock,
 } from "./thematic-courses.ts";
 
 function example(name: string): Record<string, unknown> {
@@ -99,6 +102,104 @@ test("a lesson video is the file the server chose for the language; other hosts 
     const result = parseCourseDocument(foreign) as { document: CourseDocument };
     assert.equal(result.document.lessons[1]!.video, null, url);
     assert.equal(result.document.lessons[1]!.notes.length, document.lessons[1]!.notes.length);
+  }
+});
+
+type RawLesson = Record<string, unknown> & { media?: Record<string, unknown>[] };
+
+function mediaOf(change: (lessons: RawLesson[]) => void): CourseMediaBlock[][] {
+  const value = example("course-document.example.json");
+  change(value.lessons as RawLesson[]);
+  const result = parseCourseDocument(value) as { document: CourseDocument };
+  return result.document.lessons.map((lesson) => lesson.media);
+}
+
+test("lesson media keep the author's order: banner, then video and slides", () => {
+  const document = exampleDocument();
+  const [first, second, third] = document.lessons.map((lesson) => lesson.media);
+  assert.deepEqual(first!.map((block) => block.type), ["banner"]);
+  assert.deepEqual(second!.map((block) => block.type), ["video", "slides"]);
+  assert.deepEqual(third, []);
+
+  const banner = first![0] as Extract<CourseMediaBlock, { type: "banner" }>;
+  assert.deepEqual(banner.image, {
+    url: "https://media.iqro.forum/courses/banners/2222222222bbbbbbbbbb.webp",
+    small_url: "https://media.iqro.forum/courses/banners/2222222222bbbbbbbbbb-800.webp",
+    width: 1600,
+    height: 900,
+  });
+  assert.deepEqual([banner.caption, banner.alt, banner.dir], ["", "Полумесяц над минаретом на закате", "ltr"]);
+
+  const slides = (second![1] as Extract<CourseMediaBlock, { type: "slides" }>).slides;
+  assert.deepEqual(slides.map((slide) => [slide.image.width, slide.image.height, slide.dir]), [[1600, 1200, "ltr"], [1600, 900, "rtl"]]);
+  assert.equal(slides[1]!.caption, "نويت صوم غد");
+  assert.equal(lessonImageSrcSet(banner.image), `${banner.image.small_url} 800w, ${banner.image.url} 1600w`);
+  // A tall slide is 800 px high in its small file, so narrower.
+  assert.equal(lessonImageSrcSet({ url: "/l.webp", small_url: "/s.webp", width: 1200, height: 1600 }), "/s.webp 600w, /l.webp 1200w");
+  // «12 мин · видео 9:48» comes from the video among the media; it is the lesson's video.
+  assert.deepEqual(mediaVideo(second!), document.lessons[1]!.video);
+  assert.equal(mediaVideo(first!), null);
+});
+
+test("a release prepared before media shows its video as the only block", () => {
+  const [first, second, third] = mediaOf((lessons) => {
+    for (const lesson of lessons) delete lesson.media;
+  });
+  const document = exampleDocument();
+  assert.deepEqual(first, []);
+  assert.deepEqual(second, [{ type: "video", video: document.lessons[1]!.video }]);
+  assert.deepEqual(third, []);
+});
+
+test("media of an unknown type or from another host are left out; the rest stays", () => {
+  const slidesOf = (lessons: RawLesson[]) => lessons[1]!.media![1]!.slides as Record<string, Record<string, unknown>>[];
+  for (const [name, change, expected] of [
+    ["unknown type", (lessons: RawLesson[]) => {
+      lessons[1]!.media!.splice(1, 0, { type: "quiz", quiz: "ramadan-basics" });
+    }, ["video", "slides"]],
+    ["foreign banner", (lessons: RawLesson[]) => {
+      (lessons[0]!.media![0]!.image as Record<string, unknown>).url = "https://example.com/banner.webp";
+    }, null],
+    ["foreign small banner", (lessons: RawLesson[]) => {
+      (lessons[0]!.media![0]!.image as Record<string, unknown>).small_url = "https://media.iqro.forum.example.com/b.webp";
+    }, null],
+    ["foreign slide", (lessons: RawLesson[]) => {
+      slidesOf(lessons)[1]!.image!.url = "https://example.com/slide.webp";
+    }, ["video"]],
+    ["empty slides", (lessons: RawLesson[]) => {
+      lessons[1]!.media![1]!.slides = [];
+    }, ["video"]],
+    ["foreign video", (lessons: RawLesson[]) => {
+      (lessons[1]!.media![0]!.video as Record<string, unknown>).url = "https://example.com/v.mp4";
+    }, ["slides"]],
+    ["video null", (lessons: RawLesson[]) => {
+      lessons[1]!.media![0]!.video = null;
+    }, ["slides"]],
+  ] as const) {
+    const [first, second] = mediaOf(change);
+    if (expected === null) assert.deepEqual(first, [], name);
+    else assert.deepEqual(second!.map((block) => block.type), expected, name);
+  }
+
+  // The site's own /media proxy is the media host too.
+  const [, second] = mediaOf((lessons) => {
+    slidesOf(lessons)[0]!.image = { url: "/media/courses/slides/a.webp", small_url: "/media/courses/slides/a-800.webp", width: 800, height: 600 };
+  });
+  const slides = (second![1] as Extract<CourseMediaBlock, { type: "slides" }>).slides;
+  assert.equal(slides[0]!.image.small_url, "/media/courses/slides/a-800.webp");
+});
+
+test("a broken media block is an error of the document", () => {
+  for (const change of [
+    (lessons: RawLesson[]) => { lessons[1]!.media = "video" as never; },
+    (lessons: RawLesson[]) => { lessons[1]!.media![1] = "slides" as never; },
+    (lessons: RawLesson[]) => { (lessons[1]!.media![1]!.slides as Record<string, unknown>[])[0]!.dir = "up"; },
+    (lessons: RawLesson[]) => { delete (lessons[1]!.media![1]!.slides as Record<string, unknown>[])[0]!.caption; },
+    (lessons: RawLesson[]) => { lessons[0]!.media![0]!.image = null; },
+    (lessons: RawLesson[]) => { (lessons[0]!.media![0]!.image as Record<string, unknown>).width = "1600"; },
+    (lessons: RawLesson[]) => { (lessons[0]!.media![0]!.image as Record<string, unknown>).url = "javascript:alert(1)"; },
+  ]) {
+    assert.throws(() => mediaOf(change), /Invalid course document/);
   }
 });
 

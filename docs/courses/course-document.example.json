@@ -27,6 +27,20 @@
       "summary": "Зачем мусульмане постятся в Рамадан.",
       "minutes": 8,
       "video": null,
+      "media": [
+        {
+          "type": "banner",
+          "image": {
+            "url": "https://media.iqro.forum/courses/banners/2222222222bbbbbbbbbb.webp",
+            "small_url": "https://media.iqro.forum/courses/banners/2222222222bbbbbbbbbb-800.webp",
+            "width": 1600,
+            "height": 900
+          },
+          "caption": "",
+          "alt": "Полумесяц над минаретом на закате",
+          "dir": "ltr"
+        }
+      ],
       "notes": [
         {
           "type": "heading",
@@ -112,6 +126,52 @@
           "height": 720
         }
       },
+      "media": [
+        {
+          "type": "video",
+          "video": {
+            "url": "https://media.iqro.forum/courses/videos/abcdef0123456789abcd.mp4",
+            "bytes": 113246208,
+            "duration_ms": 588000,
+            "width": 1280,
+            "height": 720,
+            "spoken_language": "ru",
+            "poster": {
+              "url": "https://media.iqro.forum/courses/posters/abcdef0123456789abcd-0123456789ab-1280.webp",
+              "small_url": "https://media.iqro.forum/courses/posters/abcdef0123456789abcd-0123456789ab-640.webp",
+              "width": 1280,
+              "height": 720
+            }
+          }
+        },
+        {
+          "type": "slides",
+          "slides": [
+            {
+              "image": {
+                "url": "https://media.iqro.forum/courses/slides/1111111111aaaaaaaaaa.webp",
+                "small_url": "https://media.iqro.forum/courses/slides/1111111111aaaaaaaaaa-800.webp",
+                "width": 1600,
+                "height": 1200
+              },
+              "caption": "[Когда делать намерение — схема после проверки]",
+              "alt": "Схема: ночь, рассвет и время намерения",
+              "dir": "ltr"
+            },
+            {
+              "image": {
+                "url": "https://media.iqro.forum/courses/slides/3333333333cccccccccc.webp",
+                "small_url": "https://media.iqro.forum/courses/slides/3333333333cccccccccc-800.webp",
+                "width": 1600,
+                "height": 900
+              },
+              "caption": "نويت صوم غد",
+              "alt": "نويت صوم غد",
+              "dir": "rtl"
+            }
+          ]
+        }
+      ],
       "notes": [
         {
           "type": "heading",
@@ -186,6 +246,7 @@
       "summary": "Ночной намаз Рамадана.",
       "minutes": 10,
       "video": null,
+      "media": [],
       "notes": [
         {
           "type": "heading",

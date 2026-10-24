@@ -114,6 +114,9 @@ class CourseLesson(BaseModel):
         related_name="+",
         editable=False,
     )
+    # Video, slides and banners in the author's order (courses/lesson_media.py), set by the
+    # media block of the lesson page. A list without the video's place shows it first.
+    media = models.JSONField(default=list, blank=True, editable=False)
     title_ru = models.CharField(max_length=120, blank=True)
     title_en = models.CharField(max_length=120, blank=True)
     title_ar = models.CharField(max_length=120, blank=True)
