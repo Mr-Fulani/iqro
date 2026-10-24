@@ -2611,4 +2611,130 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tajweedPracticeAgain => 'Ещё раз';
+
+  @override
+  String get coursesTitle => 'Курсы';
+
+  @override
+  String get coursesSubtitle => 'Темы с конспектами';
+
+  @override
+  String get coursesOfflineBanner =>
+      'Нет интернета — показаны сохранённые курсы';
+
+  @override
+  String get coursesEmpty => 'Новые курсы появятся здесь.';
+
+  @override
+  String get coursesOfflineEmpty =>
+      'Сохранённых курсов пока нет. Откройте курс с интернетом — он останется на телефоне.';
+
+  @override
+  String get coursesLoadFailed => 'Не удалось загрузить курсы';
+
+  @override
+  String get coursesContinue => 'Продолжить';
+
+  @override
+  String get coursesStart => 'Начать';
+
+  @override
+  String coursesLessonCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count темы',
+      many: '$count тем',
+      few: '$count темы',
+      one: '$count тема',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String coursesHours(int hours) {
+    return '$hours ч';
+  }
+
+  @override
+  String coursesHoursMinutes(int hours, int minutes) {
+    return '$hours ч $minutes мин';
+  }
+
+  @override
+  String coursesStatusStarted(int done, int total) {
+    return 'Начат · $done/$total';
+  }
+
+  @override
+  String get coursesStatusCompleted => 'Пройден';
+
+  @override
+  String coursesProgress(int done, int total) {
+    return 'Пройдено тем: $done из $total';
+  }
+
+  @override
+  String coursesLessonOf(String course, int number, int total) {
+    return '$course · тема $number из $total';
+  }
+
+  @override
+  String get coursesSource => 'Автор и источники';
+
+  @override
+  String get coursesLessons => 'Темы';
+
+  @override
+  String get coursesNotes => 'Конспект';
+
+  @override
+  String get coursesSources => 'Источники';
+
+  @override
+  String get coursesImportant => 'Важно';
+
+  @override
+  String get coursesMarkDone => 'Тема изучена';
+
+  @override
+  String get coursesLessonDone => 'Тема пройдена';
+
+  @override
+  String get coursesUnmark => 'Снять отметку';
+
+  @override
+  String get coursesPrevious => 'Назад';
+
+  @override
+  String get coursesNext => 'Дальше';
+
+  @override
+  String coursesPreviousTopic(String title) {
+    return 'Назад: $title';
+  }
+
+  @override
+  String coursesNextTopic(String title) {
+    return 'Дальше: $title';
+  }
+
+  @override
+  String get coursesAllLessons => 'Все темы';
+
+  @override
+  String get coursesCompleted => 'Курс пройден';
+
+  @override
+  String get coursesUpdateApp => 'Обновите приложение';
+
+  @override
+  String get coursesUpdateAppMessage =>
+      'Этот курс сделан для новой версии IQRO.';
+
+  @override
+  String get coursesUnavailable => 'Курс сейчас недоступен';
+
+  @override
+  String get coursesLessonNotFound => 'Такой темы нет в курсе';
 }

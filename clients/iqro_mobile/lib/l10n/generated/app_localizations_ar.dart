@@ -2565,4 +2565,132 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tajweedPracticeAgain => 'مرة أخرى';
+
+  @override
+  String get coursesTitle => 'الدورات';
+
+  @override
+  String get coursesSubtitle => 'موضوعات مع ملخصات';
+
+  @override
+  String get coursesOfflineBanner =>
+      'لا يوجد اتصال بالإنترنت — تُعرض الدورات المحفوظة';
+
+  @override
+  String get coursesEmpty => 'ستظهر الدورات الجديدة هنا.';
+
+  @override
+  String get coursesOfflineEmpty =>
+      'لا توجد دورات محفوظة بعد. افتح دورة وأنت متصل بالإنترنت لتبقى على هاتفك.';
+
+  @override
+  String get coursesLoadFailed => 'تعذّر تحميل الدورات';
+
+  @override
+  String get coursesContinue => 'متابعة';
+
+  @override
+  String get coursesStart => 'ابدأ';
+
+  @override
+  String coursesLessonCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count موضوع',
+      many: '$count موضوعًا',
+      few: '$count موضوعات',
+      two: 'موضوعان',
+      one: 'موضوع واحد',
+      zero: '$count موضوع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String coursesHours(int hours) {
+    return '$hours س';
+  }
+
+  @override
+  String coursesHoursMinutes(int hours, int minutes) {
+    return '$hours س $minutes د';
+  }
+
+  @override
+  String coursesStatusStarted(int done, int total) {
+    return 'بدأت · $done/$total';
+  }
+
+  @override
+  String get coursesStatusCompleted => 'مكتملة';
+
+  @override
+  String coursesProgress(int done, int total) {
+    return 'الموضوعات المدروسة: $done من $total';
+  }
+
+  @override
+  String coursesLessonOf(String course, int number, int total) {
+    return '$course · الموضوع $number من $total';
+  }
+
+  @override
+  String get coursesSource => 'المؤلف والمصادر';
+
+  @override
+  String get coursesLessons => 'الموضوعات';
+
+  @override
+  String get coursesNotes => 'الملخص';
+
+  @override
+  String get coursesSources => 'المصادر';
+
+  @override
+  String get coursesImportant => 'مهم';
+
+  @override
+  String get coursesMarkDone => 'تمت الدراسة';
+
+  @override
+  String get coursesLessonDone => 'تمت دراسة هذا الموضوع';
+
+  @override
+  String get coursesUnmark => 'إلغاء العلامة';
+
+  @override
+  String get coursesPrevious => 'السابق';
+
+  @override
+  String get coursesNext => 'التالي';
+
+  @override
+  String coursesPreviousTopic(String title) {
+    return 'السابق: $title';
+  }
+
+  @override
+  String coursesNextTopic(String title) {
+    return 'التالي: $title';
+  }
+
+  @override
+  String get coursesAllLessons => 'كل الموضوعات';
+
+  @override
+  String get coursesCompleted => 'اكتملت الدورة';
+
+  @override
+  String get coursesUpdateApp => 'حدّث التطبيق';
+
+  @override
+  String get coursesUpdateAppMessage =>
+      'تحتاج هذه الدورة إلى إصدار أحدث من IQRO.';
+
+  @override
+  String get coursesUnavailable => 'هذه الدورة غير متاحة حاليًا';
+
+  @override
+  String get coursesLessonNotFound => 'هذا الموضوع غير موجود في الدورة';
 }

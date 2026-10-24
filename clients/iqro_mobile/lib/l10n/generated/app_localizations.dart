@@ -4649,6 +4649,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Practise again'**
   String get tajweedPracticeAgain;
+
+  /// No description provided for @coursesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Courses'**
+  String get coursesTitle;
+
+  /// No description provided for @coursesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Topics with study notes'**
+  String get coursesSubtitle;
+
+  /// No description provided for @coursesOfflineBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet — showing saved courses'**
+  String get coursesOfflineBanner;
+
+  /// No description provided for @coursesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'New courses will appear here.'**
+  String get coursesEmpty;
+
+  /// No description provided for @coursesOfflineEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved courses yet. Open a course online and it stays on your phone.'**
+  String get coursesOfflineEmpty;
+
+  /// No description provided for @coursesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the courses'**
+  String get coursesLoadFailed;
+
+  /// No description provided for @coursesContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get coursesContinue;
+
+  /// No description provided for @coursesStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get coursesStart;
+
+  /// No description provided for @coursesLessonCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} topic} other{{count} topics}}'**
+  String coursesLessonCount(num count);
+
+  /// No description provided for @coursesHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h'**
+  String coursesHours(int hours);
+
+  /// No description provided for @coursesHoursMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h {minutes} min'**
+  String coursesHoursMinutes(int hours, int minutes);
+
+  /// No description provided for @coursesStatusStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Started · {done}/{total}'**
+  String coursesStatusStarted(int done, int total);
+
+  /// No description provided for @coursesStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get coursesStatusCompleted;
+
+  /// No description provided for @coursesProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Topics studied: {done} of {total}'**
+  String coursesProgress(int done, int total);
+
+  /// No description provided for @coursesLessonOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{course} · topic {number} of {total}'**
+  String coursesLessonOf(String course, int number, int total);
+
+  /// No description provided for @coursesSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Author and sources'**
+  String get coursesSource;
+
+  /// No description provided for @coursesLessons.
+  ///
+  /// In en, this message translates to:
+  /// **'Topics'**
+  String get coursesLessons;
+
+  /// No description provided for @coursesNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Study notes'**
+  String get coursesNotes;
+
+  /// No description provided for @coursesSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Sources'**
+  String get coursesSources;
+
+  /// No description provided for @coursesImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Important'**
+  String get coursesImportant;
+
+  /// No description provided for @coursesMarkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as studied'**
+  String get coursesMarkDone;
+
+  /// No description provided for @coursesLessonDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic studied'**
+  String get coursesLessonDone;
+
+  /// No description provided for @coursesUnmark.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmark'**
+  String get coursesUnmark;
+
+  /// No description provided for @coursesPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get coursesPrevious;
+
+  /// No description provided for @coursesNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get coursesNext;
+
+  /// No description provided for @coursesPreviousTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous: {title}'**
+  String coursesPreviousTopic(String title);
+
+  /// No description provided for @coursesNextTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {title}'**
+  String coursesNextTopic(String title);
+
+  /// No description provided for @coursesAllLessons.
+  ///
+  /// In en, this message translates to:
+  /// **'All topics'**
+  String get coursesAllLessons;
+
+  /// No description provided for @coursesCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Course completed'**
+  String get coursesCompleted;
+
+  /// No description provided for @coursesUpdateApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Update the app'**
+  String get coursesUpdateApp;
+
+  /// No description provided for @coursesUpdateAppMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This course needs a newer version of IQRO.'**
+  String get coursesUpdateAppMessage;
+
+  /// No description provided for @coursesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This course is not available'**
+  String get coursesUnavailable;
+
+  /// No description provided for @coursesLessonNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This topic is not in the course'**
+  String get coursesLessonNotFound;
 }
 
 class _AppLocalizationsDelegate

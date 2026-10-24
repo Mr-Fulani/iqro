@@ -8,6 +8,9 @@ import '../features/account/account_screen.dart';
 import '../features/account/devices_screen.dart';
 import '../features/announcements/news_screen.dart';
 import '../features/calendar/hijri_calendar_screen.dart';
+import '../features/courses/course_catalog_screen.dart';
+import '../features/courses/course_home_screen.dart';
+import '../features/courses/course_lesson_screen.dart';
 import '../features/audio/player_screen.dart';
 import '../features/audio/reciter_launch_screen.dart';
 import '../features/dua/dua_repository.dart';
@@ -261,6 +264,22 @@ GoRouter createRouter({required bool onboardingComplete}) {
         builder: (context, state) => TajweedLessonScreen(
           lessonSlug: state.pathParameters['slug'] ?? '',
           stepSlug: state.pathParameters['step'],
+        ),
+      ),
+      GoRoute(
+        path: '/courses',
+        builder: (context, state) => const CourseCatalogScreen(),
+      ),
+      GoRoute(
+        path: '/courses/:course',
+        builder: (context, state) =>
+            CourseHomeScreen(courseSlug: state.pathParameters['course'] ?? ''),
+      ),
+      GoRoute(
+        path: '/courses/:course/:lesson',
+        builder: (context, state) => CourseLessonScreen(
+          courseSlug: state.pathParameters['course'] ?? '',
+          lessonSlug: state.pathParameters['lesson'] ?? '',
         ),
       ),
       GoRoute(

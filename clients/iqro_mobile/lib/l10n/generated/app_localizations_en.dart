@@ -2588,4 +2588,127 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tajweedPracticeAgain => 'Practise again';
+
+  @override
+  String get coursesTitle => 'Courses';
+
+  @override
+  String get coursesSubtitle => 'Topics with study notes';
+
+  @override
+  String get coursesOfflineBanner => 'No internet — showing saved courses';
+
+  @override
+  String get coursesEmpty => 'New courses will appear here.';
+
+  @override
+  String get coursesOfflineEmpty =>
+      'No saved courses yet. Open a course online and it stays on your phone.';
+
+  @override
+  String get coursesLoadFailed => 'Could not load the courses';
+
+  @override
+  String get coursesContinue => 'Continue';
+
+  @override
+  String get coursesStart => 'Start';
+
+  @override
+  String coursesLessonCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count topics',
+      one: '$count topic',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String coursesHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String coursesHoursMinutes(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
+  String coursesStatusStarted(int done, int total) {
+    return 'Started · $done/$total';
+  }
+
+  @override
+  String get coursesStatusCompleted => 'Completed';
+
+  @override
+  String coursesProgress(int done, int total) {
+    return 'Topics studied: $done of $total';
+  }
+
+  @override
+  String coursesLessonOf(String course, int number, int total) {
+    return '$course · topic $number of $total';
+  }
+
+  @override
+  String get coursesSource => 'Author and sources';
+
+  @override
+  String get coursesLessons => 'Topics';
+
+  @override
+  String get coursesNotes => 'Study notes';
+
+  @override
+  String get coursesSources => 'Sources';
+
+  @override
+  String get coursesImportant => 'Important';
+
+  @override
+  String get coursesMarkDone => 'Mark as studied';
+
+  @override
+  String get coursesLessonDone => 'Topic studied';
+
+  @override
+  String get coursesUnmark => 'Unmark';
+
+  @override
+  String get coursesPrevious => 'Back';
+
+  @override
+  String get coursesNext => 'Next';
+
+  @override
+  String coursesPreviousTopic(String title) {
+    return 'Previous: $title';
+  }
+
+  @override
+  String coursesNextTopic(String title) {
+    return 'Next: $title';
+  }
+
+  @override
+  String get coursesAllLessons => 'All topics';
+
+  @override
+  String get coursesCompleted => 'Course completed';
+
+  @override
+  String get coursesUpdateApp => 'Update the app';
+
+  @override
+  String get coursesUpdateAppMessage =>
+      'This course needs a newer version of IQRO.';
+
+  @override
+  String get coursesUnavailable => 'This course is not available';
+
+  @override
+  String get coursesLessonNotFound => 'This topic is not in the course';
 }
