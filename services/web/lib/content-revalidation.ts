@@ -3,6 +3,7 @@ import { isEditionCode, isUuid } from "./public-content";
 import { isDuaCollectionSlug } from "./public-route-params";
 import { isSalahSlug } from "./salah";
 import { isTajweedLessonSlug } from "./tajweed-course";
+import { isCourseSlug, isQuizSlug } from "./thematic-courses";
 import { SUPPORTED_LOCALES } from "./i18n";
 
 const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -12,6 +13,7 @@ const RECITER_ACTIONS = new Set(["created", "updated"]);
 const DUA_ACTIONS = new Set(["published", "activated", "updated", "withdrawn"]);
 const SOCIAL_PROFILE_ACTIONS = new Set(["created", "updated", "deleted"]);
 const COURSE_ACTIONS = new Set(["published", "activated", "withdrawn"]);
+const THEMATIC_ACTIONS = new Set(["activated", "withdrawn"]);
 const ANNOUNCEMENT_ACTIONS = new Set([
   "published",
   "withdrawn",
@@ -73,6 +75,20 @@ type TajweedCourseChange = {
   version: string;
 };
 
+type ThematicCourseChange = {
+  type: "courses.course.changed";
+  action: string;
+  course: string;
+  version: string;
+};
+
+type QuizChange = {
+  type: "quizzes.quiz.changed";
+  action: string;
+  quiz: string;
+  version: string;
+};
+
 export type ContentChange =
   | QuranContentChange
   | AudioContentChange
@@ -80,6 +96,8 @@ export type ContentChange =
   | DuaContentChange
   | SalahCourseChange
   | TajweedCourseChange
+  | ThematicCourseChange
+  | QuizChange
   | SocialProfilesChange
   | AnnouncementsChange;
 
@@ -192,6 +210,32 @@ export function parseContentChange(value: unknown): ContentChange | null {
     return value as TajweedCourseChange;
   }
 
+  if (value.type === "courses.course.changed") {
+    if (!hasExactKeys(value, ["type", "action", "course", "version"])) return null;
+    if (
+      typeof value.action !== "string" ||
+      !THEMATIC_ACTIONS.has(value.action) ||
+      typeof value.course !== "string" ||
+      !isCourseSlug(value.course) ||
+      typeof value.version !== "string" ||
+      !VERSION_PATTERN.test(value.version)
+    ) return null;
+    return value as ThematicCourseChange;
+  }
+
+  if (value.type === "quizzes.quiz.changed") {
+    if (!hasExactKeys(value, ["type", "action", "quiz", "version"])) return null;
+    if (
+      typeof value.action !== "string" ||
+      !THEMATIC_ACTIONS.has(value.action) ||
+      typeof value.quiz !== "string" ||
+      !isQuizSlug(value.quiz) ||
+      typeof value.version !== "string" ||
+      !VERSION_PATTERN.test(value.version)
+    ) return null;
+    return value as QuizChange;
+  }
+
   return null;
 }
 
@@ -248,6 +292,25 @@ export function revalidateContentChange(change: ContentChange): void {
     for (const locale of SUPPORTED_LOCALES) expireTag(`tajweed:locale:${locale}`);
     revalidatePath("/[locale]/tajweed", "page");
     revalidatePath("/[locale]/tajweed/[lesson]", "page");
+    return;
+  }
+
+  if (change.type === "courses.course.changed") {
+    expireTag("courses:catalog");
+    expireTag(`courses:course:${change.course}`);
+    // Quizzes link to course lessons.
+    expireTag("quizzes:catalog");
+    revalidatePath("/[locale]/courses", "page");
+    revalidatePath("/[locale]/courses/[course]", "page");
+    revalidatePath("/[locale]/courses/[course]/[lesson]", "page");
+    return;
+  }
+
+  if (change.type === "quizzes.quiz.changed") {
+    expireTag("quizzes:catalog");
+    expireTag(`quizzes:quiz:${change.quiz}`);
+    revalidatePath("/[locale]/quiz", "page");
+    revalidatePath("/[locale]/quiz/[quiz]", "page");
     return;
   }
 

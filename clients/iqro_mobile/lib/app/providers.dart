@@ -36,6 +36,7 @@ import '../features/prayer/prayer_widget_service.dart';
 import '../features/quran/quran_models.dart';
 import '../features/quran/mushaf_edition.dart';
 import '../features/quran/mushaf_offline_repository.dart';
+import '../features/quran/mushaf_thumbnail_cache.dart';
 import '../features/quran/quran_repository.dart';
 import '../features/reminders/reminder_controller.dart';
 import '../features/reminders/reminder_models.dart';
@@ -74,6 +75,12 @@ final quranRepositoryProvider = Provider<QuranRepository>(
 );
 final mushafOfflineRepositoryProvider = Provider<MushafOfflineRepository>(
   (ref) => _missing('MushafOfflineRepository'),
+);
+
+/// Drawn edition miniatures. The app stores them on disk; without that
+/// override they last for this run only.
+final mushafThumbnailCacheProvider = Provider<MushafThumbnailCache>(
+  (ref) => MushafThumbnailCache.memory(),
 );
 final audioRepositoryProvider = Provider<AudioRepository>(
   (ref) => _missing('AudioRepository'),
@@ -586,6 +593,9 @@ final mushafRenditionsProvider = FutureProvider<List<NativeMushafEdition>>((
 ) {
   return ref.watch(quranRepositoryProvider).mushafRenditions();
 });
+
+/// The app overrides this with the copy AppDependencies reads before the
+/// first frame, so the Quran tab never waits on the database for it.
 final cachedMushafRenditionsProvider =
     FutureProvider<List<NativeMushafEdition>>((ref) {
       return ref.watch(quranRepositoryProvider).cachedMushafRenditions();

@@ -462,6 +462,45 @@ test("content revalidation accepts only authenticated allowlisted events", async
       headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
     })).status()).toBe(422);
   }
+
+  const courseEvent = {
+    type: "courses.course.changed",
+    action: "activated",
+    course: "ramadan",
+    version: "2",
+  };
+  const quizEvent = {
+    type: "quizzes.quiz.changed",
+    action: "withdrawn",
+    quiz: "ramadan-basics",
+    version: "1",
+  };
+  for (const event of [courseEvent, { ...courseEvent, action: "withdrawn" }, quizEvent]) {
+    const accepted = await request.post(endpoint, {
+      data: event,
+      headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+    });
+    expect(accepted.ok()).toBe(true);
+    expect(await accepted.json()).toEqual({ accepted: true, type: event.type });
+  }
+  for (const invalid of [
+    { ...courseEvent, action: "published" },
+    { ...courseEvent, course: "salah" },
+    { ...courseEvent, course: "Ramadan" },
+    { ...courseEvent, course: "../ramadan" },
+    { ...courseEvent, version: "" },
+    { ...courseEvent, quiz: "ramadan-basics" },
+    { type: courseEvent.type, action: "activated", course: "ramadan" },
+    { ...quizEvent, action: "deleted" },
+    { ...quizEvent, quiz: "quiz" },
+    { ...quizEvent, version: "1/2" },
+    { type: quizEvent.type, action: "withdrawn", course: "ramadan-basics", version: "1" },
+  ]) {
+    expect((await request.post(endpoint, {
+      data: invalid,
+      headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+    })).status()).toBe(422);
+  }
 });
 
 test("versioned Quran sitemap contains only routes from the published API catalog", async ({ request }) => {

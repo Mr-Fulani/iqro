@@ -7,7 +7,8 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from django.test import override_settings
+from django.contrib.auth.models import Permission
+from django.test import Client, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -27,10 +28,12 @@ from quran_backend.modules.tajweed.course_publication import (
 )
 from quran_backend.modules.tajweed.markup import parse_tajweed_verse
 from quran_backend.modules.tajweed.models import (
+    TAJWEED_COURSE_LANGUAGES,
     TajweedCourse,
     TajweedCourseDocument,
     TajweedCourseProgress,
     TajweedCourseStatus,
+    TajweedCourseVersion,
 )
 from quran_backend.modules.tajweed.progress import merge_lessons
 from quran_backend.modules.tajweed.quran_foundation_sync import (
@@ -501,3 +504,112 @@ def test_the_admin_edits_a_draft_signs_it_and_publishes(client: Any, owner: User
     assert version.course.versions.filter(version="2026-12-01", status="draft").exists()
     change = reverse("admin:tajweed_tajweedcourseversion_change", args=[version.pk])
     assert "Создать черновик из этой версии" in client.get(change).content.decode()
+
+
+VERSIONS = "/admin/tajweed/tajweedcourseversion/"
+DOCUMENTS = "/admin/tajweed/tajweedcoursedocument/"
+LIST_ACTIONS = ("sign_versions", "publish_versions", "recompile_versions")
+NOTIFY = "quran_backend.modules.tajweed.course_publication.enqueue_tajweed_content_change"
+COMPILE = "quran_backend.modules.tajweed.course_admin.compile_course_version"
+
+
+def _staff(*codenames: str) -> Client:
+    user = User.objects.create_user(
+        email=f"staff-{'-'.join(codenames)}@example.com", status="active", is_staff=True
+    )
+    user.user_permissions.set(Permission.objects.filter(codename__in=codenames))
+    client = Client()
+    client.force_login(user)
+    return client
+
+
+def _action(client: Client, action: str, version: TajweedCourseVersion) -> Any:
+    """The action as the version list sends it, for one selected version."""
+    with patch(NOTIFY):
+        return client.post(
+            VERSIONS, {"action": action, "index": 0, "_selected_action": [version.pk]}
+        )
+
+
+@pytest.mark.django_db
+def test_list_actions_need_the_change_permission() -> None:
+    version = import_tajweed_course(_snapshot())
+    reader = _staff("view_tajweedcourseversion")
+    page = reader.get(VERSIONS).content.decode()
+    assert not any(f'value="{action}"' in page for action in LIST_ACTIONS)
+    with patch(COMPILE) as recompile:
+        for action in LIST_ACTIONS:
+            _action(reader, action, version)
+    recompile.assert_not_called()
+    version.refresh_from_db()
+    assert not version.is_signed
+
+    editor = _staff("view_tajweedcourseversion", "change_tajweedcourseversion")
+    page = editor.get(VERSIONS).content.decode()
+    assert all(f'value="{action}"' in page for action in LIST_ACTIONS)
+    with patch(COMPILE) as recompile:
+        _action(editor, "recompile_versions", version)
+    recompile.assert_called_once()
+    assert _action(editor, "sign_versions", version).status_code == 302
+    version.refresh_from_db()
+    assert version.reviewed_by == User.objects.get(
+        email="staff-view_tajweedcourseversion-change_tajweedcourseversion@example.com"
+    )
+    _action(editor, "publish_versions", version)
+    version.refresh_from_db()
+    assert version.status == TajweedCourseStatus.PUBLISHED
+
+
+@pytest.mark.django_db
+def test_a_signed_draft_is_not_signed_again(client: Any, owner: User) -> None:
+    version = import_tajweed_course(_snapshot())
+    client.force_login(owner)
+    _action(client, "sign_versions", version)
+    version.refresh_from_db()
+    signed_at = version.reviewed_at
+
+    _action(
+        _staff("view_tajweedcourseversion", "change_tajweedcourseversion"), "sign_versions", version
+    )
+    version.refresh_from_db()
+    assert version.reviewed_by == owner
+    assert version.reviewed_at == signed_at
+
+
+@pytest.mark.django_db
+def test_a_draft_is_deleted_only_with_the_delete_permission() -> None:
+    version = import_tajweed_course(_snapshot())
+    delete = reverse("admin:tajweed_tajweedcourseversion_delete", args=[version.pk])
+    # The documents' delete permission alone does not delete their version.
+    reader = _staff("view_tajweedcourseversion", "delete_tajweedcoursedocument")
+    assert 'value="delete_selected"' not in reader.get(VERSIONS).content.decode()
+    assert reader.post(delete, {"post": "yes"}).status_code == 403
+    assert TajweedCourseVersion.objects.filter(pk=version.pk).exists()
+
+    remover = _staff(
+        "view_tajweedcourseversion", "delete_tajweedcourseversion", "delete_tajweedcoursedocument"
+    )
+    assert remover.post(delete, {"post": "yes"}).status_code == 302
+    assert not TajweedCourseVersion.objects.filter(pk=version.pk).exists()
+
+
+def test_documents_of_a_published_or_withdrawn_version_are_not_deleted(
+    client: Any, owner: User, published: Any
+) -> None:
+    draft = copy_tajweed_course(published, "2026-11-01")
+    client.force_login(owner)
+    document = draft.documents.get(language="ru")
+    delete = reverse("admin:tajweed_tajweedcoursedocument_delete", args=[document.pk])
+    assert client.get(delete).status_code == 200
+
+    _action(client, "sign_versions", draft)
+    _action(client, "publish_versions", draft)
+    published.refresh_from_db()
+    assert published.status == TajweedCourseStatus.WITHDRAWN
+    for version in (draft, published):
+        document = version.documents.get(language="ru")
+        delete = reverse("admin:tajweed_tajweedcoursedocument_delete", args=[document.pk])
+        assert client.post(delete, {"post": "yes"}).status_code == 403
+        selected = {"action": "delete_selected", "_selected_action": [document.pk], "post": "yes"}
+        assert client.post(DOCUMENTS, selected).status_code == 403
+        assert version.documents.count() == len(TAJWEED_COURSE_LANGUAGES)

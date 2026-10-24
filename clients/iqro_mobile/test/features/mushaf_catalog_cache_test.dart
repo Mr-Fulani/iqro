@@ -164,6 +164,40 @@ void main() {
       expect(api.calls[_catalogPath], 1);
     },
   );
+
+  testWidgets(
+    'the first frame shows the edition from the catalog read at startup',
+    (tester) async {
+      final api = _Api();
+      final cache = _Cache()
+        ..entries[_catalogKey] = _cached([_foundation('Cached Tajweed')]);
+      // AppDependencies reads the catalog before the app's first frame.
+      final startup = await QuranRepository(
+        api: api,
+        database: cache,
+      ).cachedMushafRenditions();
+      // Startup queries hold the database, so the tab's own reads wait.
+      final busy = cache.busy = Completer<void>();
+      await _pumpQuran(
+        tester,
+        api,
+        cache,
+        settle: false,
+        overrides: [
+          cachedMushafRenditionsProvider.overrideWith((ref) => startup),
+        ],
+      );
+      final l10n = _l10n(tester);
+
+      expect(find.text('Cached Tajweed'), findsOneWidget);
+      expect(find.text(l10n.mushafCatalogEmpty), findsNothing);
+
+      busy.complete();
+      await _settle(tester);
+      expect(find.text('Cached Tajweed'), findsOneWidget);
+      expect(api.calls, isEmpty);
+    },
+  );
 }
 
 Map<String, Object?> _foundation(String name, {String checksum = 'a'}) => {
@@ -224,7 +258,13 @@ Future<void> _settle(WidgetTester tester) async {
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(QuranScreen)));
 
-Future<void> _pumpQuran(WidgetTester tester, _Api api, _Cache cache) async {
+Future<void> _pumpQuran(
+  WidgetTester tester,
+  _Api api,
+  _Cache cache, {
+  bool settle = true,
+  List<Override> overrides = const [],
+}) async {
   tester.view.devicePixelRatio = 2.75;
   tester.view.physicalSize = const Size(1080, 2340);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -248,6 +288,7 @@ Future<void> _pumpQuran(WidgetTester tester, _Api api, _Cache cache) async {
         mushafDownloadProvider.overrideWithValue(
           const MushafDownloadSnapshot.empty(),
         ),
+        ...overrides,
       ],
       child: MaterialApp(
         theme: IqroTheme.light(),
@@ -258,7 +299,7 @@ Future<void> _pumpQuran(WidgetTester tester, _Api api, _Cache cache) async {
       ),
     ),
   );
-  await _settle(tester);
+  if (settle) await _settle(tester);
 }
 
 class _Api implements ApiClient {
@@ -291,9 +332,13 @@ class _Cache implements LocalDatabase {
   @override
   final accountScope = AccountScope.forTesting();
   final entries = <String, CachedValue>{};
+  Completer<void>? busy;
 
   @override
-  Future<CachedValue?> readCache(String key) async => entries[key];
+  Future<CachedValue?> readCache(String key) async {
+    await busy?.future;
+    return entries[key];
+  }
 
   @override
   Future<void> writeCache(
