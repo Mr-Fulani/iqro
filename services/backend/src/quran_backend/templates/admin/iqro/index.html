@@ -1,0 +1,28 @@
+{% extends "admin/index.html" %}
+{% comment %}The admin home: «Требует внимания» above the sections (quran_backend/admin_attention.py).{% endcomment %}
+
+{% block content %}
+<div id="content-main" class="app-list">
+  {% if attention %}
+    <style>
+      .iqro-attention caption { background: var(--message-warning-bg, #ffc); color: var(--body-fg); }
+      .iqro-attention td { text-align: right; white-space: nowrap; }
+      .iqro-attention tr.level-ok td { color: var(--body-quiet-color); }
+      .iqro-attention tr.level-warn td { font-weight: 600; }
+      .iqro-attention tr.level-error th, .iqro-attention tr.level-error td { color: var(--error-fg, #ba2121); font-weight: 600; }
+    </style>
+    <div class="module iqro-attention">
+      <table>
+        <caption>Требует внимания</caption>
+        {% for item in attention %}
+          <tr class="level-{{ item.level }}">
+            <th scope="row">{% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</th>
+            <td>{{ item.detail }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% endif %}
+  {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+</div>
+{% endblock %}

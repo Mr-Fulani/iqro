@@ -12,6 +12,7 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from quran_backend.modules.accounts.models import User
+from quran_backend.modules.alerts.services import feedback_ticket_created
 from quran_backend.modules.feedback.exceptions import (
     FeedbackConflict,
     FeedbackLimitReached,
@@ -232,6 +233,7 @@ def create_ticket(
         },
     )
     _notify_operator_after_commit(ticket.id, initial_message.id, "created")
+    feedback_ticket_created(ticket, initial_message.body)
     return ticket, True
 
 

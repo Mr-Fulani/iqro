@@ -17,6 +17,7 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
+from quran_backend.modules.alerts.services import course_version_event
 from quran_backend.modules.core.content_revalidation import enqueue_tajweed_content_change
 from quran_backend.modules.tajweed.course import (
     TajweedCourseError,
@@ -125,6 +126,7 @@ def copy_tajweed_course(source: TajweedCourseVersion, version: str) -> TajweedCo
         checksum_sha256=snapshot_checksum(snapshot),
     )
     compile_course_version(draft)
+    course_version_event(draft, "draft")
     return draft
 
 
@@ -151,4 +153,5 @@ def publish_tajweed_course(version: TajweedCourseVersion) -> TajweedCourseVersio
     course.active_version = version
     course.save(update_fields=["active_version", "updated_at"])
     enqueue_tajweed_content_change(action="activated", course=course.slug, version=version.version)
+    course_version_event(version, "published")
     return version
