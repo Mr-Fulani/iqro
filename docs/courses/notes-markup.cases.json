@@ -1,0 +1,152 @@
+{
+  "about": "Разметка конспекта → блоки. Единые примеры для тестов бэкенда (разбор) и клиентов (отрисовка). Правила: docs/courses/README.md, раздел «Конспект». Порядок ключей в объектах не важен.",
+  "cases": [
+    {
+      "name": "empty",
+      "input": "",
+      "blocks": []
+    },
+    {
+      "name": "heading",
+      "input": "## Что такое намерение",
+      "blocks": [{"type": "heading", "dir": "ltr", "text": [{"text": "Что такое намерение"}]}]
+    },
+    {
+      "name": "paragraph_bold_and_line_break",
+      "input": "Намерение — это **решение сердца**.\nВторая строка",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "dir": "ltr",
+          "lines": [
+            [{"text": "Намерение — это "}, {"text": "решение сердца", "bold": true}, {"text": "."}],
+            [{"text": "Вторая строка"}]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "two_paragraphs",
+      "input": "Первый абзац.\n\nВторой абзац.",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Первый абзац."}]]},
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Второй абзац."}]]}
+      ]
+    },
+    {
+      "name": "unordered_list",
+      "input": "- Первый\n- Второй",
+      "blocks": [
+        {"type": "list", "dir": "ltr", "ordered": false, "items": [[{"text": "Первый"}], [{"text": "Второй"}]]}
+      ]
+    },
+    {
+      "name": "ordered_list",
+      "input": "1. Раз\n2. Два",
+      "blocks": [
+        {"type": "list", "dir": "ltr", "ordered": true, "items": [[{"text": "Раз"}], [{"text": "Два"}]]}
+      ]
+    },
+    {
+      "name": "list_item_bold",
+      "input": "- **Сухур** до рассвета",
+      "blocks": [
+        {"type": "list", "dir": "ltr", "ordered": false, "items": [[{"text": "Сухур", "bold": true}, {"text": " до рассвета"}]]}
+      ]
+    },
+    {
+      "name": "quote_arabic_with_source",
+      "input": "> نص الآية بعد المراجعة\n> — Коран, 2:183",
+      "blocks": [
+        {"type": "quote", "dir": "rtl", "lines": [[{"text": "نص الآية بعد المراجعة", "lang": "ar"}]], "source": "Коран, 2:183"}
+      ]
+    },
+    {
+      "name": "quote_without_source",
+      "input": "> Простая цитата",
+      "blocks": [
+        {"type": "quote", "dir": "ltr", "lines": [[{"text": "Простая цитата"}]], "source": null}
+      ]
+    },
+    {
+      "name": "note_two_lines",
+      "input": "! Строка один\n! Строка два",
+      "blocks": [
+        {"type": "note", "dir": "ltr", "lines": [[{"text": "Строка один"}], [{"text": "Строка два"}]]}
+      ]
+    },
+    {
+      "name": "inline_arabic_word",
+      "input": "Пост (الصوم) — обязанность.",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "dir": "ltr",
+          "lines": [[{"text": "Пост ("}, {"text": "الصوم", "lang": "ar"}, {"text": ") — обязанность."}]]
+        }
+      ]
+    },
+    {
+      "name": "inline_arabic_phrase_keeps_inner_spaces",
+      "input": "Скажите: بسم الله الرحمن الرحيم и начните.",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "dir": "ltr",
+          "lines": [[{"text": "Скажите: "}, {"text": "بسم الله الرحمن الرحيم", "lang": "ar"}, {"text": " и начните."}]]
+        }
+      ]
+    },
+    {
+      "name": "arabic_only_paragraph_is_rtl",
+      "input": "بسم الله",
+      "blocks": [
+        {"type": "paragraph", "dir": "rtl", "lines": [[{"text": "بسم الله", "lang": "ar"}]]}
+      ]
+    },
+    {
+      "name": "bold_arabic",
+      "input": "**الصوم**",
+      "blocks": [
+        {"type": "paragraph", "dir": "rtl", "lines": [[{"text": "الصوم", "bold": true, "lang": "ar"}]]}
+      ]
+    },
+    {
+      "name": "unmatched_bold_stays_text",
+      "input": "Цена **без пары",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Цена **без пары"}]]}
+      ]
+    },
+    {
+      "name": "unknown_marker_stays_text",
+      "input": "### Не заголовок",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "### Не заголовок"}]]}
+      ]
+    },
+    {
+      "name": "blocks_without_blank_lines",
+      "input": "## Заголовок\nТекст абзаца\n- пункт",
+      "blocks": [
+        {"type": "heading", "dir": "ltr", "text": [{"text": "Заголовок"}]},
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Текст абзаца"}]]},
+        {"type": "list", "dir": "ltr", "ordered": false, "items": [[{"text": "пункт"}]]}
+      ]
+    },
+    {
+      "name": "trims_line_edges",
+      "input": "   Отступ   ",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Отступ"}]]}
+      ]
+    },
+    {
+      "name": "crlf_line_endings",
+      "input": "Строка\r\nВторая",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Строка"}], [{"text": "Вторая"}]]}
+      ]
+    }
+  ]
+}

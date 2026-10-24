@@ -148,6 +148,24 @@ def test_corpus_import_is_complete_without_images_and_repeat_preserves_ids(
 
 
 @pytest.mark.django_db
+def test_import_refreshes_statistics_autovacuum_took_while_tables_were_empty(
+    corpus: tuple[Path, QuranFoundationMushaf],
+) -> None:
+    if connection.vendor != "postgresql":
+        pytest.skip("Planner statistics are PostgreSQL's.")
+    table = Ayah._meta.db_table
+    with connection.cursor() as cursor:
+        # What autovacuum does between transactional tests or on a fresh install.
+        cursor.execute(f"ANALYZE {connection.ops.quote_name(table)}")
+        corpus_import.import_canonical_corpus(corpus[0])
+        cursor.execute("SELECT reltuples FROM pg_class WHERE relname = %s", [table])
+        (estimated,) = cursor.fetchone()
+
+    # Taken for one row, 6236 ayahs made the publication checks loop for minutes.
+    assert estimated == 6236
+
+
+@pytest.mark.django_db
 def test_bootstrap_readiness_preserves_a_published_legacy_corpus(
     corpus: tuple[Path, QuranFoundationMushaf],
 ) -> None:

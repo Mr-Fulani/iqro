@@ -1,0 +1,33 @@
+<style>
+  .cp { margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--hairline-color, #e8e8e8); border-radius: 6px; background: var(--darkened-bg, #f8f8f8); display: flex; flex-direction: column; gap: 12px; }
+  .cp h2 { margin: 0; font-size: 15px; }
+  .cp ul { margin: 0; padding-inline-start: 20px; }
+  .cp p { margin: 0; }
+  .cp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .cp-nav { flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; }
+  .cp-row form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+  .cp-badge { padding: 3px 10px; border-radius: 4px; font-weight: 700; font-size: 12px; }
+  .cp-badge--live { background: #e3f3e5; color: #1b5e20; }
+  .cp-badge--off { background: #eeeeee; color: #555555; }
+  .cp-badge--hidden { background: #fde7e7; color: #8a1c1c; }
+  .cp-badge--review { background: #e1eef5; color: #205067; }
+  .cp-warning { padding: 8px 12px; border-inline-start: 4px solid #e0a800; background: #fff8e1; color: #4d3800; }
+  .cp-error { padding: 8px 12px; border-inline-start: 4px solid var(--error-fg, #ba2121); background: #fdecec; color: #5b1010; }
+  .cp-langs { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; }
+  .cp-ok { color: #2e7d32; }
+  .cp-missing { color: var(--error-fg, #ba2121); }
+  .cp table { width: 100%; }
+  .cp input[type="text"] { min-width: 260px; }
+  .cp-diff { font-family: var(--font-family-monospace, monospace); font-size: 13px; white-space: pre-wrap; margin: 4px 0 12px; border: 1px solid var(--hairline-color, #e8e8e8); }
+  .cp-diff div { padding: 1px 8px; unicode-bidi: plaintext; }
+  .cp-diff .is-add { background: #e6ffed; }
+  .cp-diff .is-del { background: #ffeef0; text-decoration: line-through; }
+  .cp-diff .is-gap { color: var(--body-quiet-color, #666); }
+  @media (prefers-color-scheme: dark) {
+    .cp-warning { background: #3a2f00; color: #ffe8a3; }
+    .cp-error { background: #3d1515; color: #ffd6d6; }
+    .cp-diff .is-add { background: #12361d; }
+    .cp-diff .is-del { background: #3d1519; }
+  }
+  textarea[dir="rtl"], input[dir="rtl"] { font-size: 18px; }
+</style>

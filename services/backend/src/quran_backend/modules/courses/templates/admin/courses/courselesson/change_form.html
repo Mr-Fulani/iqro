@@ -1,0 +1,15 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% endblock %}
+
+{% block content %}
+{% if lesson_nav %}{% with nav=lesson_nav %}
+<nav class="cp cp-nav" aria-label="Темы курса">
+  {% if nav.previous %}<a href="{% url 'admin:courses_courselesson_change' nav.previous.pk %}">← Предыдущая тема</a>{% else %}<span></span>{% endif %}
+  <span>Тема {{ nav.number }} из {{ nav.count }} · <a href="{% url 'admin:courses_course_change' nav.course.pk %}">{{ nav.course }}</a></span>
+  <a class="button" href="{{ nav.preview_url }}">Предпросмотр</a>
+  {% if nav.next %}<a href="{% url 'admin:courses_courselesson_change' nav.next.pk %}">Следующая тема →</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endwith %}{% endif %}
+{{ block.super }}
+{% endblock %}

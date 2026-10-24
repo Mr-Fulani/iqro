@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "course": {
+    "slug": "ramadan",
+    "version": "1",
+    "language": "ru",
+    "languages": ["ru"],
+    "title": "Рамадан",
+    "summary": "Пост, намерение, таравих, Ночь Предопределения и закят аль-фитр: что важно знать до начала месяца.",
+    "source": "[автор и источники — после проверки]",
+    "cover": {
+      "url": "https://media.iqro.forum/courses/covers/0123456789abcdef0123.webp",
+      "thumb_url": "https://media.iqro.forum/courses/covers/0123456789abcdef0123-640.webp",
+      "width": 1280,
+      "height": 720
+    },
+    "published_at": "2027-01-12T10:00:00+00:00",
+    "checksum_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "lessons": [
+    {
+      "slug": "smysl-posta",
+      "number": 1,
+      "title": "Смысл поста",
+      "summary": "Зачем мусульмане постятся в Рамадан.",
+      "minutes": 8,
+      "video": null,
+      "notes": [
+        {"type": "heading", "dir": "ltr", "text": [{"text": "Что такое пост"}]},
+        {
+          "type": "paragraph",
+          "dir": "ltr",
+          "lines": [
+            [
+              {"text": "Пост ("},
+              {"text": "الصوم", "lang": "ar"},
+              {"text": ") — это "},
+              {"text": "[определение поста — текст после проверки]", "bold": true},
+              {"text": "."}
+            ]
+          ]
+        },
+        {
+          "type": "quote",
+          "dir": "rtl",
+          "lines": [[{"text": "نص الآية بعد المراجعة", "lang": "ar"}]],
+          "source": "Коран, 2:183"
+        },
+        {
+          "type": "quote",
+          "dir": "ltr",
+          "lines": [[{"text": "[смысловой перевод аята — после проверки]"}]],
+          "source": null
+        }
+      ],
+      "sources": ["[источник 1 — после проверки]"]
+    },
+    {
+      "slug": "namerenie",
+      "number": 2,
+      "title": "Намерение (ният)",
+      "summary": "Что такое намерение и когда его делать.",
+      "minutes": 12,
+      "video": null,
+      "notes": [
+        {"type": "heading", "dir": "ltr", "text": [{"text": "Что такое намерение"}]},
+        {
+          "type": "paragraph",
+          "dir": "ltr",
+          "lines": [
+            [{"text": "Намерение — это "}, {"text": "решение сердца", "bold": true}, {"text": " совершить пост ради Аллаха."}],
+            [{"text": "[правило о произнесении намерения по методике курса — после проверки]"}]
+          ]
+        },
+        {
+          "type": "list",
+          "dir": "ltr",
+          "ordered": false,
+          "items": [
+            [{"text": "Намерение отличает поклонение от привычки."}],
+            [{"text": "[второй пункт — после проверки]"}]
+          ]
+        },
+        {
+          "type": "note",
+          "dir": "ltr",
+          "lines": [[{"text": "[важное правило о времени намерения — после проверки]"}]]
+        }
+      ],
+      "sources": ["[источник 1 — после проверки]", "[источник 2 — после проверки]"]
+    },
+    {
+      "slug": "taraviikh",
+      "number": 3,
+      "title": "Таравих",
+      "summary": "Ночной намаз Рамадана.",
+      "minutes": 10,
+      "video": null,
+      "notes": [
+        {"type": "heading", "dir": "ltr", "text": [{"text": "Порядок"}]},
+        {
+          "type": "list",
+          "dir": "ltr",
+          "ordered": true,
+          "items": [
+            [{"text": "[шаг 1 — после проверки]"}],
+            [{"text": "[шаг 2 — после проверки]"}]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "dir": "rtl",
+          "lines": [[{"text": "فقرة عربية بعد المراجعة", "lang": "ar"}]]
+        }
+      ],
+      "sources": []
+    }
+  ]
+}
