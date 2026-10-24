@@ -1,0 +1,22 @@
+{
+  "language": "ru",
+  "courses": [
+    {
+      "slug": "ramadan",
+      "version": "1",
+      "title": "Рамадан",
+      "summary": "Пост, намерение, таравих, Ночь Предопределения и закят аль-фитр: что важно знать до начала месяца.",
+      "source": "[автор и источники — после проверки]",
+      "cover": {
+        "url": "https://media.iqro.forum/courses/covers/0123456789abcdef0123.webp",
+        "thumb_url": "https://media.iqro.forum/courses/covers/0123456789abcdef0123-640.webp",
+        "width": 1280,
+        "height": 720
+      },
+      "lesson_count": 3,
+      "minutes": 30,
+      "video_minutes": 0,
+      "published_at": "2027-01-12T10:00:00+00:00"
+    }
+  ]
+}
