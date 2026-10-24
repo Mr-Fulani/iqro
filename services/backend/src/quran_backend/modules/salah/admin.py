@@ -94,9 +94,11 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
         return False if obj is not None else super().has_change_permission(request, obj)
 
     def has_delete_permission(
-        self, _request: HttpRequest, obj: SalahCourseVersion | None = None
+        self, request: HttpRequest, obj: SalahCourseVersion | None = None
     ) -> bool:
-        return obj is None or obj.status == SalahPublicationStatus.DRAFT
+        return super().has_delete_permission(request, obj) and (
+            obj is None or obj.status == SalahPublicationStatus.DRAFT
+        )
 
     @admin.display(boolean=True, description="Подписана")
     def signed(self, obj: SalahCourseVersion) -> bool:
@@ -265,9 +267,10 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
             blocks.append(format_html("<h3>{}</h3><ol>{}</ol>", lesson["title"], steps))
         return format_html_join("", "{}", ((block,) for block in blocks))
 
-    @admin.action(description="Подписать: религиозная проверка пройдена")
+    # The actions change a version: like the editor's sign-off, they need the change permission.
+    @admin.action(permissions=["change"], description="Подписать: религиозная проверка пройдена")
     def sign_versions(self, request: HttpRequest, queryset: QuerySet[SalahCourseVersion]) -> None:
-        for version in queryset.filter(status=SalahPublicationStatus.DRAFT):
+        for version in queryset.filter(status=SalahPublicationStatus.DRAFT, reviewed_at=None):
             try:
                 sign_salah_version(version, request.user)
             except (SalahSnapshotError, SalahFormulaError) as error:
@@ -282,7 +285,7 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
             else:
                 self.message_user(request, f"{version}: подписана.", messages.SUCCESS)
 
-    @admin.action(description="Опубликовать")
+    @admin.action(permissions=["change"], description="Опубликовать")
     def publish_versions(
         self, request: HttpRequest, queryset: QuerySet[SalahCourseVersion]
     ) -> None:
@@ -294,7 +297,7 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
             else:
                 self.message_user(request, f"{version}: опубликована.", messages.SUCCESS)
 
-    @admin.action(description="Пересобрать документы")
+    @admin.action(permissions=["change"], description="Пересобрать документы")
     def recompile_versions(
         self, request: HttpRequest, queryset: QuerySet[SalahCourseVersion]
     ) -> None:
@@ -329,3 +332,11 @@ class SalahCompiledDocumentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         self, request: HttpRequest, obj: SalahCompiledDocument | None = None
     ) -> bool:
         return False if obj is not None else super().has_change_permission(request, obj)
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: SalahCompiledDocument | None = None
+    ) -> bool:
+        """A published or withdrawn version keeps its documents: the API serves them."""
+        return super().has_delete_permission(request, obj) and (
+            obj is None or obj.version.status == SalahPublicationStatus.DRAFT
+        )
