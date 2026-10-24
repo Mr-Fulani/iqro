@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+{% block extrastyle %}{{ block.super }}{% include "admin/course_feedback/styles.html" %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Начало</a> › <a href="{{ summary_url }}?days={{ report.days }}">Курсы: сводка</a> › {{ course }}</div>{% endblock %}
+{% block content %}
+<div class="ca">
+  <p><a href="{{ course_url }}">Открыть курс в редакторе</a></p>
+  {% include "admin/course_feedback/periods.html" %}
+
+  <div class="ca-kpis" aria-label="Коротко">
+    <div class="ca-kpi"><span>Открыли темы</span><strong>{{ report.totals.opened }}</strong><span class="ca-quiet">всего открытий</span></div>
+    <div class="ca-kpi"><span>Дошли до конца</span><strong>{% if report.totals.finished_share is not None %}{{ report.totals.finished_share }} %{% else %}—{% endif %}</strong><span class="ca-quiet">{{ report.totals.finished }} из {{ report.totals.started }} начавших</span></div>
+    <div class="ca-kpi"><span>Средняя оценка</span><strong>{% if report.ratings.count %}{{ report.ratings.average|floatformat:1 }} ★{% else %}—{% endif %}</strong><span class="ca-quiet">оценок за период: {{ report.ratings.count }}</span></div>
+    <div class="ca-kpi"><span>Замечания учеников</span><strong>{{ report.reports }}</strong><a href="{{ reports_url }}">Открыть обращения</a></div>
+  </div>
+
+  <section aria-labelledby="ca-funnel">
+    <h2 id="ca-funnel">Воронка по темам</h2>
+    <table>
+      <thead><tr><th>№</th><th>Тема</th>{% for label in report.funnel_labels %}<th>{{ label }}</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for row in report.lessons %}
+        <tr>
+          <td class="num">{{ row.number }}</td>
+          <td>{{ row.title }}</td>
+          {% for step in row.funnel %}
+            <td><div class="ca-bar"><span class="ca-fill{% if forloop.counter == 2 or forloop.counter == 3 %} is-video{% elif forloop.counter == 4 %} is-done{% endif %}" style="width: {{ step.width }}%"></span><span class="num">{{ step.value }}{% if step.share is not None and not forloop.first %} · {{ step.share }} %{% endif %}</span></div></td>
+          {% endfor %}
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">В курсе пока нет тем.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="ca-quiet">Проценты — от числа открывших тему. «Досмотрели» — видео просмотрено на 90 % и больше.</p>
+  </section>
+
+  <section aria-labelledby="ca-drop">
+    <h2 id="ca-drop">Где чаще бросают</h2>
+    {% for place in report.dropoff %}
+      <p><strong>{{ place.number }}. {{ place.title }}</strong> — {{ place.share }} % ({{ place.lost }}) {% if place.last %}открыли, но не отметили изученной{% else %}не открыли следующую тему{% endif %}</p>
+    {% empty %}
+      <p class="ca-quiet">Данных пока мало.</p>
+    {% endfor %}
+  </section>
+
+  <section aria-labelledby="ca-helpful">
+    <h2 id="ca-helpful">«Полезно» и «Не очень» по темам</h2>
+    <table>
+      <thead><tr><th>№</th><th>Тема</th><th class="num">Полезно</th><th class="num">Не очень</th><th>Доля «Полезно»</th></tr></thead>
+      <tbody>
+      {% for row in report.lessons %}
+        <tr>
+          <td class="num">{{ row.number }}</td>
+          <td>{{ row.title }}</td>
+          <td class="num">{{ row.helpful }}</td>
+          <td class="num">{{ row.not_helpful }}</td>
+          <td>{% if row.votes %}<div class="ca-bar"><span class="ca-split"><span class="ca-fill is-done" style="width: {{ row.helpful_share }}%"></span><span class="ca-fill is-bad" style="width: {{ row.not_helpful_share }}%"></span></span><span class="num">{{ row.helpful_share }} %</span></div>{% else %}<span class="ca-quiet">нет голосов</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="ca-platforms">
+    <h2 id="ca-platforms">Платформы</h2>
+    <table>
+      <thead><tr><th>Платформа</th>{% for label in report.funnel_labels %}<th class="num">{{ label }}</th>{% endfor %}<th class="num">Изучили из открывших</th></tr></thead>
+      <tbody>
+      {% for platform in report.platforms %}
+        <tr><td>{{ platform.label }}</td>{% for value in platform.values %}<td class="num">{{ value }}</td>{% endfor %}<td class="num">{% if platform.completion is not None %}{{ platform.completion }} %{% else %}—{% endif %}</td></tr>
+      {% empty %}
+        <tr><td colspan="6" class="ca-quiet">За период событий нет.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section aria-labelledby="ca-ratings">
+    <h2 id="ca-ratings">Оценки и комментарии</h2>
+    <p>За период: {% if report.ratings.count %}<strong>{{ report.ratings.average|floatformat:1 }} ★</strong> из {{ report.ratings.count }} оценок{% else %}оценок нет{% endif %}. За всё время: {% if report.ratings.overall_count %}{{ report.ratings.overall_average|floatformat:1 }} ★ из {{ report.ratings.overall_count }}{% else %}оценок нет{% endif %}.</p>
+    <table class="ca-stars" aria-label="Распределение звёзд">
+      {% for item in report.ratings.stars %}
+        <tr><td>{{ item.stars }} ★</td><td><div class="ca-bar"><span class="ca-fill is-star" style="width: {{ item.width }}%"></span><span class="num">{{ item.count }}</span></div></td></tr>
+      {% endfor %}
+    </table>
+    <h2>Последние комментарии</h2>
+    {% for rating in report.ratings.comments %}
+      <div class="ca-comment"><span>{{ rating.stars }} ★</span> <span class="ca-quiet">{{ rating.updated_at|date:"d.m.Y H:i" }} · {{ rating.language }} · {{ rating.platform }} · выпуск {{ rating.release_number }}</span><p>{{ rating.comment }}</p></div>
+    {% empty %}
+      <p class="ca-quiet">Комментариев за период нет.</p>
+    {% endfor %}
+    <p class="ca-quiet">Оценки и комментарии видят только администраторы. Кто оценил, не хранится.</p>
+  </section>
+
+</div>
+{% endblock %}

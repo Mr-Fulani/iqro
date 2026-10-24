@@ -180,6 +180,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "courses.CourseLesson": ("тема", "темы курсов"),
     "courses.CourseRelease": ("выпуск курса", "выпуски курсов"),
     "courses.CourseDocument": ("документ выпуска", "документы выпусков курсов"),
+    "course_feedback.CourseAnalytics": ("аналитика курса", "Курсы: сводка"),
 }
 
 
@@ -676,6 +677,9 @@ FIELD_LABELS: dict[str, str] = {
     "ended_at": "Снят с сайта",
     "end_reason": "Причина снятия",
     "card": "Карточка каталога",
+    "course_slug": "Курс (адрес)",
+    "lesson_slug": "Тема (адрес)",
+    "slide_number": "Номер слайда",
 }
 
 
@@ -707,6 +711,9 @@ MODEL_FIELD_LABELS = {
     ("courses.CourseRelease", "review_note"): "Комментарий рецензента",
     ("courses.CourseDocument", "release"): "Выпуск",
     ("courses.CourseDocument", "payload"): "Документ",
+    # The proxy shares the fields of a course: keep their course labels.
+    ("course_feedback.CourseAnalytics", "slug"): "Адрес в ссылке",
+    ("course_feedback.CourseAnalytics", "position"): "Порядок в каталоге",
 }
 
 

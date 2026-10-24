@@ -169,6 +169,11 @@ class FeedbackContext(BaseModel):
     recitation_id = models.CharField(max_length=128, blank=True)
     audio_track_id = models.CharField(max_length=128, blank=True)
     playback_ms = models.PositiveBigIntegerField(null=True, blank=True)
+    # A thematic course lesson (docs/courses/README.md, «Замечания»); the release
+    # number goes to content_version, the video second to playback_ms.
+    course_slug = models.SlugField(max_length=64, blank=True, db_index=True)
+    lesson_slug = models.SlugField(max_length=64, blank=True)
+    slide_number = models.PositiveSmallIntegerField(null=True, blank=True)
     ad_campaign_id = models.CharField(max_length=128, blank=True)
     ad_creative_id = models.CharField(max_length=128, blank=True)
     route = models.CharField(max_length=255, blank=True)

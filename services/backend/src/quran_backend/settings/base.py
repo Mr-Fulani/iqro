@@ -268,7 +268,8 @@ DEBUG = False
 ALLOWED_HOSTS: list[str] = []
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    # Django's admin with the sections and «Требует внимания» of quran_backend/admin_site.py.
+    "quran_backend.admin_site.IqroAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -297,6 +298,8 @@ INSTALLED_APPS = [
     "quran_backend.modules.share_referrals.apps.ShareReferralsConfig",
     "quran_backend.modules.announcements.apps.AnnouncementsConfig",
     "quran_backend.modules.courses.apps.CoursesConfig",
+    "quran_backend.modules.course_feedback.apps.CourseFeedbackConfig",
+    "quran_backend.modules.alerts.apps.AlertsConfig",
 ]
 
 MIDDLEWARE = [
@@ -321,7 +324,8 @@ ASGI_APPLICATION = "quran_backend.asgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        # Project-wide overrides of the admin's own templates (admin/app_list.html).
+        "DIRS": [Path(__file__).resolve().parents[1] / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -471,6 +475,11 @@ DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "Quran Platform <nor
 PUBLIC_SITE_URL = os.getenv("SITE_URL", "http://localhost:3000").rstrip("/")
 # Support address shown in the footer of every email; the site uses the same variable.
 LEGAL_CONTACT_EMAIL = os.getenv("LEGAL_CONTACT_EMAIL", "").strip()
+# Telegram alerts to the owner's group (docs/alerts.md); off unless both are set.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_ALERT_CHAT_ID = os.getenv("TELEGRAM_ALERT_CHAT_ID", "").strip()
+# The summary the server heartbeat writes for «Требует внимания» (ops/monitoring/heartbeat.py).
+MONITOR_STATUS_FILE = os.getenv("MONITOR_STATUS_FILE", "").strip()
 FEEDBACK_NOTIFICATION_EMAIL = os.getenv(
     "FEEDBACK_NOTIFICATION_EMAIL",
     LEGAL_CONTACT_EMAIL,
@@ -575,6 +584,8 @@ REST_FRAMEWORK: dict[str, Any] = {
         "feedback_write": os.getenv("QURAN_FEEDBACK_WRITE_RATE", "20/hour"),
         "share_event": os.getenv("QURAN_SHARE_EVENT_RATE", "120/hour"),
         "announcement_event": os.getenv("QURAN_ANNOUNCEMENT_EVENT_RATE", "120/minute"),
+        "course_event": os.getenv("QURAN_COURSE_EVENT_RATE", "120/minute"),
+        "course_rating": os.getenv("QURAN_COURSE_RATING_RATE", "20/hour"),
         "referral_link": os.getenv("QURAN_REFERRAL_LINK_RATE", "30/hour"),
         "referral_redirect": os.getenv("QURAN_REFERRAL_REDIRECT_RATE", "300/hour"),
         "prayer_calculate": os.getenv("QURAN_PRAYER_CALCULATE_RATE", "60/minute"),
@@ -753,12 +764,21 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "filters": ["request_id"],
             "formatter": "json",
-        }
+        },
+        # Server errors to Telegram, one per kind of error in 30 minutes.
+        "telegram": {
+            "class": "quran_backend.modules.alerts.logging.TelegramAlertHandler",
+            "level": "ERROR",
+        },
     },
-    "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "root": {"handlers": ["console", "telegram"], "level": LOG_LEVEL},
     "loggers": {
-        "django": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
-        "quran_backend": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+        "django": {"handlers": ["console", "telegram"], "level": LOG_LEVEL, "propagate": False},
+        "quran_backend": {
+            "handlers": ["console", "telegram"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
     },
 }
 
