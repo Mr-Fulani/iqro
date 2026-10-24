@@ -5,14 +5,17 @@ import { notFound } from "next/navigation";
 import { CourseNotes } from "@/components/courses/CourseNotes";
 import { CourseOutdated } from "@/components/courses/CourseOutdated";
 import { LessonStatusBadge } from "@/components/courses/CourseProgress";
+import { CourseRating } from "@/components/courses/CourseRating";
+import { CourseShareButton } from "@/components/courses/CourseShareButton";
 import { LateArabicFont } from "@/components/courses/LateArabicFont";
 import { LessonCompleteBar } from "@/components/courses/LessonCompleteBar";
+import { LessonFeedback } from "@/components/courses/LessonFeedback";
 import { LessonVideo } from "@/components/courses/LessonVideo";
 import { formatClock } from "@/lib/audio-content";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { getPublishedCourse, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
-import { createContentMetadata } from "@/lib/seo";
+import { absoluteSiteUrl, createContentMetadata } from "@/lib/seo";
 import { isCourseSlug, isLessonSlug } from "@/lib/thematic-courses";
 import { translate } from "@/lib/translate";
 import "../../courses.css";
@@ -64,6 +67,8 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
     description: lesson.summary,
     path: `/courses/${course.slug}/${lesson.slug}`,
     locales: course.languages.filter(isLocale),
+    // The lesson's own video cover; the course cover for a lesson without a video.
+    image: lesson.video?.poster ?? course.cover ?? undefined,
   });
 }
 
@@ -109,6 +114,11 @@ export default async function CourseLessonPage({ params }: { params: Promise<Rou
                 ? ` · ${translate(route.locale, "courses.videoDuration", { duration: formatClock(video.duration_ms, format.format) })}`
                 : null}
             </p>
+            <CourseShareButton
+              title={`${lesson.title} · ${course.title}`}
+              text={lesson.summary}
+              url={absoluteSiteUrl(lessonHref(lesson.slug))}
+            />
           </header>
 
           {video ? (
@@ -140,6 +150,15 @@ export default async function CourseLessonPage({ params }: { params: Promise<Rou
                 </ol>
               </div>
             ) : null}
+            <LessonFeedback
+              courseSlug={course.slug}
+              courseTitle={course.title}
+              courseVersion={course.version}
+              language={course.language}
+              lessonSlug={lesson.slug}
+              lessonNumber={lesson.number}
+              lessonTitle={lesson.title}
+            />
           </section>
 
           <LessonCompleteBar
@@ -149,6 +168,15 @@ export default async function CourseLessonPage({ params }: { params: Promise<Rou
             previous={previous ? { slug: previous.slug, title: previous.title } : null}
             next={next ? { slug: next.slug, title: next.title } : null}
           />
+
+          {next ? null : (
+            <CourseRating
+              courseSlug={course.slug}
+              language={course.language}
+              lessonSlugs={lessons.map((item) => item.slug)}
+              afterLesson={lesson.slug}
+            />
+          )}
         </article>
 
         <aside className="surface course-outline" aria-labelledby="course-outline-title">

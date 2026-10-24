@@ -1250,6 +1250,8 @@ export type FeedbackTicket = {
   updated_at: string;
 };
 
+export type CourseRatingResult = { stars: number; comment: string; updated_at: string };
+
 export type FeedbackMessage = {
   id: string;
   client_message_id: string;
@@ -1276,6 +1278,9 @@ export type FeedbackTicketDetail = FeedbackTicket & {
     recitation_id: string;
     audio_track_id: string;
     playback_ms: number | null;
+    course_slug?: string;
+    lesson_slug?: string;
+    slide_number?: number | null;
     ad_campaign_id: string;
     ad_creative_id: string;
     route: string;
@@ -2995,25 +3000,47 @@ export class ApiClient {
     category: string;
     subject: string;
     message: string;
+    locale?: SupportedLocale;
+    contact_email?: string;
     context?: {
       route?: string;
       app_version?: string;
       client_platform?: DevicePlatform;
+      // A thematic course lesson (docs/courses/README.md, «Замечания»).
+      course_slug?: string;
+      lesson_slug?: string;
+      content_version?: string;
+      playback_ms?: number;
+      slide_number?: number;
     };
   }): Promise<FeedbackTicketDetail> {
+    const { context, locale, contact_email: contactEmail, ...ticket } = payload;
     return this.request<FeedbackTicketDetail>("/api/v1/feedback/tickets", {
       method: "POST",
       body: JSON.stringify({
-        ...payload,
+        ...ticket,
+        ...(contactEmail ? { contact_email: contactEmail } : {}),
         client_request_id: generateUuidV7(),
         client_message_id: generateUuidV7(),
-        locale: this.locale,
+        locale: locale || this.locale,
         context: {
-          route: payload.context?.route || "/profile",
-          app_version: payload.context?.app_version || "1.0.0",
-          client_platform: payload.context?.client_platform || "web",
+          ...context,
+          route: context?.route || "/profile",
+          app_version: context?.app_version || "1.0.0",
+          client_platform: context?.client_platform || "web",
         },
       }),
+    });
+  }
+
+  /** One rating per installation or account; a new one replaces it (docs/courses/README.md). */
+  public async rateCourse(
+    courseSlug: string,
+    rating: { stars: number; comment: string; language: string },
+  ): Promise<CourseRatingResult> {
+    return this.request<CourseRatingResult>(`/api/v1/courses/${encodeURIComponent(courseSlug)}/rating`, {
+      method: "PUT",
+      body: JSON.stringify({ ...rating, platform: "web" }),
     });
   }
 
