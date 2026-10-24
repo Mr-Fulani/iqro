@@ -21,7 +21,7 @@ from django.template.response import TemplateResponse
 # (key, title, apps in the order their groups are shown)
 SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("learning", "Обучение", ("courses", "tajweed", "salah", "quiz")),
-    ("feedback", "Обратная связь", ("feedback",)),
+    ("feedback", "Обратная связь", ("feedback", "course_feedback")),
     ("announcements", "Объявления", ("announcements",)),
     ("quran", "Коран и аудио", ("quran", "translations", "tafsirs", "audio")),
     ("dua", "Ду’а и календарь", ("dua", "calendar", "prayer_times")),
