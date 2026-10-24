@@ -117,6 +117,7 @@ class _LessonVideoState extends ConsumerState<LessonVideo>
   }
 
   Future<void> _start() async {
+    if (_controller != null) return;
     final base = Uri.parse(ref.read(appConfigProvider).apiBaseUrl);
     final uri = base.resolve(widget.video.url);
     if (!isApprovedPublicAssetUri(
