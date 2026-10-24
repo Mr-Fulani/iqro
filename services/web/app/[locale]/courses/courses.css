@@ -1,0 +1,528 @@
+/* -------------------------------------------------------------------------
+   Thematic courses (/courses): catalog, course, lesson
+------------------------------------------------------------------------- */
+.courses-page {
+  display: grid;
+  gap: 20px;
+}
+
+.courses-hero,
+.course-hero {
+  display: grid;
+  gap: 10px;
+  background: linear-gradient(135deg, var(--panel) 55%, var(--primary-subtle));
+}
+
+.courses-hero h1,
+.course-hero h1,
+.course-lesson-header h1 {
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1.2;
+}
+
+.courses-hero > p:not(.eyebrow),
+.course-hero-copy > p:not(.eyebrow, .courses-card-meta) {
+  margin: 0;
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.courses-continue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  padding: 16px 20px;
+}
+
+.courses-continue p {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+.courses-section-title {
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.courses-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.courses-card:hover,
+.courses-card:focus-visible {
+  border-color: var(--primary-border);
+  box-shadow: var(--shadow-md);
+}
+
+.courses-card-art {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  background: var(--primary-subtle);
+}
+
+.courses-card-art-builtin {
+  background: var(--accent-gold-subtle);
+}
+
+.courses-card-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.courses-card-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: var(--primary);
+}
+
+.courses-card-art-builtin .courses-card-icon {
+  border-color: var(--accent-gold-border);
+}
+
+.courses-card-body {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 16px;
+}
+
+.courses-card-title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.courses-card-summary {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.courses-card-meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.courses-card-progress,
+.course-progress-copy {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.courses-card-progress progress,
+.course-progress-copy progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--primary);
+}
+
+.courses-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding-block: 40px;
+  text-align: center;
+}
+
+.courses-empty h1,
+.courses-empty h2 {
+  font-size: 20px;
+}
+
+.courses-empty p {
+  margin: 0;
+  max-width: 420px;
+  color: var(--text-secondary);
+}
+
+/* Course page ------------------------------------------------------------- */
+.course-hero.has-cover {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+  align-items: start;
+  gap: 24px;
+}
+
+.course-hero-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.course-hero-cover {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+}
+
+.course-source {
+  font-size: 14px;
+}
+
+.course-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.course-progress-copy {
+  min-width: min(260px, 100%);
+  font-weight: 600;
+}
+
+.course-progress-copy p {
+  margin: 0;
+}
+
+.course-lessons {
+  display: grid;
+  gap: 14px;
+}
+
+.course-lessons h2,
+.course-lesson-notes > h2 {
+  font-size: 20px;
+}
+
+.course-lesson-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-lesson-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.course-lesson-card:hover,
+.course-lesson-card:focus-visible {
+  border-color: var(--primary-border);
+  box-shadow: var(--shadow-md);
+}
+
+.course-lesson-number,
+.course-outline-number {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font-weight: 700;
+}
+
+.course-lesson-copy {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+}
+
+.course-lesson-title {
+  font-weight: 700;
+}
+
+.course-lesson-summary {
+  color: var(--text-secondary);
+}
+
+.course-lesson-status {
+  flex: none;
+}
+
+/* Lesson page ------------------------------------------------------------- */
+.course-lesson-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 24px;
+}
+
+.course-lesson-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.course-lesson-header {
+  display: grid;
+  gap: 6px;
+}
+
+.course-lesson-notes {
+  display: grid;
+  gap: 14px;
+}
+
+.course-notes {
+  display: grid;
+  gap: 14px;
+  line-height: 1.7;
+}
+
+.course-notes > * {
+  margin: 0;
+}
+
+.course-notes-heading {
+  font-size: 17px;
+}
+
+.course-notes-list {
+  padding-inline-start: 22px;
+}
+
+/* On a phone the Quran font waits until the page has loaded (LateArabicFont), as in the
+   tajweed course; a wider screen uses it from the first paint. */
+.course-notes-ar {
+  font-family: "Scheherazade New", "Traditional Arabic", serif;
+  font-size: 1.25em;
+  line-height: 1.9;
+}
+
+.has-arabic-font .course-notes-ar {
+  font-family: var(--font-arabic);
+}
+
+@media (min-width: 900px) {
+  .course-notes-ar {
+    font-family: var(--font-arabic);
+  }
+}
+
+.course-notes-quote {
+  padding: 14px 16px;
+  border-inline-start: 4px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.course-notes-quote blockquote {
+  margin: 0;
+}
+
+.course-notes-quote figcaption {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.course-notes-note {
+  padding: 12px 14px;
+  border: 1px solid var(--warning-border);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--warning-subtle);
+}
+
+.course-notes-note-label {
+  color: var(--text-primary);
+}
+
+.course-lesson-sources {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.course-lesson-sources h3 {
+  margin-bottom: 6px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.course-lesson-sources ol {
+  margin: 0;
+  padding-inline-start: 20px;
+}
+
+.course-lesson-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.course-lesson-bar-main {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+}
+
+.course-lesson-bar-done {
+  margin: 0;
+  color: var(--primary-text);
+}
+
+.course-lesson-bar-saved {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.course-lesson-bar-side {
+  min-width: 0;
+}
+
+.course-lesson-bar-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.course-lesson-bar-short {
+  display: none;
+}
+
+[dir="rtl"] .course-lesson-bar-arrow {
+  transform: scaleX(-1);
+}
+
+.course-outline {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.course-outline h2 {
+  font-size: 16px;
+}
+
+.course-outline ol {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-outline a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  color: inherit;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.course-outline a:hover {
+  background: var(--bg-subtle);
+}
+
+.course-outline a[aria-current="page"] {
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font-weight: 700;
+}
+
+.course-outline-number {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+
+.course-outline-title {
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  .course-hero.has-cover,
+  .course-lesson-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .course-hero-cover {
+    grid-row: 1;
+  }
+
+  .course-outline {
+    position: static;
+  }
+}
+
+/* On a phone the way on stays at hand: fixed above the tab bar. */
+@media (max-width: 768px) {
+  .course-lesson-bar {
+    position: sticky;
+    bottom: var(--mobile-nav-space, 72px);
+    z-index: 2;
+    margin-inline: -4px;
+    padding: 10px 4px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .course-lesson-bar .btn {
+    min-height: 48px;
+  }
+
+  .course-lesson-bar-main .btn {
+    width: 100%;
+  }
+
+  .course-lesson-bar-side .course-lesson-bar-title,
+  .course-lesson-bar-saved {
+    display: none;
+  }
+
+  .course-lesson-bar-next .course-lesson-bar-short {
+    display: inline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .courses-card,
+  .course-lesson-card {
+    transition: none;
+  }
+}

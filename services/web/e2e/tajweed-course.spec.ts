@@ -104,22 +104,23 @@ test("course and lesson pages render on the server and unknown lessons are 404",
 test("header, mobile navigation and footer lead to the course next to the prayer course", async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto("/ru/tajweed");
+  // The header has one entry for all courses; the course opens from its catalog.
   const header = page.locator(".app-menu");
-  await expect(header.getByRole("link", { name: "Таджвид" })).toHaveClass(/menu-link-active/);
-  const labels = await header.getByRole("link").allTextContents();
-  expect(labels.findIndex((label) => label.includes("Таджвид")))
-    .toBe(labels.findIndex((label) => label.includes("Обучение намазу")) + 1);
+  await expect(header.getByRole("link", { name: "Курсы" })).toHaveClass(/menu-link-active/);
+  await expect(header.getByRole("link", { name: "Таджвид" })).toHaveCount(0);
   await expect(page.locator("footer").getByRole("link", { name: "Таджвид" })).toHaveAttribute("href", "/ru/tajweed");
 
   await page.setViewportSize({ width: 390, height: 844 });
   const navigation = page.locator(".mobile-navigation");
   await navigation.locator(".mobile-more > summary").click();
+  // «More» leads to the course through the catalog, as in the app.
   const more = navigation.locator(".mobile-more-links");
-  await expect(more.getByRole("link", { name: "Таджвид" })).toHaveAttribute("aria-current", "page");
-  for (const [locale, label] of [["en", "Tajweed"], ["ar", "التجويد"], ["tr", "Tecvid"]]) {
+  await expect(more.getByRole("link", { name: "Курсы" })).toHaveAttribute("aria-current", "page");
+  await expect(more.getByRole("link", { name: "Таджвид" })).toHaveCount(0);
+  for (const [locale, label] of [["en", "Courses"], ["ar", "الدورات"], ["tr", "Kurslar"]]) {
     await page.goto(`/${locale}/tajweed`);
     await navigation.locator(".mobile-more > summary").click();
-    await expect(more.getByRole("link", { name: label })).toHaveAttribute("href", `/${locale}/tajweed`);
+    await expect(more.getByRole("link", { name: label })).toHaveAttribute("href", `/${locale}/courses`);
   }
 });
 

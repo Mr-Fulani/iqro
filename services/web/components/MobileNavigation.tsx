@@ -10,7 +10,7 @@ import { forAudience, isFinished } from "../lib/announcements";
 import { useAuth } from "../lib/auth-context";
 import { useActiveAnnouncements, useAnnouncementState } from "./announcements/announcement-store";
 
-type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "salah" | "tajweed" | "dua" | "calendar" | "notes" | "profile" | "names" | "news";
+type IconName = "home" | "quran" | "plan" | "audio" | "more" | "prayer" | "courses" | "dua" | "calendar" | "notes" | "profile" | "names" | "news";
 
 function NavigationIcon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -20,8 +20,7 @@ function NavigationIcon({ name }: { name: IconName }) {
     audio: <><path d="M3 14v-2a9 9 0 0 1 18 0v2M3 13h3v8H4a1 1 0 0 1-1-1Zm18 0h-3v8h2a1 1 0 0 0 1-1Z" /></>,
     more: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
     prayer: <><path d="M20 15.2A9 9 0 0 1 8.8 4 9 9 0 1 0 20 15.2Z" /><path d="M17 3v4m-2-2h4" /></>,
-    salah: <><path d="M6 21V9a6 6 0 0 1 12 0v12Z" /><path d="M6 17h12M12 7v3" /></>,
-    tajweed: <><path d="M4 10c0 5 3.6 8 8 8s8-3 8-8" /><circle cx="9.5" cy="6" r="1.3" fill="currentColor" stroke="none" /><circle cx="14.5" cy="6" r="1.3" fill="currentColor" stroke="none" /></>,
+    courses: <><path d="M5 4h11a3 3 0 0 1 3 3v14H8a3 3 0 0 1-3-3Z" /><path d="M5 18a3 3 0 0 1 3-3h11" /><path d="m10 7.5 4 2.5-4 2.5Z" /></>,
     dua: <><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18m-14 5h3m4 0h3" /></>,
     notes: <><path d="M5 3h10l4 4v14H5Z" /><path d="M9 11h6M9 15h6" /></>,
@@ -51,15 +50,16 @@ export function MobileNavigation() {
   const more = [
     { href: "/news", label: t("news.title"), icon: "news" },
     { href: "/prayer", label: t("nav.prayer"), icon: "prayer" },
-    { href: "/salah", label: t("nav.salah"), icon: "salah" },
-    { href: "/tajweed", label: t("nav.tajweed"), icon: "tajweed" },
+    // The prayer and tajweed courses open from the course catalog.
+    { href: "/courses", label: t("nav.courses"), icon: "courses", also: ["/salah", "/tajweed"] },
     { href: "/calendar", label: t("calendar.title"), icon: "calendar" },
     { href: "/dua", label: t("nav.dua"), icon: "dua" },
     { href: "/memorization", label: t("nav.memorization"), icon: "plan" },
     { href: "/notes", label: t("notes.title"), icon: "notes" },
     { href: "/profile", label: t("nav.profile"), icon: "profile" },
   ] as const;
-  const active = (href: string) => route === href || (href !== "/" && route.startsWith(`${href}/`));
+  const active = (href: string, also: readonly string[] = []) => [href, ...also].some((item) =>
+    route === item || (item !== "/" && route.startsWith(`${item}/`)));
 
   return (
     <nav className="mobile-navigation" aria-label={t("nav.aria")}>
@@ -75,7 +75,7 @@ export function MobileNavigation() {
           event.currentTarget.querySelector("summary")?.focus();
         }
       }}>
-        <summary className={`mobile-tab${more.some((item) => active(item.href)) ? " is-active" : ""}`}>
+        <summary className={`mobile-tab${more.some((item) => active(item.href, "also" in item ? item.also : [])) ? " is-active" : ""}`}>
           <span className="mobile-tab-icon">
             <NavigationIcon name="more" />
             {unreadNews ? <span className="mobile-tab-dot" aria-hidden="true" /> : null}
@@ -87,7 +87,7 @@ export function MobileNavigation() {
           <h2>{t("nav.more")}</h2>
           <div className="mobile-more-links">
             {more.map((item) => (
-              <IntentPrefetchLink key={item.href} href={localizedPath(locale, item.href)} aria-current={active(item.href) ? "page" : undefined}>
+              <IntentPrefetchLink key={item.href} href={localizedPath(locale, item.href)} aria-current={active(item.href, "also" in item ? item.also : []) ? "page" : undefined}>
                 <span className="mobile-more-icon"><NavigationIcon name={item.icon} /></span>
                 <span>{item.label}</span>
                 {item.href === "/news" && unreadNews ? (

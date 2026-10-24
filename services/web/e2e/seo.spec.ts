@@ -108,6 +108,7 @@ test("robots and sitemap publish only the current public route set", async ({ re
       "/prayer",
       "/salah",
       "/tajweed",
+      "/courses",
       "/legal",
       "/privacy",
       "/terms",

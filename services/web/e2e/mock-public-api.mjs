@@ -183,6 +183,78 @@ function tajweedCourse(language) {
   return document;
 }
 
+// Thematic courses (docs/courses/README.md): the contract examples in Russian, and an
+// Arabic release of the same course for RTL. Other languages see no course, as on the
+// backend, where a course is visible only in the languages of its release.
+const courseListExample = JSON.parse(
+  readFileSync(new URL("../../../docs/courses/course-list.example.json", import.meta.url), "utf8"),
+);
+const courseDocumentExample = JSON.parse(
+  readFileSync(new URL("../../../docs/courses/course-document.example.json", import.meta.url), "utf8"),
+);
+const courseLanguages = new Set(["ru", "en", "ar", "tr"]);
+const ramadanLanguages = ["ru", "ar"];
+const arabic = (text, extra = {}) => ({ text, lang: "ar", ...extra });
+const ramadanArabic = {
+  course: ["رمضان", "الصيام والنية والتراويح وليلة القدر وزكاة الفطر: ما ينبغي معرفته قبل الشهر."],
+  lessons: {
+    "smysl-posta": ["معنى الصيام", "لماذا يصوم المسلمون في رمضان."],
+    namerenie: ["النية", "ما النية ومتى تكون."],
+    taraviikh: ["التراويح", "قيام ليالي رمضان."],
+  },
+  notes: [
+    { type: "heading", dir: "rtl", text: [arabic("ما النية")] },
+    {
+      type: "paragraph",
+      dir: "rtl",
+      lines: [[arabic("النية هي "), arabic("عزم القلب", { bold: true }), arabic(" على الصيام لله.")]],
+    },
+    { type: "list", dir: "rtl", ordered: false, items: [[arabic("تميّز النية العبادة عن العادة.")], [arabic("محلها القلب.")]] },
+    { type: "quote", dir: "rtl", lines: [[arabic("إنما الأعمال بالنيات")]], source: "صحيح البخاري، 1" },
+    { type: "note", dir: "rtl", lines: [[arabic("تُبيَّت النية من الليل.")]] },
+  ],
+};
+
+function courseCover(cover) {
+  return cover && {
+    ...cover,
+    url: cover.url.replace("https://media.iqro.forum/", "/media/"),
+    thumb_url: cover.thumb_url.replace("https://media.iqro.forum/", "/media/"),
+  };
+}
+
+function ramadanCourse(language) {
+  const document = structuredClone(courseDocumentExample);
+  document.course.language = language;
+  document.course.languages = ramadanLanguages;
+  document.course.cover = courseCover(document.course.cover);
+  if (language === "ar") {
+    [document.course.title, document.course.summary] = ramadanArabic.course;
+    document.course.source = "المؤلف والمصادر بعد المراجعة";
+    for (const lesson of document.lessons) {
+      [lesson.title, lesson.summary] = ramadanArabic.lessons[lesson.slug];
+      lesson.notes = ramadanArabic.notes;
+      lesson.sources = ["صحيح البخاري"];
+    }
+  }
+  return document;
+}
+
+function courseList(language) {
+  if (!ramadanLanguages.includes(language)) return { language, courses: [] };
+  const list = structuredClone(courseListExample);
+  const { course } = ramadanCourse(language);
+  list.language = language;
+  list.courses[0] = { ...list.courses[0], title: course.title, summary: course.summary, cover: course.cover };
+  return list;
+}
+
+function courseCoverImage(width, height) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 1280 720">`
+    + `<rect width="1280" height="720" fill="#065f46"/><circle cx="980" cy="230" r="120" fill="#fbbf24"/>`
+    + `<circle cx="1030" cy="200" r="110" fill="#065f46"/></svg>`;
+}
+
 function salahImage(label) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">`
     + `<rect width="720" height="720" fill="#ecfdf5"/><circle cx="360" cy="230" r="70" fill="#a7f3d0"/>`
@@ -492,6 +564,26 @@ const server = createServer(async (request, response) => {
     });
   }
 
+  if (path === "/api/v1/courses" || path.startsWith("/api/v1/courses/")) {
+    const requested = url.searchParams.get("language") ?? "ru";
+    if (!courseLanguages.has(requested)) {
+      return sendJson(response, 400, { language: ["Поддерживаются: ar, en, ru, tr."] });
+    }
+    if (path === "/api/v1/courses") return sendJson(response, 200, courseList(requested));
+    if (path === "/api/v1/courses/ramadan" && ramadanLanguages.includes(requested)) {
+      return sendJson(response, 200, ramadanCourse(requested));
+    }
+    // A release from a newer backend: the site asks for a reload instead of guessing.
+    if (path === "/api/v1/courses/future-format") {
+      return sendJson(response, 200, { ...ramadanCourse("ru"), schema_version: 2 });
+    }
+    return sendJson(response, 404, { detail: "Такого курса нет." });
+  }
+  const coverMedia = path.match(/^\/media\/courses\/covers\/[0-9a-f]+(-640)?\.webp$/);
+  if (coverMedia) {
+    response.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=60" });
+    return response.end(coverMedia[1] ? courseCoverImage(640, 360) : courseCoverImage(1280, 720));
+  }
   if (path === "/api/v1/salah/courses") {
     const { course } = salahCourseExample;
     return sendJson(response, 200, [{
