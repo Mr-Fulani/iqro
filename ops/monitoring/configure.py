@@ -34,7 +34,7 @@ def _quote(value: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     success_url = os.getenv("UPTIME_HEARTBEAT_URL") or getpass.getpass(
-        "External success heartbeat URL: "
+        "External success heartbeat URL (optional): "
     )
     failure_url = os.getenv("UPTIME_HEARTBEAT_FAILURE_URL") or getpass.getpass(
         "External failure heartbeat URL (optional): "

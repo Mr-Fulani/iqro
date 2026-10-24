@@ -23,6 +23,8 @@ class SystemdUnitTests(unittest.TestCase):
         self.assertIn("ProtectSystem=strict", service)
         self.assertIn("OnUnitActiveSec=5m", timer)
         self.assertIn("Persistent=true", timer)
+        # The admin reads the summary from here (compose.production.yaml).
+        self.assertIn("StateDirectory=iqro-monitor/%i", service)
 
     def test_both_backup_jobs_use_existing_failure_monitor(self) -> None:
         for service_name, component in (

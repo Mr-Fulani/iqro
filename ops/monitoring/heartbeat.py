@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+from ops.monitoring.alerts import report_check, report_job_failure
 from ops.monitoring.backup_status import check_status, write_status
 
 
@@ -23,7 +24,7 @@ class HeartbeatError(RuntimeError):
 @dataclass(frozen=True)
 class Settings:
     targets: tuple[str, ...]
-    success_url: str
+    success_url: str | None
     failure_url: str | None
     timeout_seconds: float
     backup_dir: Path
@@ -54,12 +55,12 @@ def _https_url(value: str, label: str, *, allow_secret_path: bool) -> str:
 
 def load_settings(values: Mapping[str, str] | None = None) -> Settings:
     source = os.environ if values is None else values
-    success_url = source.get("UPTIME_HEARTBEAT_URL", "").strip()
-    if not success_url:
-        raise HeartbeatError("UPTIME_HEARTBEAT_URL is required")
-    success_url = _https_url(
-        success_url, "UPTIME_HEARTBEAT_URL", allow_secret_path=True
-    )
+    # Optional since Telegram alerts (docs/alerts.md): without it there is no dead-man ping.
+    success_url = source.get("UPTIME_HEARTBEAT_URL", "").strip() or None
+    if success_url:
+        success_url = _https_url(
+            success_url, "UPTIME_HEARTBEAT_URL", allow_secret_path=True
+        )
     failure_url = source.get("UPTIME_HEARTBEAT_FAILURE_URL", "").strip() or None
     if failure_url:
         failure_url = _https_url(
@@ -195,7 +196,8 @@ def run(settings: Settings) -> None:
                 )
             except ValueError as exc:
                 raise HeartbeatError(str(exc)) from exc
-    ping(settings.success_url, timeout=settings.timeout_seconds)
+    if settings.success_url:
+        ping(settings.success_url, timeout=settings.timeout_seconds)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -214,6 +216,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.job_result and os.environ.get("SERVICE_RESULT") == "success":
         return 0
+    if args.job_result:
+        report_job_failure(args.job_result)
     try:
         settings = load_settings()
         if args.job_result:
@@ -238,8 +242,11 @@ def main(argv: list[str] | None = None) -> int:
                 )
         except HeartbeatError:
             pass
+        if not args.job_result:
+            report_check(ok=False, problem=str(exc))
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
+    report_check(ok=True)
     print("Public endpoints, backup freshness and external heartbeat passed.")
     return 0
 
