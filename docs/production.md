@@ -115,7 +115,10 @@ reverse proxy на том же сервере. Для публичного за�
 `Host`, `X-Forwarded-For` и `X-Forwarded-Proto: https`. Не выставляйте gateway на
 `0.0.0.0` без firewall и настроенного TLS. Прокси должен пропускать тело запроса до 520 МБ:
 столько gateway разрешает для загрузки сур записи в админке
-(`/admin/audio/recitationedition/…/surahs/upload/`); для остальных путей лимит 55 МБ.
+(`/admin/audio/recitationedition/…/surahs/upload/`). Видео тем курсов и их озвучки идут
+по `/admin/courses/courselesson/…/video/upload/` и `…/video/dubs/<язык>/upload/` с лимитом
+500 МБ. Ответ на эти загрузки приходит только после проверки файла, поэтому прокси должен
+ждать его до 10 минут. Для остальных путей лимит 55 МБ.
 
 Проверки после запуска:
 

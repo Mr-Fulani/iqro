@@ -8,7 +8,8 @@ import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { getPublishedCourse, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
 import { createContentMetadata } from "@/lib/seo";
-import { courseOutline, isCourseSlug } from "@/lib/thematic-courses";
+import { formatClock } from "@/lib/audio-content";
+import { courseOutline, isCourseSlug, videoMinutes } from "@/lib/thematic-courses";
 import { translate } from "@/lib/translate";
 import "../courses.css";
 
@@ -64,6 +65,7 @@ export default async function CoursePage({ params }: { params: Promise<RoutePara
   const { course } = document;
   const format = new Intl.NumberFormat(localeTag(route.locale));
   const minutes = document.lessons.reduce((total, lesson) => total + lesson.minutes, 0);
+  const video = videoMinutes(document.lessons);
 
   return (
     <div className="courses-page">
@@ -83,6 +85,7 @@ export default async function CoursePage({ params }: { params: Promise<RoutePara
             {translate(route.locale, "courses.lessonCount", { count: format.format(document.lessons.length) })}
             {" · "}
             {translate(route.locale, "common.minutes", { count: format.format(minutes) })}
+            {video ? ` · ${translate(route.locale, "courses.videoMinutes", { count: format.format(video) })}` : null}
           </p>
           {course.source ? (
             <p className="course-source">
@@ -118,6 +121,9 @@ export default async function CoursePage({ params }: { params: Promise<RoutePara
                   <span className="course-lesson-summary">{lesson.summary}</span>
                   <span className="courses-card-meta">
                     {translate(route.locale, "common.minutes", { count: format.format(lesson.minutes) })}
+                    {lesson.video
+                      ? ` · ${translate(route.locale, "courses.videoDuration", { duration: formatClock(lesson.video.duration_ms, format.format) })}`
+                      : null}
                   </span>
                 </span>
                 <LessonStatusBadge courseSlug={course.slug} lessonSlug={lesson.slug} />

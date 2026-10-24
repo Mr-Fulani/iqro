@@ -215,19 +215,30 @@ const ramadanArabic = {
   ],
 };
 
+const toMockMedia = (url) => url.replace("https://media.iqro.forum/", "/media/");
+
 function courseCover(cover) {
-  return cover && {
-    ...cover,
-    url: cover.url.replace("https://media.iqro.forum/", "/media/"),
-    thumb_url: cover.thumb_url.replace("https://media.iqro.forum/", "/media/"),
+  return cover && { ...cover, url: toMockMedia(cover.url), thumb_url: toMockMedia(cover.thumb_url) };
+}
+
+// The lesson video of the example, with the Arabic document showing the Russian voice:
+// a language without its own dub gets the main video, as the server decides.
+function courseVideo(video) {
+  return video && {
+    ...video,
+    url: toMockMedia(video.url),
+    poster: { ...video.poster, url: toMockMedia(video.poster.url), small_url: toMockMedia(video.poster.small_url) },
   };
 }
+// VP9 decodes in every Chromium build; the Linux CI one may lack H.264.
+const courseLessonVideo = readFileSync(new URL("./fixtures/course-lesson-video.webm", import.meta.url));
 
 function ramadanCourse(language) {
   const document = structuredClone(courseDocumentExample);
   document.course.language = language;
   document.course.languages = ramadanLanguages;
   document.course.cover = courseCover(document.course.cover);
+  for (const lesson of document.lessons) lesson.video = courseVideo(lesson.video);
   if (language === "ar") {
     [document.course.title, document.course.summary] = ramadanArabic.course;
     document.course.source = "المؤلف والمصادر بعد المراجعة";
@@ -579,10 +590,24 @@ const server = createServer(async (request, response) => {
     }
     return sendJson(response, 404, { detail: "Такого курса нет." });
   }
-  const coverMedia = path.match(/^\/media\/courses\/covers\/[0-9a-f]+(-640)?\.webp$/);
+  const coverMedia = path.match(/^\/media\/courses\/(?:covers\/[0-9a-f]+(-640)?|posters\/[0-9a-f-]+-(?:1280|(640)))\.webp$/);
   if (coverMedia) {
     response.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=60" });
-    return response.end(coverMedia[1] ? courseCoverImage(640, 360) : courseCoverImage(1280, 720));
+    return response.end(coverMedia[1] || coverMedia[2] ? courseCoverImage(640, 360) : courseCoverImage(1280, 720));
+  }
+  if (/^\/media\/courses\/videos\/[0-9a-f-]+\.mp4$/.test(path)) {
+    // Byte ranges, as R2 serves them: without them the browser cannot seek.
+    const headers = { "Content-Type": "video/webm", "Cache-Control": "public, max-age=60", "Accept-Ranges": "bytes" };
+    const range = /^bytes=(\d*)-(\d*)$/.exec(request.headers.range ?? "");
+    if (!range) {
+      response.writeHead(200, { ...headers, "Content-Length": courseLessonVideo.length });
+      return response.end(courseLessonVideo);
+    }
+    const last = courseLessonVideo.length - 1;
+    const start = range[1] ? Number(range[1]) : Math.max(0, last + 1 - Number(range[2]));
+    const end = range[1] && range[2] ? Math.min(Number(range[2]), last) : last;
+    response.writeHead(206, { ...headers, "Content-Range": `bytes ${start}-${end}/${last + 1}`, "Content-Length": end - start + 1 });
+    return response.end(courseLessonVideo.subarray(start, end + 1));
   }
   if (path === "/api/v1/salah/courses") {
     const { course } = salahCourseExample;

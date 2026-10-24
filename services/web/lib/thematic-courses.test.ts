@@ -12,10 +12,15 @@ import {
   parseCourseDocument,
   parseCourseList,
   readThematicProgress,
+  readVideoPositions,
   recordLessonCompleted,
   recordLessonOpened,
   summarizeThematicProgress,
+  videoMegabytes,
+  videoMinutes,
+  videoPositionStorageKey,
   writeThematicProgress,
+  writeVideoPosition,
   type CourseDocument,
 } from "./thematic-courses.ts";
 
@@ -68,8 +73,33 @@ test("the contract examples parse; unknown fields are ignored", () => {
   const extended = example("course-document.example.json");
   extended.future_field = { anything: true };
   (extended.course as Record<string, unknown>).trailer = "x";
-  ((extended.lessons as Record<string, unknown>[])[0]!).video = { url: "https://media.iqro.forum/v.mp4" };
+  ((extended.lessons as Record<string, Record<string, unknown>>[])[1]!).video!.codec = "h264";
   assert.deepEqual(parseCourseDocument(extended), { outdated: false, document });
+});
+
+test("a lesson video is the file the server chose for the language; other hosts are left out", () => {
+  const [course] = parseCourseList(example("course-list.example.json"));
+  const document = exampleDocument();
+  const video = document.lessons[1]!.video!;
+  assert.equal(document.lessons[0]!.video, null);
+  assert.deepEqual(
+    { bytes: video.bytes, duration_ms: video.duration_ms, spoken_language: video.spoken_language },
+    { bytes: 113_246_208, duration_ms: 588_000, spoken_language: "ru" },
+  );
+  assert.equal(video.url, "https://media.iqro.forum/courses/videos/abcdef0123456789abcd.mp4");
+  assert.equal(video.poster.small_url.endsWith("-640.webp"), true);
+  // «9:48 · 108 МБ» on the cover, and the list's rounded-up minutes.
+  assert.equal(videoMegabytes(video.bytes), 108);
+  assert.equal(videoMinutes(document.lessons), course!.video_minutes);
+  assert.equal(videoMinutes([{ video: null }]), 0);
+
+  for (const url of ["https://example.com/v.mp4", "https://media.iqro.forum.example.com/v.mp4"]) {
+    const foreign = example("course-document.example.json");
+    ((foreign.lessons as Record<string, Record<string, unknown>>[])[1]!).video!.url = url;
+    const result = parseCourseDocument(foreign) as { document: CourseDocument };
+    assert.equal(result.document.lessons[1]!.video, null, url);
+    assert.equal(result.document.lessons[1]!.notes.length, document.lessons[1]!.notes.length);
+  }
 });
 
 test("a newer schema asks for a reload; a broken document is an error", () => {
@@ -87,6 +117,12 @@ test("a newer schema asks for a reload; a broken document is an error", () => {
     },
     (value: Record<string, unknown>) => {
       (value.course as Record<string, unknown>).cover = { url: "javascript:alert(1)", thumb_url: "", width: 1, height: 1 };
+    },
+    (value: Record<string, unknown>) => {
+      ((value.lessons as Record<string, Record<string, unknown>>[])[1]!).video!.duration_ms = "9:48";
+    },
+    (value: Record<string, unknown>) => {
+      ((value.lessons as Record<string, Record<string, unknown>>[])[1]!).video!.poster = null;
     },
   ]) {
     const broken = example("course-document.example.json");
@@ -115,6 +151,32 @@ test("progress uses the shared course-progress shape under courses.progress.<slu
   // Reopening a completed lesson keeps it completed.
   const reopened = recordLessonOpened(progress, "smysl-posta", "2", new Date("2026-10-25T10:00:00Z"));
   assert.equal(reopened.lessons["smysl-posta"]!.status, "completed");
+});
+
+test("video positions live under courses.position.<slug>; a video watched to the end forgets its own", () => {
+  const storage = memoryStorage();
+  const now = new Date("2026-10-24T10:00:00Z");
+  writeVideoPosition("ramadan", "namerenie", 252_000.7, { storage, now });
+  writeVideoPosition("ramadan", "taraviikh", 30_000, { storage, now });
+  assert.equal(videoPositionStorageKey("ramadan"), "courses.position.ramadan");
+  assert.deepEqual(JSON.parse(storage.values.get("courses.position.ramadan")!), {
+    namerenie: { ms: 252_000, updated_at: now.toISOString() },
+    taraviikh: { ms: 30_000, updated_at: now.toISOString() },
+  });
+
+  writeVideoPosition("ramadan", "taraviikh", null, { storage, now });
+  assert.deepEqual(Object.keys(readVideoPositions("ramadan", storage)), ["namerenie"]);
+
+  // Entries that do not fit are dropped; broken JSON is no position at all.
+  storage.values.set("courses.position.ramadan", JSON.stringify({
+    namerenie: { ms: 4_000 },
+    "Bad Slug": { ms: 1 },
+    taraviikh: { ms: -5 },
+    "smysl-posta": { ms: "12" },
+  }));
+  assert.deepEqual(readVideoPositions("ramadan", storage), { namerenie: { ms: 4_000, updated_at: "" } });
+  storage.values.set("courses.position.ramadan", "{");
+  assert.deepEqual(readVideoPositions("ramadan", storage), {});
 });
 
 test("summary and «Continue» follow the first unfinished lesson of the course opened last", () => {

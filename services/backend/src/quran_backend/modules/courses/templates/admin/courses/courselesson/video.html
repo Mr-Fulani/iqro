@@ -1,0 +1,99 @@
+{% with b=block %}
+<section class="cp cvid" data-course-video aria-labelledby="cvid-title">
+  <div class="cp-row cvid-head">
+    <h2 id="cvid-title">Видео</h2>
+    <a href="{{ b.instruction_url }}" target="_blank" rel="noopener">Как подготовить видео и озвучку</a>
+  </div>
+
+  {% if b.video %}
+    <div class="cvid-ready">
+      <video class="cvid-player" controls playsinline preload="metadata" src="{{ b.url }}" poster="{{ b.poster_url }}" width="{{ b.video.poster_width }}" height="{{ b.video.poster_height }}" data-video-player></video>
+      <div class="cvid-side">
+        <dl class="cvid-meta">
+          <dt>Длительность</dt><dd>{{ b.duration }}</dd>
+          <dt>Размер</dt><dd>{{ b.size }}</dd>
+          <dt>Кадр</dt><dd>{{ b.video.width }}×{{ b.video.height }}, {{ b.fps }} кадров/с</dd>
+          <dt>Звук</dt><dd>{% if b.video.has_audio %}{{ b.video.audio_codec|upper }}{% else %}нет{% endif %}</dd>
+          {% if b.video.original_name %}<dt>Файл</dt><dd>{{ b.video.original_name }}</dd>{% endif %}
+        </dl>
+        {% if b.can_edit %}
+          <form class="cvid-form" method="post" action="{{ b.language_url }}" data-video-action>
+            <input type="hidden" name="video" value="{{ b.video.pk }}">
+            <label for="cvid-language">Язык речи</label>
+            <select id="cvid-language" name="spoken_language" data-video-autosubmit>
+              {% for code, label in b.languages %}<option value="{{ code }}"{% if code == b.video.spoken_language %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </form>
+        {% else %}
+          <p>Язык речи: {{ b.speech }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="cvid-poster">
+      <img src="{{ b.poster_url }}" alt="Обложка видео" width="160" height="{% widthratio b.video.poster_height b.video.poster_width 160 %}">
+      {% if b.can_edit %}
+        <form class="cvid-form" method="post" action="{{ b.poster_url_action }}" data-video-action>
+          <input type="hidden" name="video" value="{{ b.video.pk }}">
+          <label for="cvid-second">Взять кадр на</label>
+          <input id="cvid-second" type="number" name="second" min="0" max="{{ b.last_second }}" step="1" value="{{ b.poster_second }}" data-video-second>
+          <span>с</span>
+          <button type="submit" class="button">Взять кадр</button>
+        </form>
+        <form class="cvid-form" method="post" action="{{ b.poster_url_action }}" enctype="multipart/form-data" data-video-action>
+          <input type="hidden" name="video" value="{{ b.video.pk }}">
+          <label class="button cvid-file">Загрузить картинку<input type="file" name="image" accept="image/jpeg,image/png,image/webp" data-video-autosubmit></label>
+        </form>
+      {% endif %}
+    </div>
+
+    {% if b.can_upload or b.can_remove %}
+      <div class="cp-row">
+        {% if b.can_upload %}
+          {% include "admin/courses/courselesson/video_upload.html" with kind="video" label="Заменить видео" %}
+        {% endif %}
+        {% if b.can_remove %}
+          <form method="post" action="{{ b.remove_url }}" data-video-action data-video-confirm="Убрать видео из темы? Файл останется в хранилище.">
+            <input type="hidden" name="video" value="{{ b.video.pk }}">
+            <button type="submit" class="button">Убрать видео из темы</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <h3 class="cvid-subtitle">Озвучки</h3>
+    <p class="help">Полный звук на другом языке: голос, музыка и звуки вместе. MP3, M4A (AAC), WAV или FLAC до {{ b.max_dub_mib }} МБ, длительность как у видео ({{ b.duration }}) с точностью до 2 секунд. Ученики этого языка получат видео с этим звуком.</p>
+    <div class="cvid-tabs" role="tablist" aria-label="Языки озвучки">
+      {% for tab in b.dubs %}
+        <button type="button" role="tab" id="cvid-tab-{{ tab.code }}" aria-controls="cvid-panel-{{ tab.code }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"{% if tab.code == "ar" %} lang="ar"{% endif %} data-video-tab>{{ tab.tab }}{% if tab.dub %} ✓{% endif %}</button>
+      {% endfor %}
+    </div>
+    {% for tab in b.dubs %}
+      <div class="cvid-panel" role="tabpanel" id="cvid-panel-{{ tab.code }}" aria-labelledby="cvid-tab-{{ tab.code }}"{% if not forloop.first %} hidden{% endif %}>
+        {% if tab.dub %}
+          <audio controls preload="none" src="{{ tab.url }}"></audio>
+          <p>Озвучка на языке «{{ tab.label }}»: {{ tab.duration }}, {{ tab.size }}{% if tab.dub.audio_original_name %}, файл «{{ tab.dub.audio_original_name }}»{% endif %}.</p>
+          <div class="cp-row">
+            {% if b.can_dub %}{% include "admin/courses/courselesson/video_upload.html" with kind="audio" label="Заменить озвучку" upload_url=tab.upload_url %}{% endif %}
+            {% if b.can_delete_dub %}
+              <form method="post" action="{{ tab.delete_url }}" data-video-action data-video-confirm="Удалить озвучку на языке «{{ tab.label }}»? Ученики этого языка получат основное видео.">
+                <input type="hidden" name="video" value="{{ b.video.pk }}">
+                <button type="submit" class="button">Удалить</button>
+              </form>
+            {% endif %}
+          </div>
+        {% else %}
+          <p>Озвучки на языке «{{ tab.label }}» нет: ученики этого языка получат основное видео ({{ b.speech }}).</p>
+          {% if b.can_dub %}{% include "admin/courses/courselesson/video_upload.html" with kind="audio" label="Загрузить озвучку" upload_url=tab.upload_url %}{% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% elif b.can_upload %}
+    <p class="help">MP4 или MOV: видео H.264 до 1920×1080 и 60 кадров/с, звук AAC или без звука, от 10 секунд до 60 минут, до {{ b.max_video_mib }} МБ. Рекомендуем 720p, 30 кадров/с, 5–20 минут на тему.</p>
+    {% include "admin/courses/courselesson/video_upload.html" with kind="video" label="Загрузить видео" drop=True %}
+  {% else %}
+    <p>У темы нет видео.</p>
+  {% endif %}
+  <p class="cvid-status" role="status" aria-live="polite" data-video-status></p>
+</section>
+{% endwith %}
