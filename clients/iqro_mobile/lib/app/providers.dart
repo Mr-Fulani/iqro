@@ -586,6 +586,9 @@ final mushafRenditionsProvider = FutureProvider<List<NativeMushafEdition>>((
 ) {
   return ref.watch(quranRepositoryProvider).mushafRenditions();
 });
+
+/// The app overrides this with the copy AppDependencies reads before the
+/// first frame, so the Quran tab never waits on the database for it.
 final cachedMushafRenditionsProvider =
     FutureProvider<List<NativeMushafEdition>>((ref) {
       return ref.watch(quranRepositoryProvider).cachedMushafRenditions();

@@ -21,6 +21,7 @@ import '../features/memorization/memorization_repository.dart';
 import '../features/plan/plan_repository.dart';
 import '../features/prayer/prayer_repository.dart';
 import '../features/prayer/prayer_widget_service.dart';
+import '../features/quran/mushaf_edition.dart';
 import '../features/quran/quran_repository.dart';
 import '../features/quran/mushaf_offline_repository.dart';
 import '../features/reminders/reminder_repository.dart';
@@ -35,6 +36,7 @@ class AppDependencies {
     required this.auth,
     required this.api,
     required this.quran,
+    required this.mushafRenditions,
     required this.offlineMushaf,
     required this.audio,
     required this.offlineAudio,
@@ -59,6 +61,7 @@ class AppDependencies {
   final AuthRepository auth;
   final ApiClient api;
   final QuranRepository quran;
+  final List<NativeMushafEdition> mushafRenditions;
   final MushafOfflineRepository offlineMushaf;
   final AudioRepository audio;
   final AudioOfflineRepository offlineAudio;
@@ -107,6 +110,14 @@ class AppDependencies {
       authRepository: auth,
       locale: () => preferences.read().locale,
     );
+    final quran = QuranRepository(api: api, database: database);
+    // Read before the first frame, while the database is idle. Read lazily,
+    // the catalog queued for seconds behind the startup queries and the Quran
+    // tab showed no edition. A damaged copy must not keep the app from
+    // opening: the tab then waits for the network catalog as before.
+    final mushafRenditions = await quran.cachedMushafRenditions().onError(
+      (_, _) => const <NativeMushafEdition>[],
+    );
     final prayer = PrayerRepository(api: api, database: database);
     final prayerWidget = PrayerWidgetService(
       prayer: prayer,
@@ -152,7 +163,8 @@ class AppDependencies {
       database: database,
       auth: auth,
       api: api,
-      quran: QuranRepository(api: api, database: database),
+      quran: quran,
+      mushafRenditions: mushafRenditions,
       offlineMushaf: offlineMushaf,
       audio: audio,
       offlineAudio: offlineAudio,
@@ -184,6 +196,7 @@ class AppDependencies {
     authRepositoryProvider.overrideWithValue(auth),
     apiClientProvider.overrideWithValue(api),
     quranRepositoryProvider.overrideWithValue(quran),
+    cachedMushafRenditionsProvider.overrideWith((ref) => mushafRenditions),
     mushafOfflineRepositoryProvider.overrideWithValue(offlineMushaf),
     audioRepositoryProvider.overrideWithValue(audio),
     audioOfflineRepositoryProvider.overrideWithValue(offlineAudio),
