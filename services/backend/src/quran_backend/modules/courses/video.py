@@ -14,14 +14,14 @@ from __future__ import annotations
 
 import subprocess
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
 from shutil import disk_usage, which
 from tempfile import TemporaryDirectory, gettempdir
-from typing import Any
+from typing import Any, Protocol
 
 from django.core.cache import cache
 from django.core.files.uploadedfile import UploadedFile
@@ -109,6 +109,23 @@ class VideoProbe:
 class AudioProbe:
     duration_ms: int
     codec: str
+
+
+class VideoFile(Protocol):
+    """A stored lesson video: a CourseVideo row, or the video of a tajweed lesson's snapshot."""
+
+    @property
+    def sha256(self) -> str: ...
+    @property
+    def object_key(self) -> str: ...
+    @property
+    def duration_ms(self) -> int: ...
+    @property
+    def width(self) -> int: ...
+    @property
+    def height(self) -> int: ...
+    @property
+    def spoken_language(self) -> str: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -326,6 +343,47 @@ def upload_lesson_video(  # noqa: PLR0913 - the admin passes each of them
     ffprobe: str = "ffprobe",
 ) -> CourseVideo:
     """Checks, remuxes and stores the video, then makes it the lesson's video."""
+    checksum, created = process_video(
+        source,
+        spoken_language=spoken_language,
+        known=lambda checksum: CourseVideo.objects.filter(
+            course_id=lesson.course_id, sha256=checksum
+        ).exists(),
+        uploader=uploader,
+        ffmpeg=ffmpeg,
+        ffprobe=ffprobe,
+    )
+    if created is not None:
+        created.update(original_name=original_name[:255], uploaded_by=user)
+    with transaction.atomic():
+        locked = CourseLesson.objects.select_for_update().get(pk=lesson.pk)
+        video, _ = CourseVideo.objects.get_or_create(
+            course_id=locked.course_id, sha256=checksum, defaults=created
+        )
+        previous = locked.video_id
+        locked.video = video
+        locked.updated_by = user
+        locked.save(update_fields=["video", "updated_by", "updated_at"])
+        if previous is not None and previous != video.pk:
+            _forget_video(previous)
+    return video
+
+
+def process_video(  # noqa: PLR0913 - the file and how to store it
+    source: Path,
+    *,
+    spoken_language: str,
+    known: Callable[[str], bool] = lambda _checksum: False,
+    prefix: str = "courses",
+    uploader: ObjectUploader | None = None,
+    ffmpeg: str | None = None,
+    ffprobe: str = "ffprobe",
+) -> tuple[str, dict[str, Any] | None]:
+    """Checks, remuxes and stores a video with its poster, for any module's lesson.
+
+    Gives the SHA-256 of the stored file and its fields; a file `known` to be stored
+    already is not stored again and has no fields.
+    """
     if spoken_language not in SPEECH_NAMES:
         raise CourseVideoError("Выберите язык речи.")
     _check_size(source, MAX_VIDEO_MIB, "Видео должно быть")
@@ -346,9 +404,9 @@ def upload_lesson_video(  # noqa: PLR0913 - the admin passes each of them
         )
         stored = probe_video(remuxed, ffprobe=ffprobe)
         checksum = _sha256(remuxed)
-        if not CourseVideo.objects.filter(course_id=lesson.course_id, sha256=checksum).exists():
+        if not known(checksum):
             actual_uploader = uploader or player_background_uploader()
-            object_key = f"courses/videos/{checksum[:20]}.mp4"
+            object_key = f"{prefix}/videos/{checksum[:20]}.mp4"
             _store(actual_uploader, remuxed, object_key, VIDEO_CONTENT_TYPE, checksum)
             frame = _frame(
                 program, str(remuxed), min(POSTER_SECOND, stored.duration_ms / 10_000), folder
@@ -361,6 +419,7 @@ def upload_lesson_video(  # noqa: PLR0913 - the admin passes each of them
                 height=stored.height,
                 folder=folder,
                 uploader=actual_uploader,
+                prefix=prefix,
             )
             created = {
                 "object_key": object_key,
@@ -375,21 +434,8 @@ def upload_lesson_video(  # noqa: PLR0913 - the admin passes each of them
                 "has_audio": bool(stored.audio_codec),
                 "spoken_language": spoken_language,
                 **_poster_fields(poster),
-                "original_name": original_name[:255],
-                "uploaded_by": user,
             }
-    with transaction.atomic():
-        locked = CourseLesson.objects.select_for_update().get(pk=lesson.pk)
-        video, _ = CourseVideo.objects.get_or_create(
-            course_id=locked.course_id, sha256=checksum, defaults=created
-        )
-        previous = locked.video_id
-        locked.video = video
-        locked.updated_by = user
-        locked.save(update_fields=["video", "updated_by", "updated_at"])
-        if previous is not None and previous != video.pk:
-            _forget_video(previous)
-    return video
+    return checksum, created
 
 
 def remove_lesson_video(lesson: CourseLesson, video_id: Any, *, user: Any) -> None:
@@ -428,6 +474,27 @@ def set_video_poster(  # noqa: PLR0913 - the admin passes each of them
 ) -> CourseVideo:
     """A frame at `second` of the video, or the author's picture cropped to the frame's shape."""
     video = _video_of(lesson, video_id)
+    poster = make_poster(video, second=second, image=image, uploader=uploader, ffmpeg=ffmpeg)
+    with transaction.atomic():
+        locked = _locked_lesson(lesson, video_id)
+        CourseVideo.objects.filter(pk=video_id).update(
+            **_poster_fields(poster), updated_at=timezone.now()
+        )
+        _touch(locked, user)
+    video.refresh_from_db()
+    return video
+
+
+def make_poster(  # noqa: PLR0913 - the video, the choice of the author and where to store
+    video: VideoFile,
+    *,
+    second: float | None = None,
+    image: UploadedFile | None = None,
+    prefix: str = "courses",
+    uploader: ObjectUploader | None = None,
+    ffmpeg: str | None = None,
+) -> Poster:
+    """The poster of a stored video: a frame at `second`, or the author's picture."""
     program = ffmpeg or which("ffmpeg") or "ffmpeg"
     with TemporaryDirectory(prefix="iqro-course-poster-") as directory:
         folder = Path(directory)
@@ -443,7 +510,8 @@ def set_video_poster(  # noqa: PLR0913 - the admin passes each of them
             if second is None or not 0 <= second < video.duration_ms / 1000:
                 raise CourseVideoError(f"Укажите секунду от 0 до {video.duration_ms // 1000 - 1}.")
             picture = _frame(program, video_source(video), second, folder)
-        poster = _posters(
+        # The files are stored before the folder goes away.
+        return _posters(
             program,
             picture,
             video_checksum=video.sha256,
@@ -451,18 +519,11 @@ def set_video_poster(  # noqa: PLR0913 - the admin passes each of them
             height=video.height,
             folder=folder,
             uploader=uploader or player_background_uploader(),
+            prefix=prefix,
         )
-    with transaction.atomic():
-        locked = _locked_lesson(lesson, video_id)
-        CourseVideo.objects.filter(pk=video_id).update(
-            **_poster_fields(poster), updated_at=timezone.now()
-        )
-        _touch(locked, user)
-    video.refresh_from_db()
-    return video
 
 
-def video_source(video: CourseVideo) -> str:
+def video_source(video: VideoFile) -> str:
     """Where ffmpeg reads a stored video: the public URL, which answers Range requests."""
     return public_audio_url(video.object_key)
 
@@ -484,6 +545,36 @@ def upload_video_dub(  # noqa: PLR0913 - the admin passes each of them
 ) -> CourseVideoDub:
     """Joins the picture of the lesson's video with the whole sound of another language."""
     video = _video_of(lesson, video_id)
+    joined = process_dub(video, language, source, uploader=uploader, ffmpeg=ffmpeg, ffprobe=ffprobe)
+    with transaction.atomic():
+        locked = _locked_lesson(lesson, video_id)
+        locked_video = CourseVideo.objects.select_for_update().get(pk=video_id)
+        _check_dub_language(locked_video, language)
+        current = locked_video.dubs.filter(language=language, retired_at__isnull=True).first()
+        if current is not None:
+            _drop_dub(current)
+        dub = CourseVideoDub.objects.create(
+            video=locked_video,
+            language=language,
+            audio_original_name=original_name[:255],
+            uploaded_by=user,
+            **joined,
+        )
+        _touch(locked, user)
+    return dub
+
+
+def process_dub(  # noqa: PLR0913 - the video, the sound and how to store the result
+    video: VideoFile,
+    language: str,
+    source: Path,
+    *,
+    prefix: str = "courses",
+    uploader: ObjectUploader | None = None,
+    ffmpeg: str | None = None,
+    ffprobe: str = "ffprobe",
+) -> dict[str, Any]:
+    """Checks the sound and joins it with the stored video's picture: the dub's fields."""
     _check_dub_language(video, language)
     _check_size(source, MAX_DUB_MIB, "Файл озвучки должен быть")
     audio = probe_audio(source, ffprobe=ffprobe)
@@ -511,7 +602,7 @@ def upload_video_dub(  # noqa: PLR0913 - the admin passes each of them
         )  # fmt: skip
         stored = probe_video(joined, ffprobe=ffprobe)
         checksum = _sha256(joined)
-        object_key = f"courses/videos/{video.sha256[:20]}-{language}-{checksum[:12]}.mp4"
+        object_key = f"{prefix}/videos/{video.sha256[:20]}-{language}-{checksum[:12]}.mp4"
         _store(
             uploader or player_background_uploader(),
             joined,
@@ -520,29 +611,16 @@ def upload_video_dub(  # noqa: PLR0913 - the admin passes each of them
             checksum,
         )
         size_bytes = joined.stat().st_size
-    with transaction.atomic():
-        locked = _locked_lesson(lesson, video_id)
-        locked_video = CourseVideo.objects.select_for_update().get(pk=video_id)
-        _check_dub_language(locked_video, language)
-        current = locked_video.dubs.filter(language=language, retired_at__isnull=True).first()
-        if current is not None:
-            _drop_dub(current)
-        dub = CourseVideoDub.objects.create(
-            video=locked_video,
-            language=language,
-            audio_original_name=original_name[:255],
-            audio_sha256=audio_checksum,
-            audio_bytes=source.stat().st_size,
-            audio_codec=audio.codec,
-            audio_duration_ms=audio.duration_ms,
-            object_key=object_key,
-            sha256=checksum,
-            bytes=size_bytes,
-            duration_ms=stored.duration_ms,
-            uploaded_by=user,
-        )
-        _touch(locked, user)
-    return dub
+    return {
+        "audio_sha256": audio_checksum,
+        "audio_bytes": source.stat().st_size,
+        "audio_codec": audio.codec,
+        "audio_duration_ms": audio.duration_ms,
+        "object_key": object_key,
+        "sha256": checksum,
+        "bytes": size_bytes,
+        "duration_ms": stored.duration_ms,
+    }
 
 
 def delete_video_dub(lesson: CourseLesson, video_id: Any, language: str, *, user: Any) -> None:
@@ -561,7 +639,7 @@ def current_dubs(video: CourseVideo) -> list[CourseVideoDub]:
     return list(video.dubs.filter(retired_at__isnull=True).order_by("language"))
 
 
-def _check_dub_language(video: CourseVideo, language: str) -> None:
+def _check_dub_language(video: VideoFile, language: str) -> None:
     if language not in COURSE_LANGUAGES:
         raise CourseVideoError("Неизвестный язык озвучки.")
     if language == video.spoken_language:
@@ -689,6 +767,7 @@ def _posters(  # noqa: PLR0913 - the picture, the video and where to put the res
     height: int,
     folder: Path,
     uploader: ObjectUploader,
+    prefix: str = "courses",
 ) -> Poster:
     big_size = poster_size(width, height, POSTER_BOX)
     try:
@@ -702,7 +781,7 @@ def _posters(  # noqa: PLR0913 - the picture, the video and where to put the res
         )
     except CourseCoverError as exc:
         raise CourseVideoError(str(exc)) from exc
-    stem = f"courses/posters/{video_checksum[:20]}-{_sha256(big)[:12]}"
+    stem = f"{prefix}/posters/{video_checksum[:20]}-{_sha256(big)[:12]}"
     big_key = f"{stem}-{POSTER_BOX[0]}.webp"
     small_key = f"{stem}-{POSTER_SMALL_BOX[0]}.webp"
     _store(uploader, big, big_key, POSTER_CONTENT_TYPE)

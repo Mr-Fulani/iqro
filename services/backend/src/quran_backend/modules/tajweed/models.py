@@ -222,6 +222,8 @@ class TajweedCourseVersion(BaseModel):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     review_note = models.TextField(blank=True)
+    # SHA-256 of the new lesson videos and dubs the owner marked as watched before signing.
+    watched_videos = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "tajweed_course_version"

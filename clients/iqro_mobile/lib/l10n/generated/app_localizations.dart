@@ -4913,6 +4913,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exit full screen'**
   String get coursesVideoExitFullscreen;
+
+  /// No description provided for @lessonMediaSlides.
+  ///
+  /// In en, this message translates to:
+  /// **'Slides'**
+  String get lessonMediaSlides;
+
+  /// No description provided for @lessonMediaSlideOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide {current} of {total}'**
+  String lessonMediaSlideOf(int current, int total);
+
+  /// No description provided for @lessonMediaSlideCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} / {total}'**
+  String lessonMediaSlideCounter(int current, int total);
+
+  /// No description provided for @lessonMediaPreviousSlide.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous slide'**
+  String get lessonMediaPreviousSlide;
+
+  /// No description provided for @lessonMediaNextSlide.
+  ///
+  /// In en, this message translates to:
+  /// **'Next slide'**
+  String get lessonMediaNextSlide;
 }
 
 class _AppLocalizationsDelegate

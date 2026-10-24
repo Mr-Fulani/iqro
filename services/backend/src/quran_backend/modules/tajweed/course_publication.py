@@ -1,3 +1,5 @@
+# Russian messages for the editor intentionally contain Cyrillic letters.
+# ruff: noqa: RUF001
 """Imports the tajweed course snapshot, compiles its documents and publishes versions.
 
 Flow, as for the prayer course: import (draft, documents compiled) or a draft
@@ -21,6 +23,7 @@ from quran_backend.modules.core.content_revalidation import enqueue_tajweed_cont
 from quran_backend.modules.tajweed.course import (
     TajweedCourseError,
     compile_course_document,
+    course_video_files,
     snapshot_checksum,
     validate_course_snapshot,
 )
@@ -105,9 +108,38 @@ def save_course_draft(version: TajweedCourseVersion, snapshot: Mapping[str, Any]
     compile_course_version(version)
 
 
+def new_videos(version: TajweedCourseVersion) -> set[str]:
+    """SHA-256 of the video and dub files students get anew with this version."""
+    active = version.course.active_version
+    before = (
+        course_video_files(active.snapshot)
+        if active is not None and active.pk != version.pk
+        else set()
+    )
+    return course_video_files(version.snapshot) - before
+
+
+@transaction.atomic
+def mark_tajweed_watched(version: TajweedCourseVersion, *, sha256: str, watched: bool) -> None:
+    """The owner's «Просмотрено» on one new video or dub of an unsigned draft."""
+    version = TajweedCourseVersion.objects.select_for_update().get(pk=version.pk)
+    if version.status != TajweedCourseStatus.DRAFT or version.is_signed:
+        raise TajweedCourseError(["Отмечать можно только неподписанный черновик."])
+    if sha256 not in new_videos(version):
+        raise TajweedCourseError(["Этого файла нет среди новых видео и озвучек версии."])
+    marks = set(version.watched_videos) - {sha256}
+    if watched:
+        marks.add(sha256)
+    version.watched_videos = sorted(marks)
+    version.save(update_fields=["watched_videos", "updated_at"])
+
+
 def sign_tajweed_course(version: TajweedCourseVersion, user: Any, note: str = "") -> None:
-    """The owner's sign-off of a complete draft: every text in every language."""
+    """The owner's sign-off of a complete draft: every text in every language, every new video
+    watched."""
     validate_course_snapshot(version.snapshot)
+    if new_videos(version) - set(version.watched_videos):
+        raise TajweedCourseError(["Отметьте «Просмотрено» у каждого нового видео и озвучки."])
     version.sign(user, note)
     compile_course_version(version)
 

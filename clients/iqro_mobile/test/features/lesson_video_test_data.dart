@@ -95,6 +95,10 @@ class RecordingAudioController extends StateNotifier<IqroAudioState>
     lessonVideoPauses += 1;
   }
 
+  /// A tajweed lesson stops its clips when it closes.
+  @override
+  Future<void> stopStandaloneOf(Object owner) async {}
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

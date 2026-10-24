@@ -17,6 +17,12 @@ from typing import Any
 
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.editorial.markup import parse_notes, plain_text
+from quran_backend.modules.courses.lesson_media import (
+    default_media,
+    media_changes,
+    media_payload,
+    media_snapshot,
+)
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
     MAX_NOTES_CHARS,
@@ -73,6 +79,12 @@ def build_snapshot(course: Course) -> dict[str, Any]:
             "minutes": lesson.minutes,
             "video": video_snapshot(lesson.video),
         }
+        media = media_snapshot(
+            lesson.media, has_video=lesson.video is not None, languages=COURSE_LANGUAGES
+        )
+        # Only a lesson with slides or banners has the key: the checksums of the rest stay.
+        if media != default_media(has_video=lesson.video is not None):
+            item["media"] = media
         for field in LESSON_TEXTS:
             item[field] = {language: lesson.text(field, language) for language in COURSE_LANGUAGES}
         item["checksum"] = checksum(item)
@@ -118,6 +130,12 @@ def video_snapshot(video: CourseVideo | None) -> dict[str, Any] | None:
             for dub in video.dubs.filter(retired_at__isnull=True).order_by("language")
         },
     }
+
+
+def lesson_media(lesson: dict[str, Any]) -> list[dict[str, Any]]:
+    """The media blocks of a snapshot's lesson; a lesson without them shows its video alone."""
+    media = lesson.get("media")
+    return default_media(has_video=lesson["video"] is not None) if media is None else media
 
 
 def snapshot_files(snapshot: dict[str, Any]) -> set[str]:
@@ -260,6 +278,12 @@ def build_document(
                 "summary": lesson["summary"][language].strip(),
                 "minutes": lesson_minutes(lesson, blocks, video),
                 "video": video,
+                "media": media_payload(
+                    lesson_media(lesson),
+                    language=language,
+                    video=video,
+                    public_url=public_audio_url,
+                ),
                 "notes": blocks,
                 "sources": [
                     line.strip()
@@ -333,6 +357,7 @@ def changes(old: dict[str, Any] | None, new: dict[str, Any]) -> list[str]:
         ]
         parts += [CHANGED[field] for field in ("slug", "minutes") if before[field] != lesson[field]]
         parts += video_changes(before["video"], lesson["video"])
+        parts += media_changes(lesson_media(before), lesson_media(lesson), editor_languages())
         found.append(f"{name}: {'; '.join(parts)}")
     found.extend(
         f"Удалена тема «{lesson['title']['ru'] or lesson['slug']}»"

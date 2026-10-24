@@ -826,5 +826,10 @@
   "coursesVideoForward10": "10 saniye ileri",
   "coursesVideoPosition": "Video konumu",
   "coursesVideoFullscreen": "Tam ekran",
-  "coursesVideoExitFullscreen": "Tam ekrandan çık"
+  "coursesVideoExitFullscreen": "Tam ekrandan çık",
+  "lessonMediaSlides": "Slaytlar",
+  "lessonMediaSlideOf": "Slayt {current} / {total}",
+  "lessonMediaSlideCounter": "{current} / {total}",
+  "lessonMediaPreviousSlide": "Önceki slayt",
+  "lessonMediaNextSlide": "Sonraki slayt"
 }

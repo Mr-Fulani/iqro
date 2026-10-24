@@ -79,6 +79,17 @@ export type CourseVideo = {
   poster: { url: string; small_url: string; width: number; height: number };
 };
 
+/** A WebP from the media host: `url` up to 1600 px on the longer side, `small_url` up to 800 px. */
+export type CourseImage = { url: string; small_url: string; width: number; height: number };
+
+export type CourseSlide = { image: CourseImage; caption: string; alt: string; dir: TextDirection };
+
+/** Lesson media above the notes, in the author's order (docs/courses/README.md, «Медиа темы»). */
+export type CourseMediaBlock =
+  | { type: "video"; video: CourseVideo }
+  | { type: "slides"; slides: CourseSlide[] }
+  | { type: "banner"; image: CourseImage; caption: string; alt: string; dir: TextDirection };
+
 export type CourseLesson = {
   slug: string;
   number: number;
@@ -86,6 +97,7 @@ export type CourseLesson = {
   summary: string;
   minutes: number;
   video: CourseVideo | null;
+  media: CourseMediaBlock[];
   notes: NoteBlock[];
   sources: string[];
 };
@@ -116,9 +128,13 @@ export type CourseOutline = {
 };
 
 export class CourseDocumentError extends Error {
+  /** What is wrong, without the prefix: the tajweed course reports media errors as its own. */
+  readonly detail: string;
+
   constructor(message: string) {
     super(`Invalid course document: ${message}`);
     this.name = "CourseDocumentError";
+    this.detail = message;
   }
 }
 
@@ -175,7 +191,11 @@ function cover(value: unknown, where: string): CourseCover | null {
   };
 }
 
-const VIDEO_HOST = "media.iqro.forum";
+const MEDIA_HOST = "media.iqro.forum";
+
+function fromMediaHost(url: string): boolean {
+  return url.startsWith("/") || new URL(url).host === MEDIA_HOST;
+}
 
 /** Videos come only from the media host (or this site's /media proxy), as the app requires. */
 function video(value: unknown, where: string): CourseVideo | null {
@@ -197,8 +217,7 @@ function video(value: unknown, where: string): CourseVideo | null {
       height: count(poster.height, `${where}.poster.height`),
     },
   };
-  const approved = [result.url, result.poster.url, result.poster.small_url]
-    .every((url) => url.startsWith("/") || new URL(url).host === VIDEO_HOST);
+  const approved = [result.url, result.poster.url, result.poster.small_url].every(fromMediaHost);
   // A file from elsewhere is left out; the notes of the lesson still show.
   return approved ? result : null;
 }
@@ -206,6 +225,79 @@ function video(value: unknown, where: string): CourseVideo | null {
 function direction(value: unknown, where: string): TextDirection {
   if (value !== "ltr" && value !== "rtl") throw new CourseDocumentError(`${where} is not ltr or rtl`);
   return value;
+}
+
+/** A slide or banner picture; one from another host is `null`, like a video. */
+function image(value: unknown, where: string): CourseImage | null {
+  if (!isRecord(value)) throw new CourseDocumentError(`${where} is not an object`);
+  const result: CourseImage = {
+    url: mediaUrl(value.url, `${where}.url`),
+    small_url: mediaUrl(value.small_url, `${where}.small_url`),
+    width: count(value.width, `${where}.width`),
+    height: count(value.height, `${where}.height`),
+  };
+  return fromMediaHost(result.url) && fromMediaHost(result.small_url) ? result : null;
+}
+
+/**
+ * `lessons[].media`. A release prepared before media has no field: its video is the only block.
+ * A block of an unknown type, or with a file from another host, is left out; the notes still show.
+ */
+function media(value: unknown, lessonVideo: CourseVideo | null, where: string): CourseMediaBlock[] {
+  if (value === undefined || value === null) return lessonVideo ? [{ type: "video", video: lessonVideo }] : [];
+  return parseLessonMedia(value, where);
+}
+
+/**
+ * Media blocks of a lesson, shared with the tajweed course (docs/tajweed/course.md): no field is
+ * no media. A block of an unknown type, or with a file from another host, is left out.
+ */
+export function parseLessonMedia(value: unknown, where: string): CourseMediaBlock[] {
+  if (value === undefined || value === null) return [];
+  const blocks: CourseMediaBlock[] = [];
+  list(value, where).forEach((block, index) => {
+    const at = `${where}[${index}]`;
+    if (!isRecord(block)) throw new CourseDocumentError(`${at} is not a block`);
+    if (block.type === "video") {
+      const parsed = video(block.video, `${at}.video`);
+      if (parsed) blocks.push({ type: "video", video: parsed });
+    } else if (block.type === "slides") {
+      const slides = list(block.slides, `${at}.slides`).map((slide, item) => {
+        const on = `${at}.slides[${item}]`;
+        if (!isRecord(slide)) throw new CourseDocumentError(`${on} is not an object`);
+        return {
+          image: image(slide.image, `${on}.image`),
+          caption: text(slide.caption, `${on}.caption`),
+          alt: text(slide.alt, `${on}.alt`),
+          dir: direction(slide.dir, `${on}.dir`),
+        };
+      });
+      // A block with a picture from another host is left out whole, as is an empty one.
+      if (slides.length && slides.every((slide) => slide.image)) blocks.push({ type: "slides", slides: slides as CourseSlide[] });
+    } else if (block.type === "banner") {
+      const picture = image(block.image, `${at}.image`);
+      const caption = text(block.caption, `${at}.caption`);
+      const alt = text(block.alt, `${at}.alt`);
+      const dir = direction(block.dir, `${at}.dir`);
+      if (picture) blocks.push({ type: "banner", image: picture, caption, alt, dir });
+    }
+  });
+  return blocks;
+}
+
+/** The lesson video among its media, for «12 min · video 9:48». */
+export function mediaVideo(blocks: CourseMediaBlock[]): CourseVideo | null {
+  for (const block of blocks) if (block.type === "video") return block.video;
+  return null;
+}
+
+/** The lesson column on the site: the full width on a phone, about 880 px beside the outline. */
+export const LESSON_MEDIA_SIZES = "(max-width: 900px) 100vw, 880px";
+
+/** `srcset` with the real widths: `small_url` is the same picture at up to 800 px on its longer side. */
+export function lessonImageSrcSet(image: CourseImage): string {
+  const small = Math.round(image.width * Math.min(1, 800 / Math.max(image.width, image.height, 1)));
+  return `${image.small_url} ${small}w, ${image.url} ${image.width}w`;
 }
 
 function segments(value: unknown, where: string): Segment[] {
@@ -285,13 +377,15 @@ export function parseCourseDocument(value: unknown): CourseDocumentResult {
   const lessons = list(value.lessons, "lessons").map((lesson, index): CourseLesson => {
     const at = `lessons[${index}]`;
     if (!isRecord(lesson)) throw new CourseDocumentError(`${at} is not an object`);
+    const lessonVideo = video(lesson.video, `${at}.video`);
     return {
       slug: slug(lesson.slug, `${at}.slug`, isLessonSlug),
       number: count(lesson.number, `${at}.number`),
       title: text(lesson.title, `${at}.title`),
       summary: text(lesson.summary, `${at}.summary`),
       minutes: count(lesson.minutes, `${at}.minutes`),
-      video: video(lesson.video, `${at}.video`),
+      video: lessonVideo,
+      media: media(lesson.media, lessonVideo, `${at}.media`),
       notes: parseNoteBlocks(lesson.notes, `${at}.notes`),
       sources: list(lesson.sources, `${at}.sources`).map((source, item) => text(source, `${at}.sources[${item}]`)),
     };

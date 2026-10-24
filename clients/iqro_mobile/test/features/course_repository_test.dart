@@ -50,6 +50,65 @@ void main() {
         false,
       ]);
       expect(document.lessons.last.sources, isEmpty);
+
+      // Media above the notes, in the author's order.
+      final banner = first.media.single as LessonBannerMedia;
+      expect(banner.picture.image.url, endsWith('/2222222222bbbbbbbbbb.webp'));
+      expect(banner.picture.image.smallUrl, endsWith('bbbbbbbbbb-800.webp'));
+      expect(banner.picture.image.width, 1600);
+      expect(banner.picture.image.height, 900);
+      expect(banner.picture.caption, '');
+      expect(banner.picture.alt, 'Полумесяц над минаретом на закате');
+      expect(banner.picture.direction, TextDirection.ltr);
+      final media = document.lesson('namerenie')!.media;
+      expect(media.map((block) => block.runtimeType), [
+        LessonVideoMedia,
+        LessonSlidesMedia,
+      ]);
+      expect(
+        (media.first as LessonVideoMedia).video.url,
+        document.lesson('namerenie')!.video!.url,
+      );
+      final slides = (media.last as LessonSlidesMedia).slides;
+      expect(slides.map((slide) => slide.image.height), [1200, 900]);
+      expect(slides.last.caption, 'نويت صوم غد');
+      expect(slides.last.direction, TextDirection.rtl);
+      expect(document.lessons.last.media, isEmpty);
+    });
+
+    test('media: a document without it has its video; unknown blocks are '
+        'left out', () {
+      final json = courseDocumentJson();
+      final lessons = (json['lessons']! as List).cast<Map>();
+      for (final lesson in lessons) {
+        lesson.remove('media');
+      }
+      var document = CourseDocument.fromJson(json);
+      expect(document.lessons.first.media, isEmpty);
+      final video = document.lesson('namerenie')!.media.single;
+      expect((video as LessonVideoMedia).video.url, endsWith('abcd.mp4'));
+
+      lessons.first['media'] = [
+        {'type': 'quiz', 'quiz': 'ramadan-basics'},
+        {'type': 'slides', 'slides': <Object?>[]},
+        {
+          'type': 'banner',
+          'image': {
+            'url': 'https://media.iqro.forum/courses/banners/b.webp',
+            'small_url': 'https://media.iqro.forum/courses/banners/b-800.webp',
+            'width': 1600,
+            'height': 900,
+          },
+          'caption': 'Подпись',
+          'alt': '',
+          'dir': 'ltr',
+          'added_later': true,
+        },
+      ];
+      document = CourseDocument.fromJson(json);
+      final banner = document.lessons.first.media.single as LessonBannerMedia;
+      expect(banner.picture.caption, 'Подпись');
+      expect(banner.picture.alt, '');
     });
 
     test('ignore unknown fields', () {
@@ -93,6 +152,8 @@ void main() {
           (json['lessons']! as List).first as Map;
       Map<Object?, Object?> firstBlock(Map<String, Object?> json) =>
           (firstLesson(json)['notes']! as List).first as Map;
+      Map<Object?, Object?> banner(Map<String, Object?> json) =>
+          (firstLesson(json)['media']! as List).first as Map;
 
       for (final json in [
         changed((json) => json.remove('schema_version')),
@@ -104,6 +165,25 @@ void main() {
         changed((json) => firstLesson(json)['slug'] = 'namerenie'),
         changed((json) => firstBlock(json)['type'] = 'table'),
         changed((json) => firstBlock(json)['dir'] = 'auto'),
+        changed((json) => firstLesson(json)['media'] = {'type': 'banner'}),
+        changed((json) => banner(json)['dir'] = 'auto'),
+        changed((json) => banner(json).remove('alt')),
+        changed((json) => (banner(json)['image']! as Map).remove('small_url')),
+        changed(
+          (json) => firstLesson(json)['media'] = [
+            {'type': 'video', 'video': null},
+          ],
+        ),
+        changed(
+          (json) => firstLesson(json)['media'] = [
+            {
+              'type': 'slides',
+              'slides': [
+                {'image': null, 'caption': '', 'alt': '', 'dir': 'ltr'},
+              ],
+            },
+          ],
+        ),
         changed(
           (json) => firstBlock(json)['text'] = [
             {'text': 'x', 'bold': 'yes'},
@@ -162,6 +242,44 @@ void main() {
       await open('ru');
       expect(remote.listRequests, ['ru', 'ru']);
       expect(remote.documentRequests, ['ramadan.ru']);
+    });
+
+    test('keeps the pictures of the lessons with the document', () async {
+      final kept = <List<LessonMedia>>[];
+      repository = CourseRepository(
+        remote: remote,
+        database: database,
+        keepMedia: (media) async => kept.add(media.toList()),
+      );
+      await open('ru');
+      await pumpEventQueue();
+      expect(kept.single.map((block) => block.runtimeType), [
+        LessonBannerMedia,
+        LessonVideoMedia,
+        LessonSlidesMedia,
+      ]);
+
+      // Opened again from the device: what did not arrive is fetched now.
+      await open('ru');
+      await pumpEventQueue();
+      expect(kept, hasLength(2));
+      expect(remote.documentRequests, ['ramadan.ru']);
+    });
+
+    test('pictures that cannot be kept do not fail the course', () async {
+      for (final keep in <Future<void> Function(Iterable<LessonMedia>)>[
+        (_) => throw Exception('no disk'),
+        (_) async => throw Exception('offline'),
+      ]) {
+        repository = CourseRepository(
+          remote: remote,
+          database: database,
+          keepMedia: keep,
+        );
+        final document = await open('ru');
+        await pumpEventQueue();
+        expect(document.lessons, hasLength(3));
+      }
     });
 
     test('a new version in the list means a new document', () async {

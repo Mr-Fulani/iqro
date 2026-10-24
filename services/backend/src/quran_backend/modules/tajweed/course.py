@@ -17,6 +17,15 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.courses.document import shown_files, video_payload
+from quran_backend.modules.courses.lesson_media import (
+    KINDS,
+    MAX_BLOCKS,
+    VIDEO,
+    media_payload,
+    media_snapshot,
+)
 from quran_backend.modules.tajweed.course_markers import DERIVED_TARGETS, TARGETS
 from quran_backend.modules.tajweed.models import TAJWEED_COURSE_LANGUAGES
 from quran_backend.modules.tajweed.rules import RULES_BY_CODE
@@ -167,6 +176,21 @@ class _Checker:
             self.problems.append(
                 f"{where}: examples — до {MAX_PREFERRED_EXAMPLES} ключей аятов вида 112:4."
             )
+        media = lesson.get("media", [])
+        if (
+            not isinstance(media, list)
+            or len(media) > MAX_BLOCKS
+            or not all(
+                isinstance(block, Mapping)
+                and block.get("type") in KINDS
+                and (block.get("type") == VIDEO or isinstance(block.get("slides"), list))
+                for block in media
+            )
+            or sum(1 for block in media if block.get("type") == VIDEO) > 1
+        ):
+            self.problems.append(
+                f"{where}: media — до {MAX_BLOCKS} блоков видео, слайдов и баннеров, видео одно."
+            )
 
     def sections(self, items: Sequence[Mapping[str, Any]], lessons: Sequence[str]) -> None:
         placed: list[str] = []
@@ -215,6 +239,40 @@ def validate_course_snapshot(snapshot: Mapping[str, Any], *, complete: bool = Tr
         raise TajweedCourseError(checker.problems)
 
 
+def lesson_video(lesson: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The lesson's video with its poster and dubs, as a course release keeps one."""
+    return next(
+        (
+            block["video"]
+            for block in lesson.get("media") or []
+            if block.get("type") == VIDEO and block.get("video")
+        ),
+        None,
+    )
+
+
+def lesson_media(lesson: Mapping[str, Any], language: str) -> list[dict[str, Any]]:
+    """The media blocks of one language (docs/courses/README.md, «Медиа темы»)."""
+    video = lesson_video(lesson)
+    blocks = media_snapshot(
+        lesson.get("media") or [],
+        has_video=video is not None,
+        languages=TAJWEED_COURSE_LANGUAGES,
+    )
+    return media_payload(
+        blocks,
+        language=language,
+        video=video_payload(video, language),
+        public_url=public_audio_url,
+    )
+
+
+def course_video_files(snapshot: Mapping[str, Any]) -> set[str]:
+    """SHA-256 of the video and dub files the course's documents give students."""
+    lessons = [{"video": lesson_video(lesson)} for lesson in snapshot.get("lessons") or []]
+    return shown_files({"lessons": lessons}, list(TAJWEED_COURSE_LANGUAGES))
+
+
 def _text(value: Mapping[str, str] | None, language: str) -> str:
     # A draft may still miss a translation; a published version never does.
     return "" if value is None else str(value.get(language, ""))
@@ -259,6 +317,7 @@ def compile_course_document(
                     "minutes": int(lesson["minutes"]),
                     **{field: _text(lesson[field], language) for field in LESSON_TEXTS},
                     "letters": str(lesson.get("letters", "")),
+                    "media": lesson_media(lesson, language),
                 }
             )
     return {

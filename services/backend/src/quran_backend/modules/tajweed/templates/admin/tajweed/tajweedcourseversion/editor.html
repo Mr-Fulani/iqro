@@ -1,7 +1,12 @@
 {% extends "admin/base_site.html" %}
-{% load admin_urls %}
+{% load admin_urls static %}
 
-{% block extrastyle %}{{ block.super }}
+{% block extrahead %}{{ block.super }}
+<script src="{% static 'courses/admin/video.js' %}" defer></script>
+<script src="{% static 'lesson_media/admin/media.js' %}" defer></script>
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}
 <style>
   .te { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); gap: 24px; align-items: start; }
   .te-tree { list-style: none; margin: 0; padding: 0; }
@@ -18,6 +23,8 @@
   .te-lang textarea { min-height: 72px; }
   .te-lang.is-empty label::after { content: " — нет текста"; color: var(--error-fg, #ba2121); }
   .te-setting { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 8px; margin-bottom: 8px; }
+  .te-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .te-main > .cp { margin: 0; }
   @media (max-width: 767px) { .te, .te-lang, .te-setting { grid-template-columns: minmax(0, 1fr); } }
 </style>
 {% endblock %}
@@ -61,6 +68,29 @@
       {% for name, count in missing %}<bdi>{{ name }}</bdi>: <b>{{ count }}</b>{% if not forloop.last %}, {% endif %}{% endfor %}.
       Подписать можно, когда переведено всё.</div>
   {% endif %}
+  {% if videos %}
+    <section class="cp" id="videos" aria-labelledby="te-videos-title">
+      <h2 id="te-videos-title">Новые видео и озвучки: посмотрите каждое перед подписью</h2>
+      {% for video in videos %}
+        <div class="cvid-watch{% if video.watched %} is-watched{% endif %}">
+          <video controls playsinline preload="none" src="{{ video.url }}" poster="{{ video.poster_url }}"></video>
+          <div class="cp-row">
+            <strong>{{ video.name }}</strong>
+            <span>{{ video.duration }} · {{ video.size }}</span>
+            {% if editable %}
+              <form method="post" action="{{ video.mark_url }}">{% csrf_token %}
+                <input type="hidden" name="node" value="{{ node_id }}">
+                <input type="hidden" name="watched" value="{% if video.watched %}0{% else %}1{% endif %}">
+                <button type="submit" class="button{% if not video.watched %} default{% endif %}">{% if video.watched %}Снять отметку{% else %}Просмотрено{% endif %}</button>
+              </form>
+            {% elif video.watched %}
+              <span>Просмотрено</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
   <div class="te">
     <nav aria-label="Содержание курса">
       <ul class="te-tree">
@@ -69,6 +99,8 @@
         {% endfor %}
       </ul>
     </nav>
+    <div class="te-main">
+    {{ media_block }}
     <form method="post">
       {% csrf_token %}
       <input type="hidden" name="node" value="{{ node_id }}">
@@ -105,6 +137,7 @@
       </fieldset>
       {% if editable %}<div class="submit-row"><input type="submit" class="default" value="Сохранить"></div>{% endif %}
     </form>
+    </div>
   </div>
 </div>
 {% endblock %}

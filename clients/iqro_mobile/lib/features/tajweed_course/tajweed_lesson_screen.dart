@@ -9,6 +9,8 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/lesson_media_view.dart';
+import '../courses/lesson_video_player.dart';
 import '../tajweed/tajweed_sheet.dart'
     show TajweedRuleDot, tajweedArabicStyle, tajweedBodyStyle, tajweedLabel;
 import 'tajweed_course_home_screen.dart'
@@ -531,6 +533,8 @@ class _TajweedLessonPlayerState extends ConsumerState<TajweedLessonPlayer>
     final target = document.target(lesson);
     if (slug == 'intro') {
       return _IntroPage(
+        courseSlug: widget.courseSlug,
+        language: document.course.language,
         lesson: lesson,
         target: target,
         pendingReview: document.pendingReview,
@@ -688,13 +692,21 @@ class _TargetHeading extends StatelessWidget {
   }
 }
 
+/// The lesson's media, then the rule: its name, the explanation and the
+/// letters.
+/// The video stops when the learner turns the page, as the page goes.
 class _IntroPage extends StatelessWidget {
   const _IntroPage({
+    required this.courseSlug,
+    required this.language,
     required this.lesson,
     required this.target,
     required this.pendingReview,
   });
 
+  /// Keeps the video's position, under `courses.position.<courseSlug>`.
+  final String courseSlug;
+  final String language;
   final TajweedCourseLesson lesson;
   final TajweedCourseTarget target;
   final bool pendingReview;
@@ -704,6 +716,19 @@ class _IntroPage extends StatelessWidget {
     final theme = Theme.of(context);
     return _StepScroll(
       children: <Widget>[
+        // Under the lesson's title and above the rule, as on the site.
+        // Each block is followed by its gap.
+        if (lesson.media.isNotEmpty)
+          LessonMediaView(
+            media: lesson.media,
+            videoBuilder: (context, video) => LessonVideo(
+              course: courseSlug,
+              lesson: lesson.slug,
+              lessonTitle: lesson.title,
+              video: video,
+              language: language,
+            ),
+          ),
         _stepTitle(context, context.l10n.tajweedCourseRule),
         const SizedBox(height: 10),
         _TargetHeading(target: target),

@@ -7,14 +7,15 @@ import { CourseOutdated } from "@/components/courses/CourseOutdated";
 import { LessonStatusBadge } from "@/components/courses/CourseProgress";
 import { LateArabicFont } from "@/components/courses/LateArabicFont";
 import { LessonCompleteBar } from "@/components/courses/LessonCompleteBar";
-import { LessonVideo } from "@/components/courses/LessonVideo";
+import { LessonMedia } from "@/components/courses/LessonMedia";
 import { formatClock } from "@/lib/audio-content";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { getPublishedCourse, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
 import { createContentMetadata } from "@/lib/seo";
-import { isCourseSlug, isLessonSlug } from "@/lib/thematic-courses";
+import { isCourseSlug, isLessonSlug, mediaVideo } from "@/lib/thematic-courses";
 import { translate } from "@/lib/translate";
+import "@/components/courses/lesson-media.css";
 import "../../courses.css";
 
 export const revalidate = 3_600;
@@ -78,10 +79,7 @@ export default async function CourseLessonPage({ params }: { params: Promise<Rou
   const next = lessons[index + 1] ?? null;
   const format = new Intl.NumberFormat(localeTag(route.locale));
   const lessonHref = (slug: string) => localizedPath(route.locale, `/courses/${course.slug}/${slug}`);
-  const { video } = lesson;
-  // The server already chose the file for this language; a video in another one says so.
-  const spoken = video?.spoken_language;
-  const otherLanguage = spoken && spoken !== course.language && isLocale(spoken) ? spoken : null;
+  const video = mediaVideo(lesson.media);
 
   return (
     <div className="courses-page course-lesson-page">
@@ -111,21 +109,14 @@ export default async function CourseLessonPage({ params }: { params: Promise<Rou
             </p>
           </header>
 
-          {video ? (
-            <div className="course-lesson-video">
-              <LessonVideo courseSlug={course.slug} lessonSlug={lesson.slug} title={lesson.title} video={video} />
-              {otherLanguage ? (
-                <p className="course-lesson-video-language" data-testid="lesson-video-language">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-                    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" />
-                  </svg>
-                  {translate(route.locale, `courses.videoLanguage.${otherLanguage}`)}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+          <LessonMedia
+            blocks={lesson.media}
+            locale={route.locale}
+            language={course.language}
+            courseSlug={course.slug}
+            lessonSlug={lesson.slug}
+            title={lesson.title}
+          />
 
           <section className="surface course-lesson-notes" aria-labelledby="course-notes-title">
             <h2 id="course-notes-title">{translate(route.locale, "courses.notes")}</h2>

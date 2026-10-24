@@ -827,9 +827,17 @@ def test_only_a_reviewer_marks_watched(lesson: CourseLesson, owner: User) -> Non
 def test_lesson_page_shows_the_video_block(lesson: CourseLesson, owner: User) -> None:
     client = _client(owner)
     empty = client.get(f"/admin/courses/courselesson/{lesson.pk}/change/").content.decode()
-    assert "Перетащите файл сюда" in empty
+    assert "Медиа пока нет." in empty
+    assert "Перетащите файл сюда" not in empty
     assert "courses/admin/video.js" in empty
+    assert "lesson_media/admin/media.js" in empty
     assert "docs/courses/video.md" in empty
+    # «Добавить: Видео» puts the place of the video in the list, with the upload box.
+    added = client.post(
+        f"/admin/courses/courselesson/{lesson.pk}/media/", {"action": "add", "kind": "video"}
+    )
+    assert added.status_code == 200
+    assert "Перетащите файл сюда" in added.json()["html"]
 
     video = _stored_video(lesson, original_name="lecture.mp4")
     _stored_dub(video, "en", "d" * 64, audio_original_name="english.mp3")

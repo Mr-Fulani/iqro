@@ -24,6 +24,7 @@ from django.contrib.admin.helpers import InlineAdminFormSet
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.core.files.uploadedfile import UploadedFile
+from django.db import transaction
 from django.db.models import QuerySet
 from django.forms.models import BaseInlineFormSet
 from django.http import (
@@ -50,9 +51,23 @@ from quran_backend.modules.courses.document import (
     changes,
     checksum,
     editor_languages,
+    lesson_media,
     readiness,
     untranslated,
     video_payload,
+)
+from quran_backend.modules.courses.lesson_media import (
+    BANNER,
+    SLIDES,
+    VIDEO,
+    LessonMediaError,
+    changed_blocks,
+)
+from quran_backend.modules.courses.lesson_media_admin import (
+    Change,
+    MediaPage,
+    render_media,
+    run_media_action,
 )
 from quran_backend.modules.courses.media import CourseCoverError, upload_course_cover
 from quran_backend.modules.courses.models import (
@@ -296,16 +311,20 @@ class CourseLessonInline(admin.TabularInline):  # type: ignore[type-arg]
     def get_queryset(self, request: HttpRequest) -> QuerySet[CourseLesson]:
         return super().get_queryset(request).select_related("video")
 
-    @admin.display(description="Видео")
+    @admin.display(description="Медиа")
     def video_state(self, obj: CourseLesson) -> str:
+        parts = []
         video = obj.video
-        if video is None:
-            return "—"
-        dubs = [dub.language for dub in current_dubs(video)]
-        speech = video.spoken_language or "без речи"
-        return " · ".join(
-            [clock(video.duration_ms), speech + (" + " + ", ".join(dubs) if dubs else "")]
-        )
+        if video is not None:
+            dubs = [dub.language for dub in current_dubs(video)]
+            speech = video.spoken_language or "без речи"
+            parts += [clock(video.duration_ms), speech + (" + " + ", ".join(dubs) if dubs else "")]
+        slides = sum(len(block.get("slides", [])) for block in obj.media if block["type"] == SLIDES)
+        if slides:
+            parts.append(f"слайдов: {slides}")
+        if any(block["type"] == BANNER and block.get("slides") for block in obj.media):
+            parts.append("баннер")
+        return " · ".join(parts) or "—"
 
 
 @admin.register(Course)
@@ -671,7 +690,14 @@ def preview_response(  # noqa: PLR0913 - the page needs each of them
     else:
         payload = build_document(snapshot, language=language, version=version, languages=available)
     lessons = [
-        {**lesson, "video_label": video_label(lesson["video"], language)}
+        {
+            **lesson,
+            "video_label": video_label(lesson["video"], language),
+            # Documents of releases before media have no list: the video alone.
+            "media_blocks": lesson.get(
+                "media", [{"type": VIDEO, "video": lesson["video"]}] if lesson["video"] else []
+            ),
+        }
         for lesson, source in zip(payload["lessons"], snapshot["lessons"], strict=True)
         if not lesson_id or source["id"] == lesson_id
     ]
@@ -706,7 +732,7 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     change_form_template = "admin/courses/courselesson/change_form.html"
 
     class Media:
-        js = ("courses/admin/video.js",)
+        js = ("courses/admin/video.js", "lesson_media/admin/media.js")
 
     def get_fieldsets(self, _request: HttpRequest, _obj: CourseLesson | None = None) -> Any:
         return [
@@ -758,7 +784,7 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "course": lesson.course,
                 "preview_url": reverse("admin:courses_courselesson_preview", args=[lesson.pk]),
             }
-            context["video_block"] = video_block(request, lesson)
+            context["media_block"] = render_media(media_page(request, lesson), request)
         return super().change_view(request, object_id, form_url, context)
 
     def response_change(self, request: HttpRequest, obj: CourseLesson) -> HttpResponse:
@@ -775,6 +801,11 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "<path:object_id>/preview/",
                 view(self.preview_view),
                 name="courses_courselesson_preview",
+            ),
+            path(
+                "<path:object_id>/media/",
+                view(self.media_view),
+                name="courses_courselesson_media",
             ),
             path(
                 "<path:object_id>/video/upload/",
@@ -920,6 +951,43 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             }
         )
 
+    def media_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        """The «Медиа» block: one URL, the button says what to do in `action`."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        lesson = self.get_object(request, unquote(object_id))
+        if lesson is None:
+            raise Http404
+        if not self.has_change_permission(request, lesson):
+            raise PermissionDenied
+        user = cast(Any, request.user)
+
+        def update(change: Change) -> None:
+            with transaction.atomic():
+                locked = CourseLesson.objects.select_for_update().get(pk=lesson.pk)
+                locked.media = change(list(locked.media))
+                locked.updated_by = user
+                locked.save(update_fields=["media", "updated_by", "updated_at"])
+
+        def remove_video() -> None:
+            remove_lesson_video(lesson, lesson.video_id, user=user)
+
+        try:
+            log = run_media_action(
+                request, media_page(request, lesson), update=update, remove_video=remove_video
+            )
+        except (LessonMediaError, CourseVideoError) as error:
+            return JsonResponse({"error": str(error)}, status=error.status)
+        except ImproperlyConfigured, ObjectStorageError, OSError:
+            logger.exception("Course lesson media operation failed")
+            return JsonResponse({"error": "Хранилище недоступно, повторите."}, status=502)
+        self.log_change(request, lesson, [{"changed": {"fields": [log]}}])
+        if request.POST.get("action") == "texts":
+            # The author is typing in the next field: the block is not drawn anew.
+            return JsonResponse({"ok": True})
+        lesson.refresh_from_db()
+        return JsonResponse({"html": render_media(media_page(request, lesson), request)})
+
     def preview_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
         lesson = self.get_object(request, unquote(object_id))
         if lesson is None:
@@ -978,6 +1046,23 @@ def video_label(video: dict[str, Any] | None, language: str) -> str:
     if speech != language:
         label += " · " + (f"видео на языке «{SPEECH_NAMES[speech]}»" if speech else "без речи")
     return label
+
+
+def media_page(request: HttpRequest, lesson: CourseLesson) -> MediaPage:
+    """The lesson's media list, with its video block drawn in the video's place."""
+    return MediaPage(
+        media=lesson.media,
+        has_video=lesson.video_id is not None,
+        languages=editor_languages(),
+        action_url=reverse("admin:courses_courselesson_media", args=[lesson.pk]),
+        can_edit=request.user.has_perm("courses.change_courselesson"),
+        video_html=render_to_string(
+            "admin/courses/courselesson/video.html",
+            {"block": video_block(request, lesson)},
+            request=request,
+        ),
+        prefix="courses",
+    )
 
 
 def video_block(request: HttpRequest, lesson: CourseLesson) -> dict[str, Any]:
@@ -1277,6 +1362,11 @@ def review_panel(request: HttpRequest, release: CourseRelease) -> dict[str, Any]
                 "name": f"Тема {number} «{lesson['title']['ru'] or lesson['slug']}»"
                 + ("" if before else " — новая"),
                 "fields": fields,
+                "media": review_media(
+                    lesson_media(before) if before else None,
+                    lesson_media(lesson),
+                    list(release.languages),
+                ),
             }
         )
     in_review = release.status == CourseReleaseStatus.IN_REVIEW
@@ -1305,6 +1395,42 @@ def review_panel(request: HttpRequest, release: CourseRelease) -> dict[str, Any]
             for operation in ("withdraw", "return", "sign", "publish")
         },
     }
+
+
+def review_media(
+    old: list[dict[str, Any]] | None, new: list[dict[str, Any]], languages: list[str]
+) -> list[dict[str, Any]]:
+    """New and changed slides and banners of a lesson: each picture with its texts."""
+    found = []
+    for block, is_new in changed_blocks(old, new):
+        kind = "Баннер" if block["type"] == BANNER else "Слайды"
+        found.append(
+            {
+                "label": f"{kind}: {'новый блок' if is_new else 'изменён блок'}",
+                "slides": [
+                    {
+                        "pictures": [
+                            (public_audio_url(slide["image"]["small_object_key"]), "общая"),
+                            *(
+                                (public_audio_url(image["small_object_key"]), language)
+                                for language, image in slide["images"].items()
+                                if language in languages
+                            ),
+                        ],
+                        "texts": [
+                            {
+                                "code": language,
+                                "caption": slide["caption"][language],
+                                "alt": slide["alt"][language],
+                            }
+                            for language in languages
+                        ],
+                    }
+                    for slide in block["slides"]
+                ],
+            }
+        )
+    return found
 
 
 def review_videos(release: CourseRelease) -> list[dict[str, Any]]:

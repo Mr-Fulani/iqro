@@ -62,6 +62,65 @@ test("the contract example parses into lessons in course order with their target
   );
 });
 
+type RawLesson = Record<string, unknown> & { media?: Record<string, unknown>[] };
+
+function lessonsWith(change: (lessons: RawLesson[]) => void) {
+  const raw = structuredClone(documentJson) as { lessons: RawLesson[] };
+  change(raw.lessons);
+  return parseTajweedCourseDocument(raw).lessons;
+}
+
+test("lesson media: izhar has a video and two slides, the others none", () => {
+  const [izhar, ...others] = parseTajweedCourseDocument(documentJson).lessons;
+  assert.deepEqual(izhar!.media.map((block) => block.type), ["video", "slides"]);
+  const [video, slides] = izhar!.media;
+  assert.equal(video!.type === "video" && video.video.duration_ms, 245000);
+  assert.equal(video!.type === "video" && video.video.poster.small_url,
+    "https://media.iqro.forum/courses/posters/5555555555eeeeeeeeee-0123456789ab-640.webp");
+  assert.deepEqual(slides!.type === "slides" && slides.slides.map((slide) => [slide.caption, slide.dir]), [
+    ["Шесть горловых букв изхара", "ltr"],
+    ["مِنْ خَوْفٍ", "rtl"],
+  ]);
+  assert.ok(others.every((lesson) => lesson.media.length === 0));
+});
+
+test("a document built before media has no field: no media", () => {
+  const lessons = lessonsWith((raw) => { for (const lesson of raw) delete lesson.media; });
+  assert.ok(lessons.every((lesson) => Array.isArray(lesson.media) && lesson.media.length === 0));
+  assert.deepEqual(lessonsWith((raw) => { raw[0]!.media = null as never; })[0]!.media, []);
+});
+
+test("tajweed media of an unknown type or from another host are left out", () => {
+  const types = (change: (lessons: RawLesson[]) => void) => lessonsWith(change)[0]!.media.map((block) => block.type);
+  assert.deepEqual(types((raw) => { raw[0]!.media!.push({ type: "quiz", quiz: "izhar" }); }), ["video", "slides"]);
+  assert.deepEqual(types((raw) => {
+    (raw[0]!.media![0]!.video as Record<string, unknown>).url = "https://example.com/v.mp4";
+  }), ["slides"]);
+  assert.deepEqual(types((raw) => {
+    ((raw[0]!.media![1]!.slides as Record<string, Record<string, unknown>>[])[1]!.image!).small_url = "https://example.com/s.webp";
+  }), ["video"]);
+  assert.deepEqual(types((raw) => {
+    raw[0]!.media!.push({
+      type: "banner",
+      image: { url: "https://media.iqro.forum/courses/banners/b.webp", small_url: "https://media.iqro.forum/courses/banners/b-800.webp", width: 1600, height: 900 },
+      caption: "",
+      alt: "Изхар",
+      dir: "ltr",
+    });
+  }), ["video", "slides", "banner"]);
+});
+
+test("a broken tajweed media block is an error of the tajweed document", () => {
+  for (const change of [
+    (raw: RawLesson[]) => { raw[0]!.media = "video" as never; },
+    (raw: RawLesson[]) => { (raw[0]!.media![1]!.slides as Record<string, unknown>[])[0]!.dir = "up"; },
+    (raw: RawLesson[]) => { (raw[0]!.media![0]!.video as Record<string, unknown>).url = "javascript:alert(1)"; },
+  ]) {
+    assert.throws(() => lessonsWith(change), (error: unknown) =>
+      error instanceof TajweedCourseDocumentError && error.message.startsWith("Invalid tajweed course document: lessons[0].media"));
+  }
+});
+
 test("lesson steps: the first page is read except its last example, which is found", () => {
   const examples = parseTajweedExamplesPage({ ...examplesJson.izhar, offset: 0, next_offset: 4 }).examples.slice(0, 4);
   const { shown, find } = splitFirstExamples(examples);

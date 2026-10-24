@@ -4,6 +4,8 @@ import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/auth/auth_session.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
+import 'package:iqro_mobile/features/courses/course_models.dart';
+import 'package:iqro_mobile/features/courses/lesson_media_cache.dart';
 import 'package:iqro_mobile/features/tajweed/tajweed_models.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_models.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_progress.dart';
@@ -43,6 +45,82 @@ void main() {
         document.target(document.lesson('idgham-ghunnah')!).rule,
         'idgham_ghunnah',
       );
+    });
+
+    test('reads the media of the lessons in the example document', () {
+      final document = TajweedCourseDocument.fromJson(
+        tajweedCourseExampleDocumentJson(),
+      );
+      final izhar = document.lesson('izhar')!;
+      expect(izhar.media.map((block) => block.runtimeType), [
+        LessonVideoMedia,
+        LessonSlidesMedia,
+      ]);
+      final video = (izhar.media.first as LessonVideoMedia).video;
+      expect(
+        video.url,
+        'https://media.iqro.forum/courses/videos/5555555555eeeeeeeeee.mp4',
+      );
+      expect(video.duration, const Duration(milliseconds: 245000));
+      expect(video.spokenLanguage, 'ru');
+      final slides = (izhar.media.last as LessonSlidesMedia).slides;
+      expect(slides.map((slide) => slide.caption), [
+        'Шесть горловых букв изхара',
+        'مِنْ خَوْفٍ',
+      ]);
+      expect(slides.map((slide) => slide.direction), [
+        TextDirection.ltr,
+        TextDirection.rtl,
+      ]);
+      expect(slides.first.image.smallUrl, endsWith('-800.webp'));
+      // The other lessons have `media: []`.
+      expect(document.lessons.where((lesson) => lesson.media.isNotEmpty), [
+        izhar,
+      ]);
+    });
+
+    test('a document before media has none; unknown blocks are left out', () {
+      final old = TajweedCourseDocument.fromJson(tajweedCourseDocumentJson());
+      expect(old.lessons.expand((lesson) => lesson.media), isEmpty);
+
+      final json = tajweedCourseDocumentWithMediaJson();
+      final izhar = (json['lessons']! as List).first as Map;
+      (izhar['media'] as List).insert(0, <String, Object?>{
+        'type': 'quiz',
+        'questions': <Object?>[],
+      });
+      final media = TajweedCourseDocument.fromJson(json).lesson('izhar')!.media;
+      expect(media.map((block) => block.runtimeType), [
+        LessonVideoMedia,
+        LessonSlidesMedia,
+      ]);
+
+      // A slide from another host leaves its whole block out, as in a
+      // thematic course.
+      final slides = (izhar['media'] as List).last as Map;
+      ((slides['slides'] as List).last as Map)['image'] = <String, Object?>{
+        'url': 'https://example.com/slide.webp',
+        'small_url': 'https://example.com/slide-800.webp',
+        'width': 1600,
+        'height': 900,
+      };
+      final foreign = TajweedCourseDocument.fromJson(
+        json,
+      ).lesson('izhar')!.media;
+      expect(
+        approvedLessonMedia(
+          foreign,
+          Uri.parse('https://iqro.forum'),
+        ).map((block) => block.runtimeType),
+        [LessonVideoMedia],
+      );
+
+      // A known block of a broken shape rejects the document.
+      (izhar['media'] as List).add(<String, Object?>{
+        'type': 'video',
+        'video': null,
+      });
+      expect(() => TajweedCourseDocument.fromJson(json), throwsFormatException);
     });
 
     test('rejects another schema and lessons that do not fit', () {
@@ -387,6 +465,45 @@ void main() {
       );
     });
 
+    test('keeps the pictures of the lessons with the document', () async {
+      final kept = <List<LessonMedia>>[];
+      remote.document = tajweedCourseDocumentWithMediaJson();
+      final repository = TajweedCourseRepository(
+        remote: remote,
+        database: database,
+        keepMedia: (media) async => kept.add(media.toList()),
+      );
+      await repository.course('tajweed', 'ru');
+      await pumpEventQueue();
+      expect(kept.single.map((block) => block.runtimeType), [
+        LessonVideoMedia,
+        LessonSlidesMedia,
+      ]);
+
+      // Opened again from the device: what did not arrive is fetched now.
+      await repository.course('tajweed', 'ru');
+      await pumpEventQueue();
+      expect(kept, hasLength(2));
+      expect(remote.documentRequests, hasLength(1));
+    });
+
+    test('pictures that cannot be kept do not fail the course', () async {
+      remote.document = tajweedCourseDocumentWithMediaJson();
+      for (final keep in <Future<void> Function(Iterable<LessonMedia>)>[
+        (_) => throw Exception('no disk'),
+        (_) async => throw Exception('offline'),
+      ]) {
+        final repository = TajweedCourseRepository(
+          remote: remote,
+          database: database,
+          keepMedia: keep,
+        );
+        final document = await repository.course('tajweed', 'ru');
+        await pumpEventQueue();
+        expect(document.lesson('izhar')!.media, hasLength(2));
+      }
+    });
+
     test('pages examples with offset and limit', () async {
       final repository = TajweedCourseRepository(
         remote: remote,
@@ -521,6 +638,9 @@ class _FakeRemote implements TajweedCourseRemoteGateway {
   final documentRequests = <String>[];
   final exampleRequests = <String>[];
   Map<String, Object?> stored = {};
+
+  /// The document the server gives; the trimmed example by default.
+  Map<String, Object?>? document;
   final saved =
       <
         ({
@@ -554,7 +674,7 @@ class _FakeRemote implements TajweedCourseRemoteGateway {
   Future<Object?> course(String slug, String language) async {
     documentRequests.add('$slug:$language');
     _check();
-    return tajweedCourseDocumentJson();
+    return document ?? tajweedCourseDocumentJson();
   }
 
   @override

@@ -301,3 +301,121 @@ for (const viewport of [
     await expect(next).toBeInViewport();
   });
 }
+
+// Lesson media (docs/tajweed/course.md, `lessons[].media`): the blocks of thematic courses.
+const tajweedMediaFile = /\/media\/courses\/(?:slides|posters|videos)\//;
+
+test("izhar's rule step shows its video and slides above the rule; they turn apart from the steps", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.addInitScript(() => {
+    window.localStorage.setItem("courses.position.tajweed", JSON.stringify({ izhar: { ms: 61_000, updated_at: "2026-10-25T10:00:00Z" } }));
+  });
+  const lesson = await openLesson(page, "/ru/tajweed/izhar");
+  const media = page.locator(".lesson-media > *");
+  await expect(media).toHaveCount(2);
+  await expect(media.nth(0)).toHaveClass("course-lesson-video");
+  await expect(media.nth(1)).toHaveAttribute("data-testid", "lesson-slides");
+  // On the rule step, as in the app: under the step counter, above «Rule» and the explanation.
+  const intro = lesson.locator('[data-step="intro"]');
+  await expect(intro.locator("> .lesson-media")).toBeVisible();
+  expect(await intro.evaluate((step) => [...step.children].slice(0, 2).map((child) => child.className || child.tagName)))
+    .toEqual(["lesson-media", "H2"]);
+  const block = (await page.locator(".lesson-media").boundingBox())!;
+  expect(block.y).toBeGreaterThan((await counter(page).boundingBox())!.y);
+
+  // The video waits behind its poster, which the media host serves, and resumes from
+  // courses.position.tajweed: «tajweed» is reserved, no thematic course shares it.
+  const video = page.getByTestId("lesson-video");
+  const cover = video.getByRole("button", { name: "Смотреть видео «Изхар — нун звучит ясно», 4:05, 40 МБ, продолжить с 1:01" });
+  await expect(cover).toBeVisible();
+  await expect(video).toContainText("Продолжить с 1:01");
+  await expect.poll(() => cover.locator("img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth))
+    .toBeGreaterThan(0);
+  await expect(page.getByTestId("lesson-video-language")).toHaveCount(0);
+
+  const carousel = page.getByRole("region", { name: "Слайды" });
+  await expect(carousel).toHaveAttribute("aria-roledescription", "карусель");
+  const slideCounter = carousel.locator(".lesson-slides-counter");
+  const caption = carousel.locator(".lesson-slides-captions p[data-current]");
+  const previous = carousel.getByRole("button", { name: "Предыдущий слайд" });
+  const next = carousel.getByRole("button", { name: "Следующий слайд" });
+  await expect(slideCounter).toHaveText("1 / 2");
+  await expect(caption).toHaveText("Шесть горловых букв изхара");
+  await expect(caption).toHaveAttribute("dir", "ltr");
+  const first = carousel.locator(".lesson-slides-slide").first().locator("img");
+  await expect(first).toHaveAttribute("alt", "Буквы ء ه ع ح غ خ на схеме горла");
+  await expect(first).toHaveAttribute("fetchpriority", "high");
+  await expect(first).toHaveAttribute("srcset", /ffff-800\.webp 800w, .+ffff\.webp 1600w$/);
+  // Two 16:9 slides: a 16:9 frame.
+  const frame = (await carousel.locator(".lesson-slides-frame").boundingBox())!;
+  expect(Math.abs(frame.width / frame.height - 16 / 9)).toBeLessThan(0.02);
+
+  await next.click();
+  await expect(slideCounter).toHaveText("2 / 2");
+  await expect(caption).toHaveText("مِنْ خَوْفٍ");
+  await expect(caption).toHaveAttribute("dir", "rtl");
+  await expect(next).toHaveAttribute("aria-disabled", "true");
+  await expect.poll(() => carousel.locator(".lesson-slides-slide img").evaluateAll((images) =>
+    images.map((image) => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)))
+    .toEqual([true, true]);
+
+  // ←/→ in the carousel turn slides, not the lesson's steps; outside it, the other way round.
+  await page.keyboard.press("ArrowLeft");
+  await expect(slideCounter).toHaveText("1 / 2");
+  await expect(previous).toHaveAttribute("aria-disabled", "true");
+  await expect(counter(page)).toHaveText(/^Шаг 1 из 6/);
+  await page.locator("h1").click();
+  await page.keyboard.press("ArrowRight");
+  await expect(counter(page)).toHaveText(/^Шаг 2 из 6/);
+  // The other steps have no media.
+  await expect(page.locator(".lesson-media")).toBeHidden();
+
+  // A video playing on the rule step stops when the step changes, as the ayah's sound does.
+  await lesson.getByRole("button", { name: /^Назад/ }).click();
+  await expect(counter(page)).toHaveText(/^Шаг 1 из 6/);
+  await expect(slideCounter).toHaveText("1 / 2");
+  await cover.click();
+  const player = video.locator("video");
+  await expect.poll(() => player.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(0);
+  await lesson.getByRole("button", { name: /^Далее/ }).click();
+  await expect(counter(page)).toHaveText(/^Шаг 2 из 6/);
+  expect(await player.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true);
+});
+
+test("izhar's media read right to left in Arabic", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openLesson(page, "/ar/tajweed/izhar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  // The Arabic course has no Arabic voice yet: the video says it speaks Russian.
+  await expect(page.getByTestId("lesson-video-language")).toHaveText("الفيديو باللغة الروسية");
+  const carousel = page.getByRole("region", { name: "الشرائح" });
+  const slideCounter = carousel.locator(".lesson-slides-counter");
+  const number = (value: number) => page.evaluate((item) => new Intl.NumberFormat("ar").format(item), value);
+  await expect(slideCounter).toHaveText(`${await number(1)} / ${await number(2)}`);
+  const previous = carousel.getByRole("button", { name: "الشريحة السابقة" });
+  const next = carousel.getByRole("button", { name: "الشريحة التالية" });
+  expect((await next.boundingBox())!.x).toBeLessThan((await previous.boundingBox())!.x);
+  const frame = (await carousel.locator(".lesson-slides-frame").boundingBox())!;
+  expect((await carousel.locator(".lesson-slides-slide").nth(1).boundingBox())!.x).toBeLessThan(frame.x);
+  await next.click();
+  await expect(slideCounter).toHaveText(`${await number(2)} / ${await number(2)}`);
+  await expect(carousel.locator("[aria-live=polite]")).toHaveText(`الشريحة ${await number(2)} من ${await number(2)}`);
+  // → goes back in Arabic.
+  await page.keyboard.press("ArrowRight");
+  await expect(slideCounter).toHaveText(`${await number(1)} / ${await number(2)}`);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+});
+
+test("a lesson without media has no media block and asks for no media files", async ({ page, request }) => {
+  const html = await (await request.get("/ru/tajweed/ikhfa")).text();
+  expect(html).not.toContain("lesson-media");
+  const requested: string[] = [];
+  page.on("request", (item) => {
+    if (tajweedMediaFile.test(new URL(item.url()).pathname)) requested.push(item.url());
+  });
+  await openLesson(page, "/ru/tajweed/ikhfa");
+  await expect(page.locator(".lesson-media, [data-testid=lesson-video], [data-testid=lesson-slides], [data-testid=lesson-banner]"))
+    .toHaveCount(0);
+  await page.waitForLoadState("networkidle");
+  expect(requested).toEqual([]);
+});

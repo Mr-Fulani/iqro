@@ -950,5 +950,12 @@
   "coursesVideoForward10": "Forward 10 seconds",
   "coursesVideoPosition": "Video position",
   "coursesVideoFullscreen": "Full screen",
-  "coursesVideoExitFullscreen": "Exit full screen"
+  "coursesVideoExitFullscreen": "Exit full screen",
+  "lessonMediaSlides": "Slides",
+  "lessonMediaSlideOf": "Slide {current} of {total}",
+  "@lessonMediaSlideOf": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "lessonMediaSlideCounter": "{current} / {total}",
+  "@lessonMediaSlideCounter": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "lessonMediaPreviousSlide": "Previous slide",
+  "lessonMediaNextSlide": "Next slide"
 }

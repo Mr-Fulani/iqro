@@ -27,6 +27,7 @@ import '../features/audio/reciter_catalog.dart';
 import '../features/courses/course_models.dart';
 import '../features/courses/course_progress_store.dart';
 import '../features/courses/course_repository.dart';
+import '../features/courses/lesson_media_cache.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/dua/dua_topics.dart';
 import '../features/feedback/feedback_models.dart';
@@ -1015,6 +1016,10 @@ final tajweedCourseRepositoryProvider = Provider<TajweedCourseRepository>(
   (ref) => TajweedCourseRepository(
     remote: ref.watch(tajweedCourseGatewayProvider),
     database: ref.watch(localDatabaseProvider),
+    keepMedia: LessonMediaPrefetcher(
+      cache: ref.watch(lessonMediaCacheManagerProvider),
+      apiBase: Uri.parse(ref.watch(appConfigProvider).apiBaseUrl),
+    ).keep,
   ),
 );
 final tajweedCourseProvider =
@@ -1049,6 +1054,10 @@ final courseRepositoryProvider = Provider<CourseRepository>(
   (ref) => CourseRepository(
     remote: ref.watch(courseGatewayProvider),
     database: ref.watch(localDatabaseProvider),
+    keepMedia: LessonMediaPrefetcher(
+      cache: ref.watch(lessonMediaCacheManagerProvider),
+      apiBase: Uri.parse(ref.watch(appConfigProvider).apiBaseUrl),
+    ).keep,
   ),
 );
 
