@@ -17,6 +17,7 @@ export const PUBLIC_INDEXABLE_PATHS = [
   "/prayer",
   "/salah",
   "/tajweed",
+  "/courses",
   "/legal",
   "/privacy",
   "/terms",
@@ -47,6 +48,8 @@ type ContentMetadataOptions = {
   description: string;
   path: string;
   index?: boolean;
+  /** Languages the content exists in, for hreflang; all of them by default. */
+  locales?: readonly Locale[];
 };
 
 export function siteUrl(): URL {
@@ -133,7 +136,7 @@ export function createPageMetadata(
 
 export function createContentMetadata(
   locale: Locale,
-  { title, description, path, index = true }: ContentMetadataOptions,
+  { title, description, path, index = true, locales }: ContentMetadataOptions,
 ): Metadata {
   const canonical = localizedPath(locale, path);
 
@@ -142,7 +145,7 @@ export function createContentMetadata(
     description,
     alternates: {
       canonical,
-      languages: localizedAlternates(path),
+      languages: localizedAlternates(path, locales),
     },
     robots: index
       ? { index: true, follow: true }
@@ -166,7 +169,7 @@ export function createContentMetadata(
           title,
           description,
           locale: OPEN_GRAPH_LOCALES[locale],
-          alternateLocale: SUPPORTED_LOCALES
+          alternateLocale: (locales ?? SUPPORTED_LOCALES)
             .filter((item) => item !== locale)
             .map((item) => OPEN_GRAPH_LOCALES[item]),
           images: [

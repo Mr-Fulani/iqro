@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from django.conf import settings
-from django.db import transaction
+from django.db import connection, transaction
+from django.db.models import Model
 
 from quran_backend.modules.quran.corpus_metadata import CORPUS_SHA256, RUSSIAN_SURAH_NAMES
 from quran_backend.modules.quran.importer import (
@@ -21,17 +22,36 @@ from quran_backend.modules.quran.importer import (
 from quran_backend.modules.quran.models import (
     Ayah,
     AyahPageMapping,
+    Hizb,
+    Juz,
     MushafPage,
     PublicationStatus,
     QuranEdition,
     QuranEditionVersion,
     QuranFoundationMushaf,
+    RubElHizb,
     SourceManifest,
+    Surah,
 )
 from quran_backend.modules.quran.publication import (
     _validate_complete_version,
     publish_quran_version,
 )
+
+
+def _analyze(*models: type[Model]) -> None:
+    """Refresh PostgreSQL statistics of tables this transaction just filled.
+
+    Autovacuum may have analyzed them while empty, and it cannot see uncommitted
+    rows: the planner then takes 6236 ayahs for one and the publication checks
+    run nested loops for minutes. ANALYZE inside the transaction counts its rows.
+    """
+    if connection.vendor != "postgresql":
+        return
+    with connection.cursor() as cursor:
+        for model in models:
+            # Table names come from our models, not from input.
+            cursor.execute(f"ANALYZE {connection.ops.quote_name(model._meta.db_table)}")
 
 
 def require(condition: object, message: str) -> None:
@@ -233,6 +253,7 @@ def import_canonical_corpus(path: Path) -> QuranEditionVersion:
     _create_juz(version, references, juz)
     hizbs = _create_hizb(version, references, hizb)
     _create_rub_el_hizb(version, references, hizbs, rub)
+    _analyze(Surah, Ayah, MushafPage, AyahPageMapping, Juz, Hizb, RubElHizb)
     SourceManifest.objects.create(
         edition_version=version,
         source_version="tanzil-qf-navigation-v1",

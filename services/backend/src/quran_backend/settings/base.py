@@ -255,6 +255,9 @@ ANNOUNCEMENT_EXTERNAL_HOSTS = frozenset(
         "iqro.forum,play.google.com,apps.apple.com",
     )
 )
+# A course release may be signed by its author until a separate religious
+# reviewer joins; then the signer must not be the author or a recent editor.
+COURSES_STRICT_REVIEW = env_bool("COURSES_STRICT_REVIEW", False)
 WEB_CONTENT_REVALIDATION_SECRET = os.getenv("WEB_CONTENT_REVALIDATION_SECRET", "")
 PUBLIC_API_CACHE_PURGE_URL = os.getenv("PUBLIC_API_CACHE_PURGE_URL", "")
 WEB_CONTENT_REVALIDATION_TIMEOUT_SECONDS = positive_env_int(
@@ -293,6 +296,7 @@ INSTALLED_APPS = [
     "quran_backend.modules.calendar.apps.CalendarConfig",
     "quran_backend.modules.share_referrals.apps.ShareReferralsConfig",
     "quran_backend.modules.announcements.apps.AnnouncementsConfig",
+    "quran_backend.modules.courses.apps.CoursesConfig",
 ]
 
 MIDDLEWARE = [

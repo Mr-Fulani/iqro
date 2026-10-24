@@ -31,11 +31,16 @@ export function localizedPath(locale: Locale, href: string): string {
   return `${localizedPathname}${url.search}${url.hash}`;
 }
 
-export function localizedAlternates(pathname: string): Record<string, string> {
+/** Alternates of a page; content published in fewer languages passes them as `locales`. */
+export function localizedAlternates(
+  pathname: string,
+  locales: readonly Locale[] = SUPPORTED_LOCALES,
+): Record<string, string> {
+  const fallback = locales.includes(DEFAULT_LOCALE) ? DEFAULT_LOCALE : locales[0] ?? DEFAULT_LOCALE;
   return {
     ...Object.fromEntries(
-      SUPPORTED_LOCALES.map((locale) => [locale, localizedPath(locale, pathname)]),
+      locales.map((locale) => [locale, localizedPath(locale, pathname)]),
     ),
-    "x-default": localizedPath(DEFAULT_LOCALE, pathname),
+    "x-default": localizedPath(fallback, pathname),
   };
 }
