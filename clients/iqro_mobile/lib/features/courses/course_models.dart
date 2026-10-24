@@ -293,6 +293,124 @@ class CourseVideo {
   double get aspectRatio => width / height;
 }
 
+/// A picture of a slide or a banner: WebP, [url] up to 1600 px on the
+/// longer side and [smallUrl] up to 800 px. [width] and [height] are of the
+/// large one.
+@immutable
+class LessonImage {
+  const LessonImage({
+    required this.url,
+    required this.smallUrl,
+    required this.width,
+    required this.height,
+  });
+
+  factory LessonImage.fromJson(Object? value) {
+    final json = _map(value, 'image');
+    return LessonImage(
+      url: _nonEmpty(json, 'url'),
+      smallUrl: _nonEmpty(json, 'small_url'),
+      width: _int(json, 'width', min: 1),
+      height: _int(json, 'height', min: 1),
+    );
+  }
+
+  final String url;
+  final String smallUrl;
+  final int width;
+  final int height;
+}
+
+TextDirection _direction(Map<String, Object?> json) => switch (json['dir']) {
+  'ltr' => TextDirection.ltr,
+  'rtl' => TextDirection.rtl,
+  _ => throw const FormatException('Course block has no direction'),
+};
+
+/// A slide or a banner: the image, the caption under it in [direction], and
+/// [alt] for the screen reader (`""` for a decorative picture).
+@immutable
+class LessonPicture {
+  const LessonPicture({
+    required this.image,
+    required this.caption,
+    required this.alt,
+    required this.direction,
+  });
+
+  factory LessonPicture.fromJson(Object? value) {
+    final json = _map(value, 'picture');
+    return LessonPicture(
+      image: LessonImage.fromJson(json['image']),
+      caption: _string(json, 'caption'),
+      alt: _string(json, 'alt'),
+      direction: _direction(json),
+    );
+  }
+
+  final LessonImage image;
+  final String caption;
+  final String alt;
+  final TextDirection direction;
+}
+
+/// A block of the media above the notes, in the author's order.
+sealed class LessonMedia {
+  const LessonMedia();
+}
+
+class LessonVideoMedia extends LessonMedia {
+  const LessonVideoMedia(this.video);
+
+  final CourseVideo video;
+}
+
+class LessonSlidesMedia extends LessonMedia {
+  const LessonSlidesMedia(this.slides);
+
+  /// At least one.
+  final List<LessonPicture> slides;
+}
+
+/// A 16:9 picture with a caption under it.
+class LessonBannerMedia extends LessonMedia {
+  const LessonBannerMedia(this.picture);
+
+  final LessonPicture picture;
+}
+
+/// `lessons[].media`. A document prepared before media has none: then it is
+/// the lesson's [video], if any. A block of an unknown type and slides
+/// without a slide are left out; they do not make the document invalid.
+List<LessonMedia> parseLessonMedia(Object? value, {CourseVideo? video}) {
+  if (value == null) {
+    return List.unmodifiable([if (video != null) LessonVideoMedia(video)]);
+  }
+  final media = <LessonMedia>[];
+  for (final item in _list(value, 'media')) {
+    final json = _map(item, 'media[]');
+    switch (json['type']) {
+      case 'video':
+        final video = CourseVideo.fromJson(json['video']);
+        if (video == null) throw const FormatException('Video block is empty');
+        media.add(LessonVideoMedia(video));
+      case 'slides':
+        final slides = [
+          for (final slide in _list(json['slides'], 'slides'))
+            LessonPicture.fromJson(slide),
+        ];
+        if (slides.isNotEmpty) {
+          media.add(LessonSlidesMedia(List.unmodifiable(slides)));
+        }
+      case 'banner':
+        media.add(LessonBannerMedia(LessonPicture.fromJson(json)));
+      default:
+      // Added later; this app does not draw it.
+    }
+  }
+  return List.unmodifiable(media);
+}
+
 @immutable
 class CourseLesson {
   const CourseLesson({
@@ -304,17 +422,20 @@ class CourseLesson {
     required this.notes,
     required this.sources,
     this.video,
+    this.media = const [],
   });
 
   factory CourseLesson.fromJson(Object? value) {
     final json = _map(value, 'lessons[]');
+    final video = CourseVideo.fromJson(json['video']);
     return CourseLesson(
       slug: _slugField(json, 'slug'),
       number: _int(json, 'number', min: 1),
       title: _nonEmpty(json, 'title'),
       summary: _string(json, 'summary'),
       minutes: _int(json, 'minutes'),
-      video: CourseVideo.fromJson(json['video']),
+      video: video,
+      media: parseLessonMedia(json['media'], video: video),
       notes: parseNoteBlocks(json['notes']),
       sources: _strings(json['sources'], 'sources'),
     );
@@ -326,6 +447,9 @@ class CourseLesson {
   final String summary;
   final int minutes;
   final CourseVideo? video;
+
+  /// Above the notes, in order; [video] is among them.
+  final List<LessonMedia> media;
   final List<NoteBlock> notes;
   final List<String> sources;
 }

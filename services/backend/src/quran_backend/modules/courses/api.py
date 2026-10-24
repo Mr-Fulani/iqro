@@ -103,13 +103,42 @@ class CourseVideoSerializer(serializers.Serializer[Any]):
     poster = CourseVideoPosterSerializer()
 
 
+class CourseMediaImageSerializer(serializers.Serializer[Any]):
+    url = serializers.URLField()
+    small_url = serializers.URLField()
+    width = serializers.IntegerField()
+    height = serializers.IntegerField()
+
+
+class CourseSlideSerializer(serializers.Serializer[Any]):
+    image = CourseMediaImageSerializer()
+    caption = serializers.CharField(allow_blank=True)
+    alt = serializers.CharField(allow_blank=True)
+    dir = serializers.ChoiceField(choices=["ltr", "rtl"])
+
+
+class CourseMediaBlockSerializer(serializers.Serializer[Any]):
+    """One media block above the notes; which keys it has depends on `type`."""
+
+    type = serializers.ChoiceField(choices=["video", "slides", "banner"])
+    video = CourseVideoSerializer(required=False, help_text="video")
+    slides = CourseSlideSerializer(many=True, required=False, help_text="slides")
+    image = CourseMediaImageSerializer(required=False, help_text="banner")
+    caption = serializers.CharField(required=False, allow_blank=True, help_text="banner")
+    alt = serializers.CharField(required=False, allow_blank=True, help_text="banner")
+    dir = serializers.ChoiceField(choices=["ltr", "rtl"], required=False, help_text="banner")
+
+
 class CourseLessonSerializer(serializers.Serializer[Any]):
     slug = serializers.SlugField()
     number = serializers.IntegerField(min_value=1)
     title = serializers.CharField()
     summary = serializers.CharField(allow_blank=True)
     minutes = serializers.IntegerField()
-    video = CourseVideoSerializer(allow_null=True, help_text="null на этапе 1.")
+    video = CourseVideoSerializer(allow_null=True, help_text="Видео из media, для старых клиентов.")
+    media = CourseMediaBlockSerializer(
+        many=True, required=False, help_text="Нет в выпусках, подготовленных до медиа."
+    )
     notes = CourseNoteBlockSerializer(many=True)
     sources = serializers.ListField(child=serializers.CharField())
 

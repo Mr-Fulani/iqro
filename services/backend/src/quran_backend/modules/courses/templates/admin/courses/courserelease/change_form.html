@@ -1,6 +1,6 @@
 {% extends "admin/change_form.html" %}
 
-{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% endblock %}
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}{% endblock %}
 
 {% block content %}
 {% if review %}
@@ -26,6 +26,22 @@
       {% for field in lesson.fields %}
         <div><strong>{{ field.label }}</strong></div>
         <div class="cp-diff">{% for mark, line in field.rows %}{% if mark == "+" %}<div class="is-add">+ {{ line }}</div>{% elif mark == "-" %}<div class="is-del">− {{ line }}</div>{% elif mark == "…" %}<div class="is-gap">…</div>{% else %}<div>&nbsp; {{ line }}</div>{% endif %}{% endfor %}</div>
+      {% endfor %}
+      {% for block in lesson.media %}
+        <div><strong>{{ block.label }}</strong></div>
+        <div class="cvm-review">
+          {% for slide in block.slides %}
+            {% for url, picture in slide.pictures %}
+              <figure>
+                <img src="{{ url }}" alt="" loading="lazy">
+                <figcaption>
+                  {% if forloop.counter0 == 0 %}<strong>{{ forloop.parentloop.counter }}.</strong> {% endif %}картинка: {{ picture }}
+                  {% if forloop.first %}{% for text in slide.texts %}<span{% if text.code == "ar" %} dir="rtl" lang="ar"{% endif %}>{{ text.code }}: {{ text.caption|default:"без подписи" }}{% if text.alt %} · описание: {{ text.alt }}{% endif %}</span>{% endfor %}{% endif %}
+                </figcaption>
+              </figure>
+            {% endfor %}
+          {% endfor %}
+        </div>
       {% endfor %}
     </details>
   {% endfor %}

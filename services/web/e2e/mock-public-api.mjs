@@ -233,12 +233,58 @@ function courseVideo(video) {
 // VP9 decodes in every Chromium build; the Linux CI one may lack H.264.
 const courseLessonVideo = readFileSync(new URL("./fixtures/course-lesson-video.webm", import.meta.url));
 
+// Slides and banners: real WebP at the contract's sizes (1600 px and 800 px on the longer side),
+// about as heavy as the server's files. The hash in the path picks the picture.
+const courseMediaPictures = {
+  "1111111111aaaaaaaaaa": "slide-timeline",
+  "3333333333cccccccccc": "slide-pattern",
+  "4444444444dddddddddd": "slide-lantern",
+  "5555555555eeeeeeeeee": "slide-timeline",
+  "6666666666ffffffffff": "slide-pattern",
+  "2222222222bbbbbbbbbb": "banner-minaret",
+};
+const courseImage = (image) => ({ ...image, url: toMockMedia(image.url), small_url: toMockMedia(image.small_url) });
+const courseSlide = (hash, width, height, caption, dir = "ltr") => ({
+  image: courseImage({
+    url: `https://media.iqro.forum/courses/slides/${hash}.webp`,
+    small_url: `https://media.iqro.forum/courses/slides/${hash}-800.webp`,
+    width,
+    height,
+  }),
+  caption,
+  alt: caption,
+  dir,
+});
+
+// The example's two slides and three more: a tall one (3:4, above the frame's 4:5 limit) among them.
+function courseMedia(media, language) {
+  return media.map((block) => {
+    if (block.type === "video") return { ...block, video: courseVideo(block.video) };
+    if (block.type === "banner") return { ...block, image: courseImage(block.image) };
+    if (block.type !== "slides") return block;
+    const slides = block.slides.map((slide) => ({ ...slide, image: courseImage(slide.image) }));
+    slides.push(
+      courseSlide("4444444444dddddddddd", 1200, 1600, "Фонарь Рамадана"),
+      courseSlide("5555555555eeeeeeeeee", 1600, 1200, ""),
+      courseSlide("6666666666ffffffffff", 1600, 900, "Узор: намерение — в сердце"),
+    );
+    if (language === "ar") {
+      const captions = ["متى تكون النية", "نويت صوم غد", "فانوس رمضان", "", "النية محلها القلب"];
+      slides.forEach((slide, index) => Object.assign(slide, { caption: captions[index], alt: captions[index], dir: "rtl" }));
+    }
+    return { ...block, slides };
+  });
+}
+
 function ramadanCourse(language) {
   const document = structuredClone(courseDocumentExample);
   document.course.language = language;
   document.course.languages = ramadanLanguages;
   document.course.cover = courseCover(document.course.cover);
-  for (const lesson of document.lessons) lesson.video = courseVideo(lesson.video);
+  for (const lesson of document.lessons) {
+    lesson.video = courseVideo(lesson.video);
+    lesson.media = courseMedia(lesson.media, language);
+  }
   if (language === "ar") {
     [document.course.title, document.course.summary] = ramadanArabic.course;
     document.course.source = "المؤلف والمصادر بعد المراجعة";
@@ -594,6 +640,12 @@ const server = createServer(async (request, response) => {
   if (coverMedia) {
     response.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=60" });
     return response.end(coverMedia[1] || coverMedia[2] ? courseCoverImage(640, 360) : courseCoverImage(1280, 720));
+  }
+  const coursePicture = path.match(/^\/media\/courses\/(?:slides|banners)\/([0-9a-f]{20})(-800)?\.webp$/);
+  if (coursePicture && courseMediaPictures[coursePicture[1]]) {
+    const file = `${courseMediaPictures[coursePicture[1]]}${coursePicture[2] ?? ""}.webp`;
+    response.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "public, max-age=60" });
+    return response.end(readFileSync(new URL(`./fixtures/course-media/${file}`, import.meta.url)));
   }
   if (/^\/media\/courses\/videos\/[0-9a-f-]+\.mp4$/.test(path)) {
     // Byte ranges, as R2 serves them: without them the browser cannot seek.

@@ -30,6 +30,7 @@ import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 import 'course_test_data.dart';
+import 'lesson_media_test_data.dart';
 import 'lesson_video_test_data.dart';
 
 const _directory = String.fromEnvironment('SCREENSHOT_DIR');
@@ -137,6 +138,7 @@ Future<void> _pump(
     ],
   );
   addTearDown(router.dispose);
+  final pictures = (await tester.runAsync(_pictures))!;
   await tester.pumpWidget(
     RepaintBoundary(
       key: _boundary,
@@ -162,6 +164,14 @@ Future<void> _pump(
           // The examples' covers are not real files: the placeholder shows.
           courseImageProvider.overrideWithValue(
             (_) => MemoryImage(Uint8List(0)),
+          ),
+          // The examples' slides and banner, drawn here.
+          ...lessonMediaOverrides(
+            images: (url) => MemoryImage(
+              pictures.entries
+                  .firstWhere((entry) => url.contains(entry.key))
+                  .value,
+            ),
           ),
           lessonVideoControllerProvider.overrideWithValue(
             (videos ?? FakeVideoFactory()).call,
@@ -193,6 +203,177 @@ Future<void> _pump(
     unawaited(router.push(location));
     await _settle(tester);
   }
+}
+
+/// Stand-ins for the pictures of the examples, by the start of their name.
+Future<Map<String, Uint8List>> _pictures() async {
+  Future<Uint8List> draw(Size size, void Function(Canvas canvas) paint) async {
+    final recorder = ui.PictureRecorder();
+    paint(Canvas(recorder));
+    final image = await recorder.endRecording().toImage(
+      size.width.round(),
+      size.height.round(),
+    );
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    return data!.buffer.asUint8List();
+  }
+
+  void text(
+    Canvas canvas,
+    String value,
+    Offset center,
+    double width, {
+    double size = 30,
+    Color color = const Color(0xFF073E34),
+    String family = 'Roboto',
+    FontWeight weight = FontWeight.w700,
+    TextDirection direction = TextDirection.ltr,
+  }) {
+    final builder =
+        ui.ParagraphBuilder(
+            ui.ParagraphStyle(
+              textAlign: TextAlign.center,
+              textDirection: direction,
+            ),
+          )
+          ..pushStyle(
+            ui.TextStyle(
+              color: color,
+              fontSize: size,
+              fontFamily: family,
+              fontWeight: weight,
+            ),
+          )
+          ..addText(value);
+    final paragraph = builder.build()
+      ..layout(ui.ParagraphConstraints(width: width));
+    canvas.drawParagraph(
+      paragraph,
+      center - Offset(width / 2, paragraph.height / 2),
+    );
+  }
+
+  const green = Color(0xFF0B5D4A);
+  const gold = Color(0xFFD5A34C);
+  final scheme = await draw(const Size(800, 600), (canvas) {
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 800, 600),
+      Paint()..color = const Color(0xFFF7F1E3),
+    );
+    text(canvas, 'Когда делать намерение', const Offset(400, 70), 700);
+    const stops = <(String, String, Color)>[
+      ('Ночь', 'после магриба', Color(0xFF1F3A5F)),
+      ('Сухур', 'до рассвета', green),
+      ('Рассвет', 'начало поста', gold),
+    ];
+    for (final (index, (title, note, color)) in stops.indexed) {
+      final left = 60.0 + index * 240;
+      final box = RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, 180, 200, 170),
+        const Radius.circular(24),
+      );
+      canvas.drawRRect(box, Paint()..color = color);
+      text(canvas, title, Offset(left + 100, 245), 190, color: Colors.white);
+      text(
+        canvas,
+        note,
+        Offset(left + 100, 295),
+        190,
+        size: 20,
+        weight: FontWeight.w400,
+        color: Colors.white,
+      );
+      if (index < 2) {
+        canvas.drawPath(
+          Path()
+            ..moveTo(left + 207, 250)
+            ..lineTo(left + 233, 265)
+            ..lineTo(left + 207, 280)
+            ..close(),
+          Paint()..color = const Color(0xFF6B7F78),
+        );
+      }
+    }
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(140, 420, 520, 110),
+        const Radius.circular(20),
+      ),
+      Paint()..color = const Color(0xFFE4EFE9),
+    );
+    text(
+      canvas,
+      'Намерение — сердцем, до рассвета',
+      const Offset(400, 475),
+      500,
+      size: 26,
+    );
+  });
+  final niyya = await draw(const Size(800, 450), (canvas) {
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 800, 450),
+      Paint()..color = const Color(0xFF073E34),
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(24, 24, 752, 402),
+      Paint()
+        ..color = gold
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    text(
+      canvas,
+      'نَوَيْتُ صَوْمَ غَدٍ',
+      const Offset(400, 225),
+      700,
+      size: 92,
+      color: Colors.white,
+      family: IqroTheme.arabicFontFamily,
+      weight: FontWeight.w400,
+      direction: TextDirection.rtl,
+    );
+  });
+  final banner = await draw(const Size(800, 450), (canvas) {
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 800, 450),
+      Paint()
+        ..shader = ui.Gradient.linear(
+          Offset.zero,
+          const Offset(0, 450),
+          const <Color>[
+            Color(0xFF1B2A4A),
+            Color(0xFFB4574A),
+            Color(0xFFF2B36B),
+          ],
+          const <double>[0, .62, 1],
+        ),
+    );
+    final dark = Paint()..color = const Color(0xFF15161F);
+    canvas
+      ..drawCircle(
+        const Offset(590, 120),
+        54,
+        Paint()..color = const Color(0xFFF7E3B0),
+      )
+      ..drawCircle(
+        const Offset(615, 104),
+        50,
+        Paint()..color = const Color(0xFF263459),
+      )
+      ..drawRect(const Rect.fromLTWH(0, 380, 800, 70), dark)
+      ..drawRect(const Rect.fromLTWH(250, 170, 44, 220), dark)
+      ..drawRect(const Rect.fromLTWH(238, 215, 68, 12), dark)
+      ..drawPath(
+        Path()
+          ..moveTo(250, 170)
+          ..quadraticBezierTo(272, 120, 294, 170)
+          ..close(),
+        dark,
+      )
+      ..drawRect(const Rect.fromLTWH(320, 300, 280, 90), dark)
+      ..drawCircle(const Offset(460, 300), 70, dark);
+  });
+  return {'1111111111': scheme, '3333333333': niyya, '2222222222': banner};
 }
 
 Future<void> _settle(WidgetTester tester) async {
@@ -330,6 +511,29 @@ void main() {
       remote: FakeCourseGateway(documents: {'1': document}),
     );
     await _capture(tester, 'app-course-video-language-ar');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('lesson media: a video, then slides', (tester) async {
+    await _pump(tester, location: '/courses/ramadan/namerenie');
+    await _capture(tester, 'app-media-lesson-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('lesson slides in the Arabic interface', (tester) async {
+    final document = courseDocumentJson();
+    (document['course']! as Map)['language'] = 'ar';
+    await _pump(
+      tester,
+      location: '/courses/ramadan/namerenie',
+      locale: 'ar',
+      remote: FakeCourseGateway(documents: {'1': document}),
+    );
+    await tester.tap(find.byKey(const ValueKey('lesson-media-slide-next')));
+    await _capture(tester, 'app-media-slides-ar');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('lesson banner', (tester) async {
+    await _pump(tester, location: '/courses/ramadan/smysl-posta');
+    await _capture(tester, 'app-media-banner-ru');
   }, skip: _directory.isEmpty);
 
   testWidgets('lesson in the dark theme', (tester) async {

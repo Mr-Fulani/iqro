@@ -2743,4 +2743,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get coursesVideoExitFullscreen => 'الخروج من ملء الشاشة';
+
+  @override
+  String get lessonMediaSlides => 'الشرائح';
+
+  @override
+  String lessonMediaSlideOf(int current, int total) {
+    return 'الشريحة $current من $total';
+  }
+
+  @override
+  String lessonMediaSlideCounter(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get lessonMediaPreviousSlide => 'الشريحة السابقة';
+
+  @override
+  String get lessonMediaNextSlide => 'الشريحة التالية';
 }

@@ -1,6 +1,6 @@
 {% extends "admin/change_form.html" %}
 
-{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% endblock %}
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}{% endblock %}
 
 {% block content %}
 {% if lesson_nav %}{% with nav=lesson_nav %}
@@ -11,6 +11,6 @@
   {% if nav.next %}<a href="{% url 'admin:courses_courselesson_change' nav.next.pk %}">Следующая тема →</a>{% else %}<span></span>{% endif %}
 </nav>
 {% endwith %}{% endif %}
-{% if video_block %}{% include "admin/courses/courselesson/video.html" with block=video_block %}{% endif %}
+{% if media_block %}{{ media_block }}{% endif %}
 {{ block.super }}
 {% endblock %}
