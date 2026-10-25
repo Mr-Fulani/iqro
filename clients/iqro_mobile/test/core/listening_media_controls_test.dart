@@ -52,7 +52,8 @@ void main() {
       MediaAction.skipToNext,
       MediaAction.stop,
     ]);
-    expect(layout.compact, <int>[1, 2, 3]);
+    // Folded, the card keeps play, next and speed.
+    expect(layout.compact, <int>[2, 3, 4]);
     final speed = layout.controls.last;
     expect(speed.androidIcon, 'drawable/iqro_media_speed_125');
     expect(speed.label, 'Скорость 1.25×');

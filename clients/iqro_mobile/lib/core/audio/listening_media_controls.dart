@@ -48,8 +48,8 @@ String _speedIcon(double speed) {
 /// The buttons of the Audio tab's media card, lock screen and Now Playing.
 ///
 /// Android before 13 draws the notification's own actions, at most five of
-/// them and three when folded: back 10 s, previous surah, play/pause, next
-/// surah and speed. Forward 10 s has no room: the seek bar jumps ahead. A
+/// them: back 10 s, previous surah, play/pause, next surah and speed; folded,
+/// it keeps three, and speed is one of them: play/pause, next and speed. Forward 10 s has no room: the seek bar jumps ahead. A
 /// speed button there can only send a media key, so it rides on the stop key
 /// ([speedOnStop]); stopping is pausing in this app anyway. Android 13 and
 /// later draw previous, play and next themselves and fill two more slots with
@@ -114,7 +114,7 @@ ListeningMediaControls listeningMediaControls({
         label: labels.speed(speed),
       ),
     ],
-    compact: const <int>[1, 2, 3],
+    compact: const <int>[2, 3, 4],
   );
 }
 
