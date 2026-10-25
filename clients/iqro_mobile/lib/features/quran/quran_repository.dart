@@ -276,19 +276,28 @@ class QuranRepository {
   Future<QuranCatalog> surahs({bool forceRefresh = false}) async {
     const key = 'quran:$edition:surahs';
     final cached = await _database.readCache(key);
-    if (!forceRefresh && cached?.isFresh == true) {
-      return QuranCatalog(surahs: parseSurahs(cached!.value), fromCache: false);
+    // An empty list is never a catalog: one kept from a bad response would
+    // leave every surah list and name blank for a day.
+    final cachedSurahs = cached == null
+        ? const <Surah>[]
+        : parseSurahs(cached.value);
+    if (!forceRefresh && cached?.isFresh == true && cachedSurahs.isNotEmpty) {
+      return QuranCatalog(surahs: cachedSurahs, fromCache: false);
     }
     try {
       final payload = await _api.get(
         '/quran/editions/$edition/surahs',
         public: true,
       );
+      final surahs = parseSurahs(payload);
+      if (surahs.isEmpty) {
+        throw const FormatException('The surah catalog came back empty');
+      }
       await _database.writeCache(key, payload, maxAge: const Duration(days: 1));
-      return QuranCatalog(surahs: parseSurahs(payload), fromCache: false);
+      return QuranCatalog(surahs: surahs, fromCache: false);
     } on Object {
-      if (cached != null) {
-        return QuranCatalog(surahs: parseSurahs(cached.value), fromCache: true);
+      if (cachedSurahs.isNotEmpty) {
+        return QuranCatalog(surahs: cachedSurahs, fromCache: true);
       }
       rethrow;
     }

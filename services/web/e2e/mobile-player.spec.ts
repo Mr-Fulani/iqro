@@ -110,11 +110,12 @@ for (const phone of PHONES) {
     await expect(bar.getByRole("button", { name: "Открыть плеер", exact: true })).toBeDisabled();
     await expect(bar.getByRole("button", { name: "Воспроизвести", exact: true })).toBeDisabled();
 
-    await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+    await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
     const audio = bar.locator("audio");
     await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
     await expect(bar.getByRole("button", { name: "Поставить на паузу", exact: true })).toBeVisible();
-    await expect(bar).toContainText("Сура 1");
+    // The bar names the surah with its number once the edition's names arrive.
+    await expect(bar).toContainText("1 · Аль-Фатиха");
     await expect(bar).toContainText("Махер аль-Муайкли");
     await expect(bar.getByRole("button", { name: "Предыдущая сура", exact: true })).toBeDisabled();
     for (const name of ["Открыть плеер", "Свернуть панель плеера", "Поставить на паузу", "Следующая сура"]) {
@@ -210,7 +211,7 @@ for (const phone of PHONES) {
     const errors = watchConsole(page);
     await page.setViewportSize({ width: phone.height, height: phone.width });
     await page.goto("/ru/audio");
-    await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+    await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
     if (phone.height <= 768) {
       // Still the phone layout: the bar above the navigation, the full player scrolls.
       const bar = page.getByTestId("mobile-audio-player");
@@ -254,7 +255,7 @@ test("ten quick open and close cycles always end with the bar and a reachable pa
   const errors = watchConsole(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   await expect(bar.getByRole("button", { name: "Поставить на паузу", exact: true })).toBeVisible();
 
@@ -304,7 +305,7 @@ test("a tap on the full player's body hides the controls and the next tap shows 
   const errors = watchConsole(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
@@ -363,7 +364,7 @@ test("with reduced motion the controls hide and show without a transition", asyn
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
@@ -380,7 +381,7 @@ test("with reduced motion the controls hide and show without a transition", asyn
 test("a downward swipe on the header closes the full player; a short one springs back", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
@@ -406,7 +407,7 @@ test("a downward swipe on the header closes the full player; a short one springs
 test("the full player seeks, steps ten seconds and moves to the next surah of the recording", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   const audio = bar.locator("audio");
   await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
@@ -427,7 +428,9 @@ test("the full player seeks, steps ten seconds and moves to the next surah of th
   });
   await expect(full.locator(".mobile-player-times")).toContainText("0:01");
   await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(1);
-  // Ten seconds forward runs past the two-second range: playback finishes at its end.
+  // Ten seconds forward runs past the two-second range: with "Stop" after the
+  // surah (listening-queue.spec.ts covers moving on), playback finishes at its end.
+  await full.getByLabel("После суры").selectOption("stop");
   await full.getByRole("button", { name: "Вперёд на 10 секунд", exact: true }).click();
   await expect(full).toContainText("Воспроизведение завершено");
   await expect(full.getByRole("button", { name: "Воспроизвести", exact: true })).toBeVisible();
@@ -458,7 +461,7 @@ test("the full player seeks, steps ten seconds and moves to the next surah of th
   await expect(page.locator(".track-row").nth(1)).toHaveCSS("border-color", "rgb(11, 93, 74)");
   await bar.getByRole("button", { name: "Предыдущая сура", exact: true }).click();
   await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
-  await expect(bar).toContainText("Сура 1");
+  await expect(bar).toContainText("1 · Аль-Фатиха");
 });
 
 test("the Arabic bar mirrors its layout and the full player stays within the screen", async ({ page }) => {
@@ -466,7 +469,7 @@ test("the Arabic bar mirrors its layout and the full player stays within the scr
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ar/audio");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await page.getByRole("button", { name: "استمع", exact: true }).first().click();
+  await page.getByRole("button", { name: "الاستماع من هنا", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   await expect(bar.locator("audio")).toHaveAttribute("src", tracks[0].asset.url);
   const artwork = await box(bar.locator(".mobile-player-artwork"));
@@ -506,7 +509,7 @@ test("with reduced motion the bar and the full player switch without transitions
   await page.goto("/ru/audio");
   const bar = page.getByTestId("mobile-audio-player");
   await expect(bar).toHaveCSS("transition-duration", "0s");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
   await expect(full).toHaveCSS("animation-name", "none");
@@ -525,7 +528,7 @@ test("with reduced motion the bar and the full player switch without transitions
 test("a tablet shows the bar above its navigation and the desktop keeps the dock", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto("/ru/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   await expect(bar).toBeVisible();
   const barBox = await box(bar);

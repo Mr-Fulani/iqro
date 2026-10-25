@@ -261,6 +261,33 @@ def test_listening_audio_plays_whole_surahs_without_ayah_timings(
     assert not verified_audio_segments().filter(track__recitation_edition=timed_listening).exists()
 
 
+def test_listening_queue_reads_the_held_surahs_in_order_and_misses_the_rest(
+    api_client: Any,
+    quran_dataset: dict[str, Any],
+) -> None:
+    # docs/audio-listening-queue.md: the players step through coverage.surah_numbers
+    # and never ask for a surah the recording lacks; if one does, it is a 404.
+    recitation = _recitation(quran_dataset, code="partial-queue")
+    for surah_number in (112, 1, 36):
+        _add_surah(recitation, surah_number)
+    _publish(recitation)
+
+    listing = api_client.get(
+        reverse("audio:recitation-list"),
+        {"reciter_id": str(recitation.reciter_id)},
+    ).json()
+    (listed,) = listing["results"]
+    assert listed["coverage"]["surah_numbers"] == [1, 36, 112]
+    assert listed["coverage"]["surah_count"] == 3
+    assert listed["capabilities"]["listen"] is True
+
+    held = api_client.get(reverse("audio:surah-playback", args=[recitation.pk, 36]))
+    missing = api_client.get(reverse("audio:surah-playback", args=[recitation.pk, 2]))
+    assert held.status_code == 200
+    assert held.json()["track"]["surah_number"] == 36
+    assert missing.status_code == 404
+
+
 def test_playback_position_keeps_listening_audio_to_whole_surahs(
     api_client: Any,
     timed_listening: RecitationEdition,

@@ -1284,12 +1284,6 @@ abstract class AppLocalizations {
   /// **'Next surah'**
   String get nextSurah;
 
-  /// No description provided for @chooseSurah.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose surah'**
-  String get chooseSurah;
-
   /// No description provided for @speed.
   ///
   /// In en, this message translates to:
@@ -5159,6 +5153,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open the request'**
   String get coursesReportOpen;
+
+  /// No description provided for @queueAfterSurah.
+  ///
+  /// In en, this message translates to:
+  /// **'After the surah'**
+  String get queueAfterSurah;
+
+  /// No description provided for @queueModeStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get queueModeStop;
+
+  /// No description provided for @queueModeNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get queueModeNext;
+
+  /// No description provided for @queueModeLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop'**
+  String get queueModeLoop;
+
+  /// No description provided for @queueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue'**
+  String get queueTitle;
+
+  /// No description provided for @queueUpNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Up next'**
+  String get queueUpNext;
+
+  /// No description provided for @queueWholeQuranFromStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole Quran from the start'**
+  String get queueWholeQuranFromStart;
+
+  /// No description provided for @listenWholeQuran.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen to the whole Quran'**
+  String get listenWholeQuran;
+
+  /// No description provided for @recitationVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'Recitation'**
+  String get recitationVariant;
+
+  /// No description provided for @chooseRecitationVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'What to listen to'**
+  String get chooseRecitationVariant;
+
+  /// No description provided for @queueHeldSurahs.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of 114 surahs available'**
+  String queueHeldSurahs(int count);
+
+  /// No description provided for @queueMissingSurahs.
+  ///
+  /// In en, this message translates to:
+  /// **'Surahs {from}–{to} not uploaded'**
+  String queueMissingSurahs(int from, int to);
+
+  /// No description provided for @queueMissingSurah.
+  ///
+  /// In en, this message translates to:
+  /// **'Surah {number} not uploaded'**
+  String queueMissingSurah(int number);
+
+  /// No description provided for @recitationAllSurahs.
+  ///
+  /// In en, this message translates to:
+  /// **'All 114 surahs'**
+  String get recitationAllSurahs;
+
+  /// No description provided for @recitationSomeSurahs.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of 114 surahs'**
+  String recitationSomeSurahs(int count);
 }
 
 class _AppLocalizationsDelegate

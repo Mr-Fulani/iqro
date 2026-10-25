@@ -17,6 +17,8 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
   Future<void> Function()? _play;
   Future<void> Function()? _pause;
   Future<void> Function(Duration)? _seek;
+  Future<void> Function()? _skipToNext;
+  Future<void> Function()? _skipToPrevious;
 
   static Future<void> initialize() async {
     final directory = await getApplicationSupportDirectory();
@@ -44,11 +46,15 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
     required Future<void> Function() play,
     required Future<void> Function() pause,
     required Future<void> Function(Duration) seek,
+    Future<void> Function()? skipToNext,
+    Future<void> Function()? skipToPrevious,
   }) {
     _owner = owner;
     _play = play;
     _pause = pause;
     _seek = seek;
+    _skipToNext = skipToNext;
+    _skipToPrevious = skipToPrevious;
   }
 
   void unbind(Object owner) {
@@ -57,6 +63,8 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
     _play = null;
     _pause = null;
     _seek = null;
+    _skipToNext = null;
+    _skipToPrevious = null;
     publish(item: null);
   }
 
@@ -66,6 +74,7 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
     bool buffering = false,
     Duration position = Duration.zero,
     double speed = 1,
+    bool canSkip = false,
   }) {
     if (item != null && item.artUri == null && defaultArtwork != null) {
       item = item.copyWith(artUri: defaultArtwork);
@@ -83,8 +92,20 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
         : buffering
         ? AudioProcessingState.buffering
         : AudioProcessingState.ready;
+    // The surah buttons only while the Audio tab owns the decoder: they
+    // switch surahs of its queue, never ayahs or another section's audio.
+    final controls = item == null
+        ? const <MediaControl>[]
+        : canSkip
+        ? <MediaControl>[
+            MediaControl.skipToPrevious,
+            playing ? MediaControl.pause : MediaControl.play,
+            MediaControl.skipToNext,
+          ]
+        : <MediaControl>[playing ? MediaControl.pause : MediaControl.play];
     final previousState = playbackState.value;
     if (previousState.processingState == processingState &&
+        previousState.controls.length == controls.length &&
         previousState.playing == (item != null && playing) &&
         previousState.speed == speed &&
         (previousState.position - position).abs() <
@@ -95,10 +116,12 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
       PlaybackState(
         processingState: processingState,
         playing: item != null && playing,
-        controls: item == null
-            ? const <MediaControl>[]
-            : <MediaControl>[playing ? MediaControl.pause : MediaControl.play],
-        androidCompactActionIndices: item == null ? null : const <int>[0],
+        controls: controls,
+        androidCompactActionIndices: item == null
+            ? null
+            : canSkip
+            ? const <int>[0, 1, 2]
+            : const <int>[0],
         systemActions: item == null
             ? const <MediaAction>{}
             : const <MediaAction>{MediaAction.seek},
@@ -116,6 +139,12 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> seek(Duration position) async => await _seek?.call(position);
+
+  @override
+  Future<void> skipToNext() async => await _skipToNext?.call();
+
+  @override
+  Future<void> skipToPrevious() async => await _skipToPrevious?.call();
 
   @override
   Future<void> stop() async => await _pause?.call();

@@ -25,6 +25,7 @@ import '../core/sync/sync_service.dart';
 import '../features/audio/audio_models.dart';
 import '../features/audio/audio_offline_repository.dart';
 import '../features/audio/audio_repository.dart';
+import '../features/audio/listening_queue.dart';
 import '../features/audio/player_backgrounds.dart';
 import '../features/audio/reciter_catalog.dart';
 import '../features/courses/course_feedback.dart';
@@ -64,6 +65,7 @@ import '../features/tajweed_course/tajweed_course_progress.dart';
 import '../features/tajweed_course/tajweed_course_repository.dart';
 import '../features/tajweed_course/tajweed_practice.dart';
 import '../features/tajweed_course/tajweed_practice_store.dart';
+import '../l10n/generated/app_localizations.dart';
 
 Never _missing(String name) => throw StateError('$name was not initialized');
 
@@ -1638,6 +1640,25 @@ final audioControllerProvider =
         playbackStore: boundScope == null
             ? null
             : AudioPlaybackStore(database, accountScope: boundScope),
+        queueSource: ListeningQueueSource(
+          heldSurahs: (recitationId) async {
+            final recitations = await ref
+                .read(audioRepositoryProvider)
+                .recitations();
+            return recitationHeldSurahs(
+              recitations.where((item) => item.id == recitationId).firstOrNull,
+            );
+          },
+          entry: (recitationId, surah) async {
+            final playback = await ref
+                .read(audioRepositoryProvider)
+                .playback(recitationId: recitationId, surah: surah);
+            return (
+              playback: playback,
+              surahName: await _listeningSurahName(ref, surah),
+            );
+          },
+        ),
         onPlaybackStarted: (state) => ref
             .read(analyticsProvider.notifier)
             .track(
@@ -1651,6 +1672,21 @@ final audioControllerProvider =
       if (boundScope != null) unawaited(controller.restore());
       return controller;
     });
+
+/// The name the queue gives a surah it plays without a screen, in the app's
+/// language, as the player screens name it.
+Future<String> _listeningSurahName(Ref ref, int surah) async {
+  final locale = ref.read(appPreferencesProvider).locale;
+  try {
+    final catalog = await ref.read(quranCatalogProvider.future);
+    for (final item in catalog.surahs) {
+      if (item.number == surah) return item.nameFor(locale);
+    }
+  } on Object {
+    // The number alone still names it.
+  }
+  return '${lookupAppLocalizations(Locale(locale)).surah} $surah';
+}
 
 class SyncController extends StateNotifier<SyncReport> {
   SyncController(

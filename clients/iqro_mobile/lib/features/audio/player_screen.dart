@@ -15,6 +15,7 @@ import '../../core/storage/preferences_store.dart';
 import '../quran/quran_models.dart';
 import '../quran/surah_name_art.dart';
 import 'audio_models.dart';
+import 'listening_queue.dart';
 import 'player_backgrounds.dart';
 import 'recitation_style_label.dart';
 import 'reciter_catalog.dart';
@@ -22,6 +23,9 @@ import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
 
 typedef _ReciterSelection = ({ReciterPerson person, Recitation recitation});
+
+/// A queue sheet choice: a surah to play, or the whole Quran from its start.
+typedef _QueueChoice = ({int? surah, bool wholeQuran});
 
 typedef PlayerChromeSnapshot = ({
   AudioTrack? track,
@@ -39,6 +43,7 @@ typedef PlayerChromeSnapshot = ({
   int? activeAyah,
   int? rangeStartAyah,
   int? rangeEndAyah,
+  ListeningQueueMode queueMode,
 });
 
 PlayerChromeSnapshot playerChromeSnapshot(IqroAudioState state) => (
@@ -57,6 +62,7 @@ PlayerChromeSnapshot playerChromeSnapshot(IqroAudioState state) => (
   activeAyah: state.activeAyah,
   rangeStartAyah: state.rangeStartAyah,
   rangeEndAyah: state.rangeEndAyah,
+  queueMode: state.queueMode,
 );
 
 IqroAudioState _audioStateFromChrome(PlayerChromeSnapshot chrome) =>
@@ -76,6 +82,7 @@ IqroAudioState _audioStateFromChrome(PlayerChromeSnapshot chrome) =>
       activeAyah: chrome.activeAyah,
       rangeStartAyah: chrome.rangeStartAyah,
       rangeEndAyah: chrome.rangeEndAyah,
+      queueMode: chrome.queueMode,
     );
 
 String _audioQualityLabel(BuildContext context, String quality) =>
@@ -149,8 +156,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final controller = ref.read(audioControllerProvider.notifier);
     final locale = Localizations.localeOf(context).languageCode;
     final currentSurah = state.track?.surah;
-    final surahs =
-        ref.watch(quranCatalogProvider).valueOrNull?.surahs ?? const <Surah>[];
+    // Surah names come from the catalog; the titles follow once it arrives.
+    ref.watch(quranCatalogProvider);
     final reciters = ref.watch(recitersProvider).valueOrNull;
     final recitations = ref.watch(audioRecitationsProvider).valueOrNull;
     final currentRecitation = _recitationById(
@@ -172,6 +179,29 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         : resolvePlayerBackground(backgroundId, backgrounds);
     final currentAyah = state.displayedAyah;
     final reciter = state.reciter;
+    final listening = state.channel == AudioPlaybackChannel.listening;
+    final held = recitationHeldSurahs(currentRecitation);
+    // Only the Audio tab's queue crosses the ends, in its loop mode.
+    final navigationMode = listening
+        ? state.queueMode
+        : ListeningQueueMode.next;
+    final upNext = listening && currentSurah != null
+        ? surahAfter(held, currentSurah, state.queueMode)
+        : null;
+    final person = listening && reciter != null && reciters != null
+        ? groupRecitersByPerson(
+            reciters,
+          ).where((item) => item.containsReciter(reciter.id)).firstOrNull
+        : null;
+    final variants = person == null || recitations == null
+        ? const <Recitation>[]
+        : listeningVariants(
+            person,
+            recitations,
+            currentId: state.track?.recitationId,
+          );
+    final sourceChangeInProgress =
+        _changingSurah || _changingReciter || _changingQuality;
     final portraitUrl = reciter == null
         ? null
         : resolveReciterPortraitUrl(
@@ -220,31 +250,26 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                 light: true,
               ),
               const SizedBox(height: 8),
+              // The queue below lists the surahs; the title opens it too.
               _SurahTitleButton(
-                title: state.active ? state.surahName : context.l10n.noAudio,
+                title: state.active && currentSurah != null
+                    ? _surahTitle(currentSurah, known: state.surahName)
+                    : context.l10n.noAudio,
                 enabled:
+                    listening &&
                     state.active &&
-                    surahs.isNotEmpty &&
                     !_changingSurah &&
                     !_changingReciter &&
                     !_changingQuality,
-                onTap: () => _chooseSurah(
-                  surahs
-                      .where(
-                        (surah) =>
-                            currentRecitation?.coversSurah(surah.number) ??
-                            true,
-                      )
-                      .toList(growable: false),
-                  currentSurah,
-                ),
+                onTap: () => _openQueue(held, currentRecitation),
               ),
               const SizedBox(height: 8),
               _ReciterButton(
                 name:
                     state.reciter?.nameFor(locale) ??
                     context.l10n.chooseReciter,
-                style: currentRecitation == null
+                // With a choice of recordings the chip below names the style.
+                style: currentRecitation == null || variants.length > 1
                     ? null
                     : recitationStyleLabel(context, currentRecitation.style),
                 loading: _changingReciter,
@@ -261,13 +286,38 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   currentRecitation: currentRecitation,
                 ),
               ),
+              if (variants.length > 1 && currentRecitation != null) ...[
+                const SizedBox(height: 6),
+                _RecitationVariantChip(
+                  label: recitationVariantLabel(context, currentRecitation),
+                  enabled: state.active && !sourceChangeInProgress,
+                  onTap: () => _chooseVariant(variants, person!),
+                ),
+              ],
               const SizedBox(height: 26),
               _PlayerTransport(
-                sourceChangeInProgress:
-                    _changingSurah || _changingReciter || _changingQuality,
+                sourceChangeInProgress: sourceChangeInProgress,
+                hasPreviousSurah:
+                    adjacentQueueSurah(
+                      held,
+                      currentSurah,
+                      -1,
+                      navigationMode,
+                    ) !=
+                    null,
+                hasNextSurah:
+                    adjacentQueueSurah(held, currentSurah, 1, navigationMode) !=
+                    null,
                 onPreviousSurah: () => _changeSurah(-1),
                 onNextSurah: () => _changeSurah(1),
               ),
+              if (upNext != null) ...[
+                const SizedBox(height: 14),
+                _UpNextCard(
+                  title: _surahTitle(upNext),
+                  onTap: () => _openQueue(held, currentRecitation),
+                ),
+              ],
               const SizedBox(height: 24),
               GridView.count(
                 crossAxisCount: 2,
@@ -277,6 +327,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: <Widget>[
+                  if (listening)
+                    _PlayerOption(
+                      icon: Icons.playlist_play_rounded,
+                      title: context.l10n.queueAfterSurah,
+                      value: queueModeLabel(context, state.queueMode),
+                      onTap: state.active
+                          ? () => _openQueue(held, currentRecitation)
+                          : null,
+                    ),
                   _PlayerOption(
                     icon: Icons.speed,
                     title: context.l10n.speed,
@@ -592,43 +651,168 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       ref.read(audioRecitationsProvider).valueOrNull,
       player.track?.recitationId,
     );
-    // A listening recording may hold only some surahs: skip to the next one it has.
-    final targetSurah = recitation == null
-        ? currentSurah + direction
-        : recitation.adjacentSurah(currentSurah, direction);
+    // A listening recording may hold only some surahs: skip to the next one
+    // it has. The Audio tab's loop mode also crosses the ends.
+    final targetSurah = adjacentQueueSurah(
+      recitationHeldSurahs(recitation),
+      currentSurah,
+      direction,
+      player.channel == AudioPlaybackChannel.listening
+          ? player.queueMode
+          : ListeningQueueMode.next,
+    );
     if (targetSurah == null) return;
     await _loadSurah(targetSurah);
   }
 
-  Future<void> _chooseSurah(List<Surah> surahs, int? currentSurah) async {
-    if (_changingSurah ||
-        _changingReciter ||
-        _changingQuality ||
-        surahs.isEmpty) {
-      return;
+  String _catalogSurahName(int surah) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final catalog = ref.read(quranCatalogProvider).valueOrNull;
+    for (final item in catalog?.surahs ?? const <Surah>[]) {
+      if (item.number == surah) return item.nameFor(locale);
     }
+    return '${context.l10n.surah} $surah';
+  }
+
+  /// "2 · Аль-Бакара" from the catalog, else from the name the track was
+  /// loaded with, else "Сура 2".
+  String _surahTitle(int surah, {String? known}) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final catalog = ref.read(quranCatalogProvider).valueOrNull;
+    final name = catalog?.surahs
+        .where((item) => item.number == surah)
+        .firstOrNull
+        ?.nameFor(locale);
+    return surahDisplayTitle(
+      surah,
+      name ?? known,
+      surahWord: context.l10n.surah,
+    );
+  }
+
+  Future<void> _openQueue(List<int> held, Recitation? recitation) async {
+    if (_changingSurah || _changingReciter || _changingQuality) return;
     final scope = ref.read(localDatabaseProvider).accountScope.current;
     if (scope == null || !_sessionMatches(scope)) return;
     final controller = ref.read(audioControllerProvider.notifier);
-    final targetSurah = await showModalBottomSheet<int>(
+    final player = ref.read(audioControllerProvider);
+    if (!player.active || player.channel != AudioPlaybackChannel.listening) {
+      return;
+    }
+    final locale = Localizations.localeOf(context).languageCode;
+    final reciterName = player.reciter?.nameFor(locale) ?? '';
+    final choice = await showModalBottomSheet<_QueueChoice>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) => FractionallySizedBox(
         heightFactor: .88,
-        child: _SurahPickerSheet(surahs: surahs, currentSurah: currentSurah),
+        child: _ListeningQueueSheet(
+          surahs:
+              ref.read(quranCatalogProvider).valueOrNull?.surahs ??
+              const <Surah>[],
+          held: held,
+          subtitle: recitation == null
+              ? reciterName
+              : '$reciterName · ${recitationVariantLabel(context, recitation)}',
+        ),
       ),
     );
-    if (!_isCurrentController(scope, controller) ||
-        targetSurah == null ||
-        targetSurah == currentSurah) {
+    if (choice == null || !_isCurrentController(scope, controller)) return;
+    if (choice.wholeQuran) {
+      controller.setQueueMode(wholeQuranMode(player.queueMode));
+      await _loadSurah(
+        held.first,
+        expectedScope: scope,
+        expectedController: controller,
+      );
+      return;
+    }
+    final surah = choice.surah;
+    if (surah == null ||
+        surah == ref.read(audioControllerProvider).track?.surah) {
       return;
     }
     await _loadSurah(
-      targetSurah,
+      surah,
       expectedScope: scope,
       expectedController: controller,
     );
+  }
+
+  Future<void> _chooseVariant(
+    List<Recitation> variants,
+    ReciterPerson person,
+  ) async {
+    if (_changingSurah || _changingReciter || _changingQuality) return;
+    final scope = ref.read(localDatabaseProvider).accountScope.current;
+    if (scope == null || !_sessionMatches(scope)) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final current = ref.read(audioControllerProvider);
+    final surah = current.track?.surah;
+    if (surah == null || current.channel != AudioPlaybackChannel.listening) {
+      return;
+    }
+    final selected = await showModalBottomSheet<Recitation>(
+      context: context,
+      useSafeArea: true,
+      builder: (context) => _RecitationVariantSheet(
+        variants: variants,
+        currentId: current.track?.recitationId,
+      ),
+    );
+    if (selected == null ||
+        selected.id == current.track?.recitationId ||
+        !_isCurrentController(scope, controller)) {
+      return;
+    }
+    // The same surah when the recording holds it, else the nearest one; the
+    // new recording starts from the beginning of the surah.
+    final targetSurah =
+        nearestHeldSurah(recitationHeldSurahs(selected), surah) ?? surah;
+    final surahName = targetSurah == surah
+        ? current.surahName
+        : _catalogSurahName(targetSurah);
+    final request = ++_reciterRequest;
+    setState(() => _changingReciter = true);
+    try {
+      final playback = await ref
+          .read(audioRepositoryProvider)
+          .playback(recitationId: selected.id, surah: targetSurah);
+      if (!_isCurrentReciterRequest(scope, controller, request) ||
+          ref.read(audioControllerProvider).track?.id != current.track?.id) {
+        return;
+      }
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: reciterWithPersonPortrait(
+          selected.reciter,
+          apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+          reciters: person.sources,
+        ),
+        surahName: surahName,
+        autoplay: current.playing,
+      );
+      if (!_isCurrentReciterRequest(scope, controller, request)) return;
+      unawaited(
+        ref
+            .read(appPreferencesProvider.notifier)
+            .setListeningRecitation(selected.id),
+      );
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (!_isCurrentReciterRequest(scope, controller, request) || !mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+    } finally {
+      if (mounted && request == _reciterRequest) {
+        setState(() => _changingReciter = false);
+      }
+    }
   }
 
   Future<void> _loadSurah(
@@ -655,17 +839,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final recitationId = player.track?.recitationId;
     if (reciter == null || recitationId == null) return;
 
-    final locale = Localizations.localeOf(context).languageCode;
-    var surahName = '${context.l10n.surah} $targetSurah';
-    final catalog = ref.read(quranCatalogProvider).valueOrNull;
-    if (catalog != null) {
-      for (final surah in catalog.surahs) {
-        if (surah.number == targetSurah) {
-          surahName = surah.nameFor(locale);
-          break;
-        }
-      }
-    }
+    final surahName = _catalogSurahName(targetSurah);
 
     final request = ++_surahRequest;
     setState(() => _changingSurah = true);
@@ -964,11 +1138,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 class _PlayerTransport extends ConsumerStatefulWidget {
   const _PlayerTransport({
     required this.sourceChangeInProgress,
+    required this.hasPreviousSurah,
+    required this.hasNextSurah,
     required this.onPreviousSurah,
     required this.onNextSurah,
   });
 
   final bool sourceChangeInProgress;
+  final bool hasPreviousSurah;
+  final bool hasNextSurah;
   final VoidCallback onPreviousSurah;
   final VoidCallback onNextSurah;
 
@@ -1007,7 +1185,6 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
     final positionMs = (_seekPreviewMilliseconds ?? livePositionMs.toDouble())
         .clamp(0, durationMs <= 0 ? 1 : durationMs)
         .toDouble();
-    final currentSurah = state.track?.surah;
     final controlsEnabled =
         state.active && !state.buffering && !widget.sourceChangeInProgress;
 
@@ -1093,8 +1270,7 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
             ),
             IconButton(
               tooltip: context.l10n.previousSurah,
-              onPressed:
-                  controlsEnabled && currentSurah != null && currentSurah > 1
+              onPressed: controlsEnabled && widget.hasPreviousSurah
                   ? widget.onPreviousSurah
                   : null,
               color: Colors.white,
@@ -1114,8 +1290,7 @@ class _PlayerTransportState extends ConsumerState<_PlayerTransport> {
             ),
             IconButton(
               tooltip: context.l10n.nextSurah,
-              onPressed:
-                  controlsEnabled && currentSurah != null && currentSurah < 114
+              onPressed: controlsEnabled && widget.hasNextSurah
                   ? widget.onNextSurah
                   : null,
               color: Colors.white,
@@ -1524,152 +1699,24 @@ class _SurahTitleButton extends StatelessWidget {
         : Colors.white.withValues(alpha: .62);
     return Semantics(
       button: enabled,
-      label: context.l10n.chooseSurah,
+      hint: enabled ? context.l10n.queueTitle : null,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: enabled ? onTap : null,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(12, 5, 8, 5),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 5,
-              children: <Widget>[
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.displaySmall?.copyWith(color: foreground),
-                ),
-                Icon(Icons.expand_more_rounded, color: foreground, size: 30),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.displaySmall?.copyWith(color: foreground),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SurahPickerSheet extends StatefulWidget {
-  const _SurahPickerSheet({required this.surahs, required this.currentSurah});
-
-  final List<Surah> surahs;
-  final int? currentSurah;
-
-  @override
-  State<_SurahPickerSheet> createState() => _SurahPickerSheetState();
-}
-
-class _SurahPickerSheetState extends State<_SurahPickerSheet> {
-  late final TextEditingController _searchController;
-  late final ScrollController _scrollController;
-  var _query = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController();
-    _scrollController = ScrollController(
-      initialScrollOffset: ((widget.currentSurah ?? 1) - 1) * _surahRowExtent,
-    );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final locale = Localizations.localeOf(context).languageCode;
-    final normalizedQuery = _query.trim().toLowerCase();
-    final filtered = normalizedQuery.isEmpty
-        ? widget.surahs
-        : widget.surahs
-              .where(
-                (surah) =>
-                    surah.number.toString().contains(normalizedQuery) ||
-                    surah.nameAr.toLowerCase().contains(normalizedQuery) ||
-                    surah.nameEn.toLowerCase().contains(normalizedQuery) ||
-                    surah.nameRu.toLowerCase().contains(normalizedQuery),
-              )
-              .toList(growable: false);
-    return Column(
-      children: <Widget>[
-        const SizedBox(height: 10),
-        Container(
-          width: 42,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Theme.of(context).dividerColor,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 10, 8),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  context.l10n.chooseSurah,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-              ),
-              IconButton(
-                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: context.l10n.search,
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _query.isEmpty
-                  ? null
-                  : IconButton(
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _query = '');
-                      },
-                      icon: const Icon(Icons.clear_rounded),
-                    ),
-            ),
-            onChanged: (value) => setState(() => _query = value),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: ListView.builder(
-            controller: normalizedQuery.isEmpty ? _scrollController : null,
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-            itemExtent: _surahRowExtent,
-            itemCount: filtered.length,
-            itemBuilder: (context, index) {
-              final surah = filtered[index];
-              return _SurahPickerRow(
-                key: ValueKey<int>(surah.number),
-                surah: surah,
-                locale: locale,
-                selected: surah.number == widget.currentSurah,
-                onTap: () => Navigator.pop(context, surah.number),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1693,6 +1740,7 @@ const _surahRowExtent = 76.0;
 /// and the Arabic name as the Mushaf prints it.
 class _SurahPickerRow extends StatelessWidget {
   const _SurahPickerRow({
+    required this.number,
     required this.surah,
     required this.locale,
     required this.selected,
@@ -1700,7 +1748,11 @@ class _SurahPickerRow extends StatelessWidget {
     super.key,
   });
 
-  final Surah surah;
+  final int number;
+
+  /// The catalog's entry; without it the number and the Mushaf's own
+  /// lettering of the name still show.
+  final Surah? surah;
   final String locale;
   final bool selected;
   final VoidCallback onTap;
@@ -1726,7 +1778,7 @@ class _SurahPickerRow extends StatelessWidget {
               padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 12, 0),
               child: Row(
                 children: <Widget>[
-                  _SurahNumberStar(number: surah.number, color: accent),
+                  _SurahNumberStar(number: number, color: accent),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1734,7 +1786,8 @@ class _SurahPickerRow extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          surah.nameFor(locale),
+                          surah?.nameFor(locale) ??
+                              '${context.l10n.surah} $number',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.titleMedium?.copyWith(
@@ -1742,23 +1795,25 @@ class _SurahPickerRow extends StatelessWidget {
                             color: accent,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${surah.ayahCount} ${context.l10n.ayahs} · '
-                          '${surah.revelationType == 'meccan' ? context.l10n.meccan : context.l10n.medinan}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                        if (surah case final details?) ...<Widget>[
+                          const SizedBox(height: 2),
+                          Text(
+                            '${details.ayahCount} ${context.l10n.ayahs} · '
+                            '${details.revelationType == 'meccan' ? context.l10n.meccan : context.l10n.medinan}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
                   const SizedBox(width: 10),
                   SurahNameArt(
-                    surah: surah.number,
-                    fallback: surah.nameAr,
+                    surah: number,
+                    fallback: surah?.nameAr ?? '',
                     height: 36,
                     width: 112,
                     color: accent,
@@ -2387,4 +2442,430 @@ class _PlayerOption extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The reciter's recording in use; opens the choice of the others.
+class _RecitationVariantChip extends StatelessWidget {
+  const _RecitationVariantChip({
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = Colors.white.withValues(alpha: enabled ? .86 : .5);
+    return Semantics(
+      button: enabled,
+      label: context.l10n.recitationVariant,
+      excludeSemantics: true,
+      value: label,
+      child: Material(
+        color: const Color(0xFF0D3029),
+        shape: StadiumBorder(
+          side: BorderSide(color: Colors.white.withValues(alpha: .18)),
+        ),
+        child: InkWell(
+          key: const ValueKey('player-recitation-variant'),
+          onTap: enabled ? onTap : null,
+          customBorder: const StadiumBorder(),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 8, 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Flexible(
+                  child: Text(
+                    '${context.l10n.recitationVariant} · $label',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: foreground, fontSize: 12),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.expand_more_rounded, color: foreground, size: 18),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecitationVariantSheet extends StatelessWidget {
+  const _RecitationVariantSheet({
+    required this.variants,
+    required this.currentId,
+  });
+
+  final List<Recitation> variants;
+  final String? currentId;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 12, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 8),
+            child: Text(
+              context.l10n.chooseRecitationVariant,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
+          for (final variant in variants)
+            ListTile(
+              selected: variant.id == currentId,
+              title: Text(recitationVariantLabel(context, variant)),
+              subtitle: Text(
+                recitationHeldSurahs(variant).length == quranSurahCount
+                    ? context.l10n.recitationAllSurahs
+                    : context.l10n.recitationSomeSurahs(
+                        recitationHeldSurahs(variant).length,
+                      ),
+              ),
+              trailing: variant.id == currentId
+                  ? const Icon(Icons.check_rounded)
+                  : null,
+              onTap: () => Navigator.pop(context, variant),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// «Далее · 37 · Ас-Саффат»: what the queue plays after this surah.
+class _UpNextCard extends StatelessWidget {
+  const _UpNextCard({required this.title, required this.onTap});
+
+  /// The surah as the players title it (see [surahDisplayTitle]).
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF0D3029),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        key: const ValueKey('player-up-next'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 8, 12),
+          child: Row(
+            children: <Widget>[
+              const Icon(Icons.queue_music_rounded, color: Color(0xFFB6E8D9)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '${context.l10n.queueUpNext} · $title',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: .6),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ListeningQueueSheet extends ConsumerStatefulWidget {
+  const _ListeningQueueSheet({
+    required this.surahs,
+    required this.held,
+    required this.subtitle,
+  });
+
+  final List<Surah> surahs;
+  final List<int> held;
+  final String subtitle;
+
+  @override
+  ConsumerState<_ListeningQueueSheet> createState() =>
+      _ListeningQueueSheetState();
+}
+
+class _ListeningQueueSheetState extends ConsumerState<_ListeningQueueSheet> {
+  late final List<ListeningQueueRow> _rows;
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rows = listeningQueueRows(widget.held);
+    final current = ref.read(audioControllerProvider).track?.surah;
+    final index = _rows.indexWhere(
+      (row) => row is ListeningQueueSurahRow && row.surah == current,
+    );
+    _scrollController = ScrollController(
+      initialScrollOffset: math.max(0, index - 1) * _surahRowExtent,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final mode = ref.watch(
+      audioControllerProvider.select((value) => value.queueMode),
+    );
+    final current = ref.watch(
+      audioControllerProvider.select((value) => value.track?.surah),
+    );
+    final surahs = <int, Surah>{
+      for (final surah in widget.surahs) surah.number: surah,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const SizedBox(height: 10),
+        Center(
+          child: Container(
+            width: 42,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Theme.of(context).dividerColor,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 10, 4),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      context.l10n.queueTitle,
+                      style: textTheme.headlineSmall,
+                    ),
+                    if (widget.subtitle.isNotEmpty)
+                      Text(
+                        widget.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+        ),
+        if (widget.held.length < quranSurahCount)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 4, 20, 0),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                child: Text(
+                  context.l10n.queueHeldSurahs(widget.held.length),
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 20, 6),
+          child: Text(
+            context.l10n.queueAfterSurah,
+            style: textTheme.titleSmall,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<ListeningQueueMode>(
+              showSelectedIcon: false,
+              segments: <ButtonSegment<ListeningQueueMode>>[
+                for (final value in ListeningQueueMode.values)
+                  ButtonSegment<ListeningQueueMode>(
+                    value: value,
+                    label: Text(queueModeLabel(context, value)),
+                  ),
+              ],
+              selected: <ListeningQueueMode>{mode},
+              onSelectionChanged: (selection) =>
+                  controller.setQueueMode(selection.single),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 8),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              onPressed: () => Navigator.pop<_QueueChoice>(context, (
+                surah: null,
+                wholeQuran: true,
+              )),
+              icon: const Icon(Icons.playlist_play_rounded),
+              label: Text(context.l10n.queueWholeQuranFromStart),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+            itemExtent: _surahRowExtent,
+            itemCount: _rows.length,
+            itemBuilder: (context, index) => switch (_rows[index]) {
+              ListeningQueueSurahRow(:final surah) => _queueSurahRow(
+                surah: surah,
+                details: surahs[surah],
+                locale: locale,
+                selected: surah == current,
+              ),
+              ListeningQueueGapRow(:final from, :final to) => _QueueGapRow(
+                label: from == to
+                    ? context.l10n.queueMissingSurah(from)
+                    : context.l10n.queueMissingSurahs(from, to),
+              ),
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _queueSurahRow({
+    required int surah,
+    required Surah? details,
+    required String locale,
+    required bool selected,
+  }) {
+    return _SurahPickerRow(
+      key: ValueKey<int>(surah),
+      number: surah,
+      surah: details,
+      locale: locale,
+      selected: selected,
+      onTap: () => Navigator.pop<_QueueChoice>(context, (
+        surah: surah,
+        wholeQuran: false,
+      )),
+    );
+  }
+}
+
+/// Surahs the recording does not hold, folded into one dashed row.
+class _QueueGapRow extends StatelessWidget {
+  const _QueueGapRow({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: CustomPaint(
+        painter: _DashedBorderPainter(colorScheme.outline),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: <Widget>[
+              Icon(
+                Icons.cloud_off_rounded,
+                size: 18,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    final outline = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          (Offset.zero & size).deflate(.6),
+          const Radius.circular(14),
+        ),
+      );
+    for (final metric in outline.computeMetrics()) {
+      for (var start = 0.0; start < metric.length; start += 9) {
+        canvas.drawPath(
+          metric.extractPath(start, math.min(start + 5, metric.length)),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

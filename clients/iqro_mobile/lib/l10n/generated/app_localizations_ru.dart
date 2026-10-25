@@ -668,9 +668,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get nextSurah => 'Следующая сура';
 
   @override
-  String get chooseSurah => 'Выбрать суру';
-
-  @override
   String get speed => 'Скорость';
 
   @override
@@ -2924,4 +2921,57 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get coursesReportOpen => 'Открыть обращение';
+
+  @override
+  String get queueAfterSurah => 'После суры';
+
+  @override
+  String get queueModeStop => 'Стоп';
+
+  @override
+  String get queueModeNext => 'Дальше';
+
+  @override
+  String get queueModeLoop => 'По кругу';
+
+  @override
+  String get queueTitle => 'Очередь';
+
+  @override
+  String get queueUpNext => 'Далее';
+
+  @override
+  String get queueWholeQuranFromStart => 'Весь Коран с начала';
+
+  @override
+  String get listenWholeQuran => 'Слушать весь Коран';
+
+  @override
+  String get recitationVariant => 'Вид чтения';
+
+  @override
+  String get chooseRecitationVariant => 'Что слушать';
+
+  @override
+  String queueHeldSurahs(int count) {
+    return 'есть $count из 114 сур';
+  }
+
+  @override
+  String queueMissingSurahs(int from, int to) {
+    return 'суры $from–$to не загружены';
+  }
+
+  @override
+  String queueMissingSurah(int number) {
+    return 'сура $number не загружена';
+  }
+
+  @override
+  String get recitationAllSurahs => 'все 114 сур';
+
+  @override
+  String recitationSomeSurahs(int count) {
+    return '$count из 114 сур';
+  }
 }

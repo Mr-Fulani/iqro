@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/audio/audio_playback_store.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
+import 'package:iqro_mobile/features/audio/listening_queue.dart';
 
 void main() {
   test('playback snapshot survives a JSON round trip', () {
@@ -45,6 +46,7 @@ void main() {
       rangeStartAyah: 7,
       rangeEndAyah: 7,
       savedAt: savedAt,
+      queueMode: ListeningQueueMode.loop,
     );
 
     final restored = AudioPlaybackSnapshot.fromJson(snapshot.toJson());
@@ -61,6 +63,44 @@ void main() {
     expect(restored.rangeStartAyah, 7);
     expect(restored.rangeEndAyah, 7);
     expect(restored.savedAt, savedAt);
+    expect(snapshot.toJson()['queue_mode'], 'loop');
+    expect(restored.queueMode, ListeningQueueMode.loop);
+  });
+
+  test('a version 1 snapshot from before the queue still reads', () {
+    final json = <String, Object?>{
+      'version': 1,
+      'playback': <String, Object?>{
+        'track': <String, Object?>{
+          'id': 'track-1',
+          'recitation_id': 'recitation-1',
+          'surah_number': 1,
+          'duration_ms': 60000,
+          'asset': <String, Object?>{'url': 'https://iqro.forum/media/1.mp3'},
+        },
+        'segments': <Object?>[],
+      },
+      'reciter': <String, Object?>{'id': 'reciter-1', 'slug': 'reciter'},
+      'surah_name': 'Аль-Фатиха',
+      'position_ms': 1200,
+      'speed': 1,
+      'repeat_enabled': false,
+      'saved_at': '2026-09-01T12:30:00.000Z',
+    };
+
+    final restored = AudioPlaybackSnapshot.fromJson(json);
+
+    expect(restored.playback.track.id, 'track-1');
+    expect(restored.position, const Duration(milliseconds: 1200));
+    expect(restored.queueMode, isNull);
+    expect(restored.toJson().containsKey('queue_mode'), isFalse);
+    expect(
+      AudioPlaybackSnapshot.fromJson(<String, Object?>{
+        ...json,
+        'queue_mode': 'shuffle',
+      }).queueMode,
+      isNull,
+    );
   });
 
   test('playback snapshot rejects an unsupported format', () {

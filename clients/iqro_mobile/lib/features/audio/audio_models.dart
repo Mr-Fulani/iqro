@@ -194,6 +194,7 @@ class Recitation {
     this.capabilities,
     this.coverage,
     this.teachingDefault = false,
+    this.riwayah = '',
   });
 
   factory Recitation.fromJson(Map<String, Object?> json) {
@@ -211,6 +212,9 @@ class Recitation {
         : const <String, Object?>{};
     final capabilitiesJson = json['capabilities'] is Map
         ? Map<String, Object?>.from(json['capabilities']! as Map)
+        : const <String, Object?>{};
+    final edition = json['quran_edition'] is Map
+        ? Map<String, Object?>.from(json['quran_edition']! as Map)
         : const <String, Object?>{};
     return Recitation(
       id: json['id']?.toString() ?? '',
@@ -233,6 +237,7 @@ class Recitation {
       ),
       coverage: RecitationCoverage.fromJson(coverage),
       teachingDefault: json['teaching_default'] == true,
+      riwayah: edition['riwayah']?.toString().trim() ?? '',
     );
   }
 
@@ -254,23 +259,14 @@ class Recitation {
   /// courses play until the user picks one. The Audio tab ignores it.
   final bool teachingDefault;
 
+  /// The edition's transmission, as "Hafs 'an Asim"; empty in older catalogs.
+  final String riwayah;
+
   /// Listening recitations may hold only some surahs. Catalogs from before
   /// the surah list only ever held complete recitations.
   bool coversSurah(int surah) {
     final numbers = coverage?.surahNumbers ?? const <int>[];
     return numbers.isEmpty || numbers.contains(surah);
-  }
-
-  /// The nearest held surah after ([direction] 1) or before (-1) [from].
-  int? adjacentSurah(int from, int direction) {
-    for (
-      var surah = from + direction;
-      surah >= 1 && surah <= 114;
-      surah += direction
-    ) {
-      if (coversSurah(surah)) return surah;
-    }
-    return null;
   }
 
   /// Mirrors the site's `supportsRecitationRole`: the server's capabilities
