@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { trackEvent } from "../lib/analytics";
 import { contentShareText, type ContentShareText } from "../lib/content-share";
 import { useI18n } from "../lib/i18n-context";
 import { renderShareCard } from "../lib/share-card";
@@ -21,6 +22,7 @@ export default function ContentShareDialog({
   url,
   fileName,
   previewAlt,
+  contentType,
   load,
   onClose,
 }: {
@@ -30,6 +32,8 @@ export default function ContentShareDialog({
   url: string;
   fileName: string;
   previewAlt: string;
+  /** What is shared, for the visit statistics. */
+  contentType: "ayah" | "dua";
   /** The text; an ayah the reader has not shown is fetched. Keep it stable. */
   load: () => ContentShareText | Promise<ContentShareText>;
   onClose: () => void;
@@ -91,6 +95,7 @@ export default function ContentShareDialog({
     const files = picture && navigator.canShare?.({ files: [picture.file] }) ? [picture.file] : undefined;
     try {
       await navigator.share({ title, text, files });
+      trackEvent("share", { content_type: contentType, method: "native" });
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         setNotice(t("contentShare.shareError"));
@@ -103,6 +108,7 @@ export default function ContentShareDialog({
     try {
       await navigator.clipboard.writeText(text);
       setNotice(t("contentShare.textCopied"));
+      trackEvent("share", { content_type: contentType, method: "copy_text" });
     } catch {
       setNotice(t("contentShare.copyTextError"));
     }
@@ -112,6 +118,7 @@ export default function ContentShareDialog({
     try {
       await navigator.clipboard.writeText(url);
       setNotice(t("contentShare.linkCopied"));
+      trackEvent("share", { content_type: contentType, method: "copy_link" });
     } catch {
       setNotice(t("contentShare.copyError"));
     }

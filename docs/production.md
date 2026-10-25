@@ -65,6 +65,9 @@ chmod 600 services/backend/.env.production
 - `SENTRY_DSN` и `WEB_SENTRY_DSN` — DSN проектов `backend` и `web` в Sentry (регион EU). Пустые
   значения отключают мониторинг. DSN сайта встраивается в образ при сборке, поэтому после
   его изменения образ web нужно пересобрать. Подробно — [tech-debt.md, 1.1](tech-debt.md).
+- `WEB_GA_MEASUREMENT_ID` и `WEB_YANDEX_METRIKA_ID` — публичные ID счётчиков Google Analytics 4 и
+  Яндекс Метрики. Они тоже встраиваются в образ web при сборке; пустые значения отключают баннер
+  согласия и счётчики. Подробно — [analytics.md](analytics.md).
 
 Production settings и `docker compose config` fail closed без этих значений. Credentials должны
 иметь доступ только к media bucket; их нельзя передавать web/mobile/Mini App или добавлять в URL.

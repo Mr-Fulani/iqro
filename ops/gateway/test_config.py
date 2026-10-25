@@ -20,6 +20,13 @@ def _font_sources(policy: str) -> set[str]:
     return set(match.group(1).split())
 
 
+def _directive_sources(policy: str, directive: str) -> set[str]:
+    match = re.search(rf"{directive} ([^;\"]+)", policy)
+    if match is None:
+        raise AssertionError(f"{directive} directive is missing")
+    return set(match.group(1).split())
+
+
 class GatewayConfigTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -172,6 +179,24 @@ class GatewayConfigTests(unittest.TestCase):
         next_sources = _font_sources(NEXT_CONFIG.read_text(encoding="utf-8"))
         self.assertEqual(gateway_sources, next_sources)
         self.assertIn("https://static-cdn.tarteel.ai", gateway_sources)
+
+    def test_gateway_allows_the_analytics_hosts_of_next_csp(self) -> None:
+        # GA4 and Yandex Metrica load only after consent, but the gateway CSP
+        # replaces the Next.js one, so it must allow the same hosts.
+        policy = SECURITY_HEADERS.read_text(encoding="utf-8")
+        hosts_block = re.search(r"const metricaHosts = \[([^\]]+)\]", NEXT_CONFIG.read_text(encoding="utf-8"))
+        self.assertIsNotNone(hosts_block)
+        hosts = re.findall(r'"([a-z.]+)"', hosts_block.group(1))
+        self.assertIn("mc.yandex.ru", hosts)
+        script = _directive_sources(policy, "script-src")
+        frame = _directive_sources(policy, "frame-src")
+        connect = _directive_sources(policy, "connect-src")
+        self.assertTrue({"https://*.googletagmanager.com", "https://yastatic.net"} <= script)
+        for host in hosts:
+            self.assertIn(f"https://{host}", script)
+            self.assertIn(f"https://{host}", frame)
+            self.assertIn(f"wss://{host}", connect)
+        self.assertIn("frame-ancestors 'none'", policy)
 
     def test_text_responses_are_compressed(self) -> None:
         self.assertIn("gzip on;", self.config)

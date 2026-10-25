@@ -1336,6 +1336,17 @@ const ru = {
   "news.next": "Следующее",
   "news.counter": "{current} из {total}",
   "news.bubble": "Новое: {count}. Открыть",
+  "analytics.bannerTitle": "Согласие на статистику",
+  "analytics.bannerText": "С вашего согласия мы считаем посещения через Google Analytics и Яндекс Метрику, чтобы понимать, какие разделы полезны. Без согласия сайт работает так же.",
+  "analytics.more": "Политика cookies",
+  "analytics.accept": "Принять",
+  "analytics.decline": "Отклонить",
+  "analytics.settingsTitle": "Статистика посещений",
+  "analytics.stateGranted": "Вы разрешили статистику: Google Analytics и Яндекс Метрика включены на этом устройстве.",
+  "analytics.stateDenied": "Вы отказались от статистики: Google Analytics и Яндекс Метрика на этом устройстве не загружаются.",
+  "analytics.stateUnset": "Вы ещё не выбрали. Пока выбора нет, Google Analytics и Яндекс Метрика не загружаются.",
+  "analytics.allow": "Разрешить статистику",
+  "analytics.withdraw": "Отозвать согласие",
 };
 
 export default ru;

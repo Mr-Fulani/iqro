@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 
+import { trackEvent } from "../../lib/analytics";
 import { trackCourseEvent } from "../../lib/course-feedback";
 import { useI18n } from "../../lib/i18n-context";
 import { localizedPath } from "../../lib/routing";
@@ -60,6 +61,7 @@ export function LessonCompleteBar({
     const progress = readThematicProgress(courseSlug);
     if (progress.lessons[lessonSlug]?.status !== "completed") {
       trackCourseEvent({ course: courseSlug, lesson: lessonSlug, event: "lesson_completed" });
+      trackEvent("lesson_complete", { course: courseSlug, lesson: lessonSlug });
     }
     writeThematicProgress(recordLessonCompleted(progress, lessonSlug, courseVersion), courseSlug);
   }

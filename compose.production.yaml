@@ -350,6 +350,9 @@ services:
         NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
         NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${WEB_SENTRY_TRACES_SAMPLE_RATE:-0.1}
         NEXT_PUBLIC_APP_VERSION: ${APP_VERSION:-0.1.0}
+        # Visit statistics after cookie consent (docs/analytics.md); empty disables them.
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${WEB_GA_MEASUREMENT_ID:-}
+        NEXT_PUBLIC_YANDEX_METRIKA_ID: ${WEB_YANDEX_METRIKA_ID:-}
     restart: unless-stopped
     environment:
       NODE_ENV: production

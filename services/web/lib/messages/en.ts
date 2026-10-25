@@ -1333,6 +1333,17 @@ const en: Messages = {
   "news.next": "Next",
   "news.counter": "{current} of {total}",
   "news.bubble": "New: {count}. Open",
+  "analytics.bannerTitle": "Consent to statistics",
+  "analytics.bannerText": "With your consent we count visits with Google Analytics and Yandex Metrica to learn which sections help. Without consent the site works the same.",
+  "analytics.more": "Cookie policy",
+  "analytics.accept": "Accept",
+  "analytics.decline": "Decline",
+  "analytics.settingsTitle": "Visit statistics",
+  "analytics.stateGranted": "You allowed statistics: Google Analytics and Yandex Metrica are on for this device.",
+  "analytics.stateDenied": "You declined statistics: Google Analytics and Yandex Metrica do not load on this device.",
+  "analytics.stateUnset": "You have not chosen yet. Until you do, Google Analytics and Yandex Metrica do not load.",
+  "analytics.allow": "Allow statistics",
+  "analytics.withdraw": "Withdraw consent",
 };
 
 export default en;

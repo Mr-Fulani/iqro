@@ -9,17 +9,30 @@ const backendUrl =
   "http://127.0.0.1:8000";
 
 const isDevelopment = process.env.NODE_ENV === "development";
+// Visit statistics, loaded only after consent (lib/analytics.ts): GA4 and
+// Yandex Metrica. Their hits go over https:, which connect-src and img-src
+// already allow; only the scripts, Metrica's frame and Webvisor's socket need
+// hosts. Every response carries this header, so the list stays short.
+// ops/gateway/security-headers.conf repeats the same sources.
+const metricaHosts = ["mc.yandex.ru", "mc.yandex.com"];
+const analyticsScriptSources = [
+  "https://*.googletagmanager.com",
+  "https://yastatic.net",
+  ...metricaHosts.map((host) => `https://${host}`),
+].join(" ");
+const analyticsFrameSources = metricaHosts.map((host) => `https://${host}`).join(" ");
+const analyticsSocketSources = metricaHosts.map((host) => `wss://${host}`).join(" ");
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} ${analyticsScriptSources}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data: https://verses.quran.foundation https://static-cdn.tarteel.ai",
   `img-src 'self' blob: data: https:${isDevelopment ? " http:" : ""}`,
   `media-src 'self' blob: https:${isDevelopment ? " http:" : ""}`,
-  `connect-src 'self' https:${isDevelopment ? " http: ws: wss:" : ""}`,
+  `connect-src 'self' https: ${analyticsSocketSources}${isDevelopment ? " http: ws: wss:" : ""}`,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
-  "frame-src 'none'",
+  `frame-src ${analyticsFrameSources}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

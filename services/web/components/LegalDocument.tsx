@@ -6,11 +6,14 @@ export function LegalDocument({
   description,
   updated,
   sections,
+  children,
 }: {
   title: string;
   description: string;
   updated: string;
   sections: LegalSection[];
+  /** Controls shown after the text, such as the analytics choice on /cookies. */
+  children?: React.ReactNode;
 }) {
   return (
     <article className="seo-quran-page legal-document">
@@ -46,6 +49,7 @@ export function LegalDocument({
           )}
         </section>
       ))}
+      {children}
     </article>
   );
 }
