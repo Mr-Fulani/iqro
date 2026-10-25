@@ -508,24 +508,118 @@ class CourseDocument {
 }
 
 /// A run of text of one kind: bold, and Arabic script drawn in the Arabic
-/// font with its direction isolated.
+/// font with its direction isolated. It may lead somewhere ([link]) or be
+/// the «!» or «?» icon of a note after a word ([note], with empty [text]).
 @immutable
 class NoteSegment {
-  const NoteSegment(this.text, {this.bold = false, this.arabic = false});
+  const NoteSegment(
+    this.text, {
+    this.bold = false,
+    this.arabic = false,
+    this.link,
+    this.note,
+  });
 
-  factory NoteSegment.fromJson(Object? value) {
+  factory NoteSegment.fromJson(Object? value, {bool inline = true}) {
     final json = _map(value, 'segment');
     final bold = json['bold'] ?? false;
     final lang = json['lang'];
     if (bold is! bool || (lang != null && lang != 'ar')) {
       throw const FormatException('Note segment does not fit');
     }
-    return NoteSegment(_string(json, 'text'), bold: bold, arabic: lang == 'ar');
+    return NoteSegment(
+      _string(json, 'text'),
+      bold: bold,
+      arabic: lang == 'ar',
+      link: inline ? NoteLink.tryParse(json['link']) : null,
+      note: inline ? NoteMark.tryParse(json['note']) : null,
+    );
   }
 
   final String text;
   final bool bold;
   final bool arabic;
+  final NoteLink? link;
+  final NoteMark? note;
+}
+
+/// The sections a note may link to, as the server checks them
+/// (docs/courses/README.md, «Ссылки»).
+final _internalLink = RegExp(
+  r'^/(?:quran/\d{1,3}(?::\d{1,3})?|courses(?:/[a-z0-9-]+){0,2}'
+  r'|dua(?:/[A-Za-z0-9_-]+){0,3}|tajweed(?:/[a-z0-9-]+)?)$',
+);
+
+/// Where a link of the notes leads: a screen of the app or an allowed site.
+@immutable
+class NoteLink {
+  const NoteLink._(this.href, {required this.external});
+
+  /// A link the app can follow; any other stays plain text, as in an app
+  /// that predates links.
+  static NoteLink? tryParse(Object? value) {
+    if (value is! Map) return null;
+    final href = value['href'];
+    if (href is! String) return null;
+    if (value['kind'] == 'internal' && _internalLink.hasMatch(href)) {
+      return NoteLink._(href, external: false);
+    }
+    final uri = Uri.tryParse(href);
+    if (value['kind'] == 'external' &&
+        uri != null &&
+        uri.scheme == 'https' &&
+        uri.host.isNotEmpty &&
+        uri.userInfo.isEmpty) {
+      return NoteLink._(href, external: true);
+    }
+    return null;
+  }
+
+  final String href;
+  final bool external;
+
+  /// The app's route of an internal link: an ayah opens in the reader, a
+  /// tajweed lesson on its screen; the other sections have the site's paths.
+  String? get route {
+    if (external) return null;
+    final ayah = RegExp(r'^/quran/(\d+)(?::(\d+))?$').firstMatch(href);
+    if (ayah != null) {
+      final verse = ayah.group(2);
+      return '/reader/${ayah.group(1)}${verse == null ? '' : '?ayah=$verse'}';
+    }
+    final tajweed = RegExp(r'^/tajweed/([a-z0-9-]+)$').firstMatch(href);
+    if (tajweed != null && tajweed.group(1) != 'practice') {
+      return '/tajweed/lesson/${tajweed.group(1)}';
+    }
+    return href;
+  }
+}
+
+enum NoteMarkKind { warning, help }
+
+/// A «!» (warning) or «?» (help) after a word; its text has only bold and
+/// Arabic runs.
+@immutable
+class NoteMark {
+  const NoteMark(this.kind, this.text);
+
+  static NoteMark? tryParse(Object? value) {
+    if (value is! Map) return null;
+    final kind = switch (value['kind']) {
+      'warning' => NoteMarkKind.warning,
+      'help' => NoteMarkKind.help,
+      _ => null,
+    };
+    final text = value['text'];
+    if (kind == null || text is! List) return null;
+    final line = List<NoteSegment>.unmodifiable([
+      for (final segment in text) NoteSegment.fromJson(segment, inline: false),
+    ]);
+    return line.isEmpty ? null : NoteMark(kind, line);
+  }
+
+  final NoteMarkKind kind;
+  final NoteLine text;
 }
 
 /// One line of a block.

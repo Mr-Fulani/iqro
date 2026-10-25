@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -7,6 +8,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from quran_backend.modules.core.models import BaseModel
+
+DOMAIN = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{1,62}")
 
 
 class SocialPlatform(models.TextChoices):
@@ -139,5 +142,45 @@ class SocialProfile(BaseModel):
     def save(self, *args: Any, **kwargs: Any) -> None:
         self.profile_url = self.profile_url.strip()
         self.display_name = self.display_name.strip()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+def link_host(value: str) -> str:
+    """A site's host as links are matched against it: lower case, without «www.» and a dot."""
+    return value.strip().lower().rstrip(".").removeprefix("www.")
+
+
+class AllowedLinkSite(BaseModel):
+    """A site course notes may link to (docs/courses/README.md, «Ссылки»)."""
+
+    domain = models.CharField(
+        max_length=253,
+        unique=True,
+        help_text="Только имя сайта, например sunnah.com. Разрешает и www.sunnah.com, "
+        "но не другие поддомены.",
+    )
+    note = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = "website_allowed_link_site"
+        ordering = ("domain",)
+
+    def __str__(self) -> str:
+        return self.domain
+
+    def clean(self) -> None:
+        super().clean()
+        value = self.domain.strip()
+        if "://" in value:
+            value = urlsplit(value).hostname or ""
+        host = link_host(value)
+        if not DOMAIN.fullmatch(host):
+            raise ValidationError(
+                {"domain": "Напишите только имя сайта, например sunnah.com, без https:// и пути."}
+            )
+        self.domain = host
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
         self.full_clean()
         super().save(*args, **kwargs)

@@ -161,6 +161,23 @@ test("«Сообщить об ошибке» sends a ticket that knows the lesso
   await expect(dialog).toHaveCount(0);
 });
 
+test("a report names the slide on screen", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/ru/courses/ramadan/namerenie");
+  const slides = page.getByTestId("lesson-slides");
+  await slides.getByRole("button", { name: "Следующий слайд" }).click();
+  await slides.getByRole("button", { name: "Следующий слайд" }).click();
+  await expect(slides).toHaveAttribute("data-index", "2");
+  await page.getByRole("button", { name: "Сообщить об ошибке" }).click();
+  const dialog = page.getByTestId("lesson-report-dialog");
+  await expect(dialog.getByTestId("report-slide")).toHaveText("Приложим и номер слайда: 3.");
+  await dialog.getByLabel("Что не так?").fill("На слайде опечатка.");
+  await dialog.getByRole("button", { name: "Отправить" }).click();
+  await expect(dialog).toContainText(/Номер обращения FB-e2e\d+\./, { timeout: 30_000 });
+  const report = (await mockState(page)).reports.at(-1)!;
+  expect(report).toMatchObject({ message: "На слайде опечатка.", context: { lesson_slug: "namerenie", slide_number: 3 } });
+});
+
 test("the rating appears after the last lesson and on the course page, never as an average", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/ru/courses/ramadan");

@@ -28,6 +28,7 @@ from quran_backend.modules.courses.services import (
     publish_release,
     sign_release,
 )
+from quran_backend.modules.website.models import AllowedLinkSite
 
 UPLOADER = "quran_backend.modules.courses.media.player_background_uploader"
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is not installed")
@@ -333,6 +334,33 @@ def test_preview_draws_blocks_on_every_language(course: Course, owner_client: Cl
     ).content.decode()
     assert 'dir="rtl"' in page
     assert "Что такое пост" not in page
+
+
+@pytest.mark.django_db
+def test_preview_draws_note_icons_and_links_and_the_review_lists_the_links(
+    course: Course, owner: User, owner_client: Client
+) -> None:
+    AllowedLinkSite.objects.create(domain="sunnah.com")
+    CourseLesson.objects.filter(slug="namerenie").update(
+        notes_ru="Решение сердца[!Не вслух.]\nСм. [аят](/quran/2:255) и [хадис](https://sunnah.com/x)."
+    )
+    lesson = course.lessons.get(slug="namerenie")
+    page = owner_client.get(f"/admin/courses/courselesson/{lesson.pk}/preview/").content.decode()
+    assert 'class="cv-mark is-warning" popovertarget="cv-note-' in page
+    assert 'aria-label="Внимание"' in page
+    assert "<strong>Внимание</strong> Не вслух.</span>" in page
+    assert 'href="http://localhost:3000/ru/quran?surah=2&amp;ayah=255"' in page
+    assert 'href="https://sunnah.com/x" target="_blank" rel="noopener noreferrer"' in page
+    help_page = owner_client.get(f"/admin/courses/courselesson/{lesson.pk}/change/")
+    assert "слово[!текст]" in help_page.content.decode()
+
+    release = prepare_release(course, owner, languages=["ru"], change_note="Ссылки")
+    review = owner_client.get(f"/admin/courses/courserelease/{release.pk}/change/")
+    text = review.content.decode()
+    assert "Ссылки в выпуске" in text
+    assert "Тема 2 «Намерение» (ru), строка 2" in text
+    assert "<code>/quran/2:255</code>" in text
+    assert "<code>https://sunnah.com/x</code></a> · внешний сайт" in text
 
 
 @pytest.mark.django_db

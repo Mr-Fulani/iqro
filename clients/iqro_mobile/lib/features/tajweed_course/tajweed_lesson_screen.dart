@@ -9,6 +9,8 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/course_models.dart' show NoteBlock;
+import '../courses/course_notes_view.dart';
 import '../courses/lesson_media_view.dart';
 import '../courses/lesson_video_player.dart';
 import '../tajweed/tajweed_sheet.dart'
@@ -653,6 +655,26 @@ List<Widget> _paragraphs(BuildContext context, String text) {
   ];
 }
 
+/// The explanation or «how» of a lesson: its notes blocks, with «!» and «?»
+/// notes and links, or the plain paragraphs of an older document. An Arabic
+/// lesson keeps its text font, as its paragraphs had.
+List<Widget> _lessonText(
+  BuildContext context,
+  List<NoteBlock>? blocks,
+  String text,
+) {
+  if (blocks == null) return _paragraphs(context, text);
+  return <Widget>[
+    Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: CourseNotesView(
+        blocks: blocks,
+        plainArabic: Localizations.localeOf(context).languageCode == 'ar',
+      ),
+    ),
+  ];
+}
+
 /// The target's colour dot and name; the Arabic name when it is another.
 class _TargetHeading extends StatelessWidget {
   const _TargetHeading({required this.target});
@@ -733,7 +755,7 @@ class _IntroPage extends StatelessWidget {
         const SizedBox(height: 10),
         _TargetHeading(target: target),
         const SizedBox(height: 14),
-        ..._paragraphs(context, lesson.explanation),
+        ..._lessonText(context, lesson.explanationBlocks, lesson.explanation),
         if (lesson.letters.trim().isNotEmpty) ...<Widget>[
           const SizedBox(height: 4),
           tajweedLabel(context, context.l10n.tajweedCourseLetters),
@@ -769,7 +791,7 @@ class _HowPage extends StatelessWidget {
     children: <Widget>[
       _stepTitle(context, context.l10n.tajweedHowToRead),
       const SizedBox(height: 14),
-      ..._paragraphs(context, lesson.how),
+      ..._lessonText(context, lesson.howBlocks, lesson.how),
     ],
   );
 }

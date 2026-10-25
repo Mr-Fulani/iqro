@@ -38,6 +38,7 @@ from django.utils.html import format_html, format_html_join
 from django.utils.http import urlencode
 
 from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.core.editorial.markup import parse_notes
 from quran_backend.modules.core.object_storage import ObjectStorageError
 from quran_backend.modules.courses.admin import (
     TAB_LABELS,
@@ -54,6 +55,7 @@ from quran_backend.modules.courses.lesson_media_admin import (
     render_media,
     run_media_action,
 )
+from quran_backend.modules.courses.links import INLINE_HELP, LinkChecker, link_rows
 from quran_backend.modules.courses.models import SPOKEN_LANGUAGES
 from quran_backend.modules.courses.video import (
     MAX_DUB_MIB,
@@ -64,6 +66,7 @@ from quran_backend.modules.courses.video import (
 from quran_backend.modules.tajweed.course import (
     COLOR,
     LESSON_TEXTS,
+    MARKUP_TEXTS,
     VERSION_NAME,
     TajweedCourseError,
     lesson_video,
@@ -71,6 +74,7 @@ from quran_backend.modules.tajweed.course import (
     snapshot_json,
 )
 from quran_backend.modules.tajweed.course_publication import (
+    MARKUP_LABELS,
     compile_course_version,
     copy_tajweed_course,
     mark_tajweed_watched,
@@ -109,6 +113,10 @@ REVIEW_LABELS = {
     "reviewed": "Проверено преподавателем",
 }
 SHOWN_PROBLEMS = 12
+MARKUP_HELP = (
+    "Пустая строка — новый абзац, **слово** — жирный; работают и пометки конспекта курсов "
+    "(«## », «- », «> », «! »). "
+) + INLINE_HELP
 
 logger = logging.getLogger(__name__)
 
@@ -403,23 +411,32 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         def value(name: str, stored: object) -> str:
             return str(posted.get(name, "")) if posted is not None else str(stored or "")
 
+        links = LinkChecker(
+            tajweed_lessons=[lesson["slug"] for lesson in snapshot.get("lessons", [])]
+        )
+
+        def text(field: str, language: str) -> dict[str, Any]:
+            shown = value(f"{field}__{language}", (item.get(field) or {}).get(language))
+            found: dict[str, Any] = {
+                "code": language,
+                "label": names.get(language, language),
+                "input": f"{field}__{language}",
+                "value": shown,
+                "rtl": language == "ar",
+            }
+            if field in MARKUP_TEXTS:
+                # What students will see, and what keeps the version from being signed.
+                found["blocks"] = parse_notes(shown)
+                found["problems"] = links.problems(shown)
+            return found
+
         fields = [
             {
                 "name": field,
                 "label": TEXT_LABELS[field],
                 "multiline": field in {"explanation", "how", "summary"},
-                "values": [
-                    {
-                        "code": language,
-                        "label": names.get(language, language),
-                        "input": f"{field}__{language}",
-                        "value": value(
-                            f"{field}__{language}", (item.get(field) or {}).get(language)
-                        ),
-                        "rtl": language == "ar",
-                    }
-                    for language in languages
-                ],
+                "help": MARKUP_HELP if field in MARKUP_TEXTS else "",
+                "values": [text(field, language) for language in languages],
             }
             for field in _text_fields(kind)
         ]
@@ -537,6 +554,19 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "can_review": request.user.has_perm("tajweed.change_tajweedcourseversion"),
                 "media_block": media_block,
                 "videos": review_videos(version, node_id) if version.status == "draft" else [],
+                # Every address of the version, for the owner before signing.
+                "links": link_rows(
+                    (
+                        f"Урок «{lesson['slug']}»: {MARKUP_LABELS[field]}",
+                        language,
+                        str((lesson.get(field) or {}).get(language) or ""),
+                    )
+                    for lesson in snapshot.get("lessons", [])
+                    for field in MARKUP_TEXTS
+                    for language in languages
+                )
+                if kind == "course"
+                else [],
             },
             status=400 if posted is not None else 200,
         )

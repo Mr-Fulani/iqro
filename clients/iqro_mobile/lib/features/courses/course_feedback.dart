@@ -235,11 +235,13 @@ Map<String, Object?> lessonReportContext(
   CourseDocument document,
   CourseLesson lesson, {
   Duration? playback,
+  int? slide,
 }) => <String, Object?>{
   'course_slug': document.course.slug,
   'lesson_slug': lesson.slug,
   'content_version': document.course.version,
   'playback_ms': ?playback?.inMilliseconds,
+  'slide_number': ?slide,
 };
 
 String lessonReportRoute(String course, String lesson) =>

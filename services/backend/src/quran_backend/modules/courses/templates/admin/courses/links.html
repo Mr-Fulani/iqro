@@ -1,0 +1,19 @@
+<div id="links">
+  <h2>{{ links_title }}</h2>
+  {% if links %}
+    <table class="cv-links">
+      <thead><tr><th>Где</th><th>Текст ссылки</th><th>Адрес</th></tr></thead>
+      <tbody>
+        {% for link in links %}
+          <tr>
+            <td>{{ link.where }}</td>
+            <td dir="auto">{{ link.text }}</td>
+            <td><a href="{{ link.url }}" target="_blank" rel="noopener noreferrer"><code>{{ link.href }}</code></a> · {% if link.kind == "external" %}внешний сайт{% else %}раздел сайта{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Ссылок нет.</p>
+  {% endif %}
+</div>

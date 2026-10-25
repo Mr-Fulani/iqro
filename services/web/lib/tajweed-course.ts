@@ -11,7 +11,13 @@ import {
   type LessonOutline,
 } from "./course-progress.ts";
 import { highlightRuns, joinedRuns, wordTiming, type TajweedRun } from "./tajweed.ts";
-import { CourseDocumentError, parseLessonMedia, type CourseMediaBlock } from "./thematic-courses.ts";
+import {
+  CourseDocumentError,
+  parseLessonMedia,
+  parseNoteBlocks,
+  type CourseMediaBlock,
+  type NoteBlock,
+} from "./thematic-courses.ts";
 
 export const TAJWEED_COURSE_SLUG = "tajweed";
 export const TAJWEED_COURSE_SCHEMA_VERSION = 1;
@@ -38,8 +44,12 @@ export type TajweedCourseLesson = {
   minutes: number;
   title: string;
   summary: string;
+  /** Without markup, for the documents compiled before blocks. */
   explanation: string;
   how: string;
+  /** The same texts as notes blocks: bold, Arabic runs, «!» and «?» notes, links; null in older documents. */
+  explanation_blocks: NoteBlock[] | null;
+  how_blocks: NoteBlock[] | null;
   letters: string;
   /** Video, slides and banners above the explanation, in the author's order; `[]` without them. */
   media: CourseMediaBlock[];
@@ -98,6 +108,16 @@ function text(value: unknown, where: string): string {
 }
 
 /** The blocks are those of thematic courses; a broken one breaks this document like any field. */
+function blocks(value: unknown, where: string): NoteBlock[] | null {
+  if (value === undefined) return null;
+  try {
+    return parseNoteBlocks(value, where);
+  } catch (error) {
+    if (error instanceof CourseDocumentError) throw new TajweedCourseDocumentError(error.detail);
+    throw error;
+  }
+}
+
 function media(value: unknown, where: string): CourseMediaBlock[] {
   try {
     return parseLessonMedia(value, where);
@@ -149,6 +169,8 @@ export function parseTajweedCourseDocument(value: unknown): TajweedCourseDocumen
       summary: text(lesson.summary, `lessons[${index}].summary`),
       explanation: text(lesson.explanation, `lessons[${index}].explanation`),
       how: text(lesson.how, `lessons[${index}].how`),
+      explanation_blocks: blocks(lesson.explanation_blocks, `lessons[${index}].explanation_blocks`),
+      how_blocks: blocks(lesson.how_blocks, `lessons[${index}].how_blocks`),
       letters: typeof lesson.letters === "string" ? lesson.letters : "",
       media: media(lesson.media, `lessons[${index}].media`),
     };

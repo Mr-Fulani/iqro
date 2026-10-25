@@ -2625,6 +2625,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get coursesImportant => 'Önemli';
 
   @override
+  String get coursesMarkWarning => 'Dikkat';
+
+  @override
+  String get coursesMarkHelp => 'Açıklama';
+
+  @override
+  String get coursesMarkClose => 'Kapat';
+
+  @override
+  String get coursesLinkOpensBrowser => 'tarayıcıda açılır';
+
+  @override
   String get coursesMarkDone => 'Çalıştım';
 
   @override

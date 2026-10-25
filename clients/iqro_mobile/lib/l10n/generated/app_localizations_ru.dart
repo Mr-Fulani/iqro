@@ -2695,6 +2695,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get coursesImportant => 'Важно';
 
   @override
+  String get coursesMarkWarning => 'Внимание';
+
+  @override
+  String get coursesMarkHelp => 'Пояснение';
+
+  @override
+  String get coursesMarkClose => 'Закрыть';
+
+  @override
+  String get coursesLinkOpensBrowser => 'откроется в браузере';
+
+  @override
   String get coursesMarkDone => 'Тема изучена';
 
   @override

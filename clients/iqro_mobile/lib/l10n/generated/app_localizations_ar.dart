@@ -2651,6 +2651,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get coursesImportant => 'مهم';
 
   @override
+  String get coursesMarkWarning => 'انتباه';
+
+  @override
+  String get coursesMarkHelp => 'توضيح';
+
+  @override
+  String get coursesMarkClose => 'إغلاق';
+
+  @override
+  String get coursesLinkOpensBrowser => 'يفتح في المتصفح';
+
+  @override
   String get coursesMarkDone => 'تمت الدراسة';
 
   @override

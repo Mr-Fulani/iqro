@@ -108,7 +108,9 @@ test("header, mobile navigation and footer lead to the course next to the prayer
   const header = page.locator(".app-menu");
   await expect(header.getByRole("link", { name: "Курсы" })).toHaveClass(/menu-link-active/);
   await expect(header.getByRole("link", { name: "Таджвид" })).toHaveCount(0);
-  await expect(page.locator("footer").getByRole("link", { name: "Таджвид" })).toHaveAttribute("href", "/ru/tajweed");
+  // The footer leads to the catalog only; the course is a card there.
+  await expect(page.locator("footer").getByRole("link", { name: "Таджвид" })).toHaveCount(0);
+  await expect(page.locator('footer a[href="/ru/courses"]')).toHaveCount(1);
 
   await page.setViewportSize({ width: 390, height: 844 });
   const navigation = page.locator(".mobile-navigation");
@@ -204,6 +206,24 @@ test("a lesson explains the rule, plays its examples and asks to find it", async
   await page.goto("/ru/tajweed");
   await expect(page.getByTestId("tajweed-course-progress")).toContainText("1 из 21 уроков");
   await expect(page.locator('a[href="/ru/tajweed/ikhfa"] .tajweed-course-status')).toHaveText("Пройден");
+});
+
+test("izhar's explanation and «how» draw their «?» and «!» notes and the ayah link", async ({ page }) => {
+  const lesson = await openLesson(page, "/ru/tajweed/izhar");
+  const step = lesson.locator(".tajweed-lesson-step:not([hidden])");
+  const help = step.getByRole("button", { name: "Пояснение" });
+  await help.click();
+  await expect(page.getByRole("dialog", { name: "Пояснение" })).toContainText("Маленький кружок над буквой");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Пояснение" })).toBeHidden();
+
+  await page.keyboard.press("ArrowRight");
+  await expect(counter(page)).toHaveText(/Как читать$/);
+  const how = lesson.locator(".tajweed-lesson-step:not([hidden])");
+  await how.getByRole("button", { name: "Внимание" }).click();
+  await expect(page.getByRole("dialog", { name: "Внимание" })).toContainText("Не удлиняйте нун перед");
+  await page.keyboard.press("Escape");
+  await expect(how.getByRole("link", { name: "суре аль-Ихлас" })).toHaveAttribute("href", "/ru/quran?surah=112&ayah=4");
 });
 
 test("the find exercise marks misses, shows the answer and takes another ayah", async ({ page }) => {

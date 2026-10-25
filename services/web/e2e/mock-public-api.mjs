@@ -209,7 +209,15 @@ const ramadanArabic = {
     {
       type: "paragraph",
       dir: "rtl",
-      lines: [[arabic("النية هي "), arabic("عزم القلب", { bold: true }), arabic(" على الصيام لله.")]],
+      lines: [
+        [
+          arabic("النية هي "),
+          arabic("عزم القلب", { bold: true }),
+          { text: "", note: { kind: "help", text: [arabic("توضيح بعد المراجعة.")] } },
+          arabic(" على الصيام لله. "),
+          arabic("آية الصيام", { link: { href: "/quran/2:183", kind: "internal" } }),
+        ],
+      ],
     },
     { type: "list", dir: "rtl", ordered: false, items: [[arabic("تميّز النية العبادة عن العادة.")], [arabic("محلها القلب.")]] },
     { type: "quote", dir: "rtl", lines: [[arabic("إنما الأعمال بالنيات")]], source: "صحيح البخاري، 1" },

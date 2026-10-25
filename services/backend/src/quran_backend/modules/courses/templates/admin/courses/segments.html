@@ -1,1 +1,1 @@
-{% for segment in segments %}{% if segment.lang == "ar" %}<bdi lang="ar" class="cv-ar">{% if segment.bold %}<strong>{{ segment.text }}</strong>{% else %}{{ segment.text }}{% endif %}</bdi>{% elif segment.bold %}<strong>{{ segment.text }}</strong>{% else %}{{ segment.text }}{% endif %}{% endfor %}
+{% load course_notes %}{% note_segments segments language %}
