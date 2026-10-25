@@ -658,3 +658,241 @@
     transition: none;
   }
 }
+
+/* Share, votes, the course rating and «Сообщить об ошибке» (stage 4) ------- */
+.course-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.course-share-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.course-share-status {
+  color: var(--primary-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.course-share-status:empty {
+  display: none;
+}
+
+.course-lesson-header .course-share {
+  margin-top: 10px;
+}
+
+.course-lesson-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.course-lesson-vote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.course-lesson-vote p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.course-lesson-vote-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.course-lesson-vote-thanks {
+  color: var(--primary-text);
+}
+
+.course-lesson-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.course-lesson-report:hover {
+  color: var(--text-primary);
+}
+
+.course-rating {
+  display: grid;
+  gap: 12px;
+}
+
+.course-rating h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.course-rating form {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.course-rating-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.course-rating-fieldset legend {
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.course-rating-choice {
+  display: flex;
+  gap: 4px;
+}
+
+.course-rating-choice label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  color: var(--border-strong);
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.course-rating-choice label.is-on {
+  color: var(--accent-gold);
+}
+
+.course-rating-choice input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.course-rating-choice label:has(input:focus-visible) {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.course-rating-comment {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 560px);
+}
+
+.course-rating-comment textarea,
+.course-report-form textarea,
+.course-report-form input,
+.course-report-form select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.course-rating-comment small {
+  color: var(--text-muted);
+  justify-self: end;
+}
+
+.course-rating-saved {
+  margin: 0;
+}
+
+.course-rating-stars {
+  color: var(--accent-gold);
+  font-size: 20px;
+  letter-spacing: 2px;
+}
+
+.course-report-dialog {
+  width: min(520px, calc(100vw - 24px));
+  max-height: min(90dvh, 760px);
+  padding: 16px 20px 20px;
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  color: var(--text-primary);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.35);
+}
+
+.course-report-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.course-report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.course-report-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.course-report-close {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.course-report-form,
+.course-report-sent {
+  display: grid;
+  gap: 12px;
+}
+
+.course-report-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.course-report-intro,
+.course-report-note,
+.course-report-sent p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.course-report-error {
+  margin: 0;
+  color: var(--danger);
+}
