@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from quran_backend.modules.courses.snapshot_media import lesson_media
+from quran_backend.modules.salah.models import SALAH_LANGUAGES
 from quran_backend.modules.salah.snapshot import (
     audio_media_key,
     expand_lesson_steps,
@@ -88,6 +90,10 @@ def compile_document(
             "minutes": int(lesson.get("minutes", 0)),
             "steps": steps,
         }
+        # A lesson without media has no key, as a step without notes (docs/salah/lesson-media.md).
+        blocks = lesson_media(lesson, language, SALAH_LANGUAGES)
+        if blocks:
+            entry["media"] = blocks
         prayer = lesson.get("prayer")
         if prayer:
             entry["prayer"] = {

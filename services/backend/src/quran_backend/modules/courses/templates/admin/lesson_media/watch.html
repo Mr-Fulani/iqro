@@ -1,0 +1,25 @@
+{# New videos and dubs of a version's draft, each marked «Просмотрено» before signing. #}
+{# Context: videos (snapshot_media_admin.review_videos), editable. #}
+{% if videos %}
+  <section class="cp" id="videos" aria-labelledby="lm-videos-title">
+    <h2 id="lm-videos-title">Новые видео и озвучки: посмотрите каждое перед подписью</h2>
+    {% for video in videos %}
+      <div class="cvid-watch{% if video.watched %} is-watched{% endif %}">
+        <video controls playsinline preload="none" src="{{ video.url }}" poster="{{ video.poster_url }}"></video>
+        <div class="cp-row">
+          <strong>{{ video.name }}</strong>
+          <span>{{ video.duration }} · {{ video.size }}</span>
+          {% if editable %}
+            <form method="post" action="{{ video.mark_url }}">{% csrf_token %}
+              <input type="hidden" name="node" value="{{ video.node }}">
+              <input type="hidden" name="watched" value="{% if video.watched %}0{% else %}1{% endif %}">
+              <button type="submit" class="button{% if not video.watched %} default{% endif %}">{% if video.watched %}Снять отметку{% else %}Просмотрено{% endif %}</button>
+            </form>
+          {% elif video.watched %}
+            <span>Просмотрено</span>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </section>
+{% endif %}

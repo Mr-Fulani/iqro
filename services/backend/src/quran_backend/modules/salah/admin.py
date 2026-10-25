@@ -149,14 +149,15 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
         )
 
     def get_urls(self) -> list[Any]:
+        # The editor's addresses first: «<path>/media/» would also take «…/lessons/<slug>/media/».
         return [
+            *self.editor_urls(),
+            *self.structure_urls(),
             path(
                 "<path:object_id>/media/",
                 self.admin_site.admin_view(self.media_view),
                 name="salah_salahcourseversion_media",
             ),
-            *self.editor_urls(),
-            *self.structure_urls(),
             *super().get_urls(),
         ]
 

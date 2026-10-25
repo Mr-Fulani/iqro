@@ -11,7 +11,6 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-import struct
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -24,6 +23,8 @@ from quran_backend.modules.audio.player_background_upload import player_backgrou
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.content_revalidation import enqueue_salah_content_change
 from quran_backend.modules.core.object_storage import ImmutableObjectSpec, ObjectUploader
+from quran_backend.modules.core.webp import webp_size
+from quran_backend.modules.courses.snapshot_media import video_files
 from quran_backend.modules.salah.compiler import compile_document
 from quran_backend.modules.salah.models import (
     SALAH_LANGUAGES,
@@ -45,24 +46,6 @@ MAX_IMAGE_BYTES = 200 * 1024
 MAX_AUDIO_BYTES = 2 * 1024 * 1024
 CONTENT_TYPES = {".webp": "image/webp", ".m4a": "audio/mp4", ".mp3": "audio/mpeg"}
 PUBLIC_REVIEWER = "IQRO"
-
-
-def webp_size(data: bytes) -> tuple[int, int] | None:
-    """Width and height from a WebP header (VP8, VP8L or VP8X), without Pillow."""
-    if len(data) < 30 or data[:4] != b"RIFF" or data[8:12] != b"WEBP":
-        return None
-    chunk = data[12:16]
-    if chunk == b"VP8X":
-        width = 1 + int.from_bytes(data[24:27], "little")
-        height = 1 + int.from_bytes(data[27:30], "little")
-        return width, height
-    if chunk == b"VP8L":
-        bits = struct.unpack("<I", data[21:25])[0]
-        return (bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1
-    if chunk == b"VP8 ":
-        width, height = struct.unpack("<HH", data[26:30])
-        return width & 0x3FFF, height & 0x3FFF
-    return None
 
 
 def store_media(
@@ -235,9 +218,40 @@ def import_salah_snapshot(
     return version
 
 
+def new_videos(version: SalahCourseVersion) -> set[str]:
+    """SHA-256 of the lesson video and dub files students get anew with this version."""
+    active = version.course.active_version
+    before = (
+        video_files(active.snapshot.get("lessons", []), SALAH_LANGUAGES)
+        if active is not None and active.pk != version.pk
+        else set()
+    )
+    return video_files(version.snapshot.get("lessons", []), SALAH_LANGUAGES) - before
+
+
+@transaction.atomic
+def mark_salah_watched(version: SalahCourseVersion, *, sha256: str, watched: bool) -> None:
+    """The owner's «Просмотрено» on one new video or dub of an unsigned draft."""
+    version = SalahCourseVersion.objects.select_for_update().get(pk=version.pk)
+    if version.status != SalahPublicationStatus.DRAFT or version.is_signed:
+        raise SalahSnapshotError(["Отмечать можно только неподписанный черновик."])
+    if sha256 not in new_videos(version):
+        raise SalahSnapshotError(["Этого файла нет среди новых видео и озвучек версии."])
+    marks = set(version.watched_videos) - {sha256}
+    if watched:
+        marks.add(sha256)
+    version.watched_videos = sorted(marks)
+    version.save(update_fields=["watched_videos", "updated_at"])
+
+
 def sign_salah_version(version: SalahCourseVersion, user: Any, note: str = "") -> None:
-    """The owner's sign-off of a complete draft: every text in every language."""
+    """The owner's sign-off of a complete draft: every text in every language, every new
+    lesson video and dub watched."""
     validate_snapshot(version.snapshot)
+    if new_videos(version) - set(version.watched_videos):
+        raise SalahSnapshotError(
+            ["Отметьте «Просмотрено» у каждого нового видео и озвучки."]  # noqa: RUF001
+        )
     version.sign(user, note)
     compile_version(version)
 

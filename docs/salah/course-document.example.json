@@ -52,6 +52,53 @@
       "title": "Вуду",
       "summary": "Малое омовение перед намазом.",
       "minutes": 8,
+      "media": [
+        {
+          "type": "video",
+          "video": {
+            "url": "https://media.iqro.forum/courses/videos/8888888888bbbbbbbbbb.mp4",
+            "bytes": 31457280,
+            "duration_ms": 184000,
+            "width": 1280,
+            "height": 720,
+            "spoken_language": "ru",
+            "poster": {
+              "url": "https://media.iqro.forum/courses/posters/8888888888bbbbbbbbbb-0123456789ab-1280.webp",
+              "small_url": "https://media.iqro.forum/courses/posters/8888888888bbbbbbbbbb-0123456789ab-640.webp",
+              "width": 1280,
+              "height": 720
+            }
+          }
+        },
+        {
+          "type": "slides",
+          "slides": [
+            {
+              "image": {
+                "url": "https://media.iqro.forum/courses/slides/9999999999aaaaaaaaaa.webp",
+                "small_url": "https://media.iqro.forum/courses/slides/9999999999aaaaaaaaaa-800.webp",
+                "width": 1600,
+                "height": 900
+              },
+              "caption": "Порядок омовения: лицо, руки, голова, ноги",
+              "alt": "Схема четырёх обязательных действий вуду",
+              "dir": "ltr"
+            }
+          ]
+        },
+        {
+          "type": "banner",
+          "image": {
+            "url": "https://media.iqro.forum/courses/banners/2222222222bbbbbbbbbb.webp",
+            "small_url": "https://media.iqro.forum/courses/banners/2222222222bbbbbbbbbb-800.webp",
+            "width": 1600,
+            "height": 900
+          },
+          "caption": "",
+          "alt": "Купол и минарет мечети на рассвете",
+          "dir": "ltr"
+        }
+      ],
       "steps": [
         {
           "slug": "wudu.intention",

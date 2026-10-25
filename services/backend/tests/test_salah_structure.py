@@ -402,7 +402,8 @@ def _structure_post(
 ) -> Any:
     with patch(RESOLVER, FakeResolver):
         return client.post(
-            _structure_url(version, **query), {"revision": version.checksum_sha256, **data}
+            _structure_url(version, **query),
+            {"revision": editor.structure_revision(version.snapshot), **data},
         )
 
 

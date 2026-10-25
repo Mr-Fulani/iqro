@@ -1,8 +1,10 @@
 {% extends "admin/base_site.html" %}
 {% load static admin_urls %}
 
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'salah/editor.css' %}">{% endblock %}
-{% block extrahead %}{{ block.super }}<script src="{% static 'salah/editor.js' %}" defer></script>{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'salah/editor.css' %}">{% if media_block or videos %}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}{% endif %}{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'salah/editor.js' %}" defer></script>{% if media_block %}
+<script src="{% static 'courses/admin/video.js' %}" defer></script>
+<script src="{% static 'lesson_media/admin/media.js' %}" defer></script>{% endif %}{% endblock %}
 {% block bodyclass %}{{ block.super }} salah-editor-page{% endblock %}
 
 {% block breadcrumbs %}
@@ -64,6 +66,8 @@
       <span class="se-all-done">Все тексты курса переведены на все языки.</span>
     {% endif %}
   </div>
+
+  {% include "admin/lesson_media/watch.html" %}
 
   <div class="se-layout">
     <nav class="se-tree" aria-label="Содержание курса">
@@ -355,10 +359,11 @@
           {% if next_id %}<a href="?node={{ next_id|urlencode }}">Следующее →</a>{% endif %}
         </nav>
       </form>
+      {{ media_block }}
       {% if editable %}
         <form method="post" action="{{ structure_url }}" id="se-structure" class="se-structure-form" hidden>
           {% csrf_token %}
-          <input type="hidden" name="revision" value="{{ original.checksum_sha256 }}">
+          <input type="hidden" name="revision" value="{{ structure_revision }}">
           <input type="hidden" name="return" value="{{ node.id }}">
         </form>
       {% endif %}

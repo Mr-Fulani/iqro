@@ -12,6 +12,8 @@ import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/lesson_media_view.dart';
+import '../courses/lesson_video_player.dart';
 import 'salah_3d.dart';
 import 'salah_display.dart';
 import 'salah_formula_card.dart';
@@ -319,6 +321,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
                   document: widget.document,
                   lesson: lesson,
                   step: _steps[index],
+                  showMedia: index == 0,
                   audioOwner: _audioOwner,
                   visual: _StepVisualState(
                     index: index,
@@ -528,6 +531,7 @@ class _StepPage extends ConsumerWidget {
     required this.document,
     required this.lesson,
     required this.step,
+    required this.showMedia,
     required this.audioOwner,
     required this.visual,
     super.key,
@@ -537,6 +541,10 @@ class _StepPage extends ConsumerWidget {
   final SalahCourseDocument document;
   final SalahLesson lesson;
   final SalahStep step;
+
+  /// The first step opens with the lesson's video, slides and banners, as
+  /// on the site; the video stops when the learner turns the page.
+  final bool showMedia;
   final Object audioOwner;
   final _StepVisualState visual;
 
@@ -555,6 +563,19 @@ class _StepPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // Practice is the prayer alone: no media, as no instruction. Each
+          // block is followed by its gap.
+          if (showMedia && display.learning && lesson.media.isNotEmpty)
+            LessonMediaView(
+              media: lesson.media,
+              videoBuilder: (context, video) => LessonVideo(
+                course: courseSlug,
+                lesson: lesson.slug,
+                lessonTitle: lesson.title,
+                video: video,
+                language: document.course.language,
+              ),
+            ),
           if (media != null) ...<Widget>[
             _StepVisual(courseSlug: courseSlug, media: media, state: visual),
             const SizedBox(height: 16),

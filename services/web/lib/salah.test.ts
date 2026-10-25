@@ -164,6 +164,35 @@ test("a lesson bundle carries only the formulas and media its steps use", () => 
   assert.deepEqual(Object.keys(fajr.formulas).sort(), ["fatiha", "ruku-tasbih", "takbir", "tashahhud", "taslim"]);
 });
 
+test("a lesson carries its video, slides and banner in the thematic courses' format", () => {
+  const media = lesson("wudu").media;
+  assert.deepEqual(media?.map((block) => block.type), ["video", "slides", "banner"]);
+  const [video, slides, banner] = media!;
+  assert.equal(video?.type === "video" && video.video.spoken_language, "ru");
+  assert.equal(slides?.type === "slides" && slides.slides[0]!.caption, "Порядок омовения: лицо, руки, голова, ноги");
+  assert.equal(banner?.type === "banner" && banner.alt, "Купол и минарет мечети на рассвете");
+  // A lesson without media has none, as the server sends it.
+  assert.equal(lesson("fajr").media, undefined);
+  // The player gets the steps alone: the page draws the media on the server.
+  assert.equal(salahLessonBundle(course, lesson("wudu")).lesson.media, undefined);
+});
+
+test("lesson media from a newer course or another host are left out, a broken block breaks", () => {
+  const document = structuredClone(example) as { lessons: Array<Record<string, unknown>> };
+  const wudu = document.lessons.find((item) => item.slug === "wudu")!;
+  const blocks = wudu.media as Array<Record<string, unknown>>;
+  blocks.push({ type: "gallery", items: [] });
+  blocks[2] = { ...blocks[2], image: { ...(blocks[2]!.image as object), url: "https://example.com/x.webp" } };
+  const parsed = findSalahLesson(parseSalahCourseDocument(document), "wudu");
+  assert.deepEqual(parsed?.media?.map((block) => block.type), ["video", "slides"]);
+
+  document.lessons.find((item) => item.slug === "fajr")!.media = [{ type: "gallery" }];
+  assert.equal(findSalahLesson(parseSalahCourseDocument(document), "fajr")?.media, undefined);
+
+  wudu.media = "slides";
+  assert.throws(() => parseSalahCourseDocument(document), SalahDocumentError);
+});
+
 test("a step is read from the hash or the query", () => {
   assert.equal(stepSlugFromLocation("#fajr.r1.ruku", ""), "fajr.r1.ruku");
   assert.equal(stepSlugFromLocation("#step=fajr.r2.taslim", ""), "fajr.r2.taslim");

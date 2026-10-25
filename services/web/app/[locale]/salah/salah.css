@@ -209,6 +209,16 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* The lesson's video, slides and banners open the first step, above its picture and text;
+   as wide as a lesson of the tajweed and thematic courses (760px), so the step stays near. */
+.salah-lesson-media {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: 100%;
+  max-width: 760px;
+  min-width: 0;
+}
+
 .salah-step-image {
   display: block;
   width: 100%;

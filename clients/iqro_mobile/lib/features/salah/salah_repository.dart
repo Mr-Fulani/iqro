@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import '../../core/network/api_client.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
+import '../courses/course_models.dart' show LessonMedia;
 import '../dua/dua_repository.dart' show canUseUnverifiedDuaFallback;
 import 'salah_models.dart';
 
@@ -50,14 +53,20 @@ class SalahRepository {
     ApiClient? api,
     SalahRemoteGateway? remote,
     required LocalDatabase database,
+    Future<void> Function(Iterable<LessonMedia> media)? keepMedia,
   }) : assert(api != null || remote != null),
        _remote = remote ?? ApiSalahRemoteGateway(api!),
-       _database = database;
+       _database = database,
+       _keepMedia = keepMedia;
 
   static const _documentMaxAge = Duration(days: 30);
 
   final SalahRemoteGateway _remote;
   final LocalDatabase _database;
+
+  /// Keeps the pictures of the lessons' media for offline with the document,
+  /// as the tajweed course does.
+  final Future<void> Function(Iterable<LessonMedia> media)? _keepMedia;
 
   static String documentCacheKey(
     String slug,
@@ -89,6 +98,8 @@ class SalahRepository {
     final cached = await _cachedDocument(slug, language, version);
     if (cached != null) {
       await _rememberVersion(slug, language, version);
+      // Pictures that did not arrive with the document are fetched now.
+      _keepPictures(cached);
       return cached;
     }
 
@@ -102,7 +113,19 @@ class SalahRepository {
     final documentVersion = document.course.version;
     await _write(documentCacheKey(slug, language, documentVersion), payload);
     await _rememberVersion(slug, language, documentVersion);
+    _keepPictures(document);
     return document;
+  }
+
+  /// In the background: the course opens without waiting for its pictures.
+  void _keepPictures(SalahCourseDocument document) {
+    final keep = _keepMedia;
+    if (keep == null) return;
+    unawaited(
+      Future<void>.sync(
+        () => keep(document.lessons.expand((lesson) => lesson.media)),
+      ).catchError((Object _) {}),
+    );
   }
 
   Future<String> _activeVersion(String slug) async {

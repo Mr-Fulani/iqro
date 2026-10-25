@@ -145,6 +145,8 @@ function salahCourse(language) {
   for (const item of Object.values(document.media)) {
     item.url = item.url.replace("https://media.iqro.forum/", "/media/");
   }
+  // The wudu lesson's video, slide and banner come from this mock's /media, as a thematic course's.
+  for (const lesson of document.lessons) if (lesson.media) lesson.media = lesson.media.map(mockMediaBlock);
   return document;
 }
 
@@ -252,6 +254,7 @@ const courseMediaPictures = {
   "5555555555eeeeeeeeee": "slide-timeline",
   "6666666666ffffffffff": "slide-pattern",
   "7777777777aaaaaaaaaa": "banner-minaret",
+  "9999999999aaaaaaaaaa": "slide-timeline",
   "2222222222bbbbbbbbbb": "banner-minaret",
 };
 const courseImage = (image) => ({ ...image, url: toMockMedia(image.url), small_url: toMockMedia(image.small_url) });

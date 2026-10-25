@@ -17,6 +17,7 @@ import {
   type LessonProgress,
   type LessonStatus,
 } from "./course-progress.ts";
+import { CourseDocumentError, parseLessonMedia, type CourseMediaBlock } from "./thematic-courses.ts";
 
 export const SALAH_COURSE_SLUG = "hanbali-umdah";
 export const SALAH_SCHEMA_VERSION = 1;
@@ -90,6 +91,11 @@ export type SalahLesson = {
   minutes: number;
   prayer?: SalahPrayer;
   steps: SalahStep[];
+  /**
+   * Video, slides and banners on the first step, in the author's order, in the format of the
+   * thematic courses (docs/salah/lesson-media.md). Absent without media, as the server sends it.
+   */
+  media?: CourseMediaBlock[];
 };
 
 export type SalahAudioSegment = { ayah: number; start_ms: number; end_ms: number };
@@ -196,6 +202,16 @@ function parseStepAudio(value: unknown): SalahFormulaAudio | undefined {
   return isRecord(value) && typeof value.url === "string" && value.url.trim() ? { url: value.url } : undefined;
 }
 
+/** The blocks are those of thematic courses; a broken one breaks this document like any field. */
+function parseMedia(value: unknown, where: string): CourseMediaBlock[] {
+  try {
+    return parseLessonMedia(value, where);
+  } catch (error) {
+    if (error instanceof CourseDocumentError) throw new SalahDocumentError(error.detail);
+    throw error;
+  }
+}
+
 export function isSalahSlug(value: string): boolean {
   return value.length <= 64 && SLUG_PATTERN.test(value);
 }
@@ -283,7 +299,9 @@ export function parseSalahCourseDocument(value: unknown): SalahCourseDocument {
         ...(audio ? { audio } : {}),
       };
     });
-    return { ...(lesson as SalahLesson), steps };
+    const { media: rawMedia, ...fields } = lesson as SalahLesson & { media?: unknown };
+    const lessonMedia = parseMedia(rawMedia, `lessons.${slug}.media`);
+    return { ...(fields as SalahLesson), steps, ...(lessonMedia.length ? { media: lessonMedia } : {}) };
   });
 
   const sections = (value.sections as unknown[]).map((section, index): SalahSection => {
@@ -334,9 +352,12 @@ export function nextSalahLesson(document: SalahCourseDocument, slug: string): Sa
 export function salahLessonBundle(document: SalahCourseDocument, lesson: SalahLesson): SalahLessonBundle {
   const formulaIds = new Set(lesson.steps.flatMap((step) => step.formulas));
   const mediaKeys = new Set(lesson.steps.flatMap((step) => (step.media ? [step.media] : [])));
+  // The media are drawn on the server (LessonMedia): the player does not need them.
+  const forPlayer: SalahLesson = { ...lesson };
+  delete forPlayer.media;
   return {
     courseVersion: document.course.version,
-    lesson,
+    lesson: forPlayer,
     formulas: Object.fromEntries(Object.entries(document.formulas).filter(([id]) => formulaIds.has(id))),
     media: Object.fromEntries(Object.entries(document.media).filter(([key]) => mediaKeys.has(key))),
   };

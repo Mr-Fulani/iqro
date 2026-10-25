@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { preload } from "react-dom";
 
 import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
@@ -191,9 +191,12 @@ function StepVisual({
 export function SalahStepPlayer({
   bundle,
   nextLesson,
+  media: lessonMedia,
 }: {
   bundle: SalahLessonBundle;
   nextLesson: { slug: string; title: string } | null;
+  /** The lesson's video, slides and banners (LessonMedia), drawn on the server; on the first step. */
+  media?: ReactNode;
 }) {
   const { direction, formatNumber, locale, t } = useI18n();
   const { lesson, formulas, media, courseVersion } = bundle;
@@ -213,6 +216,7 @@ export function SalahStepPlayer({
   const three = useSalah3D(scenes[index] ?? null, scenes.some(Boolean), index);
   const practice = display.mode === "practice";
   const isLast = index === steps.length - 1;
+  const section = useRef<HTMLElement>(null);
 
   // Open on the linked step, else where the visitor left off.
   useEffect(() => {
@@ -252,6 +256,11 @@ export function SalahStepPlayer({
     const image = upcoming ? media[upcoming] : undefined;
     if (image) preload(image.url, { as: "image" });
   }, [index, media, steps]);
+
+  // The lesson video stays on the hidden first step; leaving the step pauses it too.
+  useEffect(() => {
+    section.current?.querySelectorAll("video").forEach((video) => video.pause());
+  }, [index]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -434,6 +443,7 @@ export function SalahStepPlayer({
 
   return (
     <section
+      ref={section}
       className={`surface salah-player${practice ? " is-practice" : ""}${formulaFont ? " has-formula-font" : ""}`}
       aria-label={lesson.title}
       aria-busy={!ready}
@@ -501,6 +511,8 @@ export function SalahStepPlayer({
           const repeatTarget = stepRepeatTarget(item, formulas);
           return (
             <li key={item.slug} hidden={itemIndex !== index} className="salah-step" data-step={item.slug}>
+              {/* The lesson's media open its first step, as in the app; practice is the prayer alone. */}
+              {itemIndex === 0 && !practice && lessonMedia ? <div className="salah-lesson-media">{lessonMedia}</div> : null}
               {image ? (
                 <StepVisual
                   media={image}

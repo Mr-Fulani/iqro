@@ -1,5 +1,6 @@
 // Screenshots of the courses for the pull request, on the shared examples
-// of docs/courses (and docs/tajweed for the media of a tajweed lesson):
+// of docs/courses (and docs/tajweed and docs/salah for the media of a
+// tajweed and a prayer lesson):
 //
 //   flutter test test/features/course_screenshots_test.dart \
 //     --dart-define=SCREENSHOT_DIR=/tmp/shots
@@ -30,6 +31,8 @@ import 'package:iqro_mobile/features/courses/course_lesson_screen.dart';
 import 'package:iqro_mobile/features/courses/course_notes_view.dart';
 import 'package:iqro_mobile/features/courses/course_progress_store.dart';
 import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
+import 'package:iqro_mobile/features/salah/salah_lesson_screen.dart';
+import 'package:iqro_mobile/features/salah/salah_models.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_models.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_progress.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_repository.dart';
@@ -39,6 +42,7 @@ import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'course_test_data.dart';
 import 'lesson_media_test_data.dart';
 import 'lesson_video_test_data.dart';
+import 'salah_models_test.dart' show salahFixture;
 import 'tajweed_course_test_data.dart';
 
 const _directory = String.fromEnvironment('SCREENSHOT_DIR');
@@ -101,6 +105,7 @@ Future<void> _pump(
   String locale = 'ru',
   bool dark = false,
   Map<String, Object?>? tajweed,
+  Map<String, Object?>? salah,
 }) async {
   tester.view.physicalSize = _size;
   tester.view.devicePixelRatio = _pixelRatio;
@@ -148,6 +153,11 @@ Future<void> _pump(
         path: '/tajweed/lesson/:lesson',
         builder: (context, state) =>
             TajweedLessonScreen(lessonSlug: state.pathParameters['lesson']!),
+      ),
+      GoRoute(
+        path: '/salah/lesson/:lesson',
+        builder: (context, state) =>
+            SalahLessonScreen(lessonSlug: state.pathParameters['lesson']!),
       ),
     ],
   );
@@ -216,6 +226,18 @@ Future<void> _pump(
           tajweedProgressSyncProvider.overrideWithValue(_NoTajweedSync()),
           tajweedCourseRecitationProvider.overrideWithValue(() async => null),
           audioRepositoryProvider.overrideWithValue(_NoAudioRepository()),
+          // A prayer lesson on its first step, without the offline pictures.
+          salahCourseProvider.overrideWith(
+            (ref, slug) async =>
+                SalahCourseDocument.fromJson(salah ?? salahFixture()),
+          ),
+          salahOfflineImagesProvider.overrideWith(
+            (ref, slug) async => const <String, String>{},
+          ),
+          // The next step's picture is fetched ahead; no disk cache in tests.
+          salahImageProvider.overrideWithValue(
+            (_) => MemoryImage(pictures['2222222222']!),
+          ),
           courseFeedbackGatewayProvider.overrideWithValue(
             FakeCourseFeedbackGateway(),
           ),
@@ -492,6 +514,50 @@ Future<Map<String, Uint8List>> _pictures() async {
       direction: TextDirection.rtl,
     );
   });
+  // The slide of the prayer example's «wudu»: the order of the washing.
+  final wudu = await draw(const Size(800, 450), (canvas) {
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 800, 450),
+      Paint()..color = const Color(0xFFF7F1E3),
+    );
+    text(canvas, 'Обязательное в вуду', const Offset(400, 62), 700);
+    const parts = <String>['Лицо', 'Руки', 'Голова', 'Ноги'];
+    for (final (index, part) in parts.indexed) {
+      final left = 40.0 + index * 185;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, 140, 165, 170),
+          const Radius.circular(24),
+        ),
+        Paint()..color = index.isEven ? green : const Color(0xFF1F6F8B),
+      );
+      text(
+        canvas,
+        '${index + 1}',
+        Offset(left + 82, 195),
+        150,
+        size: 48,
+        color: Colors.white,
+      );
+      text(
+        canvas,
+        part,
+        Offset(left + 82, 265),
+        150,
+        size: 26,
+        weight: FontWeight.w400,
+        color: Colors.white,
+      );
+    }
+    text(
+      canvas,
+      'по порядку и без долгих перерывов',
+      const Offset(400, 380),
+      700,
+      size: 26,
+      weight: FontWeight.w400,
+    );
+  });
   // The prayer course's cover in the catalog: an arch over a prayer mat.
   final prayerCover = await draw(const Size(640, 360), (canvas) {
     canvas.drawRect(
@@ -527,6 +593,7 @@ Future<Map<String, Uint8List>> _pictures() async {
     canvas.drawCircle(const Offset(331, 108), 20, Paint()..color = green);
   });
   return {
+    '9999999999': wudu,
     'fedcba9876': prayerCover,
     '1111111111': scheme,
     '3333333333': niyya,
@@ -763,6 +830,24 @@ void main() {
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
     await _capture(tester, 'app-tajweed-notes-ru');
   }, skip: _directory.isEmpty);
+
+  testWidgets('prayer lesson media on its first step', (tester) async {
+    await _pump(tester, location: '/salah/lesson/wudu');
+    await _capture(tester, 'app-salah-media-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets(
+    'prayer lesson media further down: the slide and the banner',
+    (tester) async {
+      await _pump(tester, location: '/salah/lesson/wudu');
+      await tester.drag(
+        find.byKey(const ValueKey('lesson-media-slides')),
+        const Offset(0, -560),
+      );
+      await _capture(tester, 'app-salah-media-banner-ru');
+    },
+    skip: _directory.isEmpty,
+  );
 
   testWidgets('lesson in the dark theme', (tester) async {
     await _pump(tester, location: '/courses/ramadan/taraviikh', dark: true);
