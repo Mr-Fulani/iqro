@@ -1,3 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/ic_notification_iqro,@drawable/iqro_notification_logo,@drawable/iqro_seal_notification,@drawable/iqro_seal_notification_large,@drawable/iqro_status_icon" />
+    tools:keep="@drawable/ic_notification_iqro,@drawable/iqro_notification_logo,@drawable/iqro_seal_notification,@drawable/iqro_seal_notification_large,@drawable/iqro_status_icon,@drawable/iqro_media_*" />

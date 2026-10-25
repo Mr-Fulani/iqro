@@ -653,6 +653,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get nextSurah => 'السورة التالية';
 
   @override
+  String get mediaBack10 => 'رجوع 10 ثوانٍ';
+
+  @override
+  String get mediaForward10 => 'تقديم 10 ثوانٍ';
+
+  @override
+  String mediaSpeed(String speed) {
+    return 'السرعة $speed×';
+  }
+
+  @override
   String get speed => 'السرعة';
 
   @override

@@ -663,6 +663,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextSurah => 'Next surah';
 
   @override
+  String get mediaBack10 => 'Back 10 seconds';
+
+  @override
+  String get mediaForward10 => 'Forward 10 seconds';
+
+  @override
+  String mediaSpeed(String speed) {
+    return 'Speed $speed×';
+  }
+
+  @override
   String get speed => 'Speed';
 
   @override

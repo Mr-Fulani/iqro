@@ -1284,6 +1284,24 @@ abstract class AppLocalizations {
   /// **'Next surah'**
   String get nextSurah;
 
+  /// No description provided for @mediaBack10.
+  ///
+  /// In en, this message translates to:
+  /// **'Back 10 seconds'**
+  String get mediaBack10;
+
+  /// No description provided for @mediaForward10.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward 10 seconds'**
+  String get mediaForward10;
+
+  /// No description provided for @mediaSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed {speed}×'**
+  String mediaSpeed(String speed);
+
   /// No description provided for @speed.
   ///
   /// In en, this message translates to:
