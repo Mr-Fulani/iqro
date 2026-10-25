@@ -175,9 +175,16 @@ Future<void> _pump(
               environment: 'production',
             ),
           ),
-          // The examples' covers are not real files: the placeholder shows.
+          // The examples' covers are not real files: the placeholder shows,
+          // except for the prayer course's, drawn here.
           courseImageProvider.overrideWithValue(
-            (_) => MemoryImage(Uint8List(0)),
+            (url) => MemoryImage(
+              pictures.entries
+                      .where((entry) => url.contains(entry.key))
+                      .firstOrNull
+                      ?.value ??
+                  Uint8List(0),
+            ),
           ),
           // The examples' slides and banner, drawn here.
           ...lessonMediaOverrides(
@@ -485,7 +492,42 @@ Future<Map<String, Uint8List>> _pictures() async {
       direction: TextDirection.rtl,
     );
   });
+  // The prayer course's cover in the catalog: an arch over a prayer mat.
+  final prayerCover = await draw(const Size(640, 360), (canvas) {
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 640, 360),
+      Paint()
+        ..shader = ui.Gradient.linear(
+          Offset.zero,
+          const Offset(640, 360),
+          const <Color>[green, Color(0xFF061D18)],
+        ),
+    );
+    final arch = Path()
+      ..moveTo(230, 330)
+      ..lineTo(230, 150)
+      ..quadraticBezierTo(230, 70, 320, 40)
+      ..quadraticBezierTo(410, 70, 410, 150)
+      ..lineTo(410, 330);
+    canvas.drawPath(
+      arch,
+      Paint()
+        ..color = gold
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(265, 250, 110, 80),
+        const Radius.circular(8),
+      ),
+      Paint()..color = const Color(0xFF8C2F39),
+    );
+    canvas.drawCircle(const Offset(320, 115), 22, Paint()..color = gold);
+    canvas.drawCircle(const Offset(331, 108), 20, Paint()..color = green);
+  });
   return {
+    'fedcba9876': prayerCover,
     '1111111111': scheme,
     '3333333333': niyya,
     '2222222222': banner,

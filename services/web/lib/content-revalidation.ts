@@ -82,6 +82,12 @@ type ThematicCourseChange = {
   version: string;
 };
 
+/** Catalog cards changed outside a release: the cover of the prayer or tajweed course. */
+type CourseCatalogChange = {
+  type: "courses.catalog.changed";
+  action: string;
+};
+
 type QuizChange = {
   type: "quizzes.quiz.changed";
   action: string;
@@ -97,6 +103,7 @@ export type ContentChange =
   | SalahCourseChange
   | TajweedCourseChange
   | ThematicCourseChange
+  | CourseCatalogChange
   | QuizChange
   | SocialProfilesChange
   | AnnouncementsChange;
@@ -223,6 +230,11 @@ export function parseContentChange(value: unknown): ContentChange | null {
     return value as ThematicCourseChange;
   }
 
+  if (value.type === "courses.catalog.changed") {
+    if (!hasExactKeys(value, ["type", "action"]) || value.action !== "updated") return null;
+    return value as CourseCatalogChange;
+  }
+
   if (value.type === "quizzes.quiz.changed") {
     if (!hasExactKeys(value, ["type", "action", "quiz", "version"])) return null;
     if (
@@ -292,6 +304,12 @@ export function revalidateContentChange(change: ContentChange): void {
     for (const locale of SUPPORTED_LOCALES) expireTag(`tajweed:locale:${locale}`);
     revalidatePath("/[locale]/tajweed", "page");
     revalidatePath("/[locale]/tajweed/[lesson]", "page");
+    return;
+  }
+
+  if (change.type === "courses.catalog.changed") {
+    expireTag("courses:catalog");
+    revalidatePath("/[locale]/courses", "page");
     return;
   }
 

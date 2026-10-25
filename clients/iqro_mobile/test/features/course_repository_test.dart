@@ -351,6 +351,44 @@ void main() {
       expect((await repository.catalog('ru')).courses.single.version, '1');
     });
 
+    test(
+      'prayer and tajweed covers come with the list and stay offline',
+      () async {
+        var catalog = await repository.catalog('ru');
+        expect(
+          catalog.builtIn.salah!.cardUrl,
+          'https://media.iqro.forum/courses/covers/fedcba9876543210fedc-640.webp',
+        );
+        expect(catalog.builtIn.salah!.width, 1280);
+        expect(catalog.builtIn.tajweed, isNull);
+
+        remote.list = offlineError;
+        catalog = await repository.catalog('ru');
+        expect(catalog.offline, isTrue);
+        // No course was opened, yet the cards keep their covers.
+        expect(catalog.courses, isEmpty);
+        expect(
+          catalog.builtIn.salah!.url,
+          endsWith('fedcba9876543210fedc.webp'),
+        );
+      },
+    );
+
+    test('no covers from an older server or a cover that does not fit', () {
+      final older = courseListJson()..remove('built_in');
+      expect(BuiltInCourseCovers.fromList(older).salah, isNull);
+      final broken = courseListJson()
+        ..['built_in'] = <String, Object?>{
+          'salah': <String, Object?>{
+            'cover': <String, Object?>{'url': ''},
+          },
+          'tajweed': 'cover',
+        };
+      final covers = BuiltInCourseCovers.fromList(broken);
+      expect((covers.salah, covers.tajweed), (null, null));
+      expect(parseCourseList(broken), hasLength(1));
+    });
+
     test('a server without the section shows no courses', () async {
       remote.list = notFoundError;
       final catalog = await repository.catalog('ru');

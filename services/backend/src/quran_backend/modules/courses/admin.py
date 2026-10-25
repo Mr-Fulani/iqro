@@ -43,6 +43,7 @@ from django.utils.html import format_html
 from quran_backend.modules.alerts.services import video_upload_failed
 from quran_backend.modules.audio.admin import _uploaded_file_path
 from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.core.content_revalidation import enqueue_courses_catalog_change
 from quran_backend.modules.core.editorial.diff import line_diff
 from quran_backend.modules.core.object_storage import ObjectStorageError
 from quran_backend.modules.courses.document import (
@@ -75,6 +76,7 @@ from quran_backend.modules.courses.media import CourseCoverError, upload_course_
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
     SPOKEN_LANGUAGES,
+    BuiltInCourseCover,
     Course,
     CourseDocument,
     CourseLesson,
@@ -185,8 +187,12 @@ class RevisionForm(forms.ModelForm):  # type: ignore[type-arg]
         return instance
 
 
-class CourseAdminForm(RevisionForm):
-    conflict_subject = "курс"
+class CoverForm(forms.Form):
+    """A 16:9 cover of a thematic or built-in course (courses/media.py).
+
+    Goes before the model form in the bases: BaseModelForm.clean does not call super().
+    """
+
     cover_upload = forms.FileField(
         required=False,
         label="Загрузить обложку",
@@ -194,6 +200,52 @@ class CourseAdminForm(RevisionForm):
         widget=forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png,image/webp"}),
     )
     remove_cover = forms.BooleanField(required=False, label="Убрать обложку")
+
+    _cover: Any = None
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = cast(dict[str, Any], super().clean())
+        uploaded = cleaned.get("cover_upload")
+        if uploaded and cleaned.get("remove_cover"):
+            self.add_error("remove_cover", "Либо загрузите новую обложку, либо уберите текущую.")
+        elif uploaded and not self.errors:
+            try:
+                self._cover = upload_course_cover(uploaded)
+            except CourseCoverError as exc:
+                self.add_error("cover_upload", str(exc))
+            except ImproperlyConfigured, ObjectStorageError, OSError:
+                logger.exception("Course cover upload failed")
+                self.add_error("cover_upload", "Не удалось сохранить обложку. Повторите позже.")
+        return cleaned
+
+    def apply_cover(self, target: Course | BuiltInCourseCover) -> bool:
+        """Puts the new cover on [target] or takes it away; says if it changed."""
+        if self._cover is not None:
+            target.cover_object_key = self._cover.object_key
+            target.cover_thumb_object_key = self._cover.thumb_object_key
+            target.cover_width = self._cover.width
+            target.cover_height = self._cover.height
+            return True
+        if self.cleaned_data.get("remove_cover") and target.cover_object_key:
+            target.cover_object_key = ""
+            target.cover_thumb_object_key = ""
+            target.cover_width = None
+            target.cover_height = None
+            return True
+        return False
+
+
+def cover_preview(target: Course | BuiltInCourseCover) -> str:
+    if not target.cover_thumb_object_key:
+        return "—"
+    return format_html(
+        '<img src="{}" alt="" width="320" height="180" style="border-radius:6px">',
+        public_audio_url(target.cover_thumb_object_key),
+    )
+
+
+class CourseAdminForm(CoverForm, RevisionForm):
+    conflict_subject = "курс"
 
     class Meta:
         model = Course
@@ -212,35 +264,9 @@ class CourseAdminForm(RevisionForm):
             for language in COURSE_LANGUAGES
         }
 
-    _cover: Any = None
-
-    def clean(self) -> dict[str, Any]:
-        cleaned = super().clean()
-        uploaded = cleaned.get("cover_upload")
-        if uploaded and cleaned.get("remove_cover"):
-            self.add_error("remove_cover", "Либо загрузите новую обложку, либо уберите текущую.")
-        elif uploaded and not self.errors:
-            try:
-                self._cover = upload_course_cover(uploaded)
-            except CourseCoverError as exc:
-                self.add_error("cover_upload", str(exc))
-            except ImproperlyConfigured, ObjectStorageError, OSError:
-                logger.exception("Course cover upload failed")
-                self.add_error("cover_upload", "Не удалось сохранить обложку. Повторите позже.")
-        return cleaned
-
     def save(self, commit: bool = True) -> Course:
         course = cast(Course, super().save(commit=False))
-        if self._cover is not None:
-            course.cover_object_key = self._cover.object_key
-            course.cover_thumb_object_key = self._cover.thumb_object_key
-            course.cover_width = self._cover.width
-            course.cover_height = self._cover.height
-        elif self.cleaned_data.get("remove_cover"):
-            course.cover_object_key = ""
-            course.cover_thumb_object_key = ""
-            course.cover_width = None
-            course.cover_height = None
+        self.apply_cover(course)
         if commit:
             course.save()
         return course
@@ -408,12 +434,7 @@ class CourseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     @admin.display(description="Обложка")
     def current_cover(self, obj: Course) -> str:
-        if not obj.cover_thumb_object_key:
-            return "—"
-        return format_html(
-            '<img src="{}" alt="" width="320" height="180" style="border-radius:6px">',
-            public_audio_url(obj.cover_thumb_object_key),
-        )
+        return cover_preview(obj)
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Course]:
         return super().get_queryset(request).select_related("live_release")
@@ -1503,3 +1524,59 @@ class CourseDocumentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     def has_delete_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
         return False
+
+
+class BuiltInCourseCoverForm(CoverForm, forms.ModelForm):  # type: ignore[type-arg]
+    class Meta:
+        model = BuiltInCourseCover
+        fields = ()
+
+    def save(self, commit: bool = True) -> BuiltInCourseCover:
+        target = cast(BuiltInCourseCover, super().save(commit=False))
+        self.cover_changed = self.apply_cover(target)
+        if commit:
+            target.save()
+        return target
+
+
+@admin.register(BuiltInCourseCover)
+class BuiltInCourseCoverAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """Covers of the prayer and tajweed cards in the catalog; outside their versions."""
+
+    form = BuiltInCourseCoverForm
+    list_display = ("__str__", "has_cover")
+    readonly_fields = ("current_cover",)
+    fieldsets = (
+        (
+            "Обложка 16:9 в каталоге «Курсы»",
+            {
+                "fields": ("current_cover", "cover_upload", "remove_cover"),
+                "description": (
+                    "Большая картинка карточки курса в каталоге «Курсы» на сайте и в приложении, "
+                    "как у тематических курсов. Она видна сразу после сохранения: новая версия "
+                    "курса для этого не нужна. Без обложки остаётся карточка со значком."
+                ),
+            },
+        ),
+    )
+
+    def has_add_permission(self, _request: HttpRequest) -> bool:
+        return False
+
+    def has_delete_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
+        return False
+
+    def save_model(
+        self, request: HttpRequest, obj: BuiltInCourseCover, form: Any, change: bool
+    ) -> None:
+        super().save_model(request, obj, form, change)
+        if form.cover_changed:
+            enqueue_courses_catalog_change(action="updated")
+
+    @admin.display(description="Обложка", boolean=True)
+    def has_cover(self, obj: BuiltInCourseCover) -> bool:
+        return bool(obj.cover_object_key)
+
+    @admin.display(description="Сейчас")
+    def current_cover(self, obj: BuiltInCourseCover) -> str:
+        return cover_preview(obj)

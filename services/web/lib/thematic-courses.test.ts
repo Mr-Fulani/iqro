@@ -11,6 +11,7 @@ import {
   isQuizSlug,
   lessonImageSrcSet,
   mediaVideo,
+  parseBuiltInCovers,
   parseCourseDocument,
   parseCourseList,
   readThematicProgress,
@@ -82,6 +83,25 @@ test("the contract examples parse; unknown fields are ignored", () => {
   (extended.course as Record<string, unknown>).trailer = "x";
   ((extended.lessons as Record<string, Record<string, unknown>>[])[1]!).video!.codec = "h264";
   assert.deepEqual(parseCourseDocument(extended), { outdated: false, document });
+});
+
+test("the prayer and tajweed cards take their covers from `built_in`; without one they keep the icon", () => {
+  const listPayload = example("course-list.example.json");
+  assert.deepEqual(parseBuiltInCovers(listPayload), {
+    salah: {
+      url: "https://media.iqro.forum/courses/covers/fedcba9876543210fedc.webp",
+      thumb_url: "https://media.iqro.forum/courses/covers/fedcba9876543210fedc-640.webp",
+      width: 1280,
+      height: 720,
+    },
+    tajweed: null,
+  });
+  // An older server without the field, and a cover that does not parse: no cover, the courses stay.
+  assert.deepEqual(parseBuiltInCovers({ language: "ru", courses: [] }), { salah: null, tajweed: null });
+  const broken = example("course-list.example.json");
+  broken.built_in = { salah: { cover: { url: "http://example.com/a.webp" } }, tajweed: "?" };
+  assert.deepEqual(parseBuiltInCovers(broken), { salah: null, tajweed: null });
+  assert.equal(parseCourseList(broken).length, 1);
 });
 
 test("a lesson video is the file the server chose for the language; other hosts are left out", () => {
