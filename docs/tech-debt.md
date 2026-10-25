@@ -103,6 +103,50 @@ staging и сверить 5xx, p95/p99 и запас соединений Postgr
 - синхронизация прогресса курса между устройствами — этап 2 в
   [`salah/learning-spec.md`](salah/learning-spec.md) §8.
 
+### 1.6. Включить статистику посещений сайта (GA4, Яндекс Метрика)
+
+**Откуда:** [PR #125](https://github.com/Mr-Fulani/iqro/pull/125), [analytics.md](analytics.md).
+
+**Состояние:** ресурсы в Google и Яндексе созданы и связаны, код баннера согласия и счётчиков в
+PR #125. Без ID при сборке баннер и счётчики выключены.
+
+**Что сделать при выкладке PR #125:**
+
+1. В `services/backend/.env.production` прописать `WEB_GA_MEASUREMENT_ID=G-TKV2YGN4KZ` и
+   `WEB_YANDEX_METRIKA_ID=113787874`.
+2. `LEGAL_EFFECTIVE_DATE` — дата выкладки: политика cookies, политика конфиденциальности и
+   «Поставщики» изменились.
+3. Пересобрать образы **web** (ID встраиваются при сборке) и **gateway** (новый CSP).
+
+**Проверка после выкладки:** на iqro.forum появляется баннер после первой прокрутки; после
+«Принять» в «Отчёте в реальном времени» GA и в Метрике виден визит. Через 1–2 дня отметить в GA
+ключевыми события `lesson_complete` и `share` («Администратор → События», звёздочка).
+
+### 1.7. Соцсети IQRO в Search Console и на сайте
+
+**Откуда:** новые «ресурсы платформ» Search Console (июль 2026): клики, показы и запросы, по
+которым посты из соцсетей находят в Google Поиске, Discover и Новостях.
+
+**Аккаунты IQRO сейчас:** TikTok [@iqro.forum](https://www.tiktok.com/@iqro.forum),
+Instagram [iqro.forum](https://www.instagram.com/iqro.forum/),
+Threads [@iqro.forum](https://www.threads.net/@iqro.forum).
+
+**Сделано 25.10.2026:** в Search Console (fulani.dev@gmail.com) привязаны Instagram @iqro.forum
+и TikTok @iqro.forum; данные появляются в течение 48 часов. Instagram для этого переведён в
+аккаунт автора («Автор цифрового контента», категория в профиле скрыта) и стал открытым.
+Важно: в Chrome Instagram помнит и mudaroba_store — при повторной привязке проверять, что окно
+согласия называет iqro.forum.
+Там же в админке прода «Соцсети» опубликованы TikTok, Instagram и Threads @iqro.forum с флагом
+«для SEO»: они в подвале сайта и в `sameAs` разметки Organization.
+
+**Что осталось:**
+
+1. Threads Search Console пока не поддерживает (только Instagram, TikTok, X, YouTube) —
+   проверить позже. Когда появятся аккаунты X и YouTube — добавить их так же.
+2. Ссылки на сайт в постах и профилях помечать UTM-метками
+   (`?utm_source=instagram&utm_medium=social&utm_campaign=<кампания>`), чтобы в GA и Метрике
+   было видно, какой пост привёл людей.
+
 ## 2. Производительность и надёжность
 
 ### Инфраструктура (аудит 1.4–1.6)
