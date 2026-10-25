@@ -4,8 +4,9 @@
 
 docs/courses/README.md, «Медиа темы». The editor keeps the blocks as a JSON list:
 on the lesson row in thematic courses, in the lesson of a course version in the
-tajweed course. Nothing here knows those models: the functions take the list
-and give back a new one, and the module locks its row around them.
+tajweed and the prayer-learning courses (snapshot_media.py). Nothing here knows
+those models: the functions take the list and give back a new one, and the
+module locks its row around them.
 
 A video block only keeps the place of the lesson's video; the file and its dubs
 stay the module's own. Slides and banners are WebP pictures in R2 under
@@ -30,6 +31,7 @@ from django.core.files.uploadedfile import UploadedFile
 from quran_backend.modules.audio.player_background_upload import player_background_uploader
 from quran_backend.modules.core.editorial.markup import direction
 from quran_backend.modules.core.object_storage import ObjectUploader
+from quran_backend.modules.core.webp import webp_size
 from quran_backend.modules.courses.media import (
     FFMPEG_TIMEOUT_SECONDS,
     WEBP_QUALITIES,
@@ -38,7 +40,6 @@ from quran_backend.modules.courses.media import (
     _save_upload,
     _store,
 )
-from quran_backend.modules.salah.importer import webp_size
 
 VIDEO = "video"
 SLIDES = "slides"

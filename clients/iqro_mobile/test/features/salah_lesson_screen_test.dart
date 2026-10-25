@@ -9,9 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
+import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/courses/course_progress_store.dart';
+import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/salah/salah_3d.dart';
 import 'package:iqro_mobile/features/salah/salah_home_screen.dart';
@@ -24,6 +27,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'lesson_media_test_data.dart';
+import 'lesson_video_test_data.dart';
 import 'salah_models_test.dart' show salahFixture;
 
 void main() {
@@ -727,6 +732,75 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Иллюстрации курса · 3.6 KB'), findsOneWidget);
   });
+
+  testWidgets('the lesson media open its first step; the video stops with '
+      'the page and keeps its place under the course', (tester) async {
+    final videos = FakeVideoFactory();
+    final positions = _Positions();
+    await _pump(
+      tester,
+      location: '/salah/lesson/wudu',
+      videos: videos,
+      positions: positions,
+    );
+    expect(find.text('Шаг 1 из 2'), findsOneWidget);
+    final facade = find.byKey(const ValueKey('lesson-video-facade'));
+    final slides = find.byKey(const ValueKey('lesson-media-slides'));
+    // The video, the slide and the banner, then the step itself.
+    expect(tester.getRect(facade).bottom, lessThan(tester.getRect(slides).top));
+    expect(
+      find.text('Порядок омовения: лицо, руки, голова, ноги'),
+      findsOneWidget,
+    );
+    final banner = find.bySemanticsLabel('Купол и минарет мечети на рассвете');
+    expect(banner, findsOneWidget);
+    expect(
+      tester.getRect(banner).bottom,
+      lessThan(tester.getRect(find.text('Намерение')).top),
+    );
+
+    await tester.tap(facade);
+    await tester.pumpAndSettle();
+    expect(
+      videos.last.uri,
+      Uri.parse(
+        'https://media.iqro.forum/courses/videos/8888888888bbbbbbbbbb.mp4',
+      ),
+    );
+    expect(videos.last.value.isPlaying, isTrue);
+
+    // Turning the page stops the video and keeps where it stopped.
+    videos.last.playTo(const Duration(seconds: 42));
+    await _tapNext(tester);
+    expect(find.text('Шаг 2 из 2'), findsOneWidget);
+    expect(videos.last.disposed, isTrue);
+    expect(positions.saved, {
+      'hanbali-umdah/wudu': const Duration(seconds: 42),
+    });
+    expect(facade, findsNothing);
+    await tester.tap(find.byKey(const ValueKey('salah-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('Продолжить с 0:42'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('practice goes without the media; a lesson without them has '
+      'none', (tester) async {
+    await _pump(tester, location: '/salah/lesson/wudu');
+    final facade = find.byKey(const ValueKey('lesson-video-facade'));
+    expect(facade, findsOneWidget);
+    await tester.tap(find.text('Практика'));
+    await tester.pumpAndSettle();
+    expect(facade, findsNothing);
+    expect(find.byKey(const ValueKey('lesson-media-slides')), findsNothing);
+    await tester.tap(find.text('Обучение'));
+    await tester.pumpAndSettle();
+    expect(facade, findsOneWidget);
+
+    await _pump(tester, location: '/salah/lesson/fajr');
+    expect(find.text('Шаг 1 из 5'), findsOneWidget);
+    expect(facade, findsNothing);
+  });
 }
 
 ButtonStyleButton _button(WidgetTester tester, String key) =>
@@ -764,6 +838,39 @@ SalahCourseProgress _progress(String lesson, String step) =>
       ),
     });
 
+/// Video positions in memory, by `<course>/<lesson>`.
+class _Positions implements CourseProgressStore {
+  final saved = <String, Duration>{};
+
+  @override
+  Future<CourseVideoPositions> readPositions(String course) async =>
+      CourseVideoPositions({
+        for (final MapEntry(:key, :value) in saved.entries)
+          if (key.startsWith('$course/'))
+            key.substring(course.length + 1): (
+              position: value,
+              updatedAt: '2026-10-25T09:00:00.000Z',
+            ),
+      });
+
+  @override
+  Future<CourseVideoPositions> savePosition({
+    required String course,
+    required String lesson,
+    required Duration position,
+  }) async {
+    if (position > Duration.zero) {
+      saved['$course/$lesson'] = position;
+    } else {
+      saved.remove('$course/$lesson');
+    }
+    return readPositions(course);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _Harness {
   _Harness(this.store, this.images, this.engine, this.audio);
 
@@ -783,6 +890,8 @@ Future<_Harness> _pump(
   SalahOfflineRepository? offline,
   Salah3DViewBuilder? view3d,
   bool disableAnimations = false,
+  FakeVideoFactory? videos,
+  CourseProgressStore? positions,
 }) async {
   SharedPreferences.setMockInitialValues(preferences);
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -846,6 +955,23 @@ Future<_Harness> _pump(
         audioControllerProvider.overrideWith((ref) => audio),
         // Widget tests have no platform WebView; the scene is a stand-in.
         salah3DViewBuilderProvider.overrideWithValue(view3d ?? _Fake3D().build),
+        // The lesson media: pictures that never arrive, a fake player.
+        appConfigProvider.overrideWithValue(
+          const AppConfig(
+            apiBaseUrl: 'https://iqro.forum',
+            fallbackDownloadUrl: 'https://iqro.forum',
+            environment: 'production',
+          ),
+        ),
+        ...lessonMediaOverrides(),
+        courseImageProvider.overrideWithValue((_) => PendingImage()),
+        lessonVideoControllerProvider.overrideWithValue(
+          (videos ?? FakeVideoFactory()).call,
+        ),
+        lessonVideoWakeProvider.overrideWithValue((_) async {}),
+        courseProgressStoreProvider.overrideWithValue(
+          positions ?? _Positions(),
+        ),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,

@@ -394,6 +394,62 @@ test("progress resumes the lesson, restarts a missing step and keeps completion"
   await expect(page.getByRole("link", { name: /Фаджр/ }).locator(".salah-lesson-status")).toHaveText("Пройден");
 });
 
+// Lesson media (docs/salah/lesson-media.md): the blocks of thematic courses on the first step.
+const lessonMediaFile = /\/media\/courses\/(?:slides|banners|posters|videos)\//;
+
+test("wudu's first step opens with its video, slide and banner; practice and other steps go without", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openLesson(page, "/ru/salah/wudu");
+  const first = page.locator('[data-step="wudu.intention"]');
+  const media = first.locator(".salah-lesson-media .lesson-media > *");
+  await expect(media).toHaveCount(3);
+  await expect(media.nth(0)).toHaveClass("course-lesson-video");
+  await expect(media.nth(1)).toHaveAttribute("data-testid", "lesson-slides");
+  await expect(media.nth(2)).toHaveAttribute("data-testid", "lesson-banner");
+  // Above the step's own text, centred and as wide as a lesson of the other courses.
+  expect(await first.evaluate((step) => step.firstElementChild?.className)).toBe("salah-lesson-media");
+  const block = (await first.locator(".salah-lesson-media").boundingBox())!;
+  const body = (await first.locator(".salah-step-body").boundingBox())!;
+  expect(block.y + block.height).toBeLessThanOrEqual(body.y + 1);
+  expect(block.width).toBeCloseTo(760, 0);
+  expect(Math.abs(block.x + block.width / 2 - (body.x + body.width / 2))).toBeLessThan(2);
+
+  const video = page.getByTestId("lesson-video");
+  const cover = video.getByRole("button", { name: /^Смотреть видео «Вуду», 3:04/ });
+  await expect(cover).toBeVisible();
+  await expect(page.getByRole("region", { name: "Слайды" }).locator(".lesson-slides-captions p[data-current]"))
+    .toHaveText("Порядок омовения: лицо, руки, голова, ноги");
+  await expect(media.nth(2).locator("img")).toHaveAttribute("alt", "Купол и минарет мечети на рассвете");
+
+  // A video playing on the first step stops when the step changes.
+  await cover.click();
+  const player = video.locator("video");
+  await expect.poll(() => player.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(0);
+  await page.getByTestId("salah-player").getByRole("button", { name: /^Далее/ }).click();
+  await expect(counter(page)).toHaveText(/^Шаг 2 из 2/);
+  expect(await player.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true);
+  await expect(page.locator(".salah-lesson-media")).toBeHidden();
+
+  // Practice is the prayer alone: no media, as no instruction.
+  await page.getByTestId("salah-player").getByRole("button", { name: /^Назад/ }).click();
+  await expect(media).toHaveCount(3);
+  await page.getByRole("button", { name: "Практика" }).click();
+  await expect(page.locator(".salah-lesson-media")).toHaveCount(0);
+});
+
+test("a lesson without media has no media block and asks for no media files", async ({ page, request }) => {
+  const html = await (await request.get("/ru/salah/fajr")).text();
+  expect(html).not.toContain("lesson-media");
+  const requested: string[] = [];
+  page.on("request", (item) => {
+    if (lessonMediaFile.test(new URL(item.url()).pathname)) requested.push(item.url());
+  });
+  await openLesson(page, "/ru/salah/fajr");
+  await expect(page.locator(".salah-lesson-media, [data-testid=lesson-video]")).toHaveCount(0);
+  await page.waitForLoadState("networkidle");
+  expect(requested).toEqual([]);
+});
+
 test("the prayer-times page links to the course", async ({ page }) => {
   await page.goto("/ru/prayer");
   const link = page.getByTestId("prayer-salah-link");

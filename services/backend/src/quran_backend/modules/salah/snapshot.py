@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from quran_backend.modules.courses.snapshot_media import MEDIA_PROBLEM, media_valid
 from quran_backend.modules.salah.models import SALAH_LANGUAGES
 
 SNAPSHOT_SCHEMA_VERSION = 1
@@ -380,6 +381,9 @@ def _check_lessons(
             problems.append(f"{where}: неизвестный вид «{lesson.get('kind')}».")
         _localized(lesson.get("title"), f"{where}.title", problems)
         _localized(lesson.get("summary"), f"{where}.summary", problems)
+        # Video, slides and banners of the lesson (docs/salah/lesson-media.md).
+        if not media_valid(lesson.get("media", [])):
+            problems.append(f"{where}: {MEDIA_PROBLEM}")
         prayer = lesson.get("prayer")
         if lesson.get("kind") == "prayer":
             if not prayer:

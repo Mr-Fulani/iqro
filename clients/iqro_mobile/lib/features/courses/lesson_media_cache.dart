@@ -19,10 +19,12 @@ const _pageGutters = 32.0;
 /// Slide and banner pictures, kept for reading offline as long as the course
 /// documents are; the files never change under one address.
 final lessonMediaCacheManagerProvider = Provider<BaseCacheManager>(
-  (ref) => _lessonMediaCache,
+  (ref) => lessonMediaCache,
 );
 
-final _lessonMediaCache = CacheManager(
+/// The cache itself, for what is built before the providers (the prayer
+/// course's repository).
+final lessonMediaCache = CacheManager(
   Config(
     'iqroLessonMedia',
     stalePeriod: const Duration(days: 180),

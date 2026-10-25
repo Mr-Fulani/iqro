@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
+import 'package:iqro_mobile/features/courses/course_models.dart';
 import 'package:iqro_mobile/features/salah/salah_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -67,6 +68,45 @@ void main() {
       await database.readCache('salah:hanbali-umdah:ru:2026-11-01'),
       isNotNull,
     );
+  });
+
+  test('keeps the pictures of the lessons with the document', () async {
+    final kept = <List<LessonMedia>>[];
+    final keeping = SalahRepository(
+      database: database,
+      remote: remote,
+      keepMedia: (media) async => kept.add(media.toList()),
+    );
+    await keeping.course('hanbali-umdah', 'ru');
+    await pumpEventQueue();
+    // The wudu lesson's video, slide and banner; the other lessons have none.
+    expect(kept.single.map((block) => block.runtimeType), [
+      LessonVideoMedia,
+      LessonSlidesMedia,
+      LessonBannerMedia,
+    ]);
+
+    // Opened again from the device: what did not arrive is fetched now.
+    await keeping.course('hanbali-umdah', 'ru');
+    await pumpEventQueue();
+    expect(kept, hasLength(2));
+    expect(remote.documentRequests, hasLength(1));
+  });
+
+  test('pictures that cannot be kept do not fail the course', () async {
+    for (final keep in <Future<void> Function(Iterable<LessonMedia>)>[
+      (_) => throw Exception('no disk'),
+      (_) async => throw Exception('offline'),
+    ]) {
+      final failing = SalahRepository(
+        database: database,
+        remote: remote,
+        keepMedia: keep,
+      );
+      final document = await failing.course('hanbali-umdah', 'ru');
+      await pumpEventQueue();
+      expect(document.lesson('wudu')!.media, hasLength(3));
+    }
   });
 
   test('keeps languages apart', () async {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { LessonMedia } from "@/components/courses/LessonMedia";
 import { SalahStepPlayer } from "@/components/SalahStepPlayer";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { translate } from "@/lib/translate";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/salah";
 import { createContentMetadata } from "@/lib/seo";
 import "../salah.css";
+import "@/components/courses/lesson-media.css";
 
 export const revalidate = 3_600;
 
@@ -88,6 +90,20 @@ export default async function SalahLessonPage({ params }: { params: Promise<Rout
       <SalahStepPlayer
         bundle={salahLessonBundle(document, lesson)}
         nextLesson={next ? { slug: next.slug, title: next.title } : null}
+        // The first step shows them above its picture, as the app does; the video remembers its
+        // place under courses.position.<course>, like a thematic course's (docs/salah/lesson-media.md).
+        media={
+          lesson.media ? (
+            <LessonMedia
+              blocks={lesson.media}
+              locale={route.locale}
+              language={document.course.language}
+              courseSlug={document.course.slug}
+              lessonSlug={lesson.slug}
+              title={lesson.title}
+            />
+          ) : null
+        }
       />
     </div>
   );

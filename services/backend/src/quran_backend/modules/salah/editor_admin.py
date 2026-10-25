@@ -15,6 +15,7 @@ import copy
 import json
 import logging
 import re
+from collections.abc import Callable
 from contextlib import ExitStack
 from typing import Any
 
@@ -39,13 +40,22 @@ from django.utils.http import urlencode
 from quran_backend.modules.audio.player_background_upload import player_background_uploader
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.object_storage import ObjectStorageError
+from quran_backend.modules.courses.lesson_media_admin import MediaPage, render_media
+from quran_backend.modules.courses.snapshot_media_admin import media_view, video_view
 from quran_backend.modules.salah import editor
 from quran_backend.modules.salah.importer import (
     compile_version,
     copy_salah_version,
+    mark_salah_watched,
     publish_salah_version,
     sign_salah_version,
     store_media,
+)
+from quran_backend.modules.salah.lesson_media import draft_lesson
+from quran_backend.modules.salah.lesson_media_admin import (
+    lesson_video_block,
+    media_page,
+    review_videos,
 )
 from quran_backend.modules.salah.media_upload import (
     MAX_AUDIO_SECONDS,
@@ -175,6 +185,26 @@ class SalahEditorAdminMixin:
                 "<path:object_id>/review/",
                 view(self.review_view),
                 name="salah_salahcourseversion_review",
+            ),
+            path(
+                "<path:object_id>/lessons/<slug:lesson>/media/",
+                view(self.lesson_media_view),
+                name="salah_salahcourseversion_lesson_media",
+            ),
+            path(
+                "<path:object_id>/lessons/<slug:lesson>/video/<str:operation>/",
+                view(self.lesson_video_view),
+                name="salah_salahcourseversion_lesson_video",
+            ),
+            path(
+                "<path:object_id>/lessons/<slug:lesson>/video/dubs/<str:language>/<str:operation>/",
+                view(self.lesson_video_view),
+                name="salah_salahcourseversion_lesson_dub",
+            ),
+            path(
+                "<path:object_id>/watched/<str:sha256>/",
+                view(self.watched_view),
+                name="salah_salahcourseversion_watched",
             ),
         ]
 
@@ -306,12 +336,21 @@ class SalahEditorAdminMixin:
                 "",
             ),
             "structure_url": reverse("admin:salah_salahcourseversion_structure", args=[version.pk]),
+            "structure_revision": editor.structure_revision(snapshot),
             "can_add_step": node.kind == "lesson" and not node.data.get("prayer"),
             "lesson_steps": self._lesson_steps(snapshot, node),
             "prev_id": ids[position - 1] if position > 0 else None,
             "next_id": ids[position + 1] if position + 1 < len(ids) else None,
             "next_missing_id": next_missing if next_missing != node.id else None,
             "preview": self._preview(snapshot, version, node, languages, assets),
+            "media_block": render_media(
+                media_page(request, version, node.data["slug"], editable=editable), request
+            )
+            if node.kind == "lesson"
+            else "",
+            "videos": review_videos(version, node.id)
+            if version.status == SalahPublicationStatus.DRAFT
+            else [],
             "max_audio_seconds": MAX_AUDIO_SECONDS,
             "status_label": self._status_label(version),
         }
@@ -933,6 +972,79 @@ class SalahEditorAdminMixin:
                 replaced.add(old_key)
         dropped = editor.drop_unused_audio(snapshot, replaced)
         SalahMediaAsset.objects.filter(version=version, key__in=dropped).delete()
+
+    # Lesson media -------------------------------------------------------
+    # JSON answers with the block drawn anew, as on a lesson of a thematic course.
+
+    def _media_draft(self, request: HttpRequest, object_id: str, lesson: str) -> SalahCourseVersion:
+        version = self._version(request, object_id)
+        if not any(item.get("slug") == lesson for item in version.snapshot.get("lessons", [])):
+            raise Http404
+        if not editor_editable(request.user, version):
+            raise PermissionDenied
+        return version
+
+    def _media_log(
+        self, request: HttpRequest, version: SalahCourseVersion, lesson: str
+    ) -> Callable[[str], object]:
+        return lambda message: self.log_change(  # type: ignore[attr-defined]
+            request, version, f"Медиа урока {lesson}: {message}"
+        )
+
+    def lesson_media_view(self, request: HttpRequest, object_id: str, lesson: str) -> HttpResponse:
+        """The «Медиа» block of a lesson: the button says what to do in `action`."""
+        version = self._media_draft(request, object_id, lesson)
+
+        def page() -> MediaPage:
+            version.refresh_from_db()
+            return media_page(request, version, lesson, editable=True)
+
+        return media_view(
+            request,
+            draft=draft_lesson(version, lesson),
+            page=page,
+            log=self._media_log(request, version, lesson),
+        )
+
+    def lesson_video_view(
+        self, request: HttpRequest, object_id: str, lesson: str, operation: str, language: str = ""
+    ) -> HttpResponse:
+        """The video block of a lesson: upload, poster, language of speech, dubs."""
+        version = self._media_draft(request, object_id, lesson)
+
+        def block() -> dict[str, Any]:
+            version.refresh_from_db()
+            return lesson_video_block(version, lesson, editable=True)
+
+        return video_view(
+            request,
+            draft=draft_lesson(version, lesson),
+            operation=operation,
+            language=language,
+            block=block,
+            log=self._media_log(request, version, lesson),
+        )
+
+    def watched_view(self, request: HttpRequest, object_id: str, sha256: str) -> HttpResponse:
+        """«Просмотрено» on one new video or dub of the draft, or the mark taken back."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        version = self._version(request, object_id)
+        if not editor_editable(request.user, version):
+            raise PermissionDenied
+        watched = request.POST.get("watched") != "0"
+        try:
+            mark_salah_watched(version, sha256=sha256, watched=watched)
+        except SalahSnapshotError as error:
+            messages.error(request, str(error))
+        else:
+            self.log_change(  # type: ignore[attr-defined]
+                request,
+                version,
+                f"{'Просмотрено' if watched else 'Снята отметка «Просмотрено»'}: {sha256[:12]}",
+            )
+        node = str(request.POST.get("node") or "course")
+        return HttpResponseRedirect(self._editor_url(version, node) + "#videos")
 
     # New draft, download, review ---------------------------------------
 

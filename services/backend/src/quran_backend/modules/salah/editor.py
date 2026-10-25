@@ -343,12 +343,28 @@ def node_revision(snapshot: Mapping[str, Any], node: EditorNode) -> str:
 
     A step's form also holds the recordings of its formulas.
     """
-    shown: list[Any] = [node.data]
+    data = node.data
+    if node.kind == "lesson":
+        # The «Медиа» block saves itself apart; its changes do not make the texts stale.
+        data = {key: value for key, value in data.items() if key != "media"}
+    shown: list[Any] = [data]
     if node.kind == "step":
         formulas = {formula.get("id"): formula for formula in snapshot.get("formulas", [])}
         shown += [formulas.get(formula_id) for formula_id in node.data.get("formulas", [])]
     canonical = json.dumps(shown, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+def structure_revision(snapshot: Mapping[str, Any]) -> str:
+    """The course as the tree shows it: a change of a lesson's media leaves it as it was."""
+    lessons = [
+        {key: value for key, value in lesson.items() if key != "media"}
+        for lesson in snapshot.get("lessons", [])
+    ]
+    canonical = json.dumps(
+        {**snapshot, "lessons": lessons}, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def _filled(value: Any) -> bool:

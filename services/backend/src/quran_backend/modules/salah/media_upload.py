@@ -21,12 +21,12 @@ from django.core.files.uploadedfile import UploadedFile
 
 from quran_backend.modules.audio.player_background_upload import player_background_uploader
 from quran_backend.modules.core.object_storage import ObjectUploader
+from quran_backend.modules.core.webp import webp_size
 from quran_backend.modules.salah.importer import (
     MAX_AUDIO_BYTES,
     MAX_IMAGE_BYTES,
     compile_version,
     store_media,
-    webp_size,
 )
 from quran_backend.modules.salah.models import (
     SalahCourseVersion,

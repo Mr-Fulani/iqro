@@ -86,7 +86,7 @@ class SalahStructureAdminMixin(SalahEditorAdminMixin):
             locked = SalahCourseVersion.objects.select_for_update().get(pk=version.pk)
             if not editor_editable(request.user, locked):
                 raise _StructureRefusedError("Версию уже подписали или опубликовали.")
-            if request.POST.get("revision") != locked.checksum_sha256:
+            if request.POST.get("revision") != editor.structure_revision(locked.snapshot):
                 raise _StructureRefusedError(
                     "Пока страница была открыта, курс изменили (в другой вкладке или другой "
                     "человек). Откройте страницу заново и повторите."
@@ -202,7 +202,7 @@ class SalahStructureAdminMixin(SalahEditorAdminMixin):
                 "after": anchor_id,
                 "after_title": anchor.title if anchor else "",
                 "shared": _shared_note(snapshot, anchor),
-                "revision": version.checksum_sha256,
+                "revision": editor.structure_revision(version.snapshot),
                 "back": _back(anchor_id, lesson_slug, str(data.get("section") or "")),
             },
             status=400 if request.method == "POST" else 200,
@@ -286,7 +286,7 @@ class SalahStructureAdminMixin(SalahEditorAdminMixin):
                 "node": node,
                 "kind_label": KIND_LABELS[node.kind],
                 "notes": structure.deletion_notes(snapshot, node),
-                "revision": version.checksum_sha256,
+                "revision": editor.structure_revision(version.snapshot),
             },
         )
 

@@ -14,6 +14,7 @@ import '../core/storage/preferences_store.dart';
 import '../core/sync/sync_service.dart';
 import '../features/audio/audio_repository.dart';
 import '../features/audio/audio_offline_repository.dart';
+import '../features/courses/lesson_media_cache.dart';
 import '../features/dua/dua_repository.dart';
 import '../features/salah/salah_repository.dart';
 import '../features/feedback/feedback_repository.dart';
@@ -181,7 +182,14 @@ class AppDependencies {
       notifications: notifications,
       memorization: MemorizationRepository(api: api, database: database),
       dua: DuaRepository(api: api, database: database),
-      salah: SalahRepository(api: api, database: database),
+      salah: SalahRepository(
+        api: api,
+        database: database,
+        keepMedia: LessonMediaPrefetcher(
+          cache: lessonMediaCache,
+          apiBase: Uri.parse(config.apiBaseUrl),
+        ).keep,
+      ),
       feedback: feedback,
       share: ShareRepository(
         api: api,

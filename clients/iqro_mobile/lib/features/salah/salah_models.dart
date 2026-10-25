@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../courses/course_models.dart' show LessonMedia, parseLessonMedia;
+
 /// The compiled course document (`docs/salah/learning-spec.md` §6).
 ///
 /// The server sends every text in the requested language and expands the
@@ -199,6 +201,7 @@ class SalahLesson {
     this.summary = '',
     this.minutes = 0,
     this.prayer,
+    this.media = const [],
   });
 
   factory SalahLesson.fromJson(Object? value) {
@@ -214,6 +217,8 @@ class SalahLesson {
       steps: <SalahStep>[
         for (final item in _list(json['steps'])) SalahStep.fromJson(item),
       ],
+      // A lesson without media has no field, as do documents built before.
+      media: parseLessonMedia(json['media']),
     );
   }
 
@@ -226,6 +231,10 @@ class SalahLesson {
   final int minutes;
   final SalahPrayer? prayer;
   final List<SalahStep> steps;
+
+  /// Videos, slides and banners on the first step, in the author's order,
+  /// in the format of the thematic courses (docs/salah/lesson-media.md).
+  final List<LessonMedia> media;
 
   int indexOfStep(String slug) => steps.indexWhere((step) => step.slug == slug);
 }

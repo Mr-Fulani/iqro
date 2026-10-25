@@ -21,7 +21,7 @@ from django.core.files.uploadedfile import UploadedFile
 
 from quran_backend.modules.audio.player_background_upload import player_background_uploader
 from quran_backend.modules.core.object_storage import ImmutableObjectSpec, ObjectUploader
-from quran_backend.modules.salah.importer import webp_size
+from quran_backend.modules.core.webp import webp_size
 
 COVER_SIZE = (1280, 720)
 THUMB_SIZE = (640, 360)

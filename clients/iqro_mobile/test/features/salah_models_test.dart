@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/features/courses/course_models.dart';
 import 'package:iqro_mobile/features/salah/salah_models.dart';
 
 Map<String, Object?> salahFixture() =>
@@ -11,6 +12,29 @@ Map<String, Object?> salahFixture() =>
         as Map<String, Object?>;
 
 void main() {
+  test('a lesson carries its video, slides and banner in the format of the '
+      'thematic courses', () {
+    final document = SalahCourseDocument.fromJson(salahFixture());
+    final media = document.lesson('wudu')!.media;
+    expect(media.map((block) => block.runtimeType), [
+      LessonVideoMedia,
+      LessonSlidesMedia,
+      LessonBannerMedia,
+    ]);
+    final video = (media.first as LessonVideoMedia).video;
+    expect(video.spokenLanguage, 'ru');
+    expect(video.poster.width, 1280);
+    final slide = (media[1] as LessonSlidesMedia).slides.single;
+    expect(slide.caption, 'Порядок омовения: лицо, руки, голова, ноги');
+    // A lesson without media, as documents built before them, has none.
+    expect(document.lesson('fajr')!.media, isEmpty);
+    final older = salahFixture();
+    for (final lesson in older['lessons']! as List<Object?>) {
+      (lesson! as Map<String, Object?>).remove('media');
+    }
+    expect(SalahCourseDocument.fromJson(older).lesson('wudu')!.media, isEmpty);
+  });
+
   test('a step carries its «?» and «!» notes and its own voice-over', () {
     final document = SalahCourseDocument.fromJson(salahFixture());
     final steps = document.lesson('fajr')!.steps;
