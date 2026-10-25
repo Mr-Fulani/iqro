@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 
 import { useI18n } from "../../lib/i18n-context";
+import { noteSlide } from "../../lib/lesson-slide";
 import { LESSON_MEDIA_SIZES, lessonImageSrcSet, type CourseSlide } from "../../lib/thematic-courses";
 import { usePageLoaded } from "../../lib/use-page-loaded";
 
@@ -17,7 +18,16 @@ const SWIPE_SHARE = 0.15;
  * gets near them. The neighbour waits for the page's load, so the first slide, often the
  * largest paint on a phone, has the network to itself. In Arabic the order and the arrows are mirrored.
  */
-export function LessonSlides({ slides, priority = false }: { slides: CourseSlide[]; priority?: boolean }) {
+export function LessonSlides({
+  slides,
+  priority = false,
+  report,
+}: {
+  slides: CourseSlide[];
+  priority?: boolean;
+  /** «Сообщить об ошибке» names the slide on screen; `firstNumber` is this carousel's first in the lesson. */
+  report?: { courseSlug: string; lessonSlug: string; firstNumber: number };
+}) {
   const { direction, formatNumber, t } = useI18n();
   const [index, setIndex] = useState(0);
   // The slides with a picture: the current one, its neighbours and those already shown.
@@ -34,8 +44,14 @@ export function LessonSlides({ slides, priority = false }: { slides: CourseSlide
   );
   const of = (number: number) => t("courses.slideOf", { number: formatNumber(number), total: formatNumber(total) });
 
+  // The lesson opens on the first slide of its first carousel.
+  useEffect(() => {
+    if (report?.firstNumber === 1) noteSlide(report.courseSlug, report.lessonSlug, 1);
+  }, [report?.courseSlug, report?.lessonSlug, report?.firstNumber]);
+
   function go(next: number): number {
     if (next < 0 || next >= total || next === index) return index;
+    if (report) noteSlide(report.courseSlug, report.lessonSlug, report.firstNumber + next);
     setIndex(next);
     setMoved(true);
     setSeen((previous) => new Set(previous).add(next - 1).add(next).add(next + 1));

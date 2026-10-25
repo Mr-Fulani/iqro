@@ -29,6 +29,9 @@ export function LessonMedia({
   if (!blocks.length) return null;
   // The first slide or banner is likely the largest paint, even below the video's cover on a phone.
   const firstPicture = blocks.findIndex((block) => block.type !== "video");
+  // A report names a slide by its number in the whole lesson: the carousels count on.
+  const firstSlides = blocks.map((_, index) =>
+    blocks.slice(0, index).reduce((count, block) => count + (block.type === "slides" ? block.slides.length : 0), 1));
   return (
     <div className="lesson-media">
       {blocks.map((block, index) => {
@@ -55,7 +58,14 @@ export function LessonMedia({
             );
           }
           case "slides":
-            return <LessonSlides key={index} slides={block.slides} priority={first} />;
+            return (
+              <LessonSlides
+                key={index}
+                slides={block.slides}
+                priority={first}
+                report={{ courseSlug, lessonSlug, firstNumber: firstSlides[index]! }}
+              />
+            );
           case "banner":
             return (
               <figure key={index} className="lesson-banner" data-testid="lesson-banner">

@@ -20,24 +20,41 @@ class LessonMediaView extends ConsumerWidget {
   const LessonMediaView({
     required this.media,
     required this.videoBuilder,
+    this.onSlide,
     super.key,
   });
 
   final List<LessonMedia> media;
   final Widget Function(BuildContext context, CourseVideo video) videoBuilder;
 
+  /// The slide on screen, numbered through all the lesson's slides from 1:
+  /// «Report an error» names it.
+  final ValueChanged<int>? onSlide;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final base = Uri.parse(ref.watch(appConfigProvider).apiBaseUrl);
+    final blocks = approvedLessonMedia(media, base);
+    // The carousels count on: the second starts after the first one's last.
+    final firstSlides = <int>[];
+    var next = 1;
+    for (final block in blocks) {
+      firstSlides.add(next);
+      if (block is LessonSlidesMedia) next += block.slides.length;
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        for (final block in approvedLessonMedia(media, base))
+        for (final (index, block) in blocks.indexed)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: switch (block) {
               LessonVideoMedia(:final video) => videoBuilder(context, video),
-              LessonSlidesMedia(:final slides) => LessonSlides(slides: slides),
+              LessonSlidesMedia(:final slides) => LessonSlides(
+                slides: slides,
+                firstNumber: firstSlides[index],
+                onSlide: onSlide,
+              ),
               LessonBannerMedia(:final picture) => LessonBanner(
                 picture: picture,
               ),
@@ -53,9 +70,18 @@ class LessonMediaView extends ConsumerWidget {
 /// to 5:4; the others fit in its middle. Only the current slide and its
 /// neighbours are loaded.
 class LessonSlides extends StatefulWidget {
-  const LessonSlides({required this.slides, super.key});
+  const LessonSlides({
+    required this.slides,
+    this.firstNumber = 1,
+    this.onSlide,
+    super.key,
+  });
 
   final List<LessonPicture> slides;
+
+  /// This carousel's first slide among all the lesson's slides.
+  final int firstNumber;
+  final ValueChanged<int>? onSlide;
 
   @override
   State<LessonSlides> createState() => _LessonSlidesState();
@@ -64,6 +90,13 @@ class LessonSlides extends StatefulWidget {
 class _LessonSlidesState extends State<LessonSlides> {
   final _pages = PageController();
   var _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // The lesson opens on the first slide of its first carousel.
+    if (widget.firstNumber == 1) widget.onSlide?.call(1);
+  }
 
   @override
   void dispose() {
@@ -118,7 +151,10 @@ class _LessonSlidesState extends State<LessonSlides> {
                   // Builds the neighbours too, so they are loaded ahead.
                   allowImplicitScrolling: true,
                   itemCount: total,
-                  onPageChanged: (page) => setState(() => _index = page),
+                  onPageChanged: (page) {
+                    widget.onSlide?.call(widget.firstNumber + page);
+                    setState(() => _index = page);
+                  },
                   itemBuilder: (context, page) => Semantics(
                     container: true,
                     label: l10n.lessonMediaSlideOf(page + 1, total),

@@ -70,6 +70,7 @@ from quran_backend.modules.courses.lesson_media_admin import (
     render_media,
     run_media_action,
 )
+from quran_backend.modules.courses.links import INLINE_HELP, link_rows
 from quran_backend.modules.courses.media import CourseCoverError, upload_course_cover
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
@@ -118,8 +119,8 @@ NOTES_HELP = (
     "Пустая строка — новый абзац. «## » в начале строки — подзаголовок. «- » — пункт списка, "
     "«1. » — нумерованный пункт. «> » — цитата (аят, хадис, дуа); последняя строка цитаты "
     "«> — Источник». «! » — рамка «Важно». **слово** — жирный. Арабский текст можно вставлять "
-    "прямо в абзац: он сам выровняется справа налево."
-)
+    "прямо в абзац: он сам выровняется справа налево. "
+) + INLINE_HELP
 RELEASE_FIELDS = frozenset({"live_release", "hidden_at", "hidden_reason", "created_by"})
 DIFF_FIELDS = (
     ("title", "Название"),
@@ -1386,6 +1387,15 @@ def review_panel(request: HttpRequest, release: CourseRelease) -> dict[str, Any]
         "all_watched": all(video["watched"] for video in videos),
         "changes": changes(old, release.snapshot),
         "diffs": diffs,
+        "links": link_rows(
+            (
+                f"Тема {number} «{lesson['title']['ru'] or lesson['slug']}»",
+                language,
+                lesson["notes"][language],
+            )
+            for number, lesson in enumerate(release.snapshot["lessons"], start=1)
+            for language in release.languages
+        ),
         "first": old is None,
         "preview_urls": [
             (

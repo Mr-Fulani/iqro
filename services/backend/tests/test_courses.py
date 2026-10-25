@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,9 +18,10 @@ from rest_framework.test import APIClient
 
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.core.editorial.diff import line_diff
-from quran_backend.modules.core.editorial.markup import parse_notes
+from quran_backend.modules.core.editorial.markup import parse_notes, plain_markup
 from quran_backend.modules.core.tasks import notify_web_content_change_task
 from quran_backend.modules.courses.document import build_snapshot, changes, readiness
+from quran_backend.modules.courses.links import LinkChecker
 from quran_backend.modules.courses.models import (
     Course,
     CourseDocument,
@@ -41,6 +43,7 @@ from quran_backend.modules.courses.services import (
     sign_release,
     withdraw_from_review,
 )
+from quran_backend.modules.website.models import AllowedLinkSite
 
 DOCS = Path(__file__).resolve().parents[3] / "docs" / "courses"
 MEDIA = "https://media.iqro.forum"
@@ -116,11 +119,13 @@ LESSONS = [
         "minutes": 12,
         "notes_ru": (
             "## Что такое намерение\n"
-            "Намерение — это **решение сердца** совершить пост ради Аллаха.\n"
+            "Намерение — это **решение сердца** совершить пост ради Аллаха"
+            "[?Пояснение о намерении — после проверки.].\n"
             "[правило о произнесении намерения по методике курса — после проверки]\n"
-            "- Намерение отличает поклонение от привычки.\n"
+            "- Намерение отличает поклонение от привычки[!Предупреждение — после проверки.].\n"
             "- [второй пункт — после проверки]\n"
-            "! [важное правило о времени намерения — после проверки]"
+            "! [важное правило о времени намерения — после проверки]\n"
+            "Аят о посте: [Коран, 2:183](/quran/2:183)."
         ),
         "sources_ru": "[источник 1 — после проверки]\n\n  [источник 2 — после проверки]  ",
         "media": [{"id": "video", "type": "video"}, SLIDES],
@@ -221,6 +226,67 @@ def test_notes_markup_matches_the_shared_cases(case: dict[str, Any]) -> None:
     assert parse_notes(case["input"]) == case["blocks"]
 
 
+# What each `errors` kind of the shared cases looks like in a problem.
+ERROR_HINTS = {
+    "unclosed": "незакрытая скобка",
+    "empty_note": "пустая пометка",
+    "not_a_link": "не адрес ссылки",
+    "domain_not_allowed": "нет в «Разрешённых сайтах для ссылок»",
+}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "case",
+    json.loads((DOCS / "notes-markup.cases.json").read_text(encoding="utf-8"))["cases"],
+    ids=lambda case: case["name"],
+)
+def test_release_check_finds_the_errors_of_the_shared_cases(case: dict[str, Any]) -> None:
+    AllowedLinkSite.objects.create(domain="sunnah.com")
+    checker = LinkChecker(course="ramadan", lessons=["namerenie"], tajweed_lessons=["izhar"])
+    found = []
+    for problem in checker.problems(case["input"]):
+        match = re.fullmatch(r"строка (\d+): (.+)", problem)
+        assert match, problem
+        kinds = [kind for kind, hint in ERROR_HINTS.items() if hint in match[2]]
+        assert len(kinds) == 1, problem
+        found.append({"line": int(match[1]), "error": kinds[0]})
+    assert found == case.get("errors", [])
+
+
+def test_notes_and_links_keep_bold_arabic_and_the_word_before_them() -> None:
+    [paragraph] = parse_notes("**Сухур [?Еда до **рассвета**.] обязателен** [السحور](/quran/2:187)")
+
+    assert paragraph["lines"] == [
+        [
+            {"text": "Сухур", "bold": True},
+            {
+                "text": "",
+                "note": {
+                    "kind": "help",
+                    "text": [
+                        {"text": "Еда до "},
+                        {"text": "рассвета", "bold": True},
+                        {"text": "."},
+                    ],
+                },
+            },
+            {"text": " обязателен", "bold": True},
+            {"text": " "},
+            {"text": "السحور", "lang": "ar", "link": {"href": "/quran/2:187", "kind": "internal"}},
+        ]
+    ]
+    # A link inside a note is not a note: the brackets stay text, the check names them.
+    assert parse_notes("а[!см. [аят](/quran/1)]")[0]["lines"][0][1]["link"]["href"] == "/quran/1"
+    assert parse_notes("a\x00[!b]")[0]["lines"][0][0] == {"text": "a"}
+
+
+def test_plain_markup_is_the_text_for_clients_without_links_and_notes() -> None:
+    assert plain_markup("## Заголовок[!x]\n\n- **один** [два](/dua)\nбез разметки  ") == (
+        "## Заголовок\n\n- один два\nбез разметки"
+    )
+
+
 def test_markup_never_fails_and_keeps_odd_markers_as_text() -> None:
     blocks = parse_notes("**a** b **c\n> — только источник\n****\n!нет пробела")
 
@@ -313,6 +379,72 @@ def test_readiness_names_what_each_language_lacks(ramadan: Course) -> None:
     ]
     assert missing["ru"][0].lesson == str(CourseLesson.objects.get(slug="namerenie").pk)
     assert "Нет названия курса." in [problem.text for problem in missing["en"]]
+
+
+@pytest.mark.django_db
+def test_links_lead_to_ayahs_published_courses_and_tajweed_lessons(
+    ramadan: Course, owner: User
+) -> None:
+    checker = LinkChecker(tajweed_lessons=["izhar"])
+    assert checker.problem("/quran/114:6", "internal") is None
+    assert "в Коране 114 сур" in str(checker.problem("/quran/115", "internal"))
+    assert "в суре 2 аятов 286" in str(checker.problem("/quran/2:287", "internal"))
+    assert checker.problem("/quran/2:0", "internal") is not None
+    assert checker.problem("/dua/hisn-al-muslim/12", "internal") is None
+    assert checker.problem("/tajweed/izhar", "internal") is None
+    assert checker.problem("/tajweed/practice", "internal") is None
+    assert "нет урока «madd»" in str(checker.problem("/tajweed/madd", "internal"))
+    assert "курса «ramadan» нет на сайте" in str(checker.problem("/courses/ramadan", "internal"))
+
+    release_course(ramadan, owner)
+    published = LinkChecker()
+    assert published.problem("/courses/ramadan/namerenie", "internal") is None
+    assert "нет темы «nope»" in str(published.problem("/courses/ramadan/nope", "internal"))
+    Course.objects.filter(pk=ramadan.pk).update(hidden_at=PUBLISHED_AT)
+    assert LinkChecker().problem("/courses/ramadan", "internal") is not None
+
+
+@pytest.mark.django_db
+def test_external_links_need_https_and_an_allowed_site() -> None:
+    AllowedLinkSite.objects.create(domain=" https://www.Sunnah.com/bukhari ")
+    assert AllowedLinkSite.objects.get().domain == "sunnah.com"
+    with pytest.raises(ValidationError):
+        AllowedLinkSite.objects.create(domain="sunnah")
+
+    checker = LinkChecker()
+    assert checker.problem("https://sunnah.com/bukhari:1", "external") is None
+    assert checker.problem("https://WWW.sunnah.com/", "external") is None
+    assert "m.sunnah.com нет" in str(checker.problem("https://m.sunnah.com/", "external"))
+    assert "только https://" in str(checker.problem("http://sunnah.com/", "external"))
+
+
+@pytest.mark.django_db
+def test_prepare_refuses_broken_markup_with_the_line_number(ramadan: Course, owner: User) -> None:
+    lesson = CourseLesson.objects.get(slug="namerenie")
+    lesson.notes_ru = "Намерение.\nСм. [хадис](https://sunnah.com/muslim:1) и сердце[?]"
+    lesson.save()
+    with pytest.raises(CourseReleaseError) as error:
+        prepare_release(ramadan, owner, languages=["ru"], change_note="Ссылки")
+    assert error.value.problems == [
+        "ru: Тема 2 «Намерение (ният)»: конспект, строка 2: пустая пометка «[?]»: "
+        "напишите текст подсказки.",
+        "ru: Тема 2 «Намерение (ният)»: конспект, строка 2: сайта sunnah.com нет в "
+        "«Разрешённых сайтах для ссылок» (раздел «Сайт и настройки»).",
+    ]
+
+    AllowedLinkSite.objects.create(domain="sunnah.com")
+    lesson.notes_ru = "Намерение.\nСм. [хадис](https://sunnah.com/muslim:1) и сердце[?В душе.]"
+    lesson.save()
+    release = prepare_release(ramadan, owner, languages=["ru"], change_note="Ссылки")
+    notes = next(
+        item for item in release.documents.get().payload["lessons"] if item["slug"] == "namerenie"
+    )["notes"]
+    assert notes[0]["lines"][1] == [
+        {"text": "См. "},
+        {"text": "хадис", "link": {"href": "https://sunnah.com/muslim:1", "kind": "external"}},
+        {"text": " и сердце"},
+        {"text": "", "note": {"kind": "help", "text": [{"text": "В душе."}]}},
+    ]
 
 
 @pytest.mark.django_db

@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from quran_backend.modules.audio.serializers import public_audio_url
+from quran_backend.modules.core.editorial.markup import parse_notes, plain_markup
 from quran_backend.modules.courses.document import shown_files, video_payload
 from quran_backend.modules.courses.lesson_media import (
     KINDS,
@@ -41,6 +42,8 @@ COLOR = re.compile(r"^#[0-9A-F]{6}$")
 VERSE_KEY = re.compile(r"^(\d{1,3}):(\d{1,3})$")
 MAX_PREFERRED_EXAMPLES = 20
 LESSON_TEXTS = ("title", "summary", "explanation", "how")
+# Written in the markup of course notes: links and «!»/«?» notes (docs/tajweed/course.md).
+MARKUP_TEXTS = ("explanation", "how")
 
 
 class TajweedCourseError(ValueError):
@@ -316,6 +319,15 @@ def compile_course_document(
                     "target": key,
                     "minutes": int(lesson["minutes"]),
                     **{field: _text(lesson[field], language) for field in LESSON_TEXTS},
+                    # Clients before links and notes read the text without markup.
+                    **{
+                        field: plain_markup(_text(lesson[field], language))
+                        for field in MARKUP_TEXTS
+                    },
+                    **{
+                        f"{field}_blocks": parse_notes(_text(lesson[field], language))
+                        for field in MARKUP_TEXTS
+                    },
                     "letters": str(lesson.get("letters", "")),
                     "media": lesson_media(lesson, language),
                 }

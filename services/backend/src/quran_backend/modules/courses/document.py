@@ -23,6 +23,7 @@ from quran_backend.modules.courses.lesson_media import (
     media_payload,
     media_snapshot,
 )
+from quran_backend.modules.courses.links import LinkChecker
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
     MAX_NOTES_CHARS,
@@ -176,6 +177,7 @@ def readiness(snapshot: dict[str, Any]) -> dict[str, list[Problem]]:
     result: dict[str, list[Problem]] = {}
     course = snapshot["course"]
     lessons = snapshot["lessons"]
+    links = LinkChecker(course=course["slug"], lessons=[lesson["slug"] for lesson in lessons])
     for language in COURSE_LANGUAGES:
         problems = []
         if not course["title"][language].strip():
@@ -198,6 +200,10 @@ def readiness(snapshot: dict[str, Any]) -> dict[str, list[Problem]]:
                 problems.append(
                     Problem(f"{name}: конспект длиннее {MAX_NOTES_CHARS} знаков.", lesson["id"])
                 )
+            problems += [
+                Problem(f"{name}: конспект, {problem}.", lesson["id"])
+                for problem in links.problems(notes)
+            ]
             if len(lesson["sources"][language]) > MAX_SOURCES_CHARS:
                 problems.append(
                     Problem(f"{name}: источники длиннее {MAX_SOURCES_CHARS} знаков.", lesson["id"])

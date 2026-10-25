@@ -1,6 +1,6 @@
 {% extends "admin/change_form.html" %}
 
-{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}{% endblock %}
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}{% include "admin/courses/notes_styles.html" %}{% endblock %}
 
 {% block content %}
 {% if review %}
@@ -45,6 +45,8 @@
       {% endfor %}
     </details>
   {% endfor %}
+
+  {% include "admin/courses/links.html" with links=review.links links_title="Ссылки в выпуске" %}
 
   {% if review.videos %}
     <div id="videos">

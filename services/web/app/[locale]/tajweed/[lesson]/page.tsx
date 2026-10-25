@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CourseNotes } from "@/components/courses/CourseNotes";
 import { LessonMedia } from "@/components/courses/LessonMedia";
 import { TajweedLessonPlayer } from "@/components/TajweedLessonPlayer";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
@@ -12,6 +13,7 @@ import { isTajweedLessonSlug, nextTajweedLesson, TAJWEED_COURSE_SLUG } from "@/l
 import { translate } from "@/lib/translate";
 import "../tajweed.css";
 import "@/components/courses/lesson-media.css";
+import "@/components/courses/course-notes.css";
 
 export const revalidate = 3_600;
 
@@ -95,6 +97,19 @@ export default async function TajweedLessonPage({ params }: { params: Promise<Ro
             title={lesson.title}
           />
         }
+        // Server HTML like the media: the «!»/«?» notes and links need no client JS. An Arabic
+        // lesson keeps the interface font, as its plain paragraphs had.
+        explanation={lesson.explanation_blocks ? (
+          <CourseNotes
+            blocks={lesson.explanation_blocks}
+            locale={route.locale}
+            id="tajweed-explanation"
+            plainArabic={route.locale === "ar"}
+          />
+        ) : null}
+        how={lesson.how_blocks ? (
+          <CourseNotes blocks={lesson.how_blocks} locale={route.locale} id="tajweed-how" plainArabic={route.locale === "ar"} />
+        ) : null}
       />
     </div>
   );

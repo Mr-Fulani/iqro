@@ -84,6 +84,21 @@ test("lesson media: izhar has a video and two slides, the others none", () => {
   assert.ok(others.every((lesson) => lesson.media.length === 0));
 });
 
+test("explanation and how come as notes blocks with notes and links; older documents have none", () => {
+  const [izhar, idgham] = parseTajweedCourseDocument(documentJson).lessons;
+  const how = izhar!.how_blocks![0]!;
+  assert.equal(how.type, "paragraph");
+  const line = how.type === "paragraph" ? how.lines[0]! : [];
+  assert.deepEqual(line.find((segment) => segment.link)?.link, { href: "/quran/112:4", kind: "internal" });
+  assert.equal(line.find((segment) => segment.note)?.note?.kind, "warning");
+  assert.ok(izhar!.explanation_blocks!.length >= 3);
+  // Clients without blocks read the same text without the markup.
+  assert.match(izhar!.how, /в суре аль-Ихлас\.$/);
+  assert.equal(idgham!.explanation_blocks, null);
+  assert.equal(idgham!.how_blocks, null);
+  assert.throws(() => lessonsWith((raw) => { raw[0]!.how_blocks = [{ type: "paragraph" }]; }), TajweedCourseDocumentError);
+});
+
 test("a document built before media has no field: no media", () => {
   const lessons = lessonsWith((raw) => { for (const lesson of raw) delete lesson.media; });
   assert.ok(lessons.every((lesson) => Array.isArray(lesson.media) && lesson.media.length === 0));

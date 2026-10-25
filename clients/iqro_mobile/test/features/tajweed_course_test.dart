@@ -79,6 +79,31 @@ void main() {
       ]);
     });
 
+    test('explanation and how come as notes blocks; older documents have '
+        'none', () {
+      final example = TajweedCourseDocument.fromJson(
+        tajweedCourseExampleDocumentJson(),
+      );
+      final izhar = example.lesson('izhar')!;
+      final how = izhar.howBlocks!.single as NoteParagraph;
+      final segments = how.lines.single;
+      expect(
+        segments.firstWhere((segment) => segment.link != null).link!.route,
+        '/reader/112?ayah=4',
+      );
+      expect(
+        segments.firstWhere((segment) => segment.note != null).note!.kind,
+        NoteMarkKind.warning,
+      );
+      expect(izhar.explanationBlocks, hasLength(3));
+      // The plain text, for the apps that predate blocks.
+      expect(izhar.how, endsWith('в суре аль-Ихлас.'));
+      final old = TajweedCourseDocument.fromJson(tajweedCourseDocumentJson());
+      expect(old.lessons.map((lesson) => lesson.explanationBlocks), [
+        for (final _ in old.lessons) null,
+      ]);
+    });
+
     test('a document before media has none; unknown blocks are left out', () {
       final old = TajweedCourseDocument.fromJson(tajweedCourseDocumentJson());
       expect(old.lessons.expand((lesson) => lesson.media), isEmpty);

@@ -71,7 +71,11 @@ test("the contract examples parse; unknown fields are ignored", () => {
   const document = exampleDocument();
   assert.deepEqual(document.lessons.map((lesson) => lesson.slug), ["smysl-posta", "namerenie", "taraviikh"]);
   assert.deepEqual(document.course.languages, ["ru"]);
-  assert.equal(document.lessons[1]!.notes.at(-1)!.type, "note");
+  assert.deepEqual(document.lessons[1]!.notes.map((block) => block.type), ["heading", "paragraph", "list", "note", "paragraph"]);
+  // The «?» after «ради Аллаха» and the ayah link of the example.
+  const [, paragraph, , , ayah] = document.lessons[1]!.notes;
+  assert.equal(paragraph!.type === "paragraph" && paragraph.lines[0]!.find((segment) => segment.note)?.note?.kind, "help");
+  assert.deepEqual(ayah!.type === "paragraph" && ayah.lines[0]![1]!.link, { href: "/quran/2:183", kind: "internal" });
 
   const extended = example("course-document.example.json");
   extended.future_field = { anything: true };

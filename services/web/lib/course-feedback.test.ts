@@ -101,4 +101,12 @@ test("a lesson report names the course, lesson, release and video moment", () =>
     playback_ms: 252_000,
   });
   assert.equal("playback_ms" in reportContext("ramadan", "namerenie", "3", undefined), false);
+  assert.deepEqual(reportContext("ramadan", "namerenie", "3", undefined, 4), {
+    course_slug: "ramadan",
+    lesson_slug: "namerenie",
+    content_version: "3",
+    route: "/courses/ramadan/namerenie",
+    client_platform: "web",
+    slide_number: 4,
+  });
 });
