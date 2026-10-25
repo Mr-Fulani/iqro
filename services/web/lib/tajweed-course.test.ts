@@ -239,3 +239,20 @@ test("merging two copies keeps a passed lesson passed and takes the later record
   assert.deepEqual(merged.lessons.ikhfa, browser.lessons.ikhfa);
   assert.deepEqual(mergeCourseProgress(browser, phone).lessons, merged.lessons);
 });
+
+test("«Author and sources» and a lesson's sources; older documents give empty ones", () => {
+  const document = parseTajweedCourseDocument(documentJson);
+  assert.match(document.course.source, /^Риваят Хафса от Асыма/);
+  assert.deepEqual(document.lessons.find((lesson) => lesson.slug === "izhar")!.sources, [
+    "Аль-Джамзури. Тухфат аль-атфаль, бейты о нуне с сукуном и танвине.",
+    "Ибн аль-Джазари. Аль-Мукаддима аль-джазария, глава о нуне и миме.",
+  ]);
+  assert.deepEqual(document.lessons.find((lesson) => lesson.slug === "iqlab")!.sources, []);
+
+  const older = structuredClone(documentJson);
+  delete older.course.source;
+  for (const lesson of older.lessons) delete lesson.sources;
+  const parsed = parseTajweedCourseDocument(older);
+  assert.equal(parsed.course.source, "");
+  assert.ok(parsed.lessons.every((lesson) => lesson.sources.length === 0));
+});

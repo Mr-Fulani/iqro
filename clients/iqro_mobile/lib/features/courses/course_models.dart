@@ -412,6 +412,20 @@ class LessonBannerMedia extends LessonMedia {
   final LessonPicture picture;
 }
 
+/// «Author and sources» of the prayer and tajweed documents
+/// (docs/salah/sources.md): optional there, so a missing or malformed value
+/// is no block.
+String optionalCourseSource(Object? value) =>
+    value is String ? value.trim() : '';
+
+/// A lesson's «Sources» in those documents, one per item; malformed or empty
+/// items are left out.
+List<String> optionalLessonSources(Object? value) => <String>[
+  if (value is List)
+    for (final item in value)
+      if (item is String && item.trim().isNotEmpty) item.trim(),
+];
+
 /// `lessons[].media`. A document prepared before media has none: then it is
 /// the lesson's [video], if any. A block of an unknown type and slides
 /// without a slide are left out; they do not make the document invalid.

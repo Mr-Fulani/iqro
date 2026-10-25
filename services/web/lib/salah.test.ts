@@ -288,3 +288,22 @@ test("the course summary counts completions and picks the lesson to continue", (
   progress = recordSalahStep(progress, "wudu", "wudu.gone", "v", { now: new Date("2026-10-18T12:00:00Z") });
   assert.deepEqual(summarizeSalahProgress(lessons, progress).continueLesson, { slug: "wudu", stepSlug: null });
 });
+
+test("«Author and sources» and a lesson's sources come through; without them there is no field", () => {
+  assert.equal(course.course.source, "По книге «Умдат аль-фикх» Ибн Кудамы аль-Макдиси, ханбалитский мазхаб.");
+  assert.deepEqual(lesson("fajr").sources, [
+    "Ибн Кудама. Умдат аль-фикх, «Книга молитвы».",
+    "Аль-Бухари, 757; Муслим, 397 — хадис о том, кто плохо молился.",
+  ]);
+  assert.equal("sources" in lesson("wudu"), false);
+  // Drawn on the server like the media: the player's bundle does not carry them.
+  assert.equal("sources" in salahLessonBundle(course, lesson("fajr")).lesson, false);
+
+  // A document built before sources, or a malformed value, gives no block.
+  const raw = structuredClone(example) as { course: Record<string, unknown>; lessons: Record<string, unknown>[] };
+  raw.course.source = 7;
+  raw.lessons[2]!.sources = ["", "  Умдат аль-фикх  ", 3];
+  const parsed = parseSalahCourseDocument(raw);
+  assert.equal("source" in parsed.course, false);
+  assert.deepEqual(parsed.lessons[2]!.sources, ["Умдат аль-фикх"]);
+});

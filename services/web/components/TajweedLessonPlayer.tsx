@@ -146,6 +146,7 @@ export function TajweedLessonPlayer({
   media,
   explanation,
   how,
+  sources,
 }: {
   courseSlug: string;
   courseVersion: string;
@@ -158,6 +159,8 @@ export function TajweedLessonPlayer({
   /** The explanation and «how» as notes blocks (CourseNotes), drawn on the server; null in older documents. */
   explanation?: ReactNode;
   how?: ReactNode;
+  /** The lesson's «Sources» (CourseLessonSources), drawn on the server; at the end of the last step. */
+  sources?: ReactNode;
 }) {
   const { direction, formatNumber, locale, t } = useI18n();
   const [examples, setExamples] = useState<Examples>({ status: "loading" });
@@ -509,6 +512,7 @@ export function TajweedLessonPlayer({
         {steps.map((step, stepIndex) => (
           <li key={step} hidden={stepIndex !== index} className="tajweed-lesson-step" data-step={step}>
             {renderStep(step, stepIndex === index)}
+            {stepIndex === steps.length - 1 ? sources : null}
           </li>
         ))}
       </ol>

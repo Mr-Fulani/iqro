@@ -31,8 +31,11 @@ import 'package:iqro_mobile/features/courses/course_lesson_screen.dart';
 import 'package:iqro_mobile/features/courses/course_notes_view.dart';
 import 'package:iqro_mobile/features/courses/course_progress_store.dart';
 import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
+import 'package:iqro_mobile/features/salah/salah_home_screen.dart';
 import 'package:iqro_mobile/features/salah/salah_lesson_screen.dart';
 import 'package:iqro_mobile/features/salah/salah_models.dart';
+import 'package:iqro_mobile/features/salah/salah_offline_repository.dart';
+import 'package:iqro_mobile/features/tajweed_course/tajweed_course_home_screen.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_models.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_progress.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_repository.dart';
@@ -106,6 +109,7 @@ Future<void> _pump(
   bool dark = false,
   Map<String, Object?>? tajweed,
   Map<String, Object?>? salah,
+  bool tajweedExamples = false,
 }) async {
   tester.view.physicalSize = _size;
   tester.view.devicePixelRatio = _pixelRatio;
@@ -148,6 +152,14 @@ Future<void> _pump(
           courseSlug: state.pathParameters['course']!,
           lessonSlug: state.pathParameters['lesson']!,
         ),
+      ),
+      GoRoute(
+        path: '/tajweed',
+        builder: (context, state) => const TajweedCourseHomeScreen(),
+      ),
+      GoRoute(
+        path: '/salah',
+        builder: (context, state) => const SalahHomeScreen(),
       ),
       GoRoute(
         path: '/tajweed/lesson/:lesson',
@@ -218,7 +230,7 @@ Future<void> _pump(
             ),
           ),
           tajweedCourseRepositoryProvider.overrideWithValue(
-            _PendingTajweedExamples(),
+            tajweedExamples ? _TajweedExamples() : _PendingTajweedExamples(),
           ),
           tajweedCourseProgressStoreProvider.overrideWithValue(
             TajweedCourseProgressStore(database),
@@ -234,6 +246,8 @@ Future<void> _pump(
           salahOfflineImagesProvider.overrideWith(
             (ref, slug) async => const <String, String>{},
           ),
+          // The prayer course's home offers no download: nothing is published.
+          salahOfflineRepositoryProvider.overrideWithValue(_NoSalahOffline()),
           // The next step's picture is fetched ahead; no disk cache in tests.
           salahImageProvider.overrideWithValue(
             (_) => MemoryImage(pictures['2222222222']!),
@@ -612,6 +626,18 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
+/// Unfolds the lesson's «Sources» at the end of its last step, in view.
+Future<void> _openSources(WidgetTester tester) async {
+  final sources = find.byKey(const ValueKey('course-lesson-sources'));
+  await tester.ensureVisible(sources);
+  await tester.tap(
+    find.descendant(of: sources, matching: find.byIcon(Icons.expand_more)),
+  );
+  await _settle(tester);
+  await tester.ensureVisible(sources);
+  await _settle(tester);
+}
+
 Future<void> _capture(WidgetTester tester, String name) async {
   await _settle(tester);
   final boundary =
@@ -849,6 +875,45 @@ void main() {
     skip: _directory.isEmpty,
   );
 
+  testWidgets('prayer course: «Author and sources»', (tester) async {
+    await _pump(tester, location: '/salah');
+    await _capture(tester, 'app-salah-course-source-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('prayer lesson: its sources on the last step', (tester) async {
+    await _pump(tester, location: '/salah/lesson/fajr');
+    for (var step = 0; step < 4; step++) {
+      await tester.tap(find.byKey(const ValueKey('salah-next')));
+      await _settle(tester);
+    }
+    await _openSources(tester);
+    await _capture(tester, 'app-salah-lesson-sources-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('tajweed course: «Author and sources»', (tester) async {
+    await _pump(
+      tester,
+      location: '/tajweed',
+      tajweed: tajweedCourseDocumentWithSourcesJson(),
+    );
+    await _capture(tester, 'app-tajweed-course-source-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('tajweed lesson: its sources on the last step', (tester) async {
+    await _pump(
+      tester,
+      location: '/tajweed/lesson/izhar',
+      tajweed: tajweedCourseDocumentWithSourcesJson(),
+      tajweedExamples: true,
+    );
+    for (var step = 0; step < 5; step++) {
+      await tester.tap(find.byKey(const ValueKey('tajweed-course-next')));
+      await _settle(tester);
+    }
+    await _openSources(tester);
+    await _capture(tester, 'app-tajweed-lesson-sources-ru');
+  }, skip: _directory.isEmpty);
+
   testWidgets('lesson in the dark theme', (tester) async {
     await _pump(tester, location: '/courses/ramadan/taraviikh', dark: true);
     await _capture(tester, 'app-course-lesson-dark-ru');
@@ -932,6 +997,35 @@ class _PendingTajweedExamples implements TajweedCourseRepository {
     required int offset,
     required int limit,
   }) => Completer<TajweedExamplesPage>().future;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _NoSalahOffline implements SalahOfflineRepository {
+  @override
+  Future<SalahOfflineSnapshot> snapshot(String slug, String language) async =>
+      const SalahOfflineSnapshot.empty();
+
+  @override
+  Future<SalahOfflineSnapshot> check(String slug, String language) async =>
+      const SalahOfflineSnapshot.empty();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// The examples of the site's fixtures, in API order.
+class _TajweedExamples implements TajweedCourseRepository {
+  @override
+  Future<TajweedExamplesPage> examples(
+    String slug,
+    String lesson, {
+    required int offset,
+    required int limit,
+  }) async => TajweedExamplesPage.fromJson(
+    tajweedCourseExamplesPage(lesson, offset: offset, limit: limit),
+  );
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

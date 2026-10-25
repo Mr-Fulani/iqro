@@ -36,6 +36,25 @@ Map<String, Object?> tajweedCourseDocumentWithMediaJson() {
   return json;
 }
 
+/// [tajweedCourseDocumentJson] with the example's «Author and sources» and
+/// the sources of «izhar»; the other lessons have none.
+Map<String, Object?> tajweedCourseDocumentWithSourcesJson() {
+  final example = tajweedCourseExampleDocumentJson();
+  final sources = {
+    for (final lesson
+        in (example['lessons']! as List).cast<Map<String, Object?>>())
+      lesson['slug']: lesson['sources'],
+  };
+  final json = tajweedCourseDocumentJson();
+  (json['course']! as Map<String, Object?>)['source'] =
+      (example['course']! as Map<String, Object?>)['source'];
+  for (final lesson
+      in (json['lessons']! as List).cast<Map<String, Object?>>()) {
+    lesson['sources'] = sources[lesson['slug']];
+  }
+  return json;
+}
+
 /// The examples of [lesson] in API order: a page is `offset..offset+limit`.
 List<Object?> tajweedCourseExamplesJson(String lesson) =>
     (jsonDecode(_examples) as Map<String, Object?>)[lesson]! as List<Object?>;

@@ -50,8 +50,12 @@ from quran_backend.modules.courses.snapshot_media_admin import (
 )
 from quran_backend.modules.tajweed.course import (
     COLOR,
+    COURSE_SOURCE,
+    LESSON_SOURCES,
     LESSON_TEXTS,
     MARKUP_TEXTS,
+    SOURCE_MAX_LENGTH,
+    SOURCES_MAX_LENGTH,
     VERSION_NAME,
     TajweedCourseError,
     missing_texts,
@@ -83,6 +87,19 @@ TEXT_LABELS = {
     "explanation": "Объяснение правила",
     "how": "Как читать",
     "name": "Название",
+    COURSE_SOURCE: "Автор и источники",
+    LESSON_SOURCES: "Источники",
+}
+# Optional: empty in every language is not stored (docs/tajweed/course.md, «Источники»).
+SOURCE_HELP = {
+    COURSE_SOURCE: (
+        "Кто составил курс, по каким книгам и изданиям, кто проверял. Видно на главной курса "
+        f"под описанием. До {SOURCE_MAX_LENGTH} знаков; можно оставить пустым на всех языках."
+    ),
+    LESSON_SOURCES: (
+        "По одному источнику на строку: книга, глава, страница. Видны на последнем шаге урока. "
+        f"До {SOURCES_MAX_LENGTH} знаков; можно оставить пустыми на всех языках."
+    ),
 }
 REVIEW_LABELS = {
     "pending_teacher_review": "На проверке у преподавателя: показывать пометку",
@@ -156,10 +173,10 @@ def _node(snapshot: Mapping[str, Any], node_id: str) -> tuple[str, dict[str, Any
 
 def _text_fields(kind: str) -> tuple[str, ...]:
     return {
-        "course": ("title", "summary"),
+        "course": ("title", "summary", COURSE_SOURCE),
         "target": ("name",),
         "section": ("title",),
-        "lesson": LESSON_TEXTS,
+        "lesson": (*LESSON_TEXTS, LESSON_SOURCES),
     }[kind]
 
 
@@ -339,7 +356,10 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             texts = dict(target.get(field) or {})
             for language in TAJWEED_COURSE_LANGUAGES:
                 texts[language] = str(data.get(f"{field}__{language}", "")).strip()
-            target[field] = texts
+            if field in SOURCE_HELP and not any(texts.values()):
+                target.pop(field, None)
+            else:
+                target[field] = texts
         problems: list[str] = []
         if kind == "course":
             target["review_status"] = str(data.get("review_status", ""))
@@ -404,18 +424,27 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 # What students will see, and what keeps the version from being signed.
                 found["blocks"] = parse_notes(shown)
                 found["problems"] = links.problems(shown)
+            elif field == COURSE_SOURCE and shown.strip():
+                found["source"] = shown.strip()
+            elif field == LESSON_SOURCES:
+                found["sources"] = [line.strip() for line in shown.splitlines() if line.strip()]
             return found
 
-        fields = [
+        fields: list[dict[str, Any]] = [
             {
                 "name": field,
                 "label": TEXT_LABELS[field],
-                "multiline": field in {"explanation", "how", "summary"},
-                "help": MARKUP_HELP if field in MARKUP_TEXTS else "",
+                "multiline": field in {"explanation", "how", "summary", *SOURCE_HELP},
+                "help": MARKUP_HELP if field in MARKUP_TEXTS else SOURCE_HELP.get(field, ""),
                 "values": [text(field, language) for language in languages],
             }
             for field in _text_fields(kind)
         ]
+        for entry in fields:
+            # Sources empty in every language are complete; written in one, the rest are due.
+            entry["may_be_empty"] = entry["name"] in SOURCE_HELP and not any(
+                value["value"].strip() for value in entry["values"]
+            )
         settings_fields: list[dict[str, Any]] = []
         if kind == "course":
             settings_fields.append(
