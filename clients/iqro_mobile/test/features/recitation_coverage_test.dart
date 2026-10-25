@@ -29,21 +29,9 @@ void main() {
     expect(recitation.coversSurah(2), isFalse);
   });
 
-  test('surah navigation skips to the next surah the recording holds', () {
-    final recitation = parse(<Object?>[1, 18, 112]);
-
-    expect(recitation.adjacentSurah(1, 1), 18);
-    expect(recitation.adjacentSurah(18, 1), 112);
-    expect(recitation.adjacentSurah(112, 1), isNull);
-    expect(recitation.adjacentSurah(18, -1), 1);
-    expect(recitation.adjacentSurah(1, -1), isNull);
-  });
-
   test('a catalog without the surah list treats every surah as present', () {
     final recitation = parse(null, surahCount: 114);
 
     expect(recitation.coversSurah(57), isTrue);
-    expect(recitation.adjacentSurah(113, 1), 114);
-    expect(recitation.adjacentSurah(114, 1), isNull);
   });
 }

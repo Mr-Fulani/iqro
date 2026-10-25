@@ -663,9 +663,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextSurah => 'Next surah';
 
   @override
-  String get chooseSurah => 'Choose surah';
-
-  @override
   String get speed => 'Speed';
 
   @override
@@ -2902,4 +2899,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coursesReportOpen => 'Open the request';
+
+  @override
+  String get queueAfterSurah => 'After the surah';
+
+  @override
+  String get queueModeStop => 'Stop';
+
+  @override
+  String get queueModeNext => 'Next';
+
+  @override
+  String get queueModeLoop => 'Loop';
+
+  @override
+  String get queueTitle => 'Queue';
+
+  @override
+  String get queueUpNext => 'Up next';
+
+  @override
+  String get queueWholeQuranFromStart => 'Whole Quran from the start';
+
+  @override
+  String get listenWholeQuran => 'Listen to the whole Quran';
+
+  @override
+  String get recitationVariant => 'Recitation';
+
+  @override
+  String get chooseRecitationVariant => 'What to listen to';
+
+  @override
+  String queueHeldSurahs(int count) {
+    return '$count of 114 surahs available';
+  }
+
+  @override
+  String queueMissingSurahs(int from, int to) {
+    return 'Surahs $from–$to not uploaded';
+  }
+
+  @override
+  String queueMissingSurah(int number) {
+    return 'Surah $number not uploaded';
+  }
+
+  @override
+  String get recitationAllSurahs => 'All 114 surahs';
+
+  @override
+  String recitationSomeSurahs(int count) {
+    return '$count of 114 surahs';
+  }
 }

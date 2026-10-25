@@ -15,6 +15,7 @@ import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
+import 'package:iqro_mobile/features/audio/listening_queue.dart';
 import 'package:iqro_mobile/features/audio/player_backgrounds.dart';
 import 'package:iqro_mobile/features/quran/surah_name_art.dart';
 import 'package:iqro_mobile/features/audio/player_screen.dart';
@@ -182,6 +183,157 @@ void main() {
     expect(find.text('Чтец для прослушивания'), findsOneWidget);
   });
 
+  testWidgets('the recording chip switches the reciter\'s recordings, '
+      'landing on the nearest held surah from its start', (tester) async {
+    final harness = await _pumpPlayer(
+      tester,
+      recitations: const <Recitation>[
+        _currentRecitation,
+        _currentPartialRecitation,
+        _mujawwadRecitation,
+      ],
+      queuePlayback: true,
+    );
+    final seeks = harness.engine.seekCalls.length;
+
+    expect(find.text('Вид чтения · Мурратталь'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('player-recitation-variant')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Что слушать'), findsOneWidget);
+    expect(find.text('все 114 сур'), findsOneWidget);
+    expect(find.text('3 из 114 сур'), findsOneWidget);
+    await tester.tap(find.text('Муджаввад'));
+    await tester.pumpAndSettle();
+
+    expect(
+      harness.repository.requestedRecitationId,
+      _currentPartialRecitation.id,
+    );
+    expect(harness.repository.requestedSurah, 36);
+    expect(
+      harness.controller.state.track?.recitationId,
+      _currentPartialRecitation.id,
+    );
+    expect(harness.controller.state.track?.surah, 36);
+    expect(harness.controller.state.position, Duration.zero);
+    expect(harness.engine.seekCalls, hasLength(seeks));
+    // It was playing, so it goes on playing.
+    expect(harness.engine.playCalls, 2);
+    expect(
+      harness.preferences.state.listeningRecitationId,
+      _currentPartialRecitation.id,
+    );
+    expect(find.text('Вид чтения · Муджаввад'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a single recording shows no recording chip', (tester) async {
+    await _pumpPlayer(tester);
+
+    expect(
+      find.byKey(const ValueKey('player-recitation-variant')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('the queue names what follows and lists the held surahs', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(
+      tester,
+      recitations: const <Recitation>[_partialPlayingRecitation],
+      queuePlayback: true,
+    );
+
+    expect(find.text('Далее · Сура 36'), findsOneWidget);
+    expect(find.text('После суры'), findsOneWidget);
+    expect(find.text('Дальше'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('player-up-next')));
+    await tester.tap(find.byKey(const ValueKey('player-up-next')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Очередь'), findsOneWidget);
+    expect(find.text('Текущий чтец · Мурратталь'), findsOneWidget);
+    expect(find.text('есть 3 из 114 сур'), findsOneWidget);
+    expect(find.text('Аль-Бакара'), findsWidgets);
+    expect(find.text('суры 3–35 не загружены'), findsOneWidget);
+    // A surah the catalog does not name keeps its number and the Mushaf's
+    // lettering of its name.
+    final unnamed = find.byKey(const ValueKey<int>(1));
+    expect(
+      find.descendant(of: unnamed, matching: find.text('Сура 1')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: unnamed, matching: find.byType(SurahNameArt)),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('По кругу'));
+    await tester.pumpAndSettle();
+    expect(harness.controller.state.queueMode, ListeningQueueMode.loop);
+
+    await tester.tap(find.text('Сура 1'));
+    await tester.pumpAndSettle();
+    expect(harness.repository.requestedSurah, 1);
+    expect(harness.controller.state.track?.surah, 1);
+    // In the loop mode the previous surah of the first is the last.
+    final previous = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.skip_previous),
+    );
+    expect(previous.onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the whole Quran from the start turns the stop mode into next', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(
+      tester,
+      recitations: const <Recitation>[_partialPlayingRecitation],
+      queuePlayback: true,
+    );
+    harness.controller.setQueueMode(ListeningQueueMode.stop);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('player-up-next')), findsNothing);
+    expect(find.text('Стоп'), findsOneWidget);
+    final previous = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.skip_previous),
+    );
+    expect(previous.onPressed, isNotNull);
+
+    await tester.ensureVisible(find.text('После суры'));
+    await tester.tap(find.text('После суры'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Весь Коран с начала'));
+    await tester.pumpAndSettle();
+
+    expect(harness.controller.state.queueMode, ListeningQueueMode.next);
+    expect(harness.repository.requestedSurah, 1);
+    expect(harness.controller.state.track?.surah, 1);
+    expect(harness.engine.playCalls, 2);
+    // Surah 1 is the first held one: nothing before it outside the loop mode.
+    final first = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.skip_previous),
+    );
+    expect(first.onPressed, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the Mushaf player has no queue', (tester) async {
+    await _pumpPlayer(
+      tester,
+      channel: AudioPlaybackChannel.mushaf,
+      recitations: const <Recitation>[_partialPlayingRecitation],
+    );
+
+    expect(find.text('После суры'), findsNothing);
+    expect(find.byKey(const ValueKey('player-up-next')), findsNothing);
+  });
+
   testWidgets('switches audio rendition without losing playback position', (
     tester,
   ) async {
@@ -240,7 +392,17 @@ void main() {
   ) async {
     await _pumpPlayer(tester);
 
-    await tester.tap(find.text('Аль-Бакара').first);
+    // The title names the surah with its number and opens the queue; it is
+    // no longer a menu of its own.
+    final title = find.ancestor(
+      of: find.text('2 · Аль-Бакара'),
+      matching: find.byType(InkWell),
+    );
+    expect(
+      find.descendant(of: title.first, matching: find.byType(Icon)),
+      findsNothing,
+    );
+    await tester.tap(find.text('2 · Аль-Бакара'));
     await tester.pumpAndSettle();
 
     final row = find.byKey(const ValueKey<int>(2));
@@ -460,6 +622,7 @@ Future<_PlayerHarness> _pumpPlayer(
     _currentRecitation,
     _mujawwadRecitation,
   ],
+  bool queuePlayback = false,
 }) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -480,7 +643,10 @@ Future<_PlayerHarness> _pumpPlayer(
     auth,
     NotificationGateway(database: database),
   );
-  final repository = _AudioRepositoryFake(recitations);
+  final repository = _AudioRepositoryFake(
+    recitations,
+    queuePlayback: queuePlayback,
+  );
   final engine = _RecordingAudioEngine();
   final controller = AudioController(engine: engine);
   await controller.loadPlayback(
@@ -636,6 +802,55 @@ const _listeningOnlyRecitation = Recitation(
   ),
 );
 
+/// The current reciter's other recording, with three surahs.
+const _currentPartialRecitation = Recitation(
+  id: 'recitation-current-partial',
+  code: 'current-mujawwad',
+  reciter: _currentReciter,
+  style: 'mujawwad',
+  timingsAvailable: false,
+  surahCount: 3,
+  streamAllowed: true,
+  offlineDownloadAllowed: false,
+  capabilities: RecitationCapabilities(
+    listen: true,
+    ayahPlayback: false,
+    memorization: false,
+    offline: false,
+  ),
+  coverage: RecitationCoverage(
+    trackCount: 3,
+    surahCount: 3,
+    expectedAyahs: 6236,
+    timedAyahs: 0,
+    complete: false,
+    timingsComplete: false,
+    surahNumbers: <int>[1, 36, 112],
+  ),
+);
+
+/// The playing recording itself, as a catalog with only some of its surahs.
+const _partialPlayingRecitation = Recitation(
+  id: 'recitation-current',
+  code: 'current-murattal',
+  reciter: _currentReciter,
+  style: 'murattal',
+  timingsAvailable: true,
+  timingsComplete: true,
+  surahCount: 3,
+  streamAllowed: true,
+  offlineDownloadAllowed: false,
+  coverage: RecitationCoverage(
+    trackCount: 3,
+    surahCount: 3,
+    expectedAyahs: 6236,
+    timedAyahs: 6236,
+    complete: false,
+    timingsComplete: true,
+    surahNumbers: <int>[1, 2, 36],
+  ),
+);
+
 const _currentRecitation = Recitation(
   id: 'recitation-current',
   code: 'current-murattal',
@@ -702,9 +917,12 @@ SurahPlayback _playback(
 );
 
 class _AudioRepositoryFake implements AudioRepository {
-  _AudioRepositoryFake(this._recitations);
+  _AudioRepositoryFake(this._recitations, {this.queuePlayback = false});
 
   final List<Recitation> _recitations;
+
+  /// Answers with the requested recitation and surah, as the queue asks.
+  final bool queuePlayback;
   String? requestedRecitationId;
   int? requestedSurah;
 
@@ -726,6 +944,19 @@ class _AudioRepositoryFake implements AudioRepository {
   }) async {
     requestedRecitationId = recitationId;
     requestedSurah = surah;
+    if (queuePlayback) {
+      return SurahPlayback(
+        track: AudioTrack(
+          id: 'track-$recitationId-$surah',
+          recitationId: recitationId,
+          surah: surah,
+          url: 'https://cdn.example.test/$recitationId/$surah.mp3',
+          duration: const Duration(minutes: 1),
+          offlineDownloadAllowed: false,
+        ),
+        segments: const <AudioSegment>[],
+      );
+    }
     return _playback(
       _mujawwadRecitation,
       start: const Duration(seconds: 30),

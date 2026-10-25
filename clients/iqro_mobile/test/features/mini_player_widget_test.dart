@@ -8,6 +8,7 @@ import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
+import 'package:iqro_mobile/features/audio/listening_queue.dart';
 import 'package:iqro_mobile/features/audio/mini_player.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
@@ -179,7 +180,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Al-Baqara'), findsNothing);
-        expect(find.text('Listening session'), findsOneWidget);
+        // The bar titles the surah with its number.
+        expect(find.text('2 · Listening session'), findsOneWidget);
         expect(controller.state.channel, channel);
         await tester.tap(find.byKey(const ValueKey('mini-player-play-toggle')));
         await tester.pumpAndSettle();
@@ -189,6 +191,99 @@ void main() {
       },
     );
   }
+
+  testWidgets('the surah buttons follow the listening queue', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = AudioController(engine: _MiniPlayerAudioEngine());
+    addTearDown(controller.dispose);
+    await controller.loadPlayback(
+      playback: const SurahPlayback(
+        track: _miniPlayerTrack,
+        segments: <AudioSegment>[],
+      ),
+      reciter: _miniPlayerReciter,
+      surahName: 'Al-Baqara',
+      autoplay: false,
+    );
+    final router = GoRouter(
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: IqroMiniPlayer(allowCollapse: false),
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          audioControllerProvider.overrideWith((ref) => controller),
+          appConfigProvider.overrideWithValue(
+            const AppConfig(
+              apiBaseUrl: 'https://media.example.test',
+              fallbackDownloadUrl: 'https://iqro.forum',
+              environment: 'local',
+            ),
+          ),
+          recitersProvider.overrideWith(
+            (ref) async => <Reciter>[_miniPlayerReciter],
+          ),
+          audioRecitationsProvider.overrideWith(
+            (ref) async => const <Recitation>[
+              Recitation(
+                id: 'mini-player-recitation',
+                code: 'mini-player-recitation',
+                reciter: _miniPlayerReciter,
+                style: 'murattal',
+                timingsAvailable: false,
+                surahCount: 2,
+                streamAllowed: true,
+                offlineDownloadAllowed: false,
+                coverage: RecitationCoverage(
+                  trackCount: 2,
+                  surahCount: 2,
+                  expectedAyahs: 6236,
+                  timedAyahs: 0,
+                  complete: false,
+                  timingsComplete: false,
+                  surahNumbers: <int>[2, 5],
+                ),
+              ),
+            ],
+          ),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    IconButton button(String tooltip) => tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byTooltip(tooltip),
+        matching: find.byType(IconButton),
+      ),
+    );
+
+    expect(button('Previous surah').onPressed, isNull);
+    expect(button('Next surah').onPressed, isNotNull);
+
+    controller.setQueueMode(ListeningQueueMode.loop);
+    await tester.pumpAndSettle();
+    expect(button('Previous surah').onPressed, isNotNull);
+  });
 
   testWidgets(
     'app-shell player restores listening instead of owned Dua audio',
@@ -268,7 +363,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Morning remembrance'), findsNothing);
-      expect(find.text('Listening session'), findsOneWidget);
+      expect(find.text('2 · Listening session'), findsOneWidget);
       expect(controller.state.standalone?.mediaItem.id, 'dua:1');
       expect(find.text('Reader'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('mini-player-play-toggle')));
@@ -278,7 +373,7 @@ void main() {
       expect(controller.state.playing, isTrue);
       expect(find.text('tab=3'), findsNothing);
 
-      await tester.tap(find.text('Listening session'));
+      await tester.tap(find.text('2 · Listening session'));
       await tester.pumpAndSettle();
       expect(find.text('player-route'), findsOneWidget);
       expect(controller.state.surahName, 'Listening session');

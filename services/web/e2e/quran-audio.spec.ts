@@ -823,7 +823,7 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
       .getByText("الفاتحة", { exact: true })
       .or(firstRow.getByRole("img", { name: "الفاتحة", exact: true })),
   ).toBeVisible();
-  const listenButtons = page.getByRole("button", { name: "Слушать", exact: true });
+  const listenButtons = page.getByRole("button", { name: "Слушать отсюда", exact: true });
   await expect(listenButtons).toHaveCount(114);
 
   await listenButtons.first().click();
@@ -846,7 +846,7 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
 
 test("switching the reciter stops the old source and prepares the same surah for the new voice", async ({ page }) => {
   await page.goto("/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
 
   const player = page.getByTestId("global-audio-player");
   const audio = player.locator("audio");
@@ -873,7 +873,7 @@ test("switching the reciter stops the old source and prepares the same surah for
 
 test("audio keeps playing on ordinary navigation and pauses when opening Quran", async ({ page }) => {
   await page.goto("/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
 
   const player = page.getByTestId("global-audio-player");
   const audio = player.locator("audio");
@@ -927,7 +927,7 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
   // Dua button and races the assertions below.
   await page.route("**/audio/ar/1.mp3", () => {});
   await page.goto("/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
 
   const player = page.getByTestId("global-audio-player");
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
@@ -963,7 +963,7 @@ test("global recitation and Dua audio take turns without overlapping", async ({ 
 
 test("a course lesson video and the recitation take turns", async ({ page }) => {
   await page.goto("/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const player = page.getByTestId("global-audio-player");
   await expect(player.getByText("Воспроизводится", { exact: true })).toBeVisible();
 
@@ -990,7 +990,7 @@ test("a course lesson video and the recitation take turns", async ({ page }) => 
 
 test("expanded player sound bars sway while the recitation plays and fade out otherwise", async ({ page }) => {
   await page.goto("/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
 
   const player = page.getByTestId("global-audio-player");
   const audio = player.locator("audio");
@@ -1049,7 +1049,7 @@ test.describe("sound bars with native media", () => {
         body: wav.subarray(start, end + 1) });
     });
     await page.goto("/audio");
-    await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+    await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
 
     const player = page.getByTestId("global-audio-player");
     const audio = player.locator("audio");
@@ -1062,7 +1062,7 @@ test.describe("sound bars with native media", () => {
     await expect.poll(playStates).toEqual(["running"]);
 
     // The expanded player covers the list, so the click goes to the button directly.
-    await page.locator(".track-row").nth(1).getByRole("button", { name: "Слушать", exact: true })
+    await page.locator(".track-row").nth(1).getByRole("button", { name: "Слушать отсюда", exact: true })
       .dispatchEvent("click");
     await expect(audio).toHaveAttribute("src", tracks[1].asset.url);
     await expect.poll(() => audio.evaluate((element) => (element as HTMLAudioElement).error?.code)).toBe(4);
@@ -1075,7 +1075,7 @@ test.describe("sound bars with native media", () => {
 test("persistent player is the app's mini player on phones and tablets and the dock on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
 
   const bar = page.getByTestId("mobile-audio-player");
   const audio = bar.locator("audio");
@@ -2728,7 +2728,7 @@ test("player preserves the cursor after interruption and registers Media Session
 
 test("minute sleep timer stops playback without losing the current position", async ({ page }) => {
   await page.goto("/audio");
-  await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   await page.getByTestId("global-audio-player")
     .getByRole("button", { name: "Развернуть плеер", exact: true })
     .click();
@@ -3689,7 +3689,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
     test("rolls up whole into the round button, however quickly it is tapped", async ({ page }) => {
       test.setTimeout(120_000);
       await page.goto("/ru/audio");
-      await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+      await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
       const bar = page.getByTestId("mobile-audio-player");
       await expect(bar.locator("audio")).toHaveAttribute("src", /\S/);
       await page.locator(".mobile-navigation a[href='/ru/quran']").first().click();

@@ -12,6 +12,7 @@ import '../../core/theme/iqro_theme.dart';
 import 'mini_player.dart';
 import 'audio_models.dart';
 import 'audio_offline_repository.dart';
+import 'listening_queue.dart';
 import 'recitation_style_label.dart';
 import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
@@ -148,14 +149,14 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                         IqroEyebrow(context.l10n.audioTitle, light: true),
                         const SizedBox(height: 6),
                         Text(
-                          listeningActive
-                              ? player.surahName
-                              : listeningController.listeningSurahName
-                                        ?.trim()
-                                        .isNotEmpty ==
-                                    true
-                              ? listeningController.listeningSurahName!
-                              : context.l10n.alFatiha,
+                          _heroTitle(
+                            listeningActive
+                                ? player.track?.surah
+                                : listeningController.listeningSurah,
+                            listeningActive
+                                ? player.surahName
+                                : listeningController.listeningSurahName,
+                          ),
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(color: Colors.white),
                         ),
@@ -303,6 +304,24 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
           const SizedBox(height: 12),
           _OfflineAudioCard(recitation: selectedRecitation!),
         ],
+        if (selectedRecitation != null) ...<Widget>[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              key: const ValueKey('audio-listen-whole-quran'),
+              onPressed: _loadingTrack
+                  ? null
+                  : () => _openPlayerForPerson(
+                      selectedPerson,
+                      selectedRecitation,
+                      wholeQuran: true,
+                    ),
+              icon: const Icon(Icons.playlist_play_rounded),
+              label: Text(context.l10n.listenWholeQuran),
+            ),
+          ),
+        ],
         const SizedBox(height: 22),
         Text(
           context.l10n.allReciters,
@@ -430,17 +449,22 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     }
   }
 
+  /// With [wholeQuran] the recording plays from its first surah and the
+  /// queue moves on after each one.
   Future<void> _openPlayerForPerson(
     ReciterPerson person,
-    Recitation recitation,
-  ) async {
+    Recitation recitation, {
+    bool wholeQuran = false,
+  }) async {
     if (_loadingTrack) return;
     final controller = ref.read(audioControllerProvider.notifier);
     final navigationEpoch = controller.navigationEpoch;
     final repository = ref.read(audioRepositoryProvider);
     final listeningSurah = controller.listeningSurah ?? 1;
     // A listening recording may hold only some surahs; start on its first one.
-    final surah = recitation.coversSurah(listeningSurah)
+    final surah = wholeQuran
+        ? recitationHeldSurahs(recitation).first
+        : recitation.coversSurah(listeningSurah)
         ? listeningSurah
         : recitation.coverage?.surahNumbers.firstOrNull ?? listeningSurah;
     final surahName = _surahName(
@@ -482,6 +506,11 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         return;
       }
       _selectedRecitationId = recitation.id;
+      if (wholeQuran) {
+        controller.setQueueMode(
+          wholeQuranMode(ref.read(audioControllerProvider).queueMode),
+        );
+      }
       unawaited(
         ref
             .read(appPreferencesProvider.notifier)
@@ -508,6 +537,29 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         });
       }
     }
+  }
+
+  /// "2 · Аль-Бакара", as the player titles the surah; Al-Fatiha before
+  /// anything was heard.
+  String _heroTitle(int? surah, String? savedName) {
+    if (surah == null) {
+      return savedName?.trim().isNotEmpty == true
+          ? savedName!
+          : context.l10n.alFatiha;
+    }
+    final locale = Localizations.localeOf(context).languageCode;
+    final name = ref
+        .watch(quranCatalogProvider)
+        .valueOrNull
+        ?.surahs
+        .where((candidate) => candidate.number == surah)
+        .firstOrNull
+        ?.nameFor(locale);
+    return surahDisplayTitle(
+      surah,
+      name ?? savedName,
+      surahWord: context.l10n.surah,
+    );
   }
 
   String _surahName(int surah, {required String fallback}) {

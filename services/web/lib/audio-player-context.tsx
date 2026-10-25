@@ -7,6 +7,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useReducer,
   useRef,
@@ -18,14 +19,15 @@ import {
 } from "../components/SegmentedAudioPlayer";
 import type {
   AudioPlaybackRequest,
+  AudioPlayerControlRequest,
   MobilePlayerParts,
   MobilePlayerProps,
   ReciterControls,
 } from "../components/SegmentedAudioPlayer";
 import { PlayerBackdrop, PlayerBackgroundPicker } from "../components/PlayerBackground";
 import { PlayerEqualizer } from "../components/PlayerEqualizer";
+import { ListeningQueueBar, ListeningQueuePanel, queueSurahLabel } from "../components/ListeningQueue";
 import { trackEvent } from "./analytics";
-import { api } from "./api";
 import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
 import {
@@ -34,7 +36,6 @@ import {
   MOBILE_PLAYER_MEDIA_QUERY,
   PLAYER_CONTROL_SELECTOR,
   SHEET_CLOSE_FALLBACK_MS,
-  adjacentSurah,
   miniPlayerReducer,
   rolledUp,
   sheetShown,
@@ -46,7 +47,10 @@ import {
   resolvePlayerBackground,
 } from "./player-backgrounds";
 import type { PlayerBackground } from "./player-backgrounds";
+import type { ListeningQueue } from "./listening-queue";
 import { useHydrated } from "./use-hydrated";
+import { useListeningQueue } from "./use-listening-queue";
+import type { QueueStart } from "./use-listening-queue";
 import { useMediaQuery } from "./use-media-query";
 import { useReducedMotion } from "./use-reduced-motion";
 import { localizedPath, stripLocalePrefix } from "./routing";
@@ -62,6 +66,10 @@ type AudioPlayerContextValue = {
   request: AudioPlaybackRequest | null;
   isPlaying: boolean;
   startPlayback: (request: AudioPlaybackRequest) => void;
+  /** Plays a surah of a reciter's recordings; the player then moves through the queue itself. */
+  startQueue: (queue: ListeningQueue, surah: number, options?: QueueStart) => Promise<void>;
+  /** Plays on from where the player rests, such as a restored place. */
+  resumePlayback: () => void;
   clearPlayback: () => void;
   setReciterControls: (controls: AudioPlayerReciterControls | null) => void;
 };
@@ -112,11 +120,9 @@ export function AudioPlayerProvider({
   const [player, dispatchView] = useReducer(miniPlayerReducer, INITIAL_MINI_PLAYER_STATE);
   const { view, controlsHidden } = player;
   const [dragOffset, setDragOffset] = useState(0);
-  const [surahChange, setSurahChange] = useState<{ busy: boolean; error: string | null }>({
-    busy: false,
-    error: null,
-  });
-  const surahAttemptRef = useRef(0);
+  const [controlRequest, setControlRequest] = useState<AudioPlayerControlRequest | null>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const queuePanelId = useId();
   const surahRequestIdRef = useRef(SURAH_REQUEST_ID_BASE);
   const requestRef = useRef<AudioPlaybackRequest | null>(null);
   const isPlayingRef = useRef(false);
@@ -162,14 +168,42 @@ export function AudioPlayerProvider({
     rememberPlayerBackgroundId(id);
   }, []);
 
+  const nextRequestId = useCallback(() => ++surahRequestIdRef.current, []);
+  const {
+    controls: queueControls,
+    change: surahChange,
+    resetChange,
+    cancel: cancelQueue,
+    startQueue,
+    onPlanEnd,
+    onPositionChange,
+    changeSurah,
+  } = useListeningQueue({
+    request,
+    setRequest,
+    requestRef,
+    isPlaying,
+    isPlayingRef,
+    nextRequestId,
+    hydrated,
+    t,
+  });
+
   const startPlayback = useCallback((nextRequest: AudioPlaybackRequest) => {
+    cancelQueue();
     setRequest(nextRequest);
-  }, []);
+  }, [cancelQueue]);
 
   const clearPlayback = useCallback(() => {
+    cancelQueue();
     setRequest(null);
     setIsPlaying(false);
-  }, []);
+  }, [cancelQueue]);
+
+  const resumePlayback = useCallback(() => {
+    if (isPlayingRef.current || !requestRef.current) return;
+    setControlRequest({ requestId: nextRequestId(), action: "toggle-playback" });
+  }, [nextRequestId]);
 
   const setReciterControls = useCallback((controls: AudioPlayerReciterControls | null) => {
     setRegisteredReciterControls(controls);
@@ -190,8 +224,8 @@ export function AudioPlayerProvider({
 
   useEffect(() => {
     dispatchView({ type: "request-change", hasRequest: request !== null });
-    setSurahChange({ busy: false, error: null });
-  }, [request]);
+    resetChange();
+  }, [request, resetChange]);
 
   const fullOpen = mobile && view === "full";
   // On screen while open and while it sinks away; only then does the dock wear the sheet's markup.
@@ -281,42 +315,15 @@ export function AudioPlayerProvider({
     dispatchView({ type: "toggle-controls" });
   };
 
-  // The previous or next surah of the same recording, as the app's mini player.
-  const changeSurah = useCallback((direction: -1 | 1) => {
-    const current = requestRef.current;
-    const target = adjacentSurah(current?.track.surah_number, direction);
-    if (!current || target === null) return;
-    const attempt = ++surahAttemptRef.current;
-    setSurahChange({ busy: true, error: null });
-    api.getSurahPlayback(current.track.recitation_id, target)
-      .then((playback) => {
-        if (attempt !== surahAttemptRef.current || requestRef.current !== current) return;
-        surahRequestIdRef.current += 1;
-        setRequest({
-          ...current,
-          requestId: surahRequestIdRef.current,
-          track: playback.track,
-          segments: playback.segments || [],
-          kind: "surah",
-          startAyah: undefined,
-          endAyah: undefined,
-          title: t("common.surah", { surah: target }),
-          autoPlay: isPlayingRef.current,
-        });
-      })
-      .catch(() => {
-        if (attempt !== surahAttemptRef.current) return;
-        setSurahChange({ busy: false, error: t("player.surahUnavailable") });
-      });
-  }, [t]);
-
   const value = useMemo<AudioPlayerContextValue>(() => ({
     request,
     isPlaying,
     startPlayback,
+    startQueue,
+    resumePlayback,
     clearPlayback,
     setReciterControls,
-  }), [clearPlayback, isPlaying, request, setReciterControls, startPlayback]);
+  }), [clearPlayback, isPlaying, request, resumePlayback, setReciterControls, startPlayback, startQueue]);
 
   const isAudioPage = stripLocalePrefix(pathname) === "/audio";
   const compact = !expanded;
@@ -336,18 +343,30 @@ export function AudioPlayerProvider({
         controlsHidden,
         onOpen: () => dispatchView({ type: "open-full" }),
         onCollapse: () => dispatchView({ type: "collapse" }),
-        surah: { change: changeSurah, busy: surahChange.busy, error: surahChange.error },
+        surah: {
+          change: changeSurah,
+          busy: surahChange.busy,
+          error: surahChange.error,
+          previous: queueControls?.previous ?? null,
+          next: queueControls?.next ?? null,
+        },
+        queue: queueControls,
         reciterControls: showReciterControls ? reciterControls : null,
         equalizer: { enabled: background.showEqualizer, playing: isPlaying && !isBuffering },
         background: { options: backgroundOptions, value: background, onChange: chooseBackground },
       }
     : undefined;
+  // "2 · Al-Baqara" rather than "Surah 2" once the edition's names have arrived.
+  const queueTitle = queueControls?.current
+    ? queueSurahLabel(queueControls, queueControls.current, locale, t)
+    : null;
+  const queueClass = queueControls && expanded ? " has-queue" : "";
   const dockClassName = mobile
     ? `mobile-audio-player is-${view}${controlsHidden ? " is-controls-hidden" : ""}${showBackground ? " has-player-background" : ""}`
-    : `global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${showBackground ? " has-player-background" : ""}${mobilePartsFailed ? " is-fallback" : ""}`;
+    : `global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${queueClass}${showBackground ? " has-player-background" : ""}${mobilePartsFailed ? " is-fallback" : ""}`;
   const spacerClassName = mobile
     ? "global-audio-player-spacer is-mobile"
-    : `global-audio-player-spacer ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}`;
+    : `global-audio-player-spacer ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${queueClass}`;
   const dragStyle: CSSProperties | undefined = dragOffset > 0
     ? { transform: `translateY(${dragOffset}px)`, transition: "none" }
     : undefined;
@@ -437,9 +456,37 @@ export function AudioPlayerProvider({
                 compact={compact}
                 presentation={mobile ? (sheetOpen ? "full" : "mini") : "desktop"}
                 mobile={mobileProps}
+                controlRequest={controlRequest}
+                onPlanEnd={onPlanEnd}
+                onTrackSkip={changeSurah}
+                onPositionChange={onPositionChange}
+                displayTitle={queueTitle}
               />
+              {!mobile && expanded && queueControls && (
+                <ListeningQueueBar
+                  controls={queueControls}
+                  compact={false}
+                  open={queueOpen}
+                  onToggle={() => setQueueOpen((current) => !current)}
+                  panelId={queuePanelId}
+                />
+              )}
+              {!mobile && queueControls && (
+                <div id={queuePanelId} className="global-audio-player-queue" hidden={!queueOpen}>
+                  {queueOpen && <ListeningQueuePanel controls={queueControls} onClose={() => setQueueOpen(false)} />}
+                </div>
+              )}
               {!mobile && compact && (
                 <div className="global-audio-player-actions">
+                  {queueControls && (
+                    <ListeningQueueBar
+                      controls={queueControls}
+                      compact
+                      open={queueOpen}
+                      onToggle={() => setQueueOpen((current) => !current)}
+                      panelId={queuePanelId}
+                    />
+                  )}
                   <button
                     className="btn btn-secondary btn-sm global-audio-player-size-toggle"
                     type="button"

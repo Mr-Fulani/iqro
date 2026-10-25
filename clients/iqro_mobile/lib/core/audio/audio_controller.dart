@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../features/audio/audio_models.dart';
+import '../../features/audio/listening_queue.dart';
 import 'audio_playback_store.dart';
 import 'listening_media_service.dart';
 
@@ -216,6 +217,33 @@ class IqroStandaloneAudioState {
 }
 
 typedef _StandaloneRequest = ({String mediaId, int intent, Object? owner});
+
+/// One surah of the listening queue, ready to become the source.
+typedef ListeningQueueEntry = ({SurahPlayback playback, String surahName});
+
+/// What the listening queue needs from the catalog outside any widget, so the
+/// next surah can follow in the background and on a locked screen.
+class ListeningQueueSource {
+  const ListeningQueueSource({required this.heldSurahs, required this.entry});
+
+  /// The surahs the recitation holds, in order (see [recitationHeldSurahs]).
+  final Future<List<int>> Function(String recitationId) heldSurahs;
+  final Future<ListeningQueueEntry> Function(String recitationId, int surah)
+  entry;
+}
+
+/// The surah that plays after the current one, asked for when it starts, so
+/// its end only swaps the source.
+class _QueuePrefetch {
+  _QueuePrefetch({required this.trackId, required this.mode});
+
+  final String trackId;
+  final ListeningQueueMode mode;
+  var resolved = false;
+  int? target;
+  ListeningQueueEntry? entry;
+}
+
 typedef _RestoredPlaybackRange = ({AudioSegment? start, AudioSegment? end});
 
 enum AudioPlaybackSource { audio, memorization }
@@ -247,6 +275,7 @@ class IqroAudioState {
     this.rangeEndAyah,
     this.error,
     this.standalone,
+    this.queueMode = defaultListeningQueueMode,
   }) : channel =
            channel ??
            (source == AudioPlaybackSource.memorization
@@ -271,6 +300,9 @@ class IqroAudioState {
   final int? rangeEndAyah;
   final String? error;
   final IqroStandaloneAudioState? standalone;
+
+  /// What follows a listening surah that ends by itself; a device setting.
+  final ListeningQueueMode queueMode;
 
   bool get active => track != null;
   bool get anyAudioActive => active || standalone != null;
@@ -335,6 +367,7 @@ class IqroAudioState {
     int? rangeEndAyah,
     String? error,
     IqroStandaloneAudioState? standalone,
+    ListeningQueueMode? queueMode,
     bool clearError = false,
     bool clearSleepTimer = false,
     bool clearActiveAyah = false,
@@ -370,6 +403,7 @@ class IqroAudioState {
       rangeEndAyah: clearRange ? null : rangeEndAyah ?? this.rangeEndAyah,
       error: clearError ? null : error ?? this.error,
       standalone: clearStandalone ? null : standalone ?? this.standalone,
+      queueMode: queueMode ?? this.queueMode,
     );
   }
 }
@@ -426,6 +460,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
     IqroAudioEngine? engine,
     AudioPlaybackStore? playbackStore,
     ListeningMediaService? mediaService,
+    ListeningQueueSource? queueSource,
     Duration persistenceDelay = const Duration(seconds: 5),
     void Function(IqroAudioState state)? onPlaybackStarted,
   }) : assert(player == null || engine == null),
@@ -433,6 +468,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
        _playbackStore = playbackStore,
        _persistenceDelay = persistenceDelay,
        _mediaService = mediaService ?? ListeningMediaService.current,
+       _queueSource = queueSource,
        _onPlaybackStarted = onPlaybackStarted,
        super(const IqroAudioState()) {
     _subscriptions.add(
@@ -480,7 +516,10 @@ class AudioController extends StateNotifier<IqroAudioState> {
           _reportedGeneration = generation;
           _onPlaybackStarted?.call(state);
         }
-        if (completed && playerState.playing) {
+        if (state.playing) _prefetchListeningQueue();
+        if (completed &&
+            playerState.playing &&
+            !_followListeningQueue(generation: generation, intent: intent)) {
           _pauseCompletedSource(
             generation: generation,
             intent: intent,
@@ -566,6 +605,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
       },
       pause: pauseListening,
       seek: seekListening,
+      skipToNext: () => skipListeningSurah(1),
+      skipToPrevious: () => skipListeningSurah(-1),
     );
     _removeMediaListener = addListener(
       (_) => _publishListeningMedia(),
@@ -593,6 +634,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
   final IqroAudioEngine _player;
   final AudioPlaybackStore? _playbackStore;
   final ListeningMediaService? _mediaService;
+  final ListeningQueueSource? _queueSource;
+  _QueuePrefetch? _queuePrefetch;
   final void Function(IqroAudioState state)? _onPlaybackStarted;
   int? _reportedGeneration;
   void Function()? _removeMediaListener;
@@ -696,6 +739,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
       buffering: listening && state.buffering,
       position: listening ? state.position : snapshot!.position,
       speed: listening ? state.speed : snapshot!.speed,
+      canSkip: listening && _queueSource != null,
     );
   }
 
@@ -922,6 +966,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
       state = state.copyWith(
         speed: snapshot.speed,
         repeatEnabled: snapshot.repeatEnabled,
+        queueMode: snapshot.queueMode,
       );
       await _serializeSource(
         () => _loadPlayback(
@@ -985,7 +1030,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
           if (_disposed || restoreIntent != _sourceIntent) return;
           await _playbackStore?.clear();
           if (!_disposed && restoreIntent == _sourceIntent) {
-            state = const IqroAudioState();
+            state = IqroAudioState(queueMode: state.queueMode);
             _activeSourceIntent = -1;
           }
         });
@@ -1015,6 +1060,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
       rangeStartAyah: state.rangeStartAyah,
       rangeEndAyah: state.rangeEndAyah,
       savedAt: DateTime.now().toUtc(),
+      queueMode: state.queueMode,
     );
   }
 
@@ -1195,6 +1241,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
         activeAyah: startSegment?.ayah,
         rangeStartAyah: startSegment?.ayah,
         rangeEndAyah: endSegment?.ayah,
+        queueMode: state.queueMode,
       );
       _activeSourceIntent = intent;
       await _player.setAudioSource(
@@ -1491,6 +1538,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
         state = IqroAudioState(
           speed: state.speed,
           repeatEnabled: state.repeatEnabled,
+          queueMode: state.queueMode,
           standalone: IqroStandaloneAudioState(
             uri: uri,
             mediaItem: mediaItem,
@@ -1691,6 +1739,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
         state = IqroAudioState(
           speed: state.speed,
           repeatEnabled: state.repeatEnabled,
+          queueMode: state.queueMode,
         );
         _activeSourceIntent = -1;
       }
@@ -1999,8 +2048,167 @@ class AudioController extends StateNotifier<IqroAudioState> {
       await _player.setLoopMode(enabled ? LoopMode.one : LoopMode.off);
       if (!_ownsQuran(generation, trackId)) return;
       state = state.copyWith(repeatEnabled: enabled);
+      if (state.playing) _prefetchListeningQueue();
       _schedulePersistence(immediate: true);
     });
+  }
+
+  /// The mode is kept with the listening snapshot and survives a restart.
+  void setQueueMode(ListeningQueueMode mode) {
+    if (_disposed || state.queueMode == mode) return;
+    state = state.copyWith(queueMode: mode);
+    if (state.playing) _prefetchListeningQueue();
+    _schedulePersistence(immediate: true);
+  }
+
+  /// The lock screen's surah buttons: the nearest held surah that way, past
+  /// the ends only in the loop mode.
+  Future<void> skipListeningSurah(int direction) async {
+    final source = _queueSource;
+    final track = state.track;
+    final reciter = state.reciter;
+    if (_disposed ||
+        source == null ||
+        track == null ||
+        reciter == null ||
+        state.standalone != null ||
+        state.channel != AudioPlaybackChannel.listening) {
+      return;
+    }
+    final intent = _sourceIntent;
+    final generation = _sourceGeneration;
+    final ListeningQueueEntry next;
+    try {
+      final held = await source.heldSurahs(track.recitationId);
+      final target = adjacentQueueSurah(
+        held,
+        track.surah,
+        direction,
+        state.queueMode,
+      );
+      if (target == null) return;
+      final prefetch = _queuePrefetch;
+      final entry = prefetch?.trackId == track.id && prefetch?.target == target
+          ? prefetch?.entry
+          : null;
+      next = entry ?? await source.entry(track.recitationId, target);
+    } on Object {
+      // Offline without the surah: the lock screen button does nothing.
+      return;
+    }
+    if (intent != _sourceIntent || !_ownsQuran(generation, track.id)) return;
+    await _loadQueuedSurah(next, reciter);
+  }
+
+  void _prefetchListeningQueue() {
+    final source = _queueSource;
+    final track = state.track;
+    final mode = state.queueMode;
+    if (source == null ||
+        track == null ||
+        state.standalone != null ||
+        state.channel != AudioPlaybackChannel.listening ||
+        state.repeatEnabled ||
+        state.hasActiveRange ||
+        mode == ListeningQueueMode.stop) {
+      return;
+    }
+    final current = _queuePrefetch;
+    if (current != null &&
+        current.trackId == track.id &&
+        current.mode == mode) {
+      return;
+    }
+    final prefetch = _QueuePrefetch(trackId: track.id, mode: mode);
+    _queuePrefetch = prefetch;
+    unawaited(() async {
+      try {
+        final held = await source.heldSurahs(track.recitationId);
+        final target = surahAfter(held, track.surah, mode);
+        prefetch.target = target;
+        if (target != null) {
+          prefetch.entry = await source.entry(track.recitationId, target);
+        }
+        prefetch.resolved = true;
+      } on Object {
+        // The end of the surah asks again.
+        if (identical(_queuePrefetch, prefetch)) _queuePrefetch = null;
+      }
+    }());
+  }
+
+  /// At the natural end of a listening surah: plays what the queue mode
+  /// holds next. False leaves the finished source to pause as before.
+  bool _followListeningQueue({required int generation, required int intent}) {
+    final source = _queueSource;
+    final track = state.track;
+    final reciter = state.reciter;
+    final mode = state.queueMode;
+    if (source == null ||
+        track == null ||
+        reciter == null ||
+        _sourceTransitionActive ||
+        state.standalone != null ||
+        state.channel != AudioPlaybackChannel.listening ||
+        state.repeatEnabled ||
+        state.hasActiveRange ||
+        mode == ListeningQueueMode.stop) {
+      return false;
+    }
+    final prefetch = _queuePrefetch;
+    final prefetched =
+        prefetch != null &&
+        prefetch.resolved &&
+        prefetch.trackId == track.id &&
+        prefetch.mode == mode;
+    if (prefetched && prefetch.target == null) return false;
+    bool owns() =>
+        !_disposed &&
+        intent == _sourceIntent &&
+        _ownsQuran(generation, track.id) &&
+        _player.processingState == ProcessingState.completed;
+    unawaited(
+      () async {
+        var entry = prefetched ? prefetch.entry : null;
+        if (entry == null) {
+          // Not asked for yet: the finished surah pauses meanwhile, as before.
+          await _serializeSource(() async {
+            if (owns()) await _player.pause();
+          });
+          final held = await source.heldSurahs(track.recitationId);
+          final target = surahAfter(held, track.surah, mode);
+          if (target == null) return;
+          entry = await source.entry(track.recitationId, target);
+        }
+        final next = entry;
+        await _serializeSource(() async {
+          if (owns()) unawaited(_loadQueuedSurah(next, reciter));
+        });
+      }().catchError((Object _) {}),
+    );
+    return true;
+  }
+
+  /// Loads a surah of the same recitation and plays it. Unlike a manual load
+  /// it keeps the finished source's platform player, so the queue goes on in
+  /// the background.
+  Future<void> _loadQueuedSurah(ListeningQueueEntry entry, Reciter reciter) {
+    final intent = ++_sourceIntent;
+    final interruption = _sourceTransitionActive
+        ? _interruptCurrentSource()
+        : null;
+    return _serializeSource(
+      () => _loadPlayback(
+        playback: entry.playback.normalized(),
+        reciter: reciter,
+        source: AudioPlaybackSource.audio,
+        channel: AudioPlaybackChannel.listening,
+        surahName: entry.surahName,
+        autoplay: true,
+        intent: intent,
+        interruption: interruption,
+      ),
+    );
   }
 
   void setSleepTimer(Duration? duration) {
@@ -2049,7 +2257,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
       if (_disposed || intent != _sourceIntent) return;
       await _player.clearAudioSources();
       if (_disposed || intent != _sourceIntent) return;
-      state = const IqroAudioState();
+      state = IqroAudioState(queueMode: state.queueMode);
       _activeSourceIntent = -1;
       _standaloneRequest = null;
       if (clearStoredPlayback) {
@@ -2103,6 +2311,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
       rangeStartAyah: state.rangeStartAyah,
       rangeEndAyah: state.rangeEndAyah,
       savedAt: DateTime.now().toUtc(),
+      queueMode: state.queueMode,
     );
     _lastListeningSnapshot = snapshot;
     if (store == null) return;

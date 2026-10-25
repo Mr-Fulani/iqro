@@ -1,4 +1,5 @@
 import '../../features/audio/audio_models.dart';
+import '../../features/audio/listening_queue.dart';
 import '../auth/account_scope.dart';
 import '../storage/local_database.dart';
 
@@ -13,6 +14,7 @@ class AudioPlaybackSnapshot {
     required this.savedAt,
     this.rangeStartAyah,
     this.rangeEndAyah,
+    this.queueMode,
   });
 
   factory AudioPlaybackSnapshot.fromJson(Map<String, Object?> json) {
@@ -46,6 +48,7 @@ class AudioPlaybackSnapshot {
       rangeStartAyah: (json['range_start_ayah'] as num?)?.toInt(),
       rangeEndAyah: (json['range_end_ayah'] as num?)?.toInt(),
       savedAt: savedAt.toUtc(),
+      queueMode: listeningQueueModeNamed(json['queue_mode']),
     );
   }
 
@@ -59,6 +62,9 @@ class AudioPlaybackSnapshot {
   final int? rangeEndAyah;
   final DateTime savedAt;
 
+  /// Null in snapshots from before the queue; restoring one keeps the mode.
+  final ListeningQueueMode? queueMode;
+
   Map<String, Object?> toJson() => <String, Object?>{
     'version': 1,
     'playback': playback.toJson(),
@@ -70,6 +76,7 @@ class AudioPlaybackSnapshot {
     'range_start_ayah': rangeStartAyah,
     'range_end_ayah': rangeEndAyah,
     'saved_at': savedAt.toUtc().toIso8601String(),
+    'queue_mode': ?queueMode?.name,
   };
 }
 

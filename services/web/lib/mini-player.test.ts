@@ -3,7 +3,6 @@ import test from "node:test";
 import {
   INITIAL_MINI_PLAYER_STATE,
   MINI_PLAYER_SPACER_HEIGHT,
-  adjacentSurah,
   miniPlayerReducer,
   rolledUp,
   seekPositionMs,
@@ -107,15 +106,6 @@ test("a long or fast downward swipe dismisses, a short slow one or an upward one
   assert.equal(swipeDismisses({ deltaY: 10, durationMs: 5 }), false);
   assert.equal(swipeDismisses({ deltaY: -200, durationMs: 100 }), false);
   assert.equal(swipeDismisses({ deltaY: 30, durationMs: 0 }), false);
-});
-
-test("previous and next stay inside the 114 surahs", () => {
-  assert.equal(adjacentSurah(1, -1), null);
-  assert.equal(adjacentSurah(1, 1), 2);
-  assert.equal(adjacentSurah(114, 1), null);
-  assert.equal(adjacentSurah(114, -1), 113);
-  assert.equal(adjacentSurah(null, 1), null);
-  assert.equal(adjacentSurah(undefined, -1), null);
 });
 
 test("a seek stays within the active range", () => {
