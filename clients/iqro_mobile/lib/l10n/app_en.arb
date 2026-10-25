@@ -491,6 +491,7 @@
   "packageTotalSize": "full size {size}",
   "@packageTotalSize": {"placeholders": {"size": {"type": "String"}}},
   "completeMushafPages": "Complete Mushaf pages",
+  "offlinePreviousVersion": "Previous version",
   "completeRecitation": "Complete Quran recitation",
   "downloadInProgress": "Download in progress",
   "downloadFailed": "Download interrupted",

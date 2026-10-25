@@ -29,13 +29,21 @@ void main() {
       await harness.database.database.update(
         'offline_packages',
         {
-          'manifest': jsonEncode({'pages': 'x' * (3 * 1024 * 1024)}),
+          'manifest': jsonEncode({
+            'package_id': 'mushaf_pages',
+            'mushaf': {'edition_code': 'qcf-v2-hafs', 'name': 'QCF V2'},
+            'pages': 'x' * (3 * 1024 * 1024),
+          }),
         },
         where: 'package_id = ?',
         whereArgs: ['mushaf_pages'],
       );
       final packages = await harness.repository.packages();
-      expect(packages.firstWhere((p) => p.isMushaf).manifest, isEmpty);
+      // Only the head of the manifest is read: the edition name, then the
+      // last downloaded page from its own table.
+      final mushaf = packages.firstWhere((p) => p.isMushaf);
+      expect(mushaf.mushafName, 'QCF V2');
+      expect(mushaf.mushafPreviewPath, '/not-used-for-read-only-list');
       final audio = packages.firstWhere((p) => p.isAudio);
       expect(audio.quality, 'standard');
       expect(audio.reciterNameFor('ru'), 'Тестовый чтец');
