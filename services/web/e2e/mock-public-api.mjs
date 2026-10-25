@@ -314,10 +314,12 @@ function ramadanCourse(language) {
 }
 
 function courseList(language) {
-  if (!ramadanLanguages.includes(language)) return { language, courses: [] };
   const list = structuredClone(courseListExample);
-  const { course } = ramadanCourse(language);
+  // The prayer course has a cover and tajweed has none, on every language.
+  for (const card of Object.values(list.built_in)) card.cover = courseCover(card.cover);
   list.language = language;
+  if (!ramadanLanguages.includes(language)) return { ...list, courses: [] };
+  const { course } = ramadanCourse(language);
   list.courses[0] = { ...list.courses[0], title: course.title, summary: course.summary, cover: course.cover };
   return list;
 }

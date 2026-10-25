@@ -172,13 +172,46 @@ List<CourseSummary> parseCourseList(Object? payload) {
   return courses;
 }
 
+/// `built_in` of `GET /courses`: the covers of the prayer and tajweed cards,
+/// kept outside their versions. An older server without the field, or a cover
+/// that does not parse, means the card's icon.
+@immutable
+class BuiltInCourseCovers {
+  const BuiltInCourseCovers({this.salah, this.tajweed});
+
+  factory BuiltInCourseCovers.fromList(Object? payload) {
+    final builtIn = payload is Map ? payload['built_in'] : null;
+    CourseCover? cover(String course) {
+      final card = builtIn is Map ? builtIn[course] : null;
+      try {
+        return card is Map ? CourseCover.fromJson(card['cover']) : null;
+      } on FormatException {
+        return null;
+      }
+    }
+
+    return BuiltInCourseCovers(
+      salah: cover('salah'),
+      tajweed: cover('tajweed'),
+    );
+  }
+
+  final CourseCover? salah;
+  final CourseCover? tajweed;
+}
+
 /// The catalog as shown: [offline] when the list could not be refreshed and
 /// only the courses kept on the device are listed.
 @immutable
 class CourseCatalog {
-  const CourseCatalog({required this.courses, this.offline = false});
+  const CourseCatalog({
+    required this.courses,
+    this.builtIn = const BuiltInCourseCovers(),
+    this.offline = false,
+  });
 
   final List<CourseSummary> courses;
+  final BuiltInCourseCovers builtIn;
   final bool offline;
 
   CourseSummary? course(String slug) =>

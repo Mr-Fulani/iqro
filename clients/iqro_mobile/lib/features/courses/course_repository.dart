@@ -85,7 +85,10 @@ class CourseRepository {
     }
     final courses = parseCourseList(payload);
     await _write(catalogCacheKey(language), payload);
-    return CourseCatalog(courses: courses);
+    return CourseCatalog(
+      courses: courses,
+      builtIn: BuiltInCourseCovers.fromList(payload),
+    );
   }
 
   /// The document of [course] as the catalog names it.
@@ -147,7 +150,12 @@ class CourseRepository {
       if (await _read(key) == null) continue;
       available.add(course.withVersion(version));
     }
-    return CourseCatalog(courses: available, offline: true);
+    return CourseCatalog(
+      courses: available,
+      // The cover pictures themselves stay in the image cache.
+      builtIn: BuiltInCourseCovers.fromList(listed?.value),
+      offline: true,
+    );
   }
 
   Future<CourseDocument?> _cachedDocument(

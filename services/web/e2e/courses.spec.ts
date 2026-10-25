@@ -108,6 +108,28 @@ test("catalog → course → lesson → «lesson learned» keeps progress on the
   await expect(cards.filter({ hasText: "Рамадан" })).toContainText("Начат · 1 из 3");
 });
 
+test("the prayer card shows its cover like a thematic course; tajweed without one keeps its icon", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/en/courses");
+  const cards = page.locator(".courses-grid > li > a");
+  // The covers do not depend on the language: English has no thematic course, the cards stay.
+  await expect(cards).toHaveCount(2);
+  const salah = page.locator('a[href="/en/salah"]');
+  const cover = salah.locator(".courses-card-art img");
+  await expect(cover).toHaveAttribute("src", "/media/courses/covers/fedcba9876543210fedc-640.webp");
+  await expect(cover).toHaveAttribute("srcset", /fedcba9876543210fedc\.webp 1280w/);
+  await expect(cover).toHaveAttribute("alt", "");
+  await expect.poll(() => cover.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  const box = (await salah.locator(".courses-card-art").boundingBox())!;
+  expect(Math.abs(box.width / box.height - 16 / 9)).toBeLessThan(0.02);
+  await expect(salah.locator(".courses-card-icon")).toHaveCount(0);
+  await expect(salah).toContainText("A step-by-step prayer course");
+
+  const tajweed = page.locator('a[href="/en/tajweed"]');
+  await expect(tajweed.locator(".courses-card-art-builtin .courses-card-icon")).toBeVisible();
+  await expect(tajweed.locator("img")).toHaveCount(0);
+});
+
 test("the video waits behind its cover until ▶, plays in place and remembers where it stopped", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   const requests = watchVideoRequests(page);

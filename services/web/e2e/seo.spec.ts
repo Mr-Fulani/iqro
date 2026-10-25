@@ -476,7 +476,8 @@ test("content revalidation accepts only authenticated allowlisted events", async
     quiz: "ramadan-basics",
     version: "1",
   };
-  for (const event of [courseEvent, { ...courseEvent, action: "withdrawn" }, quizEvent]) {
+  const catalogEvent = { type: "courses.catalog.changed", action: "updated" };
+  for (const event of [courseEvent, { ...courseEvent, action: "withdrawn" }, catalogEvent, quizEvent]) {
     const accepted = await request.post(endpoint, {
       data: event,
       headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
@@ -492,6 +493,8 @@ test("content revalidation accepts only authenticated allowlisted events", async
     { ...courseEvent, version: "" },
     { ...courseEvent, quiz: "ramadan-basics" },
     { type: courseEvent.type, action: "activated", course: "ramadan" },
+    { ...catalogEvent, action: "activated" },
+    { ...catalogEvent, course: "salah" },
     { ...quizEvent, action: "deleted" },
     { ...quizEvent, quiz: "quiz" },
     { ...quizEvent, version: "1/2" },
