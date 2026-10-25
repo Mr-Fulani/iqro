@@ -8,6 +8,9 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../audio/audio_models.dart';
+import '../audio/premium_reciter_portrait.dart';
+import '../audio/reciter_portraits.dart';
 import '../quran/mushaf_edition.dart';
 import '../quran/mushaf_edition_picker.dart';
 import '../quran/mushaf_paper.dart';
@@ -62,6 +65,8 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
       for (final edition in ref.watch(availableMushafRenditionsProvider))
         edition.identity.code: edition,
     };
+    final apiBaseUrl = ref.watch(appConfigProvider).apiBaseUrl;
+    final reciters = ref.watch(recitersProvider).valueOrNull;
     final totalUsed = packages.fold<int>(
       0,
       (sum, package) => sum + package.usedBytes,
@@ -102,6 +107,11 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
               _OfflinePackageCard(
                 package: packages[index],
                 edition: editions[packages[index].mushafCode],
+                portraitUrl: _reciterPortraitUrl(
+                  packages[index],
+                  apiBaseUrl: apiBaseUrl,
+                  reciters: reciters,
+                ),
                 deleting: _deletingPackageId == packages[index].packageId,
                 onDelete: packages[index].isDownloading
                     ? null
@@ -187,6 +197,7 @@ class _OfflinePackageCard extends StatelessWidget {
   const _OfflinePackageCard({
     required this.package,
     required this.edition,
+    required this.portraitUrl,
     required this.deleting,
     required this.onDelete,
   });
@@ -195,6 +206,9 @@ class _OfflinePackageCard extends StatelessWidget {
 
   /// The catalog entry of a Mushaf package, when the catalog still has it.
   final NativeMushafEdition? edition;
+
+  /// The reciter's portrait of an audio package, null for the default figure.
+  final String? portraitUrl;
   final bool deleting;
   final VoidCallback? onDelete;
 
@@ -220,6 +234,8 @@ class _OfflinePackageCard extends StatelessWidget {
                 )
               else if (package.mushafPreviewPath case final path?)
                 SizedBox(width: 44, child: _DownloadedPage(path: path))
+              else if (package.isAudio)
+                PremiumReciterPortrait(url: portraitUrl, size: 44)
               else
                 Container(
                   width: 44,
@@ -325,6 +341,21 @@ class _DownloadedPage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The portrait of an audio package's reciter, as the Audio tab shows it.
+String? _reciterPortraitUrl(
+  OfflinePackageSummary package, {
+  required String apiBaseUrl,
+  required Iterable<Reciter>? reciters,
+}) {
+  final raw = package.manifest['reciter'];
+  if (!package.isAudio || raw is! Map) return null;
+  return resolveReciterPortraitUrl(
+    Reciter.fromJson(Map<String, Object?>.from(raw)),
+    apiBaseUrl: apiBaseUrl,
+    reciters: reciters,
+  );
 }
 
 String _packageTitle(

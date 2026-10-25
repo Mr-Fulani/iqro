@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { formatClock } from "../lib/audio-content";
+import { DEFAULT_RECITER_PORTRAIT } from "../lib/reciter-portraits";
 import { useI18n } from "../lib/i18n-context";
 import { sheetDragOffset, swipeDismisses } from "../lib/mini-player";
 import { playerBackgroundTitle } from "../lib/player-backgrounds";
@@ -67,10 +68,16 @@ function initialsOf(name: string): string {
     .map((part) => Array.from(part)[0] || "").join("").toLocaleUpperCase();
 }
 
-/** The reciter's portrait in the app's framed circle, initials or a person when there is none. */
+/**
+ * The reciter's portrait in the app's framed circle, the default figure when there is none;
+ * initials or a person only when even that does not load.
+ */
 function PlayerArtwork({ url, name, size, selected = false }: { url: string | null; name?: string; size: number; selected?: boolean }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [url]);
+  const [failed, setFailed] = useState<readonly string[]>([]);
+  useEffect(() => setFailed([]), [url]);
+  const src = [url, DEFAULT_RECITER_PORTRAIT].find(
+    (candidate): candidate is string => Boolean(candidate) && !failed.includes(candidate!),
+  );
   const initials = name ? initialsOf(name) : "";
   return (
     <span
@@ -78,9 +85,16 @@ function PlayerArtwork({ url, name, size, selected = false }: { url: string | nu
       style={{ "--artwork-size": `${size}px` } as CSSProperties}
       aria-hidden="true"
     >
-      {url && !failed ? (
+      {src ? (
         // eslint-disable-next-line @next/next/no-img-element -- static WebP portraits and admin CDN URLs, already sized for this slot.
-        <img src={url} alt="" width={size} height={size} decoding="async" onError={() => setFailed(true)} />
+        <img
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          decoding="async"
+          onError={() => setFailed((current) => [...current, src])}
+        />
       ) : (
         <span className="mobile-player-artwork-fallback">
           {initials || <Icon name="person" size={Math.round(size * 0.48)} />}

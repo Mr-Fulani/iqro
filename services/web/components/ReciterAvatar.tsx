@@ -2,6 +2,7 @@
 
 import Image, { ImageLoaderProps } from "next/image";
 import { useEffect, useState } from "react";
+import { DEFAULT_RECITER_PORTRAIT } from "../lib/reciter-portraits";
 import { useHydrated } from "../lib/use-hydrated";
 
 const passthroughLoader = ({ src }: ImageLoaderProps) => src;
@@ -26,12 +27,17 @@ export function ReciterAvatar({
   portraitUrl?: string | null;
   tone: number;
 }) {
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failed, setFailed] = useState<readonly string[]>([]);
   // Portraits are decorative: request them after hydration so they do not
   // compete with the server-rendered text on slow connections.
   const hydrated = useHydrated();
 
-  useEffect(() => setImageFailed(false), [portraitUrl]);
+  useEffect(() => setFailed([]), [portraitUrl]);
+  // A portrait that does not load falls back to the default figure; initials
+  // only when that is unreachable too.
+  const src = [portraitUrl, DEFAULT_RECITER_PORTRAIT].find(
+    (url): url is string => Boolean(url) && !failed.includes(url!),
+  );
 
   return (
     <span
@@ -39,19 +45,19 @@ export function ReciterAvatar({
       aria-hidden="true"
       data-testid="reciter-avatar"
     >
-      {(!portraitUrl || imageFailed) && (
+      {!src && (
         <span className="reciter-avatar-initials">{initials(name)}</span>
       )}
-      {portraitUrl && !imageFailed && hydrated && (
+      {src && hydrated && (
         <Image
           loader={passthroughLoader}
           unoptimized
           className="reciter-avatar-image"
-          src={portraitUrl}
+          src={src}
           alt=""
           width={112}
           height={112}
-          onError={() => setImageFailed(true)}
+          onError={() => setFailed((current) => [...current, src])}
         />
       )}
       <span className="reciter-avatar-play">▶</span>
