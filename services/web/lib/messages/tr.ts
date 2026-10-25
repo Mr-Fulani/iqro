@@ -1333,6 +1333,17 @@ const tr: Messages = {
   "news.next": "Sonraki",
   "news.counter": "{current} / {total}",
   "news.bubble": "Yeni: {count}. Aç",
+  "analytics.bannerTitle": "İstatistik onayı",
+  "analytics.bannerText": "Onayınızla, hangi bölümlerin yararlı olduğunu anlamak için ziyaretleri Google Analytics ve Yandex Metrica ile sayarız. Onay vermeseniz de site aynı şekilde çalışır.",
+  "analytics.more": "Çerez politikası",
+  "analytics.accept": "Kabul et",
+  "analytics.decline": "Reddet",
+  "analytics.settingsTitle": "Ziyaret istatistikleri",
+  "analytics.stateGranted": "İstatistiğe izin verdiniz: Google Analytics ve Yandex Metrica bu cihazda açık.",
+  "analytics.stateDenied": "İstatistiği reddettiniz: Google Analytics ve Yandex Metrica bu cihazda yüklenmez.",
+  "analytics.stateUnset": "Henüz seçim yapmadınız. Seçim yapana kadar Google Analytics ve Yandex Metrica yüklenmez.",
+  "analytics.allow": "İstatistiğe izin ver",
+  "analytics.withdraw": "Onayı geri çek",
 };
 
 export default tr;

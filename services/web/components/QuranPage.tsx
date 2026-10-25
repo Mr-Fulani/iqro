@@ -73,6 +73,7 @@ import {
   surahName as localizedSurahName,
 } from "../lib/quran-content";
 import { localizedPath } from "../lib/routing";
+import { trackEvent } from "../lib/analytics";
 import { isTajweedMushaf, tajweedWordIndex, type TajweedSelection } from "../lib/tajweed";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
@@ -370,6 +371,19 @@ function QuranContent() {
     rawSurahParam || 1,
   );
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
+  const reportedSurahs = useRef(new Set<number>());
+
+  // «surah_open» once per surah and visit, after it has stayed the current one
+  // for a few seconds: the restored reading position and paging past a surah
+  // do not count.
+  useEffect(() => {
+    if (reportedSurahs.current.has(selectedSurah)) return;
+    const timer = setTimeout(() => {
+      reportedSurahs.current.add(selectedSurah);
+      trackEvent("surah_open", { surah: selectedSurah });
+    }, 3_000);
+    return () => clearTimeout(timer);
+  }, [selectedSurah]);
   const [translationEditions, setTranslationEditions] = useState<QuranTranslationEdition[]>([]);
   const [selectedTranslationId, setSelectedTranslationId] = useState<number | null>(null);
   const [translationEnabled, setTranslationEnabled] = useState(false);
@@ -1557,6 +1571,9 @@ function QuranContent() {
       t("contentShare.readInIqro"),
       target.url,
     ));
+    if (result === "shared" || result === "copied") {
+      trackEvent("share", { content_type: "ayah", method: result === "shared" ? "native" : "copy_text" });
+    }
     if (result === "copied") showAnnotationFeedback(t("contentShare.textCopied"));
     if (result === "failed") setFeedbackMessage({ text: t("contentShare.shareError"), type: "err" });
   };

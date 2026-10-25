@@ -25,6 +25,7 @@ import {
   writeSalahProgress,
 } from "../lib/salah";
 import { salahStepScenes } from "../lib/salah-3d";
+import { trackEvent } from "../lib/analytics";
 import { type Salah3D, useSalah3D } from "./SalahStep3D";
 import { SalahStepNotes } from "./SalahStepNotes";
 import { StepNav } from "./StepNav";
@@ -301,6 +302,7 @@ export function SalahStepPlayer({
   const finish = () => {
     writeSalahProgress(recordSalahStep(readSalahProgress(), lesson.slug, step.slug, courseVersion, { completed: true }));
     setCompleted(true);
+    trackEvent("lesson_complete", { course: "salah", lesson: lesson.slug });
   };
 
   useEffect(() => {

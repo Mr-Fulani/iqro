@@ -51,6 +51,7 @@ export default function AyahShareDialog({
       title={target.title}
       url={target.url}
       fileName={`iqro-${surah}-${ayah}.png`}
+      contentType="ayah"
       previewAlt={t("ayahShare.previewAlt", { ayah: target.ayahKey })}
       load={load}
       onClose={onClose}

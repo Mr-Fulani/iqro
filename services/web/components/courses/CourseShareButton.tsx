@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { trackEvent } from "../../lib/analytics";
 import { useI18n } from "../../lib/i18n-context";
 
 function subscribeNothing() {
@@ -28,6 +29,7 @@ export function CourseShareButton({ title, text, url }: { title: string; text: s
     if (native) {
       try {
         await navigator.share({ title, text, url });
+        trackEvent("share", { content_type: "course", method: "native" });
       } catch {
         // Closing the menu is not an error.
       }
@@ -36,6 +38,7 @@ export function CourseShareButton({ title, text, url }: { title: string; text: s
     try {
       await navigator.clipboard.writeText(url);
       setStatus("copied");
+      trackEvent("share", { content_type: "course", method: "copy_link" });
     } catch {
       setStatus("failed");
     }

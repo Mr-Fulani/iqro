@@ -24,6 +24,7 @@ import type {
 } from "../components/SegmentedAudioPlayer";
 import { PlayerBackdrop, PlayerBackgroundPicker } from "../components/PlayerBackground";
 import { PlayerEqualizer } from "../components/PlayerEqualizer";
+import { trackEvent } from "./analytics";
 import { api } from "./api";
 import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
@@ -120,6 +121,18 @@ export function AudioPlayerProvider({
   const requestRef = useRef<AudioPlaybackRequest | null>(null);
   const isPlayingRef = useRef(false);
   const dockRef = useRef<HTMLDivElement>(null);
+  const reportedRequestIdRef = useRef<number | null>(null);
+
+  // One «audio_play» per playback request, when the sound actually starts.
+  useEffect(() => {
+    if (!isPlaying || !request || reportedRequestIdRef.current === request.requestId) return;
+    reportedRequestIdRef.current = request.requestId;
+    trackEvent("audio_play", {
+      kind: request.kind,
+      surah: request.track.surah_number ?? 0,
+      reciter: request.artist,
+    });
+  }, [isPlaying, request]);
 
   useEffect(() => {
     requestRef.current = request;

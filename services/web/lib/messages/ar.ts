@@ -1333,6 +1333,17 @@ const ar: Messages = {
   "news.next": "التالي",
   "news.counter": "{current} من {total}",
   "news.bubble": "جديد: {count}. افتح",
+  "analytics.bannerTitle": "الموافقة على الإحصاءات",
+  "analytics.bannerText": "بموافقتك نحصي الزيارات عبر Google Analytics وYandex Metrica لنعرف الأقسام المفيدة. ومن دون موافقتك يعمل الموقع كما هو.",
+  "analytics.more": "سياسة ملفات الارتباط",
+  "analytics.accept": "قبول",
+  "analytics.decline": "رفض",
+  "analytics.settingsTitle": "إحصاءات الزيارات",
+  "analytics.stateGranted": "سمحت بالإحصاءات: Google Analytics وYandex Metrica مفعّلان على هذا الجهاز.",
+  "analytics.stateDenied": "رفضت الإحصاءات: لا يُحمَّل Google Analytics ولا Yandex Metrica على هذا الجهاز.",
+  "analytics.stateUnset": "لم تختر بعد. وحتى تختار لا يُحمَّل Google Analytics ولا Yandex Metrica.",
+  "analytics.allow": "السماح بالإحصاءات",
+  "analytics.withdraw": "سحب الموافقة",
 };
 
 export default ar;

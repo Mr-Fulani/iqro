@@ -11,6 +11,7 @@ import { directionFor, isLocale, SUPPORTED_LOCALES } from "../../lib/i18n";
 import { Header } from "../../components/Header";
 import { MobileNavigation } from "../../components/MobileNavigation";
 import { Footer } from "../../components/Footer";
+import { AnalyticsConsent } from "../../components/AnalyticsConsent";
 import { AudioPlayerProvider } from "../../lib/audio-player-context";
 import { absoluteSiteUrl, createRootMetadata, SITE_NAME } from "../../lib/seo";
 import { serializeJsonLd } from "../../lib/json-ld";
@@ -120,6 +121,7 @@ export default async function RootLayout({ children, params }: Props) {
                 <Footer socialProfiles={socialProfiles} />
                 <MobileNavigation />
               </div>
+              <AnalyticsConsent />
             </AudioPlayerProvider>
           </AuthProvider>
         </I18nProvider>

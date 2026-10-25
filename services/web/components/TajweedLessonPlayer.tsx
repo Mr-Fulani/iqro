@@ -28,6 +28,7 @@ import {
 import { useCourseRecitation } from "../lib/use-course-recitation";
 import { usePageLoaded } from "../lib/use-page-loaded";
 import { useTajweedProgressSync } from "../lib/use-tajweed-progress";
+import { trackEvent } from "../lib/analytics";
 import { StepNav } from "./StepNav";
 import { ClipButtons, useAyahAudio, useClipPlayer } from "./TajweedAudio";
 import { colorStyle, Explanation } from "./TajweedParts";
@@ -309,6 +310,7 @@ export function TajweedLessonPlayer({
       courseSlug,
     );
     setCompleted(true);
+    trackEvent("lesson_complete", { course: courseSlug, lesson: lesson.slug });
     void sync();
   };
 

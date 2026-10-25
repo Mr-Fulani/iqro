@@ -16,6 +16,7 @@ import { clearPrayerLocationPreference } from "./prayer-location";
 import { useI18n } from "./i18n-context";
 import { rememberPostAuthReturnPath } from "./auth-navigation";
 import { clearReadingActivityQueue } from "./reading-activity-queue";
+import { trackEvent } from "./analytics";
 
 type AuthContextType = {
   session: GuestBootstrapResponse | null;
@@ -161,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clearSyncState(guestUserId);
         }
         setSession(result);
+        trackEvent("login", { method: "email" });
         return result;
       } catch (err) {
         setError(api.normalizeError(err));

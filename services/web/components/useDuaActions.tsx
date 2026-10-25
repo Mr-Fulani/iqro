@@ -8,6 +8,7 @@ import { useAuth } from "../lib/auth-context";
 import { contentShareText, shareTextOnly, type ContentShareText } from "../lib/content-share";
 import { nextPlaybackSpeed } from "../lib/dua-practice";
 import { duaEntryKey, duaEntryPath } from "../lib/dua-presentation";
+import { trackEvent } from "../lib/analytics";
 import { duaShareText, duaShareTitle } from "../lib/dua-share";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
@@ -236,6 +237,9 @@ export function useDuaShare(onStatus: (message: string) => void) {
       title,
       contentShareText(title, load(), t("contentShare.readInIqro"), url),
     );
+    if (result === "shared" || result === "copied") {
+      trackEvent("share", { content_type: "dua", method: result === "shared" ? "native" : "copy_text" });
+    }
     if (result === "copied") onStatus(t("contentShare.textCopied"));
     if (result === "failed") onStatus(t("contentShare.shareError"));
   };
@@ -247,6 +251,7 @@ export function useDuaShare(onStatus: (message: string) => void) {
         title={share.title}
         url={share.url}
         fileName={`iqro-${share.entry.collection}-${share.entry.source_number}.png`}
+        contentType="dua"
         previewAlt={t("duaShare.previewAlt", { number: share.entry.source_number })}
         load={share.load}
         onClose={() => setShare(null)}

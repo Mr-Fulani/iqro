@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AnalyticsConsentSettings } from "@/components/AnalyticsConsent";
 import { LegalDocument } from "@/components/LegalDocument";
 import { additionalLegalDocument } from "@/lib/legal-route";
 import { createContentMetadata } from "@/lib/seo";
@@ -14,5 +15,9 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
 
 export default async function CookiesPage({ params }: { params: Promise<RouteParams> }) {
   const { document } = additionalLegalDocument((await params).locale, "cookies");
-  return <LegalDocument {...document} />;
+  return (
+    <LegalDocument {...document}>
+      <AnalyticsConsentSettings />
+    </LegalDocument>
+  );
 }
