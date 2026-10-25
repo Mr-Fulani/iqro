@@ -47,3 +47,40 @@ Future<Map<String, Object?>> readOfflineAudioSummary(
     return const {};
   }
 }
+
+/// The edition name of a Mushaf package and its last downloaded page, for the
+/// offline storage list when the catalog no longer has that edition. Reads only
+/// the head of the manifest, where the server puts the `mushaf` block.
+Future<Map<String, Object?>> readOfflineMushafSummary(
+  DatabaseExecutor database,
+  String packageId,
+) async {
+  final rows = await database.rawQuery(
+    'SELECT substr(manifest, 1, ?) AS head FROM offline_packages '
+    'WHERE package_id = ?',
+    <Object?>[64 * 1024, packageId],
+  );
+  final head = rows.isEmpty ? '' : rows.single['head'] as String? ?? '';
+  final block = RegExp(r'"mushaf"\s*:\s*\{[^{}]*\}').firstMatch(head);
+  Object? name;
+  if (block != null) {
+    try {
+      final mushaf = jsonDecode('{${block[0]}}')['mushaf'];
+      if (mushaf is Map) name = mushaf['name'];
+    } on FormatException {
+      name = null;
+    }
+  }
+  final pages = await database.query(
+    'offline_package_items',
+    columns: const <String>['local_path'],
+    where: 'package_id = ? AND status = ?',
+    whereArgs: <Object?>[packageId, 'ready'],
+    orderBy: 'item_number DESC',
+    limit: 1,
+  );
+  return <String, Object?>{
+    'name': name,
+    'preview_path': pages.firstOrNull?['local_path'],
+  };
+}

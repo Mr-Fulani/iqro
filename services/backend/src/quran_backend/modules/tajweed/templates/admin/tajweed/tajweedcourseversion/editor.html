@@ -92,7 +92,7 @@
             <h3>{{ field.label }}</h3>
             {% if field.help %}<p class="help">{{ field.help }}</p>{% endif %}
             {% for lang in field.values %}
-              <div class="te-lang{% if not lang.value %} is-empty{% endif %}">
+              <div class="te-lang{% if not lang.value and not field.may_be_empty %} is-empty{% endif %}">
                 <label for="id_{{ lang.input }}"><bdi>{{ lang.label }}</bdi></label>
                 {% if field.multiline %}
                   <textarea id="id_{{ lang.input }}" name="{{ lang.input }}" lang="{{ lang.code }}"{% if lang.rtl %} dir="rtl"{% endif %}>{{ lang.value }}</textarea>
@@ -102,6 +102,17 @@
               </div>
               {% if lang.problems %}
                 <ul class="te-problems">{% for problem in lang.problems %}<li>{{ problem }}</li>{% endfor %}</ul>
+              {% endif %}
+              {% if lang.source %}
+                <details class="te-preview">
+                  <summary>Как увидят ученики (<bdi>{{ lang.label }}</bdi>)</summary>
+                  <div class="cv" lang="{{ lang.code }}" dir="{% if lang.rtl %}rtl{% else %}ltr{% endif %}"><p><strong>{{ field.label }}:</strong> {{ lang.source }}</p></div>
+                </details>
+              {% elif lang.sources %}
+                <details class="te-preview">
+                  <summary>Как увидят ученики (<bdi>{{ lang.label }}</bdi>)</summary>
+                  <div class="cv" lang="{{ lang.code }}" dir="{% if lang.rtl %}rtl{% else %}ltr{% endif %}"><p><strong>{{ field.label }} · {{ lang.sources|length }}</strong></p><ol>{% for source in lang.sources %}<li dir="auto">{{ source }}</li>{% endfor %}</ol></div>
+                </details>
               {% endif %}
               {% if lang.blocks %}
                 <details class="te-preview">

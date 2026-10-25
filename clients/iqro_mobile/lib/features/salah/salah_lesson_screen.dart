@@ -13,6 +13,7 @@ import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/course_sources.dart';
 import '../courses/lesson_media_view.dart';
 import '../courses/lesson_video_player.dart';
 import 'salah_3d.dart';
@@ -328,6 +329,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
                   lesson: lesson,
                   step: _steps[index],
                   showMedia: index == 0,
+                  showSources: index == _steps.length - 1,
                   audioOwner: _audioOwner,
                   visual: _StepVisualState(
                     index: index,
@@ -538,6 +540,7 @@ class _StepPage extends ConsumerWidget {
     required this.lesson,
     required this.step,
     required this.showMedia,
+    required this.showSources,
     required this.audioOwner,
     required this.visual,
     super.key,
@@ -551,6 +554,9 @@ class _StepPage extends ConsumerWidget {
   /// The first step opens with the lesson's video, slides and banners, as
   /// on the site; the video stops when the learner turns the page.
   final bool showMedia;
+
+  /// The last step ends with the lesson's «Sources», as on the site.
+  final bool showSources;
   final Object audioOwner;
   final _StepVisualState visual;
 
@@ -666,6 +672,13 @@ class _StepPage extends ConsumerWidget {
               audioTitle: '${lesson.title} · ${step.title}',
               audioOwner: audioOwner,
             ),
+          ],
+          // Practice is the prayer alone: no sources, as no instruction.
+          if (showSources &&
+              display.learning &&
+              lesson.sources.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 16),
+            CourseLessonSources(sources: lesson.sources),
           ],
         ],
       ),

@@ -712,6 +712,29 @@
   font-style: italic;
 }
 
+.se-p-source,
+.se-p-sources {
+  padding: 12px;
+  border: 1px solid var(--hairline-color);
+  border-radius: 16px;
+}
+
+.se-phone .se-p-source-label {
+  margin-bottom: 4px;
+  color: var(--body-quiet-color);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.se-p-sources ol {
+  margin: 0;
+  padding-inline-start: 22px;
+}
+
+.se-p-sources li + li {
+  margin-top: 6px;
+}
+
 .se-p-head {
   display: flex;
   flex-wrap: wrap;

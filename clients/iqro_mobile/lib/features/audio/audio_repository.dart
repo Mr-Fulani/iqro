@@ -207,10 +207,19 @@ class AudioRepository {
         '/recitations/$recitationId/surahs/$surah',
         public: true,
       );
-      await _database.writeCache(key, payload, maxAge: const Duration(days: 7));
+      final playback = SurahPlayback.fromJson(jsonMap(payload));
+      // Ayah timings can be added to published audio later (MP3Quran imports),
+      // so an untimed surah is asked for again as often as the catalog is.
+      await _database.writeCache(
+        key,
+        payload,
+        maxAge: playback.segments.isEmpty
+            ? const Duration(hours: 12)
+            : const Duration(days: 7),
+      );
       return _rememberPlayback(
         key,
-        SurahPlayback.fromJson(jsonMap(payload)),
+        playback,
       ).withPreferredQuality(_preferredQuality());
     } on Object {
       if (cached != null) {

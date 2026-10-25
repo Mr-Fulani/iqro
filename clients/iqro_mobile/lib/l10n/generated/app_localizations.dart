@@ -2898,6 +2898,12 @@ abstract class AppLocalizations {
   /// **'Complete Mushaf pages'**
   String get completeMushafPages;
 
+  /// No description provided for @offlinePreviousVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous version'**
+  String get offlinePreviousVersion;
+
   /// No description provided for @completeRecitation.
   ///
   /// In en, this message translates to:

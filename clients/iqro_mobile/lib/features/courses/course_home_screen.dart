@@ -9,6 +9,7 @@ import 'course_feedback.dart';
 import 'course_feedback_widgets.dart';
 import 'course_models.dart';
 import 'course_progress_store.dart';
+import 'course_sources.dart';
 import 'course_widgets.dart';
 
 const _arabicFallback = <String>[IqroTheme.arabicFontFamily];
@@ -84,20 +85,7 @@ class _CourseContents extends ConsumerWidget {
             const SizedBox(height: 12),
           ],
           if (info.source.isNotEmpty) ...<Widget>[
-            Text(
-              context.l10n.coursesSource,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              info.source,
-              key: const ValueKey('course-source'),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontFamilyFallback: _arabicFallback,
-              ),
-            ),
+            CourseSourceBlock(source: info.source),
             const SizedBox(height: 16),
           ],
           _ProgressCard(

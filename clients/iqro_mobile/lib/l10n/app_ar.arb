@@ -486,6 +486,7 @@
   "packageTotalSize": "الحجم الكامل {size}",
   "@packageTotalSize": {"placeholders": {"size": {"type": "String"}}},
   "completeMushafPages": "صفحات المصحف كاملة",
+  "offlinePreviousVersion": "إصدار سابق",
   "completeRecitation": "تلاوة القرآن كاملة",
   "downloadInProgress": "التنزيل جارٍ",
   "downloadFailed": "توقف التنزيل",

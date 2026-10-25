@@ -486,6 +486,7 @@
   "packageTotalSize": "tam boyut {size}",
   "@packageTotalSize": {"placeholders": {"size": {"type": "String"}}},
   "completeMushafPages": "Eksiksiz Mushaf sayfaları",
+  "offlinePreviousVersion": "Önceki sürüm",
   "completeRecitation": "Eksiksiz Kur'an tilaveti",
   "downloadInProgress": "İndirme sürüyor",
   "downloadFailed": "İndirme kesildi",

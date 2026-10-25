@@ -486,6 +486,7 @@
   "packageTotalSize": "полный размер {size}",
   "@packageTotalSize": {"placeholders": {"size": {"type": "String"}}},
   "completeMushafPages": "Полные страницы Мусхафа",
+  "offlinePreviousVersion": "Прежняя версия",
   "completeRecitation": "Полная запись Корана",
   "downloadInProgress": "Загрузка выполняется",
   "downloadFailed": "Загрузка прервана",

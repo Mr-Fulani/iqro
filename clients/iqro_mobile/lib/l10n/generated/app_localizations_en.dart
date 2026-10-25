@@ -1538,6 +1538,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get completeMushafPages => 'Complete Mushaf pages';
 
   @override
+  String get offlinePreviousVersion => 'Previous version';
+
+  @override
   String get completeRecitation => 'Complete Quran recitation';
 
   @override

@@ -37,6 +37,21 @@ def _notes(step: Mapping[str, Any], language: str) -> list[dict[str, str]]:
     ]
 
 
+def _sources(owner: Mapping[str, Any], language: str) -> dict[str, list[str]]:
+    """`sources`, one per line in the author's order; none, no key (docs/salah/sources.md)."""
+    text = _text(owner.get("sources"), language) or ""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return {"sources": lines} if lines else {}
+
+
+def _course(
+    snapshot: Mapping[str, Any], course_meta: Mapping[str, Any], language: str
+) -> dict[str, Any]:
+    """The course's meta; «Автор и источники» only when written."""
+    source = (_text(snapshot["course"].get("source"), language) or "").strip()
+    return {**course_meta, "language": language, **({"source": source} if source else {})}
+
+
 def compile_document(
     snapshot: Mapping[str, Any],
     *,
@@ -94,6 +109,7 @@ def compile_document(
         blocks = lesson_media(lesson, language, SALAH_LANGUAGES)
         if blocks:
             entry["media"] = blocks
+        entry.update(_sources(lesson, language))
         prayer = lesson.get("prayer")
         if prayer:
             entry["prayer"] = {
@@ -110,7 +126,7 @@ def compile_document(
 
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "course": {**course_meta, "language": language},
+        "course": _course(snapshot, course_meta, language),
         "sections": [
             {
                 "slug": section["slug"],

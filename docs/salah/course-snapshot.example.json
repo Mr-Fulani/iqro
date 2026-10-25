@@ -9,6 +9,12 @@
       "en": "Umdat al-Fiqh (Ibn Qudamah)",
       "ar": "عمدة الفقه لابن قدامة",
       "tr": "Umdetü'l-Fıkh (İbn Kudâme)"
+    },
+    "source": {
+      "ru": "По книге «Умдат аль-фикх» Ибн Кудамы аль-Макдиси, ханбалитский мазхаб.",
+      "en": "Based on «Umdat al-Fiqh» by Ibn Qudamah al-Maqdisi, Hanbali school.",
+      "ar": "على كتاب «عمدة الفقه» لابن قدامة المقدسي، المذهب الحنبلي.",
+      "tr": "İbn Kudâme el-Makdisî'nin «Umdetü'l-Fıkh» eserine göre, Hanbelî mezhebi."
     }
   },
   "prayer_kinds": [
@@ -153,6 +159,12 @@
         "en": "2 obligatory rak'ahs, recited aloud.",
         "ar": "ركعتان فرضًا، جهرية.",
         "tr": "2 rekât farz, sesli okunur."
+      },
+      "sources": {
+        "ru": "Ибн Кудама. Умдат аль-фикх, «Книга молитвы».\nАль-Бухари, 757; Муслим, 397 — хадис о том, кто плохо молился.",
+        "en": "Ibn Qudamah. Umdat al-Fiqh, «The Book of Prayer».\nAl-Bukhari, 757; Muslim, 397 — the hadith of the man who prayed badly.",
+        "ar": "ابن قدامة. عمدة الفقه، «كتاب الصلاة».\nالبخاري، 757؛ مسلم، 397 — حديث المسيء صلاته.",
+        "tr": "İbn Kudâme. Umdetü'l-Fıkh, «Namaz Kitabı».\nBuhârî, 757; Müslim, 397 — namazını kötü kılan kişinin hadisi."
       },
       "minutes": 6,
       "prayer": {

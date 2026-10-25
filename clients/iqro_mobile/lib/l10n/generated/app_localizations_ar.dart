@@ -1518,6 +1518,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get completeMushafPages => 'صفحات المصحف كاملة';
 
   @override
+  String get offlinePreviousVersion => 'إصدار سابق';
+
+  @override
   String get completeRecitation => 'تلاوة القرآن كاملة';
 
   @override

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/course_sources.dart';
 import '../tajweed/tajweed_sheet.dart' show TajweedRuleDot;
 import 'tajweed_course_models.dart';
 import 'tajweed_course_progress.dart';
@@ -136,6 +137,11 @@ class _OverviewCard extends StatelessWidget {
                 fontFamilyFallback: _arabicFallback,
               ),
             ),
+          // Under the description, as on the site.
+          if (document.course.source.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            CourseSourceBlock(source: document.course.source),
+          ],
           if (document.pendingReview) ...<Widget>[
             const SizedBox(height: 8),
             Text(

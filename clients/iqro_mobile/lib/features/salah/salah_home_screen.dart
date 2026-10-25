@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/design_system/iqro_icon.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/course_sources.dart';
 import '../settings/offline_storage_screen.dart' show formatOfflineBytes;
 import 'salah_models.dart';
 import 'salah_offline_repository.dart';
@@ -59,6 +61,11 @@ class _CourseContents extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // «Author and sources» above the progress, as in a thematic course.
+          if (document.course.source.isNotEmpty) ...<Widget>[
+            CourseSourceBlock(source: document.course.source),
+            const SizedBox(height: 16),
+          ],
           _OverviewCard(document: document, progress: progress, onOpen: open),
           _OfflineCard(courseSlug: courseSlug),
           for (final section in document.sections)
@@ -330,19 +337,19 @@ class _LessonCard extends StatelessWidget {
                   : context.iqroColors.sand,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(
-              switch (status) {
-                SalahLessonStatus.completed => Icons.check_rounded,
-                SalahLessonStatus.inProgress => Icons.play_arrow_rounded,
-                SalahLessonStatus.notStarted =>
-                  lesson.prayer != null
-                      ? Icons.self_improvement
-                      : Icons.menu_book_outlined,
-              },
-              color: status == SalahLessonStatus.completed
-                  ? scheme.onPrimary
-                  : scheme.primary,
-            ),
+            child:
+                status == SalahLessonStatus.notStarted && lesson.prayer != null
+                ? IqroIcon(iqroSalahIcon, color: scheme.primary)
+                : Icon(
+                    switch (status) {
+                      SalahLessonStatus.completed => Icons.check_rounded,
+                      SalahLessonStatus.inProgress => Icons.play_arrow_rounded,
+                      SalahLessonStatus.notStarted => Icons.menu_book_outlined,
+                    },
+                    color: status == SalahLessonStatus.completed
+                        ? scheme.onPrimary
+                        : scheme.primary,
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(

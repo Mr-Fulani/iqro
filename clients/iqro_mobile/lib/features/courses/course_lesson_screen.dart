@@ -12,6 +12,7 @@ import 'course_feedback.dart';
 import 'course_feedback_widgets.dart';
 import 'course_models.dart';
 import 'course_notes_view.dart';
+import 'course_sources.dart';
 import 'course_widgets.dart';
 import 'lesson_media_view.dart';
 import 'lesson_video_player.dart';
@@ -188,7 +189,7 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
           LessonVoteCard(course: course.slug, lesson: lesson.slug),
           if (lesson.sources.isNotEmpty) ...<Widget>[
             const SizedBox(height: 12),
-            _Sources(sources: lesson.sources),
+            CourseLessonSources(sources: lesson.sources),
           ],
           const SizedBox(height: 4),
           LessonReportButton(
@@ -201,111 +202,6 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
             const SizedBox(height: 12),
             CourseRatingCard(course: course.slug, language: course.language),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Folded by default, as on the site.
-class _Sources extends StatefulWidget {
-  const _Sources({required this.sources});
-
-  final List<String> sources;
-
-  @override
-  State<_Sources> createState() => _SourcesState();
-}
-
-class _SourcesState extends State<_Sources> {
-  var _open = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return IqroCard(
-      key: const ValueKey('course-lesson-sources'),
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Semantics(
-            button: true,
-            expanded: _open,
-            child: InkWell(
-              onTap: () => setState(() => _open = !_open),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 56),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: <Widget>[
-                      Icon(
-                        Icons.menu_book_outlined,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          context.l10n.coursesSources,
-                          style: theme.textTheme.titleSmall,
-                        ),
-                      ),
-                      Text(
-                        '${widget.sources.length}',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      AnimatedRotation(
-                        turns: _open ? .5 : 0,
-                        duration: MediaQuery.disableAnimationsOf(context)
-                            ? Duration.zero
-                            : const Duration(milliseconds: 200),
-                        child: const Icon(Icons.expand_more),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (_open)
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  for (final (index, source) in widget.sources.indexed)
-                    Padding(
-                      padding: EdgeInsets.only(top: index == 0 ? 0 : 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          SizedBox(
-                            width: 28,
-                            child: Text(
-                              '${index + 1}.',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              source,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontFamilyFallback: const [
-                                  IqroTheme.arabicFontFamily,
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
         ],
       ),
     );
