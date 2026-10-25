@@ -11,7 +11,7 @@ from typing import Any, ClassVar, cast
 from urllib.parse import urlencode
 
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.core.files.uploadedfile import UploadedFile
@@ -21,6 +21,7 @@ from django.http import (
     HttpRequest,
     HttpResponse,
     HttpResponseNotAllowed,
+    HttpResponseRedirect,
     JsonResponse,
 )
 from django.urls import path, reverse
@@ -44,6 +45,14 @@ from quran_backend.modules.audio.models import (
     RecitationEdition,
     RecitationPublicationStatus,
     Reciter,
+)
+from quran_backend.modules.audio.mp3quran_timings import (
+    Mp3QuranTimingError,
+    cached_timing_read,
+    import_mp3quran_timings,
+    mp3quran_folder,
+    prepare_mp3quran_timings,
+    untimed_surah_tracks,
 )
 from quran_backend.modules.audio.player_background_upload import (
     MAX_PLAYER_BACKGROUND_KIB,
@@ -780,6 +789,7 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     readonly_fields = (
         "catalog_status",
         "surah_coverage",
+        "ayah_timings",
         "published_at",
         "id",
         "created_at",
@@ -791,7 +801,7 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             {"fields": ("reciter", "style", "listening_only", "quran_edition_version")},
         ),
         ("Публикация", {"fields": ("status", "published_at", "catalog_status")}),
-        ("Суры", {"fields": ("surah_coverage",)}),
+        ("Суры", {"fields": ("surah_coverage", "ayah_timings")}),
         (
             "Источник и права",
             {
@@ -899,12 +909,58 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             MAX_SURAH_UPLOAD_MIB,
         )
 
+    @admin.display(description="Таймкоды аятов")
+    def ayah_timings(self, obj: RecitationEdition | None) -> str:
+        if obj is None or obj._state.adding:
+            return "—"
+        surah_total = obj.tracks.filter(scope=AudioTrackScope.SURAH).count()
+        untimed = len(untimed_surah_tracks(obj))
+        timed = surah_total - untimed
+        summary = f"Есть у {timed} из {surah_total} сур." if surah_total else "Сур пока нет."
+        if not untimed or obj.status == RecitationPublicationStatus.WITHDRAWN:
+            return summary
+        folder = mp3quran_folder(obj)
+        if folder is None:
+            return format_html(
+                "{} Таймкоды можно подтянуть из MP3Quran, если файлы записи взяты из папки "
+                "MP3Quran и её адрес (https://{}/audio/…/) указан в «Адресе источника».",
+                summary,
+                "cdn.mp3quran.net",
+            )
+        try:
+            read = cached_timing_read(obj)
+        except Mp3QuranTimingError:
+            note = "Не удалось спросить MP3Quran, есть ли у него таймкоды; можно попробовать."
+        else:
+            if read is None:
+                return format_html(
+                    "{} У MP3Quran нет таймкодов аятов для папки {}.", summary, folder
+                )
+            note = f"У MP3Quran есть таймкоды для этой папки (чтец №{read.read_id}, {read.rewaya})."
+        return format_html(
+            '<p style="margin:0 0 8px">{} {}</p>'
+            '<button type="submit" class="button" formmethod="post" formnovalidate '
+            'formaction="{}">Подтянуть таймкоды из MP3Quran</button>'
+            '<p class="help">Сначала проверим, что каждый файл записи — тот же, что у MP3Quran '
+            "(размер и MD5), иначе таймкоды не добавятся. Звук и суры не меняются. "
+            "Когда таймкоды будут у всех аятов, запись зазвучит в Мусхафе и Заучивании. "
+            "Проверка занимает до минуты; несохранённые правки формы не сохранятся.</p>",
+            summary,
+            note,
+            reverse("admin:audio_recitationedition_mp3quran_timings", args=[obj.pk]),
+        )
+
     def get_urls(self) -> list[Any]:
         return [
             path(
                 "<path:object_id>/surahs/upload/",
                 self.admin_site.admin_view(self.upload_surah_view),
                 name="audio_recitationedition_upload_surah",
+            ),
+            path(
+                "<path:object_id>/timings/mp3quran/",
+                self.admin_site.admin_view(self.mp3quran_timings_view),
+                name="audio_recitationedition_mp3quran_timings",
             ),
             *super().get_urls(),
         ]
@@ -952,6 +1008,32 @@ class RecitationEditionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "size_bytes": result.size_bytes,
             }
         )
+
+    def mp3quran_timings_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        recitation = self.get_object(request, unquote(object_id))
+        if recitation is None:
+            raise Http404
+        if not (
+            self.has_change_permission(request, recitation)
+            and request.user.has_perm("audio.add_audiotimingversion")
+            and request.user.has_perm("audio.add_ayahaudiosegment")
+        ):
+            raise PermissionDenied
+        change_url = reverse("admin:audio_recitationedition_change", args=[recitation.pk])
+        try:
+            result = import_mp3quran_timings(prepare_mp3quran_timings(recitation))
+        except Mp3QuranTimingError as exc:
+            self.message_user(request, str(exc), messages.ERROR)
+            return HttpResponseRedirect(change_url)
+        message = (
+            f"Таймкоды MP3Quran добавлены: {result.surah_count} сур, {result.ayah_count} аятов "
+            f"(версия {result.timing_version.version})."
+        )
+        self.log_change(request, recitation, message)
+        self.message_user(request, message, messages.SUCCESS)
+        return HttpResponseRedirect(change_url)
 
     def get_readonly_fields(
         self,
