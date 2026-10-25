@@ -467,12 +467,47 @@
     return text ? element(tag, className, text) : element(tag, `${className} se-p-empty`, "Не переведено");
   }
 
+  // The blocks of the course page and of a lesson's end, as on the site and in the app.
+  function renderSources(lang) {
+    if (preview.kind === "course") {
+      const source = value(`text-source-${lang}`);
+      if (!source) {
+        previewRoot.append(element("p", "se-p-empty", "Блока «Автор и источники» не будет"));
+        return;
+      }
+      const block = element("div", "se-p-source");
+      block.append(element("p", "se-p-source-label", "Автор и источники"), element("p", "", source));
+      previewRoot.append(block);
+      return;
+    }
+    previewRoot.append(textOrMissing("h4", "", value(`text-title-${lang}`)));
+    const lines = value(`text-sources-${lang}`).split("\n").map((line) => line.trim()).filter(Boolean);
+    if (!lines.length) {
+      previewRoot.append(element("p", "se-p-empty", "Блока «Источники» не будет"));
+      return;
+    }
+    const block = element("div", "se-p-sources");
+    block.append(element("p", "se-p-source-label", `Источники · ${lines.length}`));
+    const list = element("ol");
+    lines.forEach((line) => {
+      const item = element("li", "", line);
+      item.dir = "auto";
+      list.append(item);
+    });
+    block.append(list);
+    previewRoot.append(block);
+  }
+
   function renderPreview() {
     if (!preview || !previewRoot) return;
     const lang = previewLanguage.value;
     previewRoot.replaceChildren();
     previewRoot.dir = lang === "ar" ? "rtl" : "ltr";
     previewRoot.lang = lang;
+    if (preview.kind !== "step") {
+      renderSources(lang);
+      return;
+    }
     if (preview.image) {
       const image = element("img");
       image.src = preview.image.url;

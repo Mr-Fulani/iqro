@@ -5,10 +5,11 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { formatClock } from "../lib/audio-content";
 import { DEFAULT_RECITER_PORTRAIT } from "../lib/reciter-portraits";
 import { useI18n } from "../lib/i18n-context";
-import { adjacentSurah, sheetDragOffset, swipeDismisses } from "../lib/mini-player";
+import { sheetDragOffset, swipeDismisses } from "../lib/mini-player";
 import { playerBackgroundTitle } from "../lib/player-backgrounds";
 import { PlayerBackgroundPicker } from "./PlayerBackground";
 import { PlayerEqualizer } from "./PlayerEqualizer";
+import { ListeningQueuePanel, QueueModeSelect, VariantSelect, queueSurahLabel } from "./ListeningQueue";
 import type {
   MobilePlayerEngine,
   MobilePlayerHeaderProps,
@@ -43,6 +44,8 @@ const ICON_PATHS = {
   layers: "M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16zm0-11.47L17.74 9 12 13.47 6.26 9 12 4.53z",
   repeat: "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z",
   pauseBetween: "M9 16h2V8H9v8zm3-14C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-4h2V8h-2v8z",
+  queue: "M3 6h12v2H3zm0 5h12v2H3zm0 5h8v2H3zm13-1v6l5-3z",
+  afterSurah: "M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z",
   wallpaper: "M4 4h7V2H4c-1.1 0-2 .9-2 2v7h2V4zm6 9-4 5h12l-3-4-2.03 2.71L10 13zm7-4.5c0-.83-.67-1.5-1.5-1.5S14 7.67 14 8.5s.67 1.5 1.5 1.5S17 9.33 17 8.5zM20 2h-7v2h7v7h2V4c0-1.1-.9-2-2-2zm0 18h-7v2h7c1.1 0 2-.9 2-2v-7h-2v7zM4 13H2v7c0 1.1.9 2 2 2h7v-2H4v-7z",
 } as const;
 
@@ -158,6 +161,12 @@ function Summary({ engine, mobile }: MobilePlayerPartProps) {
       ) : (
         <p className="mobile-player-artist">{artist}</p>
       )}
+      {mobile.queue && (
+        <span className="mobile-player-variant">
+          <VariantSelect controls={mobile.queue} />
+          <Icon name="chevron" size={18} />
+        </span>
+      )}
       <p className={`mobile-player-status${problem ? " is-error" : ""}`} aria-live="polite">{problem ?? engine.statusLabel}</p>
       </div>
     </div>
@@ -232,7 +241,6 @@ function SeekBar({ engine }: { engine: MobilePlayerEngine }) {
 function Transport({ engine, mobile }: MobilePlayerPartProps) {
   const { t } = useI18n();
   const { request, isPlaying } = engine;
-  const surahNumber = request?.track.surah_number ?? null;
   const changing = mobile.surah.busy;
   const spinning = changing || (mobile.buffering && isPlaying);
   const playLabel = isPlaying ? t("player.pausePlayback") : t("player.play");
@@ -244,7 +252,7 @@ function Transport({ engine, mobile }: MobilePlayerPartProps) {
       className="mobile-player-control"
       aria-label={t("player.previousSurah")}
       onClick={() => mobile.surah.change(-1)}
-      disabled={!request || changing || adjacentSurah(surahNumber, -1) === null}
+      disabled={!request || changing || mobile.surah.previous === null}
     >
       <Icon name="previous" size={23} directional />
     </button>
@@ -255,7 +263,7 @@ function Transport({ engine, mobile }: MobilePlayerPartProps) {
       className="mobile-player-control"
       aria-label={t("player.nextSurah")}
       onClick={() => mobile.surah.change(1)}
-      disabled={!request || changing || adjacentSurah(surahNumber, 1) === null}
+      disabled={!request || changing || mobile.surah.next === null}
     >
       <Icon name="next" size={23} directional />
     </button>
@@ -300,14 +308,44 @@ function Transport({ engine, mobile }: MobilePlayerPartProps) {
           <Icon name="forward" size={28} label="10" directional />
         </button>
       </div>
+      {mobile.queue && <UpNext mobile={mobile} />}
       </div>
     </div>
   );
 }
 
+/** "Up next" under the buttons; it opens the queue over the full player. */
+function UpNext({ mobile }: { mobile: MobilePlayerPartProps["mobile"] }) {
+  const { t, locale } = useI18n();
+  const [open, setOpen] = useState(false);
+  const queue = mobile.queue;
+  if (!queue) return null;
+  return (
+    <>
+      <button type="button" className="mobile-player-up-next" aria-expanded={open} onClick={() => setOpen(true)}>
+        <Icon name="queue" size={22} />
+        <span className="mobile-player-up-next-copy">
+          <span>{queue.upNext !== null ? t("player.upNext") : t("player.afterSurah")}</span>
+          <strong>
+            {queue.upNext !== null
+              ? queueSurahLabel(queue, queue.upNext, locale, t)
+              : t("player.queueMode.stop")}
+          </strong>
+        </span>
+        <span className="mobile-player-up-next-action">{t("player.queue")}</span>
+      </button>
+      {open && (
+        <div className="mobile-player-queue-sheet">
+          <ListeningQueuePanel controls={queue} onClose={() => setOpen(false)} className="is-sheet" />
+        </div>
+      )}
+    </>
+  );
+}
+
 const TILE_ICONS = { speed: "speed", sleep: "timer", repeat: "repeat", pause: "pauseBetween" } as const;
-// The app's order: speed, sleep timer, range, repeat, (audio quality,) background.
-const TILE_ORDER = ["speed", "sleep", "range", "repeat", "pause", "background"] as const;
+// The app's order: after the surah, speed, sleep timer, range, repeat, (audio quality,) background.
+const TILE_ORDER = ["queue", "speed", "sleep", "range", "repeat", "pause", "background"] as const;
 
 function Options({ engine, mobile }: MobilePlayerPartProps) {
   const { t, locale } = useI18n();
@@ -318,6 +356,15 @@ function Options({ engine, mobile }: MobilePlayerPartProps) {
     <div className="mobile-player-options" inert={mobile.controlsHidden || undefined}>
       <div className="mobile-player-tiles">
         {TILE_ORDER.map((key) => {
+          if (key === "queue") {
+            return mobile.queue ? (
+              <label key={key} className="mobile-player-tile">
+                <Icon name="afterSurah" size={24} />
+                <span className="mobile-player-tile-label">{t("player.afterSurah")}</span>
+                <QueueModeSelect controls={mobile.queue} />
+              </label>
+            ) : null;
+          }
           if (key === "range") {
             return (
               <button

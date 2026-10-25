@@ -107,14 +107,7 @@ export function swipeDismisses({ deltaY, durationMs }: SwipeSample): boolean {
 
 /** A tap on the full player's body hides its controls; taps on controls do not. */
 export const PLAYER_CONTROL_SELECTOR =
-  "button, a, input, select, textarea, label, [role='slider'], .player-background-options";
-
-/** The surah the previous/next buttons move to, or null at either end of the Quran. */
-export function adjacentSurah(current: number | null | undefined, direction: -1 | 1): number | null {
-  if (!current || !Number.isInteger(current)) return null;
-  const target = current + direction;
-  return target >= 1 && target <= 114 ? target : null;
-}
+  "button, a, input, select, textarea, label, [role='slider'], .player-background-options, .mobile-player-queue-sheet";
 
 /** Where a slider value lands on the timeline, within the active range. */
 export function seekPositionMs(value: number, startMs: number, endMs: number): number {

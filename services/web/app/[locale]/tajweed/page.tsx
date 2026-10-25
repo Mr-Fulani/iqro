@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
+import { CourseSource } from "@/components/courses/CourseSources";
 import { TajweedCourseProgress, TajweedLessonStatusBadge } from "@/components/TajweedCourseProgress";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { getPublishedTajweedCourse, PublicContentNotFoundError } from "@/lib/public-content";
@@ -11,6 +12,7 @@ import { createPageMetadata } from "@/lib/seo";
 import { courseLessons, lessonOutline, TAJWEED_COURSE_SLUG } from "@/lib/tajweed-course";
 import { translate } from "@/lib/translate";
 import "./tajweed.css";
+import "@/components/courses/course-sources.css";
 
 export const revalidate = 3_600;
 
@@ -61,6 +63,7 @@ export default async function TajweedCoursePage({ params }: { params: Promise<Ro
         <p className="eyebrow">{translate(locale, "tajweedCourse.eyebrow")}</p>
         <h1>{document.course.title}</h1>
         <p>{document.course.summary}</p>
+        <CourseSource source={document.course.source} locale={locale} />
         {document.course.review_status === "pending_teacher_review" ? (
           <p className="tajweed-review-note">{translate(locale, "tajweed.reviewNote")}</p>
         ) : null}

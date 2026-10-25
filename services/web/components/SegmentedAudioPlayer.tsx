@@ -8,8 +8,10 @@ import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
 import { useI18n } from "../lib/i18n-context";
 import { MessageKey, TranslationVariables } from "../lib/i18n";
 import { formatClock } from "../lib/audio-content";
+import type { ListeningQueue } from "../lib/listening-queue";
 import { seekPositionMs } from "../lib/mini-player";
 import type { PlayerBackground } from "../lib/player-backgrounds";
+import type { ListeningQueueControls } from "../lib/use-listening-queue";
 
 export type AudioPlaybackRequest = {
   requestId: number;
@@ -24,6 +26,10 @@ export type AudioPlaybackRequest = {
   autoPlay?: boolean;
   /** The reciter's portrait, shown by the phone player. */
   artworkUrl?: string | null;
+  /** Where a surah resumes, as the saved place left it. */
+  startPositionMs?: number;
+  /** The Audio tab's recordings the global player moves through. */
+  queue?: ListeningQueue;
 };
 
 export type RepeatMode = "off" | "ayah" | "selection";
@@ -74,6 +80,9 @@ export type MobilePlayerSurahControls = {
   change: (direction: -1 | 1) => void;
   busy: boolean;
   error: string | null;
+  /** Where the previous and next buttons go; null disables them. */
+  previous: number | null;
+  next: number | null;
 };
 
 export type MobilePlayerProps = {
@@ -86,6 +95,8 @@ export type MobilePlayerProps = {
   onOpen: () => void;
   onCollapse: () => void;
   surah: MobilePlayerSurahControls;
+  /** The Audio tab's queue, when the request carries one. */
+  queue: ListeningQueueControls | null;
   reciterControls: ReciterControls | null;
   equalizer: { enabled: boolean; playing: boolean };
   background: { options: readonly PlayerBackground[]; value: PlayerBackground; onChange: (id: string) => void };
@@ -129,6 +140,14 @@ type SegmentedAudioPlayerProps = {
   // True while playback waits for data, until the sound resumes or pauses.
   onBufferingChange?: (isBuffering: boolean) => void;
   onSettingsChange?: (settings: AudioPlaybackSettings) => void;
+  /** The plan ended by itself; true when a following request takes over. */
+  onPlanEnd?: () => boolean;
+  /** The lock screen's previous/next track; without it they move by ayah. */
+  onTrackSkip?: (direction: -1 | 1) => void;
+  /** The playing position, a few times a second. */
+  onPositionChange?: (positionMs: number) => void;
+  /** A surah's title in place of the request's, such as "2 · Al-Baqara" once the names arrive. */
+  displayTitle?: string | null;
   controlRequest?: AudioPlayerControlRequest | null;
   pauseOnNavigationKey?: string;
   compact?: boolean;
@@ -209,6 +228,10 @@ export function SegmentedAudioPlayer({
   onPlayingChange,
   onBufferingChange,
   onSettingsChange,
+  onPlanEnd,
+  onTrackSkip,
+  onPositionChange,
+  displayTitle,
   controlRequest,
   pauseOnNavigationKey,
   compact = false,
@@ -238,6 +261,9 @@ export function SegmentedAudioPlayer({
   const onActiveAyahChangeRef = useRef(onActiveAyahChange);
   const onPlayingChangeRef = useRef(onPlayingChange);
   const onBufferingChangeRef = useRef(onBufferingChange);
+  const onPlanEndRef = useRef(onPlanEnd);
+  const onTrackSkipRef = useRef(onTrackSkip);
+  const onPositionChangeRef = useRef(onPositionChange);
   const navigationKeyRef = useRef(pauseOnNavigationKey);
   const handledControlRequestRef = useRef<number | null>(null);
 
@@ -274,6 +300,12 @@ export function SegmentedAudioPlayer({
   useEffect(() => {
     onBufferingChangeRef.current = onBufferingChange;
   }, [onBufferingChange]);
+
+  useEffect(() => {
+    onPlanEndRef.current = onPlanEnd;
+    onTrackSkipRef.current = onTrackSkip;
+    onPositionChangeRef.current = onPositionChange;
+  }, [onPlanEnd, onPositionChange, onTrackSkip]);
 
   useEffect(() => {
     if (compact) {
@@ -356,6 +388,24 @@ export function SegmentedAudioPlayer({
     setActivePlan({ ...plan });
     audio.currentTime = positionMs / 1000;
     updateActiveSegment(segment, notifyParent);
+    updateMediaPosition();
+  }, [updateActiveSegment, updateMediaPosition]);
+
+  // A saved place resumes inside the surah; the plan's ayah follows on play.
+  const applyStartPosition = useCallback(() => {
+    const audio = audioRef.current;
+    const plan = planRef.current;
+    const startMs = requestRef.current?.startPositionMs;
+    if (!audio || !plan || !startMs || plan.kind !== "surah") return;
+    if (startMs <= plan.startMs || startMs >= plan.endMs - 500) return;
+    audio.currentTime = startMs / 1000;
+    const index = segmentsRef.current.findIndex((segment) => startMs >= segment.start_ms && startMs < segment.end_ms);
+    if (index >= plan.startIndex && index <= plan.endIndex) {
+      plan.currentIndex = index;
+      planRef.current = { ...plan };
+      setActivePlan({ ...plan });
+      updateActiveSegment(segmentsRef.current[index], false);
+    }
     updateMediaPosition();
   }, [updateActiveSegment, updateMediaPosition]);
 
@@ -478,8 +528,9 @@ export function SegmentedAudioPlayer({
     }
     if (!mediaReadyRef.current) return;
     startPlan(nextPlan, playWhenReadyRef.current);
+    applyStartPosition();
     playWhenReadyRef.current = false;
-  }, [clearTransition, request, startPlan, updateActiveSegment]);
+  }, [applyStartPosition, clearTransition, request, startPlan, updateActiveSegment]);
 
   useEffect(() => {
     playbackRateRef.current = playbackRate;
@@ -580,14 +631,27 @@ export function SegmentedAudioPlayer({
       return;
     }
 
+    if (onPlanEndRef.current?.()) {
+      // The queue's next surah replaces this request; until then the sound rests.
+      const nextStatus: StatusMessage = { key: "player.status.nextSurah" };
+      playAttemptRef.current += 1;
+      clearTransition();
+      playWhenReadyRef.current = false;
+      pendingPauseStatusRef.current = nextStatus;
+      audioRef.current?.pause();
+      setStatus(nextStatus);
+      return;
+    }
+
     finishPlayback({ key: "player.status.finished" });
-  }, [finishPlayback, scheduleBoundaryTransition, stopAtCurrentPosition, updateActiveSegment]);
+  }, [clearTransition, finishPlayback, scheduleBoundaryTransition, stopAtCurrentPosition, updateActiveSegment]);
 
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
     const plan = planRef.current;
     if (!audio || !plan || audio.seeking || !hasStartedRef.current || boundaryTransitionRef.current) return;
     const currentMs = Math.round(audio.currentTime * 1000);
+    onPositionChangeRef.current?.(currentMs);
 
     if (plan.currentIndex < 0) {
       if (currentMs >= plan.endMs - 40) handleBoundary();
@@ -635,6 +699,7 @@ export function SegmentedAudioPlayer({
     const shouldPlay = playWhenReadyRef.current;
     playWhenReadyRef.current = false;
     setPlanPosition(plan, plan.currentIndex, shouldPlay);
+    applyStartPosition();
     if (shouldPlay) {
       setStatus({ key: "player.status.starting" });
       attemptPlay();
@@ -642,7 +707,7 @@ export function SegmentedAudioPlayer({
       setStatus({ key: "player.status.ready" });
       onActiveAyahChangeRef.current?.(null);
     }
-  }, [attemptPlay, setPlanPosition]);
+  }, [applyStartPosition, attemptPlay, setPlanPosition]);
 
   const resumePlayback = useCallback(() => {
     const audio = audioRef.current;
@@ -759,8 +824,8 @@ export function SegmentedAudioPlayer({
       stop: () => finishPlayback({ key: "player.status.stopped" }),
       seekbackward: (details) => seekBy(-(details.seekOffset || 10)),
       seekforward: (details) => seekBy(details.seekOffset || 10),
-      previoustrack: () => moveToAdjacentAyah(-1),
-      nexttrack: () => moveToAdjacentAyah(1),
+      previoustrack: () => onTrackSkipRef.current ? onTrackSkipRef.current(-1) : moveToAdjacentAyah(-1),
+      nexttrack: () => onTrackSkipRef.current ? onTrackSkipRef.current(1) : moveToAdjacentAyah(1),
     };
 
     for (const action of actions) {
@@ -790,6 +855,16 @@ export function SegmentedAudioPlayer({
     stopAtCurrentPosition,
     updateMediaPosition,
   ]);
+
+  // The lock screen names the surah as the player does, once its name is known.
+  useEffect(() => {
+    if (!("mediaSession" in navigator) || !activeRequest || !displayTitle) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: displayTitle,
+      artist: activeRequest.artist,
+      album: activeRequest.album || "Quran Platform",
+    });
+  }, [activeRequest, displayTitle]);
 
   useEffect(() => () => {
     playAttemptRef.current += 1;
@@ -838,7 +913,7 @@ export function SegmentedAudioPlayer({
       })
     : activePlan?.kind === "ayah" && activeAyah
       ? t("common.ayah", { ayah: `${activeAyah.surah_number}:${activeAyah.ayah_number}` })
-      : activeRequest?.title || t("player.noAudio");
+      : (activeRequest && displayTitle) || activeRequest?.title || t("player.noAudio");
   const statusLabel = t(status.key, status.variables);
   const settingsActionLabel = settingsOpen ? t("player.hideSettings") : t("player.showSettings");
   const readerAyahIsActive = Boolean(readerControls?.ayahKey && activePlan?.kind === "ayah"

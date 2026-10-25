@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../courses/course_models.dart' show NoteBlock;
 import '../courses/course_notes_view.dart';
+import '../courses/course_sources.dart';
 import '../courses/lesson_media_view.dart';
 import '../courses/lesson_video_player.dart';
 import '../tajweed/tajweed_sheet.dart'
@@ -511,7 +513,12 @@ class _TajweedLessonPlayerState extends ConsumerState<TajweedLessonPlayer>
                       onPageChanged: _onPageChanged,
                       itemBuilder: (context, index) => KeyedSubtree(
                         key: ValueKey('tajweed-course-step-${_steps[index]}'),
-                        child: _page(context, _steps[index]),
+                        child: index == _steps.length - 1
+                            ? _LessonEnd(
+                                sources: widget.lesson.sources,
+                                child: _page(context, _steps[index]),
+                              )
+                            : _page(context, _steps[index]),
                       ),
                     ),
                   ),
@@ -628,19 +635,44 @@ class _StepHeader extends StatelessWidget {
   }
 }
 
+/// The last step of a lesson, whichever it is: its page ends with the
+/// lesson's «Sources», as on the site.
+class _LessonEnd extends InheritedWidget {
+  const _LessonEnd({required this.sources, required super.child});
+
+  final List<String> sources;
+
+  static List<String> sourcesOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_LessonEnd>()?.sources ??
+      const <String>[];
+
+  @override
+  bool updateShouldNotify(_LessonEnd oldWidget) =>
+      !listEquals(sources, oldWidget.sources);
+}
+
 class _StepScroll extends StatelessWidget {
   const _StepScroll({required this.children});
 
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 24),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: children,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final sources = _LessonEnd.sourcesOf(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          ...children,
+          if (sources.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 16),
+            CourseLessonSources(sources: sources),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 Widget _stepTitle(BuildContext context, String text, {Key? key}) => Semantics(

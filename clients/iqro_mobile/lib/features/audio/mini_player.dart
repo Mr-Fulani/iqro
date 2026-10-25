@@ -9,6 +9,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
 import 'audio_models.dart';
+import 'listening_queue.dart';
 import 'premium_reciter_portrait.dart';
 import 'reciter_portraits.dart';
 
@@ -66,6 +67,19 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
         (player.track != null || standalone != null) &&
         !player.buffering &&
         !_changingSurah;
+    // The catalog only matters once there is a surah to move from.
+    final held = recitationHeldSurahs(
+      player.track == null
+          ? null
+          : _recitationById(
+              ref.watch(audioRecitationsProvider).valueOrNull,
+              player.track?.recitationId,
+            ),
+    );
+    final navigationMode = _navigationMode(
+      player.channel,
+      ref.watch(audioControllerProvider.select((value) => value.queueMode)),
+    );
     final collapsed =
         widget.allowCollapse && ref.watch(miniPlayerCollapsedProvider);
     final artwork = standalone == null
@@ -83,9 +97,25 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
               size: 24,
             ),
           );
+    final track = player.track;
+    final catalogName = track == null
+        ? null
+        : ref
+              .watch(quranCatalogProvider)
+              .valueOrNull
+              ?.surahs
+              .where((item) => item.number == track.surah)
+              .firstOrNull
+              ?.nameFor(locale);
     final title =
         standalone?.title ??
-        (player.track == null ? context.l10n.audioTitle : player.surahName);
+        (track == null
+            ? context.l10n.audioTitle
+            : surahDisplayTitle(
+                track.surah,
+                catalogName ?? player.surahName,
+                surahWord: context.l10n.surah,
+              ));
     final subtitle = standalone == null
         ? reciter?.nameFor(locale) ?? context.l10n.chooseReciter
         : standalone.artist ?? standalone.album ?? context.l10n.audioTitle;
@@ -177,8 +207,13 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                         icon: Icons.skip_previous_rounded,
                         onPressed:
                             controlsEnabled &&
-                                currentSurah != null &&
-                                currentSurah > 1
+                                adjacentQueueSurah(
+                                      held,
+                                      currentSurah,
+                                      -1,
+                                      navigationMode,
+                                    ) !=
+                                    null
                             ? () => _changeSurah(-1)
                             : null,
                       ),
@@ -205,8 +240,13 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                         icon: Icons.skip_next_rounded,
                         onPressed:
                             controlsEnabled &&
-                                currentSurah != null &&
-                                currentSurah < 114
+                                adjacentQueueSurah(
+                                      held,
+                                      currentSurah,
+                                      1,
+                                      navigationMode,
+                                    ) !=
+                                    null
                             ? () => _changeSurah(1)
                             : null,
                       ),
@@ -269,17 +309,19 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
     final recitationId = player.track?.recitationId;
     final currentSurah = player.track?.surah;
     if (reciter == null || recitationId == null || currentSurah == null) return;
-    Recitation? recitation;
-    for (final item
-        in ref.read(audioRecitationsProvider).valueOrNull ??
-            const <Recitation>[]) {
-      if (item.id == recitationId) recitation = item;
-    }
-    // A listening recording may hold only some surahs: skip to the next one it has.
-    final targetSurah = recitation == null
-        ? currentSurah + direction
-        : recitation.adjacentSurah(currentSurah, direction);
-    if (targetSurah == null || targetSurah < 1 || targetSurah > 114) return;
+    final recitation = _recitationById(
+      ref.read(audioRecitationsProvider).valueOrNull,
+      recitationId,
+    );
+    // A listening recording may hold only some surahs: skip to the next one
+    // it has. The Audio tab's loop mode also crosses the ends.
+    final targetSurah = adjacentQueueSurah(
+      recitationHeldSurahs(recitation),
+      currentSurah,
+      direction,
+      _navigationMode(player.channel, current.queueMode),
+    );
+    if (targetSurah == null) return;
 
     final locale = Localizations.localeOf(context).languageCode;
     var surahName = '${context.l10n.surah} $targetSurah';
@@ -335,6 +377,20 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
       }
     }
   }
+
+  Recitation? _recitationById(List<Recitation>? recitations, String? id) {
+    for (final item in recitations ?? const <Recitation>[]) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
+  ListeningQueueMode _navigationMode(
+    AudioPlaybackChannel channel,
+    ListeningQueueMode queueMode,
+  ) => channel == AudioPlaybackChannel.listening
+      ? queueMode
+      : ListeningQueueMode.next;
 
   bool _isCurrentRequest({
     required LocalDatabase database,

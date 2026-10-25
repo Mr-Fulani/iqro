@@ -439,3 +439,25 @@ test("a lesson without media has no media block and asks for no media files", as
   await page.waitForLoadState("networkidle");
   expect(requested).toEqual([]);
 });
+
+test("the course shows «Author and sources» and izhar's last step its sources", async ({ page, request }) => {
+  const course = await (await request.get("/ru/tajweed")).text();
+  // React separates the text runs with empty comments.
+  expect(course.replaceAll("<!-- -->", "")).toContain(
+    '<p class="course-source"><strong>Автор и источники:</strong> Риваят Хафса от Асыма',
+  );
+
+  const lesson = await openLesson(page, "/ru/tajweed/izhar");
+  const sources = lesson.getByTestId("course-lesson-sources");
+  await expect(sources).toHaveCount(1);
+  await expect(sources).toBeHidden();
+  await openLesson(page, "/ru/tajweed/izhar#find");
+  await expect(sources).toBeVisible();
+  await expect(sources.getByRole("listitem")).toHaveText([
+    "Аль-Джамзури. Тухфат аль-атфаль, бейты о нуне с сукуном и танвине.",
+    "Ибн аль-Джазари. Аль-Мукаддима аль-джазария, глава о нуне и миме.",
+  ]);
+
+  // A lesson without sources has no block.
+  expect(await (await request.get("/ru/tajweed/ikhfa")).text()).not.toContain("course-lesson-sources");
+});

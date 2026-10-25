@@ -131,13 +131,14 @@ SalahMediaAsset           version, key ("position-ruku"), object_key (неизм
 ```
 {
   "schema_version": 1,
-  "course": {slug, version, methodology, source_title, language,
-             reviewed_by, reviewed_at, published_at, checksum_sha256},
+  "course": {slug, version, methodology, source_title, source?, language,
+             reviewed_by, reviewed_at, published_at, checksum_sha256},  // source — «Автор и источники» (sources.md)
   "sections": [{slug, title, lessons: [lesson_slug]}],
   "lessons": [{
     slug, kind: "article"|"steps"|"prayer", title, summary, minutes,
     prayer?: {code, kind, kind_title, rakats},  // kind — code из prayer_kinds, kind_title — его название на языке документа
     media?: [video | slides | banner],  // медиа урока по порядку, формат тематических курсов (lesson-media.md)
+    sources?: [string],                 // «Источники» урока по порядку (sources.md)
     steps: [{
       slug,                     // стабильный id: "fajr.r1.ruku"
       kind: "action"|"recitation"|"info",
@@ -162,7 +163,7 @@ SalahMediaAsset           version, key ("position-ruku"), object_key (неизм
 }
 ```
 
-Все тексты уже на языке запроса. Клиент не выбирает перевод, не собирает последовательность и не знает фикха. `notes` и `audio` у шага и `caption` у формулы появились без смены `schema_version`: прежние клиенты их не видят и работают как раньше. Записи (озвучка шагов, свои записи формул) не входят в `media` документа — там только картинки, которые клиенты проверяют на размеры. Так же без смены `schema_version` появились `lessons[].media` — видео, слайды и баннеры урока ([lesson-media.md](lesson-media.md)); у урока без медиа поля нет.
+Все тексты уже на языке запроса. Клиент не выбирает перевод, не собирает последовательность и не знает фикха. `notes` и `audio` у шага и `caption` у формулы появились без смены `schema_version`: прежние клиенты их не видят и работают как раньше. Записи (озвучка шагов, свои записи формул) не входят в `media` документа — там только картинки, которые клиенты проверяют на размеры. Так же без смены `schema_version` появились `lessons[].media` — видео, слайды и баннеры урока ([lesson-media.md](lesson-media.md)); у урока без медиа поля нет. Так же появились `course.source` («Автор и источники») и `lessons[].sources` («Источники» урока) — [sources.md](sources.md); пустых полей в документе нет.
 
 ## 7. Клиенты
 

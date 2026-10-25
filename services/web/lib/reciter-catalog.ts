@@ -78,6 +78,11 @@ export function recitationStyleLabel(style: string, t: (key: MessageKey) => stri
   return key ? t(key) : style;
 }
 
+/** How a recording is told apart from the reciter's others: "<style> · <riwayah>". */
+export function recitationVariantLabel(recitation: Recitation, t: (key: MessageKey) => string): string {
+  return `${recitationStyleLabel(recitation.style, t)} · ${recitation.quran_edition.riwayah}`;
+}
+
 /** Listening recordings may hold only some surahs; older catalogs held all of them. */
 export function recitationHasSurah(recitation: Recitation, surahNumber: number): boolean {
   const numbers = recitation.coverage.surah_numbers;

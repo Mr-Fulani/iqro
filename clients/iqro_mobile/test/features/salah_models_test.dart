@@ -35,6 +35,32 @@ void main() {
     expect(SalahCourseDocument.fromJson(older).lesson('wudu')!.media, isEmpty);
   });
 
+  test('the course has «Author and sources» and a lesson its sources; '
+      'documents built before have none', () {
+    final document = SalahCourseDocument.fromJson(salahFixture());
+    expect(
+      document.course.source,
+      'По книге «Умдат аль-фикх» Ибн Кудамы аль-Макдиси, ханбалитский мазхаб.',
+    );
+    expect(document.lesson('fajr')!.sources, <String>[
+      'Ибн Кудама. Умдат аль-фикх, «Книга молитвы».',
+      'Аль-Бухари, 757; Муслим, 397 — хадис о том, кто плохо молился.',
+    ]);
+    expect(document.lesson('wudu')!.sources, isEmpty);
+
+    final older = salahFixture();
+    (older['course']! as Map<String, Object?>)['source'] = 7;
+    final fajr = (older['lessons']! as List<Object?>).last!;
+    (fajr as Map<String, Object?>)['sources'] = <Object?>[
+      '',
+      '  Умдат аль-фикх  ',
+      3,
+    ];
+    final parsed = SalahCourseDocument.fromJson(older);
+    expect(parsed.course.source, isEmpty);
+    expect(parsed.lesson('fajr')!.sources, <String>['Умдат аль-фикх']);
+  });
+
   test('a step carries its «?» and «!» notes and its own voice-over', () {
     final document = SalahCourseDocument.fromJson(salahFixture());
     final steps = document.lesson('fajr')!.steps;

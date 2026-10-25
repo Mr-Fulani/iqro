@@ -11,7 +11,8 @@ import {
 import type { Surah } from "../lib/api";
 import type { PublishedAudioInitialData } from "../lib/public-content";
 import { ReciterAvatar } from "./ReciterAvatar";
-import type { AudioPlaybackRequest } from "./SegmentedAudioPlayer";
+import { heldSurahs } from "../lib/listening-queue";
+import type { ListeningQueue } from "../lib/listening-queue";
 import { formatClock, reciterName as localizedReciterName } from "../lib/audio-content";
 import { useAudioPlayer } from "../lib/audio-player-context";
 import { useI18n } from "../lib/i18n-context";
@@ -20,6 +21,7 @@ import {
   latestRecitationsByVariant,
   recitationHasSurah,
   recitationStyleLabel,
+  recitationVariantLabel,
   reciterPersonKey,
   reciterSourcesForPerson,
 } from "../lib/reciter-catalog";
@@ -50,7 +52,8 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
   const {
     request: playerRequest,
     isPlaying,
-    startPlayback,
+    startQueue,
+    resumePlayback,
     clearPlayback,
     setReciterControls,
   } = useAudioPlayer();
@@ -70,14 +73,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
   const [error, setError] = useState<string | null>(null);
 
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
-  const pendingReciterPlaybackRef = useRef<{
-    reciterId: string;
-    surahNumber: number;
-    kind: AudioPlaybackRequest["kind"];
-    startAyah?: number;
-    endAyah?: number;
-  } | null>(null);
+  const pendingReciterPlaybackRef = useRef<{ reciterId: string; surahNumber: number } | null>(null);
 
   // Choose the reciter once the query string and the saved preference are known.
   useEffect(() => {
@@ -203,17 +199,37 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
     [locale],
   );
 
+  // The player moves through this reciter's recordings by itself (docs/audio-listening-queue.md).
+  const listeningQueue = useMemo<ListeningQueue | null>(() => {
+    if (!selectedReciter || !selectedRecitation) return null;
+    return {
+      reciterId: selectedReciter.id,
+      artist: reciterName(selectedReciter),
+      artworkUrl: reciterPortraitUrl(selectedReciter),
+      variantId: selectedRecitation.id,
+      variants: recitations.map((recitation) => ({
+        id: recitation.id,
+        label: recitationVariantLabel(recitation, t),
+        editionCode: recitation.quran_edition.code,
+        surahNumbers: recitation.coverage.surah_numbers ?? [],
+      })),
+    };
+  }, [reciterName, recitations, selectedRecitation, selectedReciter, t]);
+
+  // A recording chosen in the player shows here too.
+  const playerQueue = playerRequest?.queue;
+  useEffect(() => {
+    if (!playerQueue || playerQueue.reciterId !== selectedReciterId) return;
+    if (playerQueue.variantId === selectedRecitationId) return;
+    const recitation = recitations.find((item) => item.id === playerQueue.variantId);
+    if (!recitation) return;
+    rememberReciterPreference(recitation.reciter, recitation, "listening");
+    setSelectedRecitationId(recitation.id);
+  }, [playerQueue, recitations, selectedRecitationId, selectedReciterId]);
+
   const rememberCurrentTrackFor = useCallback((reciterId: string) => {
     const surahNumber = playerRequest?.track.surah_number;
-    pendingReciterPlaybackRef.current = surahNumber
-      ? {
-          reciterId,
-          surahNumber,
-          kind: playerRequest.kind,
-          startAyah: playerRequest.startAyah,
-          endAyah: playerRequest.endAyah,
-        }
-      : null;
+    pendingReciterPlaybackRef.current = surahNumber ? { reciterId, surahNumber } : null;
     clearPlayback();
   }, [clearPlayback, playerRequest]);
 
@@ -294,29 +310,13 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
       pendingReciterPlaybackRef.current = null;
       return;
     }
+    if (!listeningQueue || listeningQueue.variantId !== selectedRecitation.id) return;
     let cancelled = false;
     setLoadingTrackId(`reciter-switch-${pending.surahNumber}`);
     setError(null);
-    api.getSurahPlayback(selectedRecitation.id, pending.surahNumber)
-      .then((playback) => {
-        if (cancelled || pendingReciterPlaybackRef.current !== pending) return;
-        requestIdRef.current += 1;
-        startPlayback({
-          requestId: requestIdRef.current,
-          track: playback.track,
-          segments: playback.segments || [],
-          kind: pending.kind,
-          startAyah: pending.startAyah,
-          endAyah: pending.endAyah,
-          title: pending.kind === "ayah" && pending.startAyah
-            ? t("common.ayah", { ayah: `${pending.surahNumber}:${pending.startAyah}` })
-            : t("common.surah", { surah: pending.surahNumber }),
-          artist: reciterName(selectedReciter),
-          album: `${selectedRecitation.quran_edition.riwayah} · ${recitationStyleLabel(selectedRecitation.style, t)}`,
-          artworkUrl: reciterPortraitUrl(selectedReciter),
-          autoPlay: false,
-        });
-        pendingReciterPlaybackRef.current = null;
+    startQueue(listeningQueue, pending.surahNumber, { autoPlay: false })
+      .then(() => {
+        if (!cancelled && pendingReciterPlaybackRef.current === pending) pendingReciterPlaybackRef.current = null;
       })
       .catch((reason) => {
         if (!cancelled) {
@@ -330,32 +330,19 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
     return () => {
       cancelled = true;
     };
-  }, [reciterName, selectedRecitation, selectedReciter, selectedReciterId, startPlayback, t]);
+  }, [listeningQueue, selectedRecitation, selectedReciter, selectedReciterId, startQueue]);
 
   const surahByNumber = useMemo(
     () => new Map(surahs.map((surah) => [surah.number, surah])),
     [surahs],
   );
 
-  const handlePlayTrack = async (track: AudioTrack) => {
-    if (!track.surah_number || !selectedRecitation) return;
-    setLoadingTrackId(track.id);
+  const playFrom = async (surah: number, loadingId: string, wholeQuran = false) => {
+    if (!listeningQueue) return;
+    setLoadingTrackId(loadingId);
     setError(null);
     try {
-      const playback = await api.getSurahPlayback(selectedRecitation.id, track.surah_number);
-      requestIdRef.current += 1;
-      const request: AudioPlaybackRequest = {
-        requestId: requestIdRef.current,
-        track: playback.track,
-        segments: playback.segments || [],
-        kind: "surah",
-        title: t("common.surah", { surah: track.surah_number }),
-        artist: selectedReciter ? reciterName(selectedReciter) : t("audio.reciterFallback"),
-        album: `${selectedRecitation.quran_edition.riwayah} · ${recitationStyleLabel(selectedRecitation.style, t)}`,
-        artworkUrl: selectedReciter ? reciterPortraitUrl(selectedReciter) : null,
-        autoPlay: true,
-      };
-      startPlayback(request);
+      await startQueue(listeningQueue, surah, { wholeQuran });
     } catch (reason) {
       setError(api.normalizeError(reason));
     } finally {
@@ -363,6 +350,18 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
     }
   };
 
+  const handlePlayTrack = (track: AudioTrack) => {
+    if (track.surah_number) void playFrom(track.surah_number, track.id);
+  };
+
+  const firstHeldSurah = selectedRecitation
+    ? heldSurahs(selectedRecitation.coverage.surah_numbers)[0]
+    : undefined;
+  // The player rests on a saved place: one tap plays on from it.
+  const restingPlace = playerRequest?.queue && !isPlaying && playerRequest.startPositionMs
+    && playerRequest.track.surah_number
+    ? { surah: playerRequest.track.surah_number, time: formatClock(playerRequest.startPositionMs) }
+    : null;
 
   return (
     <div className="audio-page">
@@ -414,6 +413,29 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
             </select>
           </div>
         </div>
+
+        {(firstHeldSurah !== undefined || restingPlace) && (
+          <div className="audio-queue-actions">
+            {firstHeldSurah !== undefined && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void playFrom(firstHeldSurah, "whole-quran", true)}
+                disabled={!hydrated || !listeningQueue || loadingTrackId === "whole-quran"}
+                data-testid="audio-whole-quran"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                {t("audio.listenWholeQuran")}
+              </button>
+            )}
+            {restingPlace && (
+              <button type="button" className="btn btn-secondary audio-continue-place" onClick={resumePlayback}>
+                <span>{t("audio.continueFrom")}</span>
+                <strong>{t("audio.continuePlace", restingPlace)}</strong>
+              </button>
+            )}
+          </div>
+        )}
 
         {selectedReciter && (
           <div className="audio-reciter-summary">
@@ -542,7 +564,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
                   <div className="track-row-actions">
                     <button
                       className={`btn ${isSelected && isPlaying ? "btn-primary" : "btn-secondary"} btn-sm`}
-                      onClick={() => void handlePlayTrack(track)}
+                      onClick={() => handlePlayTrack(track)}
                       disabled={!hydrated || loadingTrackId === track.id}
                     >
                       {loadingTrackId === track.id
@@ -551,7 +573,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
                           ? t("audio.playingButton")
                           : isSelected
                             ? t("audio.continuePlayer")
-                            : t("audio.listen")}
+                            : t("audio.listenFrom")}
                     </button>
                     {track.offline_download_allowed && (
                       <a

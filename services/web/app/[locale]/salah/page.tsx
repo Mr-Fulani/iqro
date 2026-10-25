@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
+import { CourseSource } from "@/components/courses/CourseSources";
 import { SalahCourseProgress, SalahLessonStatusBadge } from "@/components/SalahCourseProgress";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { translate } from "@/lib/translate";
@@ -11,6 +12,7 @@ import { localizedPath } from "@/lib/routing";
 import { orderedLessons, SALAH_COURSE_SLUG, type SalahLesson } from "@/lib/salah";
 import { createPageMetadata } from "@/lib/seo";
 import "./salah.css";
+import "@/components/courses/course-sources.css";
 
 export const revalidate = 3_600;
 
@@ -74,6 +76,7 @@ export default async function SalahCoursePage({ params }: { params: Promise<Rout
         <p className="eyebrow">{translate(locale, "salah.eyebrow")}</p>
         <h1>{translate(locale, "salah.title")}</h1>
         <p>{translate(locale, "salah.description")}</p>
+        <CourseSource source={document.course.source ?? ""} locale={locale} />
         <p className="salah-provenance">
           {translate(locale, "salah.source", { source: document.course.source_title })}
           {" · "}

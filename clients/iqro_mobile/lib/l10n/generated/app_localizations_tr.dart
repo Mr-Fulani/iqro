@@ -658,9 +658,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get nextSurah => 'Sonraki sure';
 
   @override
-  String get chooseSurah => 'Sure seç';
-
-  @override
   String get speed => 'Hız';
 
   @override
@@ -2858,4 +2855,57 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get coursesReportOpen => 'Talebi aç';
+
+  @override
+  String get queueAfterSurah => 'Sure bitince';
+
+  @override
+  String get queueModeStop => 'Dur';
+
+  @override
+  String get queueModeNext => 'Sonraki';
+
+  @override
+  String get queueModeLoop => 'Döngü';
+
+  @override
+  String get queueTitle => 'Sıra';
+
+  @override
+  String get queueUpNext => 'Sıradaki';
+
+  @override
+  String get queueWholeQuranFromStart => 'Baştan tüm Kur\'an';
+
+  @override
+  String get listenWholeQuran => 'Tüm Kur\'an\'ı dinle';
+
+  @override
+  String get recitationVariant => 'Okuma türü';
+
+  @override
+  String get chooseRecitationVariant => 'Ne dinlenecek';
+
+  @override
+  String queueHeldSurahs(int count) {
+    return '114 sureden $count tanesi var';
+  }
+
+  @override
+  String queueMissingSurahs(int from, int to) {
+    return '$from–$to. sureler yüklenmedi';
+  }
+
+  @override
+  String queueMissingSurah(int number) {
+    return '$number. sure yüklenmedi';
+  }
+
+  @override
+  String get recitationAllSurahs => '114 surenin hepsi';
+
+  @override
+  String recitationSomeSurahs(int count) {
+    return '114 sureden $count';
+  }
 }

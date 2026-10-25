@@ -11,6 +11,7 @@ import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/audio/audio_screen.dart';
+import 'package:iqro_mobile/features/audio/listening_queue.dart';
 import 'package:iqro_mobile/features/audio/premium_reciter_portrait.dart';
 import 'package:iqro_mobile/features/audio/reciter_launch_screen.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
@@ -51,6 +52,33 @@ void main() {
     expect(harness.repository.requestedSurah, 1);
     expect(harness.controller.state.reciter?.id, 'reciter-1');
     expect(harness.controller.state.surahName, 'Аль-Фатиха');
+    expect(harness.engine.playCalls, 1);
+    expect(find.text('PLAYER'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('listening to the whole Quran starts the reciter at his first '
+      'surah and moves on after each one', (tester) async {
+    final harness = await _pumpAudioScreen(tester);
+    await harness.controller.loadPlayback(
+      playback: await harness.repository.playback(
+        recitationId: 'recitation-1',
+        surah: 2,
+      ),
+      reciter: _reciter,
+      surahName: 'Аль-Бакара',
+      autoplay: false,
+    );
+    harness.controller.setQueueMode(ListeningQueueMode.stop);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Слушать весь Коран'));
+    await tester.pumpAndSettle();
+
+    expect(harness.repository.requestedRecitationId, 'recitation-1');
+    expect(harness.repository.requestedSurah, 1);
+    expect(harness.controller.state.track?.surah, 1);
+    expect(harness.controller.state.queueMode, ListeningQueueMode.next);
     expect(harness.engine.playCalls, 1);
     expect(find.text('PLAYER'), findsOneWidget);
     expect(tester.takeException(), isNull);

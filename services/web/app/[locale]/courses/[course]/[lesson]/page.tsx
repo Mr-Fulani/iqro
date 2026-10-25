@@ -7,6 +7,7 @@ import { CourseOutdated } from "@/components/courses/CourseOutdated";
 import { LessonStatusBadge } from "@/components/courses/CourseProgress";
 import { CourseRating } from "@/components/courses/CourseRating";
 import { CourseShareButton } from "@/components/courses/CourseShareButton";
+import { CourseLessonSources } from "@/components/courses/CourseSources";
 import { LateArabicFont } from "@/components/courses/LateArabicFont";
 import { LessonCompleteBar } from "@/components/courses/LessonCompleteBar";
 import { LessonFeedback } from "@/components/courses/LessonFeedback";
@@ -21,6 +22,7 @@ import { translate } from "@/lib/translate";
 import "@/components/courses/lesson-media.css";
 import "@/components/courses/course-notes.css";
 import "../../courses.css";
+import "@/components/courses/course-sources.css";
 
 export const revalidate = 3_600;
 
@@ -134,14 +136,7 @@ export default async function CourseLessonPage({ params }: { params: Promise<Rou
             <LateArabicFont>
               <CourseNotes blocks={lesson.notes} locale={route.locale} />
             </LateArabicFont>
-            {lesson.sources.length ? (
-              <div className="course-lesson-sources">
-                <h3>{translate(route.locale, "courses.sources")}</h3>
-                <ol>
-                  {lesson.sources.map((source, item) => <li key={item} dir="auto">{source}</li>)}
-                </ol>
-              </div>
-            ) : null}
+            <CourseLessonSources sources={lesson.sources} locale={route.locale} />
             <LessonFeedback
               courseSlug={course.slug}
               courseTitle={course.title}

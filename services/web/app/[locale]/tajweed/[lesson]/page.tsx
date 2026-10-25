@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CourseNotes } from "@/components/courses/CourseNotes";
+import { CourseLessonSources } from "@/components/courses/CourseSources";
 import { LessonMedia } from "@/components/courses/LessonMedia";
 import { TajweedLessonPlayer } from "@/components/TajweedLessonPlayer";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
@@ -14,6 +15,7 @@ import { translate } from "@/lib/translate";
 import "../tajweed.css";
 import "@/components/courses/lesson-media.css";
 import "@/components/courses/course-notes.css";
+import "@/components/courses/course-sources.css";
 
 export const revalidate = 3_600;
 
@@ -110,6 +112,7 @@ export default async function TajweedLessonPage({ params }: { params: Promise<Ro
         how={lesson.how_blocks ? (
           <CourseNotes blocks={lesson.how_blocks} locale={route.locale} id="tajweed-how" plainArabic={route.locale === "ar"} />
         ) : null}
+        sources={<CourseLessonSources sources={lesson.sources} locale={route.locale} />}
       />
     </div>
   );

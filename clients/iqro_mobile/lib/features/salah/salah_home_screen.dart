@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_icon.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/course_sources.dart';
 import '../settings/offline_storage_screen.dart' show formatOfflineBytes;
 import 'salah_models.dart';
 import 'salah_offline_repository.dart';
@@ -60,6 +61,11 @@ class _CourseContents extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // «Author and sources» above the progress, as in a thematic course.
+          if (document.course.source.isNotEmpty) ...<Widget>[
+            CourseSourceBlock(source: document.course.source),
+            const SizedBox(height: 16),
+          ],
           _OverviewCard(document: document, progress: progress, onOpen: open),
           _OfflineCard(courseSlug: courseSlug),
           for (final section in document.sections)

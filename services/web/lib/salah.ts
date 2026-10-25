@@ -17,7 +17,13 @@ import {
   type LessonProgress,
   type LessonStatus,
 } from "./course-progress.ts";
-import { CourseDocumentError, parseLessonMedia, type CourseMediaBlock } from "./thematic-courses.ts";
+import {
+  CourseDocumentError,
+  optionalCourseSource,
+  optionalLessonSources,
+  parseLessonMedia,
+  type CourseMediaBlock,
+} from "./thematic-courses.ts";
 
 export const SALAH_COURSE_SLUG = "hanbali-umdah";
 export const SALAH_SCHEMA_VERSION = 1;
@@ -41,6 +47,8 @@ export type SalahCourseMeta = {
   version: string;
   methodology: string;
   source_title: string;
+  /** «Author and sources»; absent when the course has none (docs/salah/sources.md). */
+  source?: string;
   language: string;
   reviewed_by: string;
   reviewed_at: string;
@@ -96,6 +104,8 @@ export type SalahLesson = {
    * thematic courses (docs/salah/lesson-media.md). Absent without media, as the server sends it.
    */
   media?: CourseMediaBlock[];
+  /** «Sources» at the end of the lesson, one per line of the author; absent without any. */
+  sources?: string[];
 };
 
 export type SalahAudioSegment = { ayah: number; start_ms: number; end_ms: number };
@@ -299,9 +309,15 @@ export function parseSalahCourseDocument(value: unknown): SalahCourseDocument {
         ...(audio ? { audio } : {}),
       };
     });
-    const { media: rawMedia, ...fields } = lesson as SalahLesson & { media?: unknown };
+    const { media: rawMedia, sources: rawSources, ...fields } = lesson as SalahLesson & { media?: unknown; sources?: unknown };
     const lessonMedia = parseMedia(rawMedia, `lessons.${slug}.media`);
-    return { ...(fields as SalahLesson), steps, ...(lessonMedia.length ? { media: lessonMedia } : {}) };
+    const sources = optionalLessonSources(rawSources);
+    return {
+      ...(fields as SalahLesson),
+      steps,
+      ...(lessonMedia.length ? { media: lessonMedia } : {}),
+      ...(sources.length ? { sources } : {}),
+    };
   });
 
   const sections = (value.sections as unknown[]).map((section, index): SalahSection => {
@@ -315,8 +331,11 @@ export function parseSalahCourseDocument(value: unknown): SalahCourseDocument {
     };
   });
 
+  const { source: rawSource, ...meta } = course as SalahCourseMeta & { source?: unknown };
+  const source = optionalCourseSource(rawSource);
   return {
     ...(value as SalahCourseDocument),
+    course: { ...(meta as SalahCourseMeta), ...(source ? { source } : {}) },
     sections,
     lessons,
     formulas,
@@ -352,9 +371,10 @@ export function nextSalahLesson(document: SalahCourseDocument, slug: string): Sa
 export function salahLessonBundle(document: SalahCourseDocument, lesson: SalahLesson): SalahLessonBundle {
   const formulaIds = new Set(lesson.steps.flatMap((step) => step.formulas));
   const mediaKeys = new Set(lesson.steps.flatMap((step) => (step.media ? [step.media] : [])));
-  // The media are drawn on the server (LessonMedia): the player does not need them.
+  // The media and sources are drawn on the server (LessonMedia, CourseSources): the player does not need them.
   const forPlayer: SalahLesson = { ...lesson };
   delete forPlayer.media;
+  delete forPlayer.sources;
   return {
     courseVersion: document.course.version,
     lesson: forPlayer,

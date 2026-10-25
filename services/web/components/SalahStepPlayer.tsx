@@ -193,11 +193,14 @@ export function SalahStepPlayer({
   bundle,
   nextLesson,
   media: lessonMedia,
+  sources,
 }: {
   bundle: SalahLessonBundle;
   nextLesson: { slug: string; title: string } | null;
   /** The lesson's video, slides and banners (LessonMedia), drawn on the server; on the first step. */
   media?: ReactNode;
+  /** The lesson's «Sources» (CourseLessonSources), drawn on the server; at the end of the last step. */
+  sources?: ReactNode;
 }) {
   const { direction, formatNumber, locale, t } = useI18n();
   const { lesson, formulas, media, courseVersion } = bundle;
@@ -544,6 +547,8 @@ export function SalahStepPlayer({
                   />
                 ) : null}
                 {item.formulas.map((id) => renderFormula(item, id, formulas[id]!))}
+                {/* As in the app: the lesson's end, in learning only, like the instruction. */}
+                {itemIndex === steps.length - 1 && !practice ? sources : null}
               </div>
             </li>
           );

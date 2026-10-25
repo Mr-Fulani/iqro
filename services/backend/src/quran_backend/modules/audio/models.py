@@ -615,6 +615,17 @@ class AudioTimingVersion(BaseModel):
                 .values_list("recitation_edition__status", flat=True)
                 .first()
             )
+        if (
+            self._state.adding
+            and current_status == RecitationPublicationStatus.PUBLISHED
+            and self.verified_at is not None
+            and AudioTrack.objects.filter(
+                recitation_edition_id=recitation_id, timing_version__isnull=True
+            ).exists()
+        ):
+            # Timings may still arrive for published audio that has none; the
+            # version itself never changes afterwards.
+            return
         if current_status in {
             RecitationPublicationStatus.PUBLISHED,
             RecitationPublicationStatus.WITHDRAWN,
@@ -807,6 +818,8 @@ class AudioTrack(BaseModel):
                     "Only untimed surah tracks can be added to a published listening recitation."
                 )
             return
+        if current_status == RecitationPublicationStatus.PUBLISHED and self._only_gains_timing():
+            return
         persisted_status = None
         if not self._state.adding:
             persisted_status = (
@@ -823,6 +836,30 @@ class AudioTrack(BaseModel):
             RecitationPublicationStatus.WITHDRAWN,
         }:
             raise ValidationError("Tracks in a published recitation edition are immutable.")
+
+    def _only_gains_timing(self) -> bool:
+        """An untimed published track may be given a verified timing version once.
+
+        The audio listeners have stays the same; only its ayah timeline is added.
+        """
+        timing_version_id = self.__dict__.get("timing_version_id")
+        if self._state.adding or timing_version_id is None:
+            return False
+        fields = ("recitation_edition_id", "scope", "surah_number", "juz_number", "duration_ms")
+        persisted = (
+            type(self).objects.filter(pk=self.pk).values("timing_version_id", *fields).first()
+        )
+        return (
+            persisted is not None
+            and persisted["timing_version_id"] is None
+            and all(persisted[field] == getattr(self, field) for field in fields)
+            and not AyahAudioSegment.objects.filter(track_id=self.pk).exists()
+            and AudioTimingVersion.objects.filter(
+                pk=timing_version_id,
+                recitation_edition_id=self.recitation_edition_id,
+                verified_at__isnull=False,
+            ).exists()
+        )
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         with transaction.atomic():

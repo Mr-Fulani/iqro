@@ -4,9 +4,11 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/audio/audio_playback_store.dart';
+import 'package:iqro_mobile/core/audio/listening_media_service.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
+import 'package:iqro_mobile/features/audio/listening_queue.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -1327,6 +1329,280 @@ void main() {
     expect(controller.state.standalone?.repeatEnabled, isFalse);
     expect(engine.loopMode, LoopMode.off);
   });
+
+  group('listening queue', () {
+    test(
+      'a surah that ends plays the next held one from the prefetch',
+      () async {
+        final queue = _FakeQueueSource(<int>[1, 36]);
+        final engine = _FakeAudioEngine();
+        final controller = AudioController(
+          engine: engine,
+          queueSource: queue.source,
+        );
+        addTearDown(controller.dispose);
+
+        await controller.loadPlayback(
+          playback: _playback,
+          reciter: _reciter,
+          surahName: 'Al-Fatiha',
+        );
+        expect(queue.entryRequests, isEmpty);
+        engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+        await pumpEventQueue();
+        expect(queue.entryRequests, <int>[36]);
+        final stops = engine.stopCalls;
+
+        engine.emitPlayerState(PlayerState(true, ProcessingState.completed));
+        await pumpEventQueue();
+
+        expect(controller.state.channel, AudioPlaybackChannel.listening);
+        expect(controller.state.track?.id, 'track-36');
+        expect(controller.state.surahName, 'Surah 36');
+        expect(controller.state.reciter?.id, _reciter.id);
+        expect(engine.playCalls, 2);
+        // The platform player is kept: no stop, and no request at the end.
+        expect(engine.stopCalls, stops);
+        expect(queue.entryRequests, <int>[36]);
+      },
+    );
+
+    test('the last surah ends playback in the next mode, '
+        'and starts the queue again in the loop mode', () async {
+      final queue = _FakeQueueSource(<int>[1]);
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        queueSource: queue.source,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+      );
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+      await pumpEventQueue();
+      engine.emitPlayerState(PlayerState(true, ProcessingState.completed));
+      await pumpEventQueue();
+
+      expect(engine.pauseCalls, 1);
+      expect(engine.sources, hasLength(1));
+      expect(queue.entryRequests, isEmpty);
+
+      controller.setQueueMode(ListeningQueueMode.loop);
+      await controller.toggle();
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+      await pumpEventQueue();
+      engine.emitPlayerState(PlayerState(true, ProcessingState.completed));
+      await pumpEventQueue();
+
+      expect(queue.entryRequests, <int>[1]);
+      expect(engine.sources, hasLength(2));
+      expect(controller.state.track?.id, 'track-1');
+      expect(engine.playing, isTrue);
+    });
+
+    test('the stop mode, repeat and other sections never move on', () async {
+      final queue = _FakeQueueSource(<int>[1, 2]);
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        queueSource: queue.source,
+      );
+      addTearDown(controller.dispose);
+      Future<void> playToEnd() async {
+        engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+        await pumpEventQueue();
+        engine.emitPlayerState(PlayerState(true, ProcessingState.completed));
+        await pumpEventQueue();
+      }
+
+      controller.setQueueMode(ListeningQueueMode.stop);
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+      );
+      await playToEnd();
+      expect(controller.state.track?.id, 'track-1');
+      expect(engine.pauseCalls, 1);
+
+      controller.setQueueMode(ListeningQueueMode.next);
+      await controller.toggleRepeat();
+      await playToEnd();
+      expect(controller.state.track?.id, 'track-1');
+
+      await controller.toggleRepeat();
+      for (final channel in <AudioPlaybackChannel>[
+        AudioPlaybackChannel.mushaf,
+        AudioPlaybackChannel.memorization,
+      ]) {
+        await controller.loadPlayback(
+          playback: _playback,
+          reciter: _reciter,
+          channel: channel,
+          surahName: 'Al-Fatiha',
+        );
+        await playToEnd();
+        expect(controller.state.track?.id, 'track-1');
+        expect(controller.state.channel, channel);
+      }
+      expect(queue.entryRequests, isEmpty);
+      expect(engine.sources, hasLength(3));
+    });
+
+    test('a surah not asked for yet is asked for at the end, '
+        'unless the listener moved on meanwhile', () async {
+      final queue = _FakeQueueSource(<int>[1, 36])..gate = Completer<void>();
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        queueSource: queue.source,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+      );
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+      engine.emitPlayerState(PlayerState(true, ProcessingState.completed));
+      await pumpEventQueue();
+      // The finished surah pauses while the next one is on its way.
+      expect(engine.pauseCalls, 1);
+      expect(queue.entryRequests, <int>[36, 36]);
+
+      queue.gate!.complete();
+      await pumpEventQueue();
+      expect(controller.state.track?.id, 'track-36');
+      expect(engine.playing, isTrue);
+
+      queue.gate = Completer<void>();
+      queue.held = <int>[1, 36, 37];
+      engine.emitPlayerState(PlayerState(true, ProcessingState.completed));
+      await pumpEventQueue();
+      await controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _reciter,
+        surahName: 'Al-Baqarah',
+      );
+      queue.gate!.complete();
+      await pumpEventQueue();
+
+      expect(controller.state.track?.id, 'track-2');
+    });
+
+    test('the queue mode is kept with the listening snapshot', () async {
+      final database = await _audioStoreDatabase();
+      addTearDown(database.close);
+      final store = AudioPlaybackStore(database);
+      final first = AudioController(
+        engine: _FakeAudioEngine(),
+        playbackStore: store,
+      );
+
+      await first.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+        autoplay: false,
+      );
+      first.setQueueMode(ListeningQueueMode.loop);
+      await pumpEventQueue();
+      expect((await store.read())?.queueMode, ListeningQueueMode.loop);
+      first.dispose();
+      await pumpEventQueue();
+
+      final second = AudioController(
+        engine: _FakeAudioEngine(),
+        playbackStore: store,
+      );
+      addTearDown(second.dispose);
+      await second.restore();
+      expect(second.state.track?.id, 'track-1');
+      expect(second.state.queueMode, ListeningQueueMode.loop);
+
+      // A snapshot from before the queue keeps the default.
+      await store.write(
+        AudioPlaybackSnapshot(
+          playback: _playback,
+          reciter: _reciter,
+          surahName: 'Al-Fatiha',
+          position: Duration.zero,
+          speed: 1,
+          repeatEnabled: false,
+          savedAt: DateTime.utc(2026, 10, 25),
+        ),
+      );
+      final third = AudioController(
+        engine: _FakeAudioEngine(),
+        playbackStore: store,
+      );
+      addTearDown(third.dispose);
+      await third.restore();
+      expect(third.state.track?.id, 'track-1');
+      expect(third.state.queueMode, ListeningQueueMode.next);
+    });
+
+    test('the lock screen switches listening surahs, '
+        'and offers no surah buttons for another section', () async {
+      final media = ListeningMediaService();
+      final queue = _FakeQueueSource(<int>[1, 36]);
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        mediaService: media,
+        queueSource: queue.source,
+      );
+      addTearDown(controller.dispose);
+      List<MediaAction> controls() => media.playbackState.value.controls
+          .map((control) => control.action)
+          .toList();
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+        autoplay: false,
+      );
+      expect(controls(), <MediaAction>[
+        MediaAction.skipToPrevious,
+        MediaAction.play,
+        MediaAction.skipToNext,
+      ]);
+      expect(media.playbackState.value.androidCompactActionIndices, <int>[
+        0,
+        1,
+        2,
+      ]);
+
+      await media.skipToPrevious();
+      expect(controller.state.track?.id, 'track-1');
+      await media.skipToNext();
+      expect(controller.state.track?.id, 'track-36');
+      expect(engine.playing, isTrue);
+      await media.skipToNext();
+      expect(controller.state.track?.id, 'track-36');
+      controller.setQueueMode(ListeningQueueMode.loop);
+      await media.skipToNext();
+      expect(controller.state.track?.id, 'track-1');
+
+      await controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _reciter,
+        channel: AudioPlaybackChannel.mushaf,
+        surahName: 'Al-Baqarah',
+        autoplay: false,
+      );
+      expect(controls(), <MediaAction>[MediaAction.play]);
+      await media.skipToNext();
+      expect(controller.state.track?.id, 'track-2');
+      expect(controller.state.channel, AudioPlaybackChannel.mushaf);
+    });
+  });
 }
 
 const _playbackTrack = AudioTrack(
@@ -1427,6 +1703,38 @@ const _memorizationReciter = Reciter(
   biographyRu: '',
   biographyTr: '',
 );
+
+class _FakeQueueSource {
+  _FakeQueueSource(this.held);
+
+  List<int> held;
+  final entryRequests = <int>[];
+
+  /// Holds every surah request until completed.
+  Completer<void>? gate;
+
+  late final source = ListeningQueueSource(
+    heldSurahs: (_) async => held,
+    entry: (recitationId, surah) async {
+      entryRequests.add(surah);
+      await gate?.future;
+      return (
+        playback: SurahPlayback(
+          track: AudioTrack(
+            id: 'track-$surah',
+            recitationId: recitationId,
+            surah: surah,
+            url: 'https://media.example.test/quran/$surah.mp3',
+            duration: const Duration(minutes: 1),
+            offlineDownloadAllowed: false,
+          ),
+          segments: const <AudioSegment>[],
+        ),
+        surahName: 'Surah $surah',
+      );
+    },
+  );
+}
 
 class _FakeAudioEngine implements IqroAudioEngine {
   final _playerStates = StreamController<PlayerState>.broadcast(sync: true);

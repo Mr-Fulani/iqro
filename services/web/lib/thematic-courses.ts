@@ -253,6 +253,19 @@ function media(value: unknown, lessonVideo: CourseVideo | null, where: string): 
 }
 
 /**
+ * «Author and sources» and a lesson's «Sources» in the prayer and tajweed documents
+ * (docs/salah/sources.md): optional there, so a missing or malformed value is no block.
+ */
+export function optionalCourseSource(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export function optionalLessonSources(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim() !== "").map((item) => item.trim());
+}
+
+/**
  * Media blocks of a lesson, shared with the tajweed course (docs/tajweed/course.md): no field is
  * no media. A block of an unknown type, or with a file from another host, is left out.
  */

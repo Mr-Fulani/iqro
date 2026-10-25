@@ -392,6 +392,8 @@ class AudioPlaybackSyncService {
       rangeStartAyah: remote.rangeStartAyah,
       rangeEndAyah: remote.rangeEndAyah,
       savedAt: remote.clientUpdatedAt,
+      // The queue mode is a setting of this device, not of the account.
+      queueMode: local?.queueMode,
     );
   }
 
