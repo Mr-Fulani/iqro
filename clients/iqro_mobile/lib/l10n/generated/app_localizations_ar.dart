@@ -2762,4 +2762,82 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get lessonMediaNextSlide => 'الشريحة التالية';
+
+  @override
+  String get coursesShare => 'مشاركة';
+
+  @override
+  String get coursesVoteQuestion => 'هل كان هذا الدرس مفيدًا؟';
+
+  @override
+  String get coursesVoteHelpful => 'مفيد';
+
+  @override
+  String get coursesVoteNotHelpful => 'ليس كثيرًا';
+
+  @override
+  String get coursesVoteThanks => 'شكرًا على رأيك';
+
+  @override
+  String get coursesRatingQuestion => 'ما مدى فائدة الدورة؟';
+
+  @override
+  String coursesRatingStars(int stars) {
+    return '$stars من 5';
+  }
+
+  @override
+  String get coursesRatingComment => 'تعليق (اختياري)';
+
+  @override
+  String get coursesSend => 'إرسال';
+
+  @override
+  String coursesRatingThanks(int stars) {
+    return 'شكرًا! تقييمك: $stars من 5';
+  }
+
+  @override
+  String get coursesRatingChange => 'تغيير';
+
+  @override
+  String get coursesSendFailed => 'تعذّر الإرسال. حاول مرة أخرى.';
+
+  @override
+  String get coursesSendTooOften => 'محاولات كثيرة. حاول لاحقًا.';
+
+  @override
+  String get coursesReportError => 'الإبلاغ عن خطأ';
+
+  @override
+  String get coursesReportType => 'نوع الملاحظة';
+
+  @override
+  String get coursesReportReligious => 'خطأ في المحتوى الديني';
+
+  @override
+  String get coursesReportTypo => 'خطأ إملائي أو ترجمة';
+
+  @override
+  String get coursesReportTechnical => 'الفيديو أو الصفحة لا تعمل';
+
+  @override
+  String get coursesReportOther => 'أخرى';
+
+  @override
+  String get coursesReportMessage => 'وصف الملاحظة';
+
+  @override
+  String get coursesReportMessageRequired => 'صِف الملاحظة';
+
+  @override
+  String get coursesReportEmail => 'البريد الإلكتروني للرد (اختياري)';
+
+  @override
+  String coursesReportThanks(String id) {
+    return 'شكرًا! رقم الطلب $id';
+  }
+
+  @override
+  String get coursesReportOpen => 'فتح الطلب';
 }

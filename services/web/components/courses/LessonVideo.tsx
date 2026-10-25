@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { formatClock } from "../../lib/audio-content";
 import { claimAudioFocus, registerAudioPlayer } from "../../lib/audio-focus";
+import { isVideoFinished, noteVideoTime, trackCourseEvent } from "../../lib/course-feedback";
 import { useI18n } from "../../lib/i18n-context";
 import { readVideoPositions, videoMegabytes, writeVideoPosition, type CourseVideo } from "../../lib/thematic-courses";
 import { useVideoPosition } from "./CourseProgress";
@@ -32,6 +33,8 @@ export function LessonVideo({
   const player = useRef<HTMLVideoElement>(null);
   const [poster, setPoster] = useState(video.poster.url);
   const savedAt = useRef(0);
+  // Counted once per page view: started on the first play, finished from 90 %.
+  const counted = useRef({ started: false, finished: false });
   const position = useVideoPosition(courseSlug, lessonSlug);
   const clock = (ms: number) => formatClock(ms, (value) => formatNumber(value));
   const duration = clock(video.duration_ms);
@@ -62,6 +65,20 @@ export function LessonVideo({
   function retry() {
     setAttempt((value) => value + 1);
     setState("playing");
+  }
+
+  function count(element: HTMLVideoElement) {
+    const ms = element.currentTime * 1_000;
+    noteVideoTime(courseSlug, lessonSlug, ms);
+    if (!counted.current.started && !element.paused) {
+      counted.current.started = true;
+      trackCourseEvent({ course: courseSlug, lesson: lessonSlug, event: "video_started" });
+    }
+    const duration = Number.isFinite(element.duration) ? element.duration * 1_000 : video.duration_ms;
+    if (counted.current.started && !counted.current.finished && (element.ended || isVideoFinished(ms, duration))) {
+      counted.current.finished = true;
+      trackCourseEvent({ course: courseSlug, lesson: lessonSlug, event: "video_finished" });
+    }
   }
 
   function save(element: HTMLVideoElement) {
@@ -105,14 +122,19 @@ export function LessonVideo({
             if (from > 0 && from < element.duration * 1_000 - 1_000) element.currentTime = from / 1_000;
             savedAt.current = from;
           }}
+          onPlay={(event) => count(event.currentTarget)}
           onTimeUpdate={(event) => {
             const element = event.currentTarget;
+            count(element);
             if (!element.paused && Math.abs(element.currentTime * 1_000 - savedAt.current) >= SAVE_EVERY_MS) save(element);
           }}
           onPause={(event) => {
             if (!event.currentTarget.ended) save(event.currentTarget);
           }}
-          onEnded={() => writeVideoPosition(courseSlug, lessonSlug, null)}
+          onEnded={(event) => {
+            count(event.currentTarget);
+            writeVideoPosition(courseSlug, lessonSlug, null);
+          }}
           onError={() => setState("error")}
         />
       </div>

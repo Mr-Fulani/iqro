@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/app/providers.dart';
+import 'package:iqro_mobile/core/auth/auth_session.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
@@ -180,6 +181,13 @@ Future<void> _pump(
           audioControllerProvider.overrideWith(
             (ref) => RecordingAudioController(),
           ),
+          courseFeedbackGatewayProvider.overrideWithValue(
+            FakeCourseFeedbackGateway(),
+          ),
+          feedbackRepositoryProvider.overrideWithValue(
+            FakeFeedbackRepository(),
+          ),
+          sessionProvider.overrideWith((ref) => _Guest()),
         ],
         child: MaterialApp.router(
           debugShowCheckedModeBanner: false,
@@ -552,6 +560,63 @@ void main() {
     );
     await _capture(tester, 'app-course-lesson-ar');
   }, skip: _directory.isEmpty);
+
+  testWidgets('rating the course after the last lesson', (tester) async {
+    await _pump(
+      tester,
+      location: '/courses/ramadan/taraviikh',
+      studied: {'smysl-posta', 'namerenie', 'taraviikh'},
+    );
+    final rating = find.byKey(const ValueKey('course-rating'));
+    await tester.ensureVisible(rating);
+    await tester.tap(find.byKey(const ValueKey('course-rating-star-4')));
+    await tester.enterText(
+      find.byKey(const ValueKey('course-rating-comment')),
+      'Спасибо, всё понятно и по делу.',
+    );
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -2000));
+    await _capture(tester, 'app-course-rating-ru');
+    await tester.tap(find.byKey(const ValueKey('course-rating-send')));
+    await _settle(tester);
+    await _capture(tester, 'app-course-rating-thanks-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('a report sent', (tester) async {
+    await _pump(tester, location: '/courses/ramadan/namerenie');
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('course-lesson-report')),
+    );
+    await tester.tap(find.byKey(const ValueKey('course-lesson-report')));
+    await _settle(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('course-report-message')),
+      'В цитате аята 2:183 опечатка.',
+    );
+    await tester.tap(find.byKey(const ValueKey('course-report-send')));
+    await _capture(tester, 'app-course-report-sent-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('lesson blocks in the Arabic interface', (tester) async {
+    final document = courseDocumentJson();
+    (document['course']! as Map)['language'] = 'ar';
+    await _pump(
+      tester,
+      location: '/courses/ramadan/taraviikh',
+      locale: 'ar',
+      studied: {'taraviikh'},
+      remote: FakeCourseGateway(documents: {'1': document}),
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -2000));
+    await _capture(tester, 'app-course-feedback-ar');
+  }, skip: _directory.isEmpty);
+}
+
+class _Guest extends StateNotifier<AsyncValue<AuthSession?>>
+    implements SessionController {
+  _Guest() : super(const AsyncData(null));
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _Preferences extends StateNotifier<AppPreferences>

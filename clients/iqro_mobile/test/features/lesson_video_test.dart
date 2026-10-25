@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/app/providers.dart';
+import 'package:iqro_mobile/core/auth/auth_session.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
@@ -205,6 +206,54 @@ void main() {
     await _settle(tester);
     expect(find.text('Рамадан · Намерение (ният)'), findsOneWidget);
     expect(find.text('Видео с 4:12'), findsOneWidget);
+    harness.dispose();
+  });
+
+  testWidgets('the video counts its start, 90 % watched, and a report', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, location: _lesson);
+    await tester.tap(find.byKey(_facade));
+    await _settle(tester);
+    final video = harness.videos.last;
+    video.playTo(const Duration(minutes: 4, seconds: 12));
+    await tester.pump();
+    await video.pause();
+    await video.play();
+    await tester.pump();
+    // 90 % of 9:48 is 8:49.2.
+    video.playTo(const Duration(minutes: 8, seconds: 49));
+    await tester.pump();
+    video.playTo(const Duration(minutes: 8, seconds: 50));
+    await tester.pump();
+    video.finish();
+    await tester.pump();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('course-lesson-report')),
+    );
+    await tester.tap(find.byKey(const ValueKey('course-lesson-report')));
+    await _settle(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('course-report-message')),
+      'Звук отстаёт',
+    );
+    await tester.tap(find.byKey(const ValueKey('course-report-send')));
+    await _settle(tester);
+    expect(
+      (harness.reports.reports.single['context']! as Map)['playback_ms'],
+      588000,
+    );
+
+    await tester.tap(find.text('Закрыть'));
+    await _settle(tester);
+    harness.router.pop();
+    await _settle(tester);
+    expect(harness.feedback.events.map((event) => event['event']), [
+      'lesson_opened',
+      'video_started',
+      'video_finished',
+    ]);
     harness.dispose();
   });
 
@@ -442,6 +491,8 @@ typedef _Harness = ({
   FakeVideoFactory videos,
   RecordingAudioController audio,
   List<bool> wake,
+  FakeCourseFeedbackGateway feedback,
+  FakeFeedbackRepository reports,
   void Function() dispose,
 });
 
@@ -461,6 +512,8 @@ Future<_Harness> _pump(
   final factory = videos ?? FakeVideoFactory();
   final audio = RecordingAudioController();
   final wake = <bool>[];
+  final feedback = FakeCourseFeedbackGateway();
+  final reports = FakeFeedbackRepository();
   final (Database sql, LocalDatabase database) = (await tester.runAsync(
     openCourseTestDatabase,
   ))!;
@@ -525,6 +578,9 @@ Future<_Harness> _pump(
         lessonVideoControllerProvider.overrideWithValue(factory.call),
         lessonVideoWakeProvider.overrideWithValue((on) async => wake.add(on)),
         audioControllerProvider.overrideWith((ref) => audio),
+        courseFeedbackGatewayProvider.overrideWithValue(feedback),
+        feedbackRepositoryProvider.overrideWithValue(reports),
+        sessionProvider.overrideWith((ref) => _Guest()),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
@@ -545,6 +601,8 @@ Future<_Harness> _pump(
     videos: factory,
     audio: audio,
     wake: wake,
+    feedback: feedback,
+    reports: reports,
     dispose: () {
       router.dispose();
       unawaited(sql.close());
@@ -559,6 +617,13 @@ Future<void> _settle(WidgetTester tester) async {
     );
     await tester.pump(const Duration(milliseconds: 100));
   }
+}
+
+class _Guest extends StateNotifier<AsyncValue<AuthSession?>>
+    implements SessionController {
+  _Guest() : super(const AsyncData(null));
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _Preferences extends StateNotifier<AppPreferences>

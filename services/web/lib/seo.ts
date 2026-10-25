@@ -50,6 +50,8 @@ type ContentMetadataOptions = {
   index?: boolean;
   /** Languages the content exists in, for hreflang; all of them by default. */
   locales?: readonly Locale[];
+  /** The picture messengers show with a link; the site card by default. */
+  image?: { url: string; width: number; height: number; alt?: string };
 };
 
 export function siteUrl(): URL {
@@ -136,9 +138,12 @@ export function createPageMetadata(
 
 export function createContentMetadata(
   locale: Locale,
-  { title, description, path, index = true, locales }: ContentMetadataOptions,
+  { title, description, path, index = true, locales, image }: ContentMetadataOptions,
 ): Metadata {
   const canonical = localizedPath(locale, path);
+  const picture = image
+    ? { url: image.url, width: image.width, height: image.height, alt: image.alt ?? title }
+    : { url: "/opengraph-image", width: 1200, height: 630, alt: SITE_NAME };
 
   return {
     title,
@@ -172,14 +177,7 @@ export function createContentMetadata(
           alternateLocale: (locales ?? SUPPORTED_LOCALES)
             .filter((item) => item !== locale)
             .map((item) => OPEN_GRAPH_LOCALES[item]),
-          images: [
-            {
-              url: "/opengraph-image",
-              width: 1200,
-              height: 630,
-              alt: SITE_NAME,
-            },
-          ],
+          images: [picture],
         }
       : undefined,
     twitter: index
@@ -187,7 +185,7 @@ export function createContentMetadata(
           card: "summary_large_image",
           title,
           description,
-          images: ["/opengraph-image"],
+          images: [picture.url],
         }
       : undefined,
   };

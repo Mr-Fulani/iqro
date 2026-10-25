@@ -575,6 +575,10 @@ async function readJson(request) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
 }
 
+const courseEvents = [];
+const courseRatings = [];
+const courseReports = [];
+
 const server = createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${host}:${port}`);
   const path = url.pathname;
@@ -621,6 +625,49 @@ const server = createServer(async (request, response) => {
     });
   }
 
+  // Stage 4 (docs/courses/README.md): anonymous counters, the course rating and lesson reports.
+  if (path === "/api/v1/courses/events" && request.method === "POST") {
+    const input = await readJson(request);
+    courseEvents.push(...(input.events || []));
+    return sendJson(response, 202, { accepted: (input.events || []).length });
+  }
+  if (path === "/__test__/course-events") {
+    return sendJson(response, 200, { events: courseEvents, ratings: courseRatings, reports: courseReports });
+  }
+  const ratingMatch = path.match(/^\/api\/v1\/courses\/([a-z0-9-]+)\/rating$/);
+  if (ratingMatch && request.method === "PUT") {
+    if (!request.headers.authorization) return sendJson(response, 401, { detail: "Authentication credentials were not provided." });
+    const input = await readJson(request);
+    courseRatings.push({ course: ratingMatch[1], ...input });
+    return sendJson(response, 200, { stars: input.stars, comment: (input.comment || "").trim(), updated_at: publishedAt });
+  }
+  if (path === "/api/v1/feedback/tickets" && request.method === "POST") {
+    if (!request.headers.authorization) return sendJson(response, 401, { detail: "Authentication credentials were not provided." });
+    const input = await readJson(request);
+    courseReports.push(input);
+    return sendJson(response, 201, {
+      public_id: `FB-e2e${courseReports.length}`,
+      category: input.category,
+      subject: input.subject,
+      status: "new",
+      priority: "high",
+      locale: input.locale,
+      channel: "web",
+      sla_response_due_at: null,
+      first_response_at: null,
+      created_at: publishedAt,
+      updated_at: publishedAt,
+      client_request_id: input.client_request_id,
+      contact_email: input.contact_email || null,
+      team: "",
+      resolved_at: null,
+      closed_at: null,
+      reopened_at: null,
+      reopen_count: 0,
+      context: input.context,
+      messages: [],
+    });
+  }
   if (path === "/api/v1/courses" || path.startsWith("/api/v1/courses/")) {
     const requested = url.searchParams.get("language") ?? "ru";
     if (!courseLanguages.has(requested)) {

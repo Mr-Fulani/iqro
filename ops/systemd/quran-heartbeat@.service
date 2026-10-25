@@ -16,4 +16,8 @@ PrivateTmp=true
 ProtectHome=true
 ProtectSystem=strict
 ReadOnlyPaths=/opt/quran
+# Telegram alert state and the summary the admin shows (ops/monitoring/alerts.py);
+# the backend container mounts this directory read-only.
+StateDirectory=iqro-monitor/%i
+StateDirectoryMode=0755
 TimeoutStartSec=2m
