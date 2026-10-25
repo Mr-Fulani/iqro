@@ -15,11 +15,14 @@ void main() {
     required Map<String, List<Map<String, Object?>>> catalogs,
     int serverPageSize = 100,
     bool repeatCursor = false,
+    Map<String, Map<String, Object?>> documents = const {},
+    void Function(Database database)? onDatabase,
   }) async {
     final sqlDatabase = await databaseFactoryFfi.openDatabase(
       inMemoryDatabasePath,
     );
     addTearDown(sqlDatabase.close);
+    onDatabase?.call(sqlDatabase);
     await sqlDatabase.execute('''
       CREATE TABLE cache_entries (
         cache_key TEXT PRIMARY KEY,
@@ -39,6 +42,7 @@ void main() {
       catalogs: catalogs,
       serverPageSize: serverPageSize,
       repeatCursor: repeatCursor,
+      documents: documents,
     );
     final repository = AudioRepository(
       api: api,
@@ -102,7 +106,64 @@ void main() {
 
     await expectLater(repository.reciters(), throwsFormatException);
   });
+
+  test('re-asks for an untimed surah sooner than for a timed one', () async {
+    late Database sqlDatabase;
+    final (repository, _) = await createRepository(
+      catalogs: const {},
+      documents: {
+        '/recitations/untimed/surahs/2': _playback('untimed', segments: []),
+        '/recitations/timed/surahs/2': _playback(
+          'timed',
+          segments: [
+            <String, Object?>{
+              'ayah_id': 'ayah-2-1',
+              'surah_number': 2,
+              'ayah_number': 1,
+              'start_ms': 960,
+              'end_ms': 6020,
+            },
+          ],
+        ),
+      },
+      onDatabase: (database) => sqlDatabase = database,
+    );
+
+    await repository.playback(recitationId: 'untimed', surah: 2);
+    await repository.playback(recitationId: 'timed', surah: 2);
+
+    Future<Duration> cachedFor(String recitationId) async {
+      final rows = await sqlDatabase.query(
+        'cache_entries',
+        where: 'cache_key = ?',
+        whereArgs: ['audio:playback:$recitationId:surah:2'],
+      );
+      final row = rows.single;
+      return DateTime.parse(
+        row['expires_at']! as String,
+      ).difference(DateTime.parse(row['updated_at']! as String));
+    }
+
+    expect(await cachedFor('untimed'), const Duration(hours: 12));
+    expect(await cachedFor('timed'), const Duration(days: 7));
+  });
 }
+
+Map<String, Object?> _playback(
+  String recitationId, {
+  required List<Map<String, Object?>> segments,
+}) => <String, Object?>{
+  'track': <String, Object?>{
+    'id': 'track-$recitationId',
+    'recitation_id': recitationId,
+    'surah_number': 2,
+    'duration_ms': 7031700,
+    'asset': <String, Object?>{
+      'url': 'https://media.iqro.forum/$recitationId/002.mp3',
+    },
+  },
+  'segments': segments,
+};
 
 const _config = AppConfig(
   apiBaseUrl: 'https://iqro.forum',
@@ -134,11 +195,13 @@ class _PagedCatalogApi extends ApiClient {
     required this.catalogs,
     required this.serverPageSize,
     required this.repeatCursor,
+    this.documents = const {},
   }) : super(config: _config, authRepository: auth, locale: () => 'ru');
 
   final Map<String, List<Map<String, Object?>>> catalogs;
   final int serverPageSize;
   final bool repeatCursor;
+  final Map<String, Map<String, Object?>> documents;
   final List<Map<String, Object?>> requests = <Map<String, Object?>>[];
 
   @override
@@ -149,6 +212,8 @@ class _PagedCatalogApi extends ApiClient {
     String? etag,
     AccountScopeSnapshot? accountScope,
   }) async {
+    final document = documents[path];
+    if (document != null) return document;
     final items = catalogs[path];
     if (items == null) throw StateError('Unexpected GET $path');
     requests.add(Map<String, Object?>.of(query ?? const {}));

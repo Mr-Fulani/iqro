@@ -1,0 +1,26 @@
+[
+ {
+  "id": 1,
+  "name": "إبراهيم الأخضر",
+  "rewaya": "حفص عن عاصم",
+  "folder_url": "https://cdn.mp3quran.net/audio/ibrahim-akhdar/r1/",
+  "soar_count": 114,
+  "soar_link": "https://www.mp3quran.net/api/v3/ayat_timing/soar?read=1"
+ },
+ {
+  "id": 12,
+  "name": "إدريس أبكر",
+  "rewaya": "حفص عن عاصم",
+  "folder_url": "https://cdn.mp3quran.net/audio/idrees-abkar/r1/",
+  "soar_count": 114,
+  "soar_link": "https://www.mp3quran.net/api/v3/ayat_timing/soar?read=12"
+ },
+ {
+  "id": 14,
+  "name": "القارئ ياسين",
+  "rewaya": "ورش عن نافع",
+  "folder_url": "https://cdn.mp3quran.net/audio/yassen-jazairi/r1/",
+  "soar_count": 114,
+  "soar_link": "https://www.mp3quran.net/api/v3/ayat_timing/soar?read=14"
+ }
+]
