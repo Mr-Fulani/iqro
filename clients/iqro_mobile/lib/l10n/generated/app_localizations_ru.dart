@@ -2806,4 +2806,82 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get lessonMediaNextSlide => 'Следующий слайд';
+
+  @override
+  String get coursesShare => 'Поделиться';
+
+  @override
+  String get coursesVoteQuestion => 'Тема была полезной?';
+
+  @override
+  String get coursesVoteHelpful => 'Полезно';
+
+  @override
+  String get coursesVoteNotHelpful => 'Не очень';
+
+  @override
+  String get coursesVoteThanks => 'Спасибо за отзыв';
+
+  @override
+  String get coursesRatingQuestion => 'Насколько курс был полезен?';
+
+  @override
+  String coursesRatingStars(int stars) {
+    return '$stars из 5';
+  }
+
+  @override
+  String get coursesRatingComment => 'Комментарий (необязательно)';
+
+  @override
+  String get coursesSend => 'Отправить';
+
+  @override
+  String coursesRatingThanks(int stars) {
+    return 'Спасибо! Ваша оценка: $stars из 5';
+  }
+
+  @override
+  String get coursesRatingChange => 'Изменить';
+
+  @override
+  String get coursesSendFailed => 'Не удалось отправить. Попробуйте ещё раз.';
+
+  @override
+  String get coursesSendTooOften => 'Слишком часто. Попробуйте позже.';
+
+  @override
+  String get coursesReportError => 'Сообщить об ошибке';
+
+  @override
+  String get coursesReportType => 'Тип замечания';
+
+  @override
+  String get coursesReportReligious => 'Ошибка в религиозном содержании';
+
+  @override
+  String get coursesReportTypo => 'Опечатка или перевод';
+
+  @override
+  String get coursesReportTechnical => 'Не работает видео или страница';
+
+  @override
+  String get coursesReportOther => 'Другое';
+
+  @override
+  String get coursesReportMessage => 'Текст замечания';
+
+  @override
+  String get coursesReportMessageRequired => 'Опишите замечание';
+
+  @override
+  String get coursesReportEmail => 'Email для ответа (необязательно)';
+
+  @override
+  String coursesReportThanks(String id) {
+    return 'Спасибо! Номер обращения $id';
+  }
+
+  @override
+  String get coursesReportOpen => 'Открыть обращение';
 }

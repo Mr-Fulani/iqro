@@ -49,6 +49,8 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
     "feedback_write": "10000/minute",
     "share_event": "10000/minute",
     "announcement_event": "10000/minute",
+    "course_event": "10000/minute",
+    "course_rating": "10000/hour",
     "referral_link": "10000/minute",
     "referral_redirect": "10000/minute",
     "prayer_calculate": "10000/minute",

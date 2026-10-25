@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 
 import { CourseOutdated } from "@/components/courses/CourseOutdated";
 import { CourseProgressSummary, LessonStatusBadge } from "@/components/courses/CourseProgress";
+import { CourseRating } from "@/components/courses/CourseRating";
+import { CourseShareButton } from "@/components/courses/CourseShareButton";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { getPublishedCourse, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
-import { createContentMetadata } from "@/lib/seo";
+import { absoluteSiteUrl, createContentMetadata } from "@/lib/seo";
 import { formatClock } from "@/lib/audio-content";
 import { courseOutline, isCourseSlug, videoMinutes } from "@/lib/thematic-courses";
 import { translate } from "@/lib/translate";
@@ -54,6 +56,7 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
     description: course.summary,
     path: `/courses/${course.slug}`,
     locales: course.languages.filter(isLocale),
+    image: course.cover ?? undefined,
   });
 }
 
@@ -93,6 +96,11 @@ export default async function CoursePage({ params }: { params: Promise<RoutePara
             </p>
           ) : null}
           <CourseProgressSummary course={courseOutline(document)} />
+          <CourseShareButton
+            title={course.title}
+            text={course.summary}
+            url={absoluteSiteUrl(localizedPath(route.locale, `/courses/${course.slug}`))}
+          />
         </div>
         {course.cover ? (
           // eslint-disable-next-line @next/next/no-img-element -- a ready 16:9 WebP from the media host
@@ -132,6 +140,12 @@ export default async function CoursePage({ params }: { params: Promise<RoutePara
           ))}
         </ol>
       </section>
+
+      <CourseRating
+        courseSlug={course.slug}
+        language={course.language}
+        lessonSlugs={document.lessons.map((lesson) => lesson.slug)}
+      />
     </div>
   );
 }

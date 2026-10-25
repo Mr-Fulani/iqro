@@ -4943,6 +4943,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next slide'**
   String get lessonMediaNextSlide;
+
+  /// No description provided for @coursesShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get coursesShare;
+
+  /// No description provided for @coursesVoteQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Was this lesson helpful?'**
+  String get coursesVoteQuestion;
+
+  /// No description provided for @coursesVoteHelpful.
+  ///
+  /// In en, this message translates to:
+  /// **'Helpful'**
+  String get coursesVoteHelpful;
+
+  /// No description provided for @coursesVoteNotHelpful.
+  ///
+  /// In en, this message translates to:
+  /// **'Not really'**
+  String get coursesVoteNotHelpful;
+
+  /// No description provided for @coursesVoteThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for the feedback'**
+  String get coursesVoteThanks;
+
+  /// No description provided for @coursesRatingQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'How helpful was the course?'**
+  String get coursesRatingQuestion;
+
+  /// No description provided for @coursesRatingStars.
+  ///
+  /// In en, this message translates to:
+  /// **'{stars} of 5'**
+  String coursesRatingStars(int stars);
+
+  /// No description provided for @coursesRatingComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment (optional)'**
+  String get coursesRatingComment;
+
+  /// No description provided for @coursesSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get coursesSend;
+
+  /// No description provided for @coursesRatingThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you! Your rating: {stars} of 5'**
+  String coursesRatingThanks(int stars);
+
+  /// No description provided for @coursesRatingChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get coursesRatingChange;
+
+  /// No description provided for @coursesSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send. Please try again.'**
+  String get coursesSendFailed;
+
+  /// No description provided for @coursesSendTooOften.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please try again later.'**
+  String get coursesSendTooOften;
+
+  /// No description provided for @coursesReportError.
+  ///
+  /// In en, this message translates to:
+  /// **'Report an error'**
+  String get coursesReportError;
+
+  /// No description provided for @coursesReportType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type of issue'**
+  String get coursesReportType;
+
+  /// No description provided for @coursesReportReligious.
+  ///
+  /// In en, this message translates to:
+  /// **'Error in religious content'**
+  String get coursesReportReligious;
+
+  /// No description provided for @coursesReportTypo.
+  ///
+  /// In en, this message translates to:
+  /// **'Typo or translation'**
+  String get coursesReportTypo;
+
+  /// No description provided for @coursesReportTechnical.
+  ///
+  /// In en, this message translates to:
+  /// **'The video or page does not work'**
+  String get coursesReportTechnical;
+
+  /// No description provided for @coursesReportOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get coursesReportOther;
+
+  /// No description provided for @coursesReportMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Description of the issue'**
+  String get coursesReportMessage;
+
+  /// No description provided for @coursesReportMessageRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the issue'**
+  String get coursesReportMessageRequired;
+
+  /// No description provided for @coursesReportEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email for a reply (optional)'**
+  String get coursesReportEmail;
+
+  /// No description provided for @coursesReportThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you! Request number {id}'**
+  String coursesReportThanks(String id);
+
+  /// No description provided for @coursesReportOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the request'**
+  String get coursesReportOpen;
 }
 
 class _AppLocalizationsDelegate

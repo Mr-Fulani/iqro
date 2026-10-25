@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'course_feedback.dart';
+import 'course_feedback_widgets.dart';
 import 'course_models.dart';
 import 'course_progress_store.dart';
 import 'course_widgets.dart';
@@ -25,6 +27,16 @@ class CourseHomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: IqroTopBar(
         title: document?.course.title ?? context.l10n.coursesTitle,
+        actions: <Widget>[
+          if (document != null)
+            CourseShareButton(
+              title: document.course.title,
+              url: courseShareUrl(
+                document.course.language,
+                document.course.slug,
+              ),
+            ),
+        ],
       ),
       body: document != null
           ? _CourseContents(document: document)
@@ -95,6 +107,10 @@ class _CourseContents extends ConsumerWidget {
                 ref.watch(coursePositionsProvider(info.slug)).valueOrNull ??
                 const CourseVideoPositions(),
           ),
+          if (progress.doneCount(document) > 0) ...<Widget>[
+            const SizedBox(height: 16),
+            CourseRatingCard(course: info.slug, language: info.language),
+          ],
           const SizedBox(height: 24),
           IqroSectionHeader(title: context.l10n.coursesLessons),
           const SizedBox(height: 10),

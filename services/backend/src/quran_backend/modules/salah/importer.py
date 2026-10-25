@@ -19,6 +19,7 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
+from quran_backend.modules.alerts.services import course_version_event
 from quran_backend.modules.audio.player_background_upload import player_background_uploader
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.content_revalidation import enqueue_salah_content_change
@@ -271,6 +272,7 @@ def copy_salah_version(source: SalahCourseVersion, version: str) -> SalahCourseV
         for asset in source.media.all()
     )
     compile_version(draft)
+    course_version_event(draft, "draft")
     return draft
 
 
@@ -299,4 +301,5 @@ def publish_salah_version(version: SalahCourseVersion) -> SalahCourseVersion:
     course.active_version = version
     course.save(update_fields=["active_version", "updated_at"])
     enqueue_salah_content_change(action="activated", course=course.slug, version=version.version)
+    course_version_event(version, "published")
     return version

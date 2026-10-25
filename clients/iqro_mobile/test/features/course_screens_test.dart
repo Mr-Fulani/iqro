@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/app/providers.dart';
+import 'package:iqro_mobile/core/auth/auth_session.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
@@ -13,8 +14,10 @@ import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/courses/course_catalog_screen.dart';
 import 'package:iqro_mobile/features/courses/course_home_screen.dart';
 import 'package:iqro_mobile/features/courses/course_lesson_screen.dart';
+import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/features/more/more_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'course_test_data.dart';
@@ -200,6 +203,188 @@ void main() {
     harness.dispose();
   });
 
+  testWidgets('a lesson is shared as a link to its page on the site', (
+    tester,
+  ) async {
+    var harness = await _pump(tester, location: '/courses/ramadan/namerenie');
+    await tester.tap(find.byKey(const ValueKey('course-share')));
+    await _settle(tester);
+    expect(
+      harness.shares.single.text,
+      'Рамадан · Намерение (ният)\nhttps://iqro.forum/ru/courses/ramadan/namerenie',
+    );
+    expect(harness.shares.single.subject, 'Рамадан · Намерение (ният)');
+    harness.dispose();
+    harness = await _pump(tester, location: '/courses/ramadan');
+    await tester.tap(find.byKey(const ValueKey('course-share')));
+    await _settle(tester);
+    expect(
+      harness.shares.single.text,
+      'Рамадан\nhttps://iqro.forum/ru/courses/ramadan',
+    );
+    harness.dispose();
+  });
+
+  testWidgets('one vote per lesson; counters go out when it is closed', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, location: '/courses/ramadan/namerenie');
+    expect(find.text('Тема была полезной?'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('course-lesson-helpful')),
+    );
+    await tester.tap(find.byKey(const ValueKey('course-lesson-helpful')));
+    await _settle(tester);
+    expect(find.text('Спасибо за отзыв'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('course-lesson-not-helpful')),
+      findsNothing,
+    );
+    final stored = await tester.runAsync(
+      () => harness.database.readState('courses.vote.ramadan'),
+    );
+    expect(stored, {'namerenie': 'helpful'});
+    // Nothing is sent while the lesson is open (the minute has not passed).
+    expect(harness.feedback.events, isEmpty);
+
+    await tester.tap(find.byKey(const ValueKey('course-lesson-done')));
+    await _settle(tester);
+    harness.router.pop();
+    await _settle(tester);
+    expect(harness.feedback.platforms.toSet(), {'android'});
+    expect(harness.feedback.events, [
+      {'course': 'ramadan', 'lesson': 'namerenie', 'event': 'lesson_opened'},
+      {'course': 'ramadan', 'lesson': 'namerenie', 'event': 'lesson_helpful'},
+      {'course': 'ramadan', 'lesson': 'namerenie', 'event': 'lesson_completed'},
+    ]);
+    harness.dispose();
+  });
+
+  testWidgets('a report files a ticket that points at the lesson', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, location: '/courses/ramadan/namerenie');
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('course-lesson-report')),
+    );
+    await tester.tap(find.byKey(const ValueKey('course-lesson-report')));
+    await _settle(tester);
+    expect(find.text('Ошибка в религиозном содержании'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('course-report-send')));
+    await _settle(tester);
+    expect(find.text('Опишите замечание'), findsOneWidget);
+    expect(harness.reports.reports, isEmpty);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('course-report-message')),
+      'В цитате неверный аят',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('course-report-email')),
+      'student@example.com',
+    );
+    await tester.tap(find.byKey(const ValueKey('course-report-send')));
+    await _settle(tester);
+
+    expect(find.text('Спасибо! Номер обращения FB-test'), findsOneWidget);
+    final report = harness.reports.reports.single;
+    expect(report['category'], 'religious_content');
+    expect(report['subject'], 'Рамадан · 2. Намерение (ният)');
+    expect(report['locale'], 'ru');
+    expect(report['route'], '/courses/ramadan/namerenie');
+    expect(report['contact_email'], 'student@example.com');
+    expect(report['context'], {
+      'course_slug': 'ramadan',
+      'lesson_slug': 'namerenie',
+      'content_version': '1',
+    });
+    harness.dispose();
+  });
+
+  testWidgets('the last lesson studied asks to rate the course', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, location: '/courses/ramadan/taraviikh');
+    expect(find.byKey(const ValueKey('course-rating')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('course-lesson-done')));
+    await _settle(tester);
+    expect(find.text('Насколько курс был полезен?'), findsOneWidget);
+    final send = find.byKey(const ValueKey('course-rating-send'));
+    await tester.ensureVisible(send);
+    expect(tester.widget<FilledButton>(send).onPressed, isNull);
+    final star = find.byKey(const ValueKey('course-rating-star-4'));
+    expect(tester.getSize(star).height, greaterThanOrEqualTo(48));
+    expect(tester.getSemantics(find.bySemanticsLabel('4 из 5')), isNotNull);
+    await tester.tap(star);
+    await tester.enterText(
+      find.byKey(const ValueKey('course-rating-comment')),
+      '  Спасибо, всё понятно  ',
+    );
+    await tester.pump();
+    await tester.tap(send);
+    await _settle(tester);
+
+    expect(find.text('Спасибо! Ваша оценка: 4 из 5'), findsOneWidget);
+    expect(harness.feedback.ratings.single.$1, 'ramadan');
+    expect(harness.feedback.ratings.single.$2, {
+      'stars': 4,
+      'comment': 'Спасибо, всё понятно',
+      'language': 'ru',
+      'platform': 'android',
+    });
+    final stored = await tester.runAsync(
+      () => harness.database.readState('courses.rating.ramadan'),
+    );
+    expect(stored, {
+      'stars': 4,
+      'comment': 'Спасибо, всё понятно',
+      'updated_at': '2027-01-20T10:00:00Z',
+    });
+
+    // «Change» opens the form again with the saved rating.
+    await tester.tap(find.byKey(const ValueKey('course-rating-change')));
+    await _settle(tester);
+    expect(find.text('Спасибо, всё понятно'), findsOneWidget);
+    harness.dispose();
+  });
+
+  testWidgets('the course page asks for a rating after a lesson; 429 is said', (
+    tester,
+  ) async {
+    final feedback = FakeCourseFeedbackGateway()
+      ..ratingError = const ApiException(message: 'slow', statusCode: 429);
+    var harness = await _pump(
+      tester,
+      location: '/courses/ramadan',
+      feedback: feedback,
+    );
+    expect(find.byKey(const ValueKey('course-rating')), findsNothing);
+    harness.dispose();
+
+    harness = await _pump(
+      tester,
+      location: '/courses/ramadan/smysl-posta',
+      feedback: feedback,
+    );
+    await tester.tap(find.byKey(const ValueKey('course-lesson-done')));
+    await _settle(tester);
+    // Not the last lesson: no rating here.
+    expect(find.byKey(const ValueKey('course-rating')), findsNothing);
+    harness.router.pop();
+    await _settle(tester);
+    harness.router.push('/courses/ramadan');
+    await _settle(tester);
+    final card = find.byKey(const ValueKey('course-rating'));
+    expect(card, findsOneWidget);
+    await tester.ensureVisible(card);
+    await tester.tap(find.byKey(const ValueKey('course-rating-star-2')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('course-rating-send')));
+    await _settle(tester);
+    expect(find.text('Слишком часто. Попробуйте позже.'), findsOneWidget);
+    harness.dispose();
+  });
+
   testWidgets('a newer document asks to update the app', (tester) async {
     final harness = await _pump(
       tester,
@@ -252,6 +437,9 @@ typedef _Harness = ({
   GoRouter router,
   LocalDatabase database,
   FakeCourseGateway remote,
+  FakeCourseFeedbackGateway feedback,
+  FakeFeedbackRepository reports,
+  List<ShareParams> shares,
   void Function() dispose,
 });
 
@@ -260,12 +448,16 @@ Future<_Harness> _pump(
   String location = '/courses',
   String locale = 'ru',
   FakeCourseGateway? remote,
+  FakeCourseFeedbackGateway? feedback,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(400, 900);
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
   final gateway = remote ?? FakeCourseGateway();
+  final feedbackGateway = feedback ?? FakeCourseFeedbackGateway();
+  final reports = FakeFeedbackRepository();
+  final shares = <ShareParams>[];
   final (Database sql, LocalDatabase database) = (await tester.runAsync(
     openCourseTestDatabase,
   ))!;
@@ -303,6 +495,12 @@ Future<_Harness> _pump(
       key: UniqueKey(),
       overrides: <Override>[
         courseGatewayProvider.overrideWithValue(gateway),
+        courseFeedbackGatewayProvider.overrideWithValue(feedbackGateway),
+        feedbackRepositoryProvider.overrideWithValue(reports),
+        courseShareProvider.overrideWithValue((params) async {
+          shares.add(params);
+        }),
+        sessionProvider.overrideWith((ref) => _Guest()),
         localDatabaseProvider.overrideWithValue(database),
         activeAccountScopeKeyProvider.overrideWithValue((
           userId: 'test-owner',
@@ -339,6 +537,9 @@ Future<_Harness> _pump(
     router: router,
     database: database,
     remote: gateway,
+    feedback: feedbackGateway,
+    reports: reports,
+    shares: shares,
     dispose: () {
       router.dispose();
       unawaited(sql.close());
@@ -353,6 +554,13 @@ Future<void> _settle(WidgetTester tester) async {
     );
     await tester.pump(const Duration(milliseconds: 100));
   }
+}
+
+class _Guest extends StateNotifier<AsyncValue<AuthSession?>>
+    implements SessionController {
+  _Guest() : super(const AsyncData(null));
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _Preferences extends StateNotifier<AppPreferences>

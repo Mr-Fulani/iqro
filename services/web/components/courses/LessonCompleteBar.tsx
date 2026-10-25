@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
+import { trackCourseEvent } from "../../lib/course-feedback";
 import { useI18n } from "../../lib/i18n-context";
 import { localizedPath } from "../../lib/routing";
 import {
@@ -43,13 +44,24 @@ export function LessonCompleteBar({
   const completed = useThematicProgress(courseSlug)?.lessons[lessonSlug]?.status === "completed";
   const lessonHref = (slug: string) => localizedPath(locale, `/courses/${courseSlug}/${slug}`);
 
+  const counted = useRef("");
+
   // Opening a lesson starts it; «Continue» then comes back here until it is learned.
   useEffect(() => {
     writeThematicProgress(recordLessonOpened(readThematicProgress(courseSlug), lessonSlug, courseVersion), courseSlug);
+    // Once per page view, also when development mode runs the effect twice.
+    const lesson = `${courseSlug}/${lessonSlug}`;
+    if (counted.current === lesson) return;
+    counted.current = lesson;
+    trackCourseEvent({ course: courseSlug, lesson: lessonSlug, event: "lesson_opened" });
   }, [courseSlug, courseVersion, lessonSlug]);
 
   function markDone() {
-    writeThematicProgress(recordLessonCompleted(readThematicProgress(courseSlug), lessonSlug, courseVersion), courseSlug);
+    const progress = readThematicProgress(courseSlug);
+    if (progress.lessons[lessonSlug]?.status !== "completed") {
+      trackCourseEvent({ course: courseSlug, lesson: lessonSlug, event: "lesson_completed" });
+    }
+    writeThematicProgress(recordLessonCompleted(progress, lessonSlug, courseVersion), courseSlug);
   }
 
   return (

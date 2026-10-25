@@ -40,6 +40,7 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
+from quran_backend.modules.alerts.services import video_upload_failed
 from quran_backend.modules.audio.admin import _uploaded_file_path
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.editorial.diff import line_diff
@@ -857,7 +858,7 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 f"{megabytes(video.bytes)}"
             )
 
-        return self._video_action(request, object_id, ("add_coursevideo",), run)
+        return self._video_action(request, object_id, ("add_coursevideo",), run, failure="видео")
 
     def video_poster_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
         def run(lesson: CourseLesson) -> str:
@@ -906,7 +907,9 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 f"Видео: озвучка ({language}) «{dub.audio_original_name}», {clock(dub.duration_ms)}"
             )
 
-        return self._video_action(request, object_id, ("add_coursevideodub",), run)
+        return self._video_action(
+            request, object_id, ("add_coursevideodub",), run, failure=f"озвучку ({language})"
+        )
 
     def dub_delete_view(self, request: HttpRequest, object_id: str, language: str) -> HttpResponse:
         def run(lesson: CourseLesson) -> str:
@@ -921,7 +924,10 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         object_id: str,
         permissions: tuple[str, ...],
         run: Callable[[CourseLesson], str],
+        *,
+        failure: str = "",
     ) -> HttpResponse:
+        """`failure` names what an upload brings: its refusal is also a Telegram alert."""
         if request.method != "POST":
             return HttpResponseNotAllowed(["POST"])
         lesson = self.get_object(request, unquote(object_id))
@@ -934,9 +940,13 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         try:
             log = run(lesson)
         except CourseVideoError as error:
+            if failure:
+                video_upload_failed(lesson, failure, str(error), request.user)
             return JsonResponse({"error": str(error)}, status=error.status)
         except ImproperlyConfigured, ObjectStorageError, OSError:
             logger.exception("Course video operation failed")
+            if failure:
+                video_upload_failed(lesson, failure, "хранилище недоступно", request.user)
             return JsonResponse({"error": "Хранилище недоступно, повторите."}, status=502)
         # A list like the form's own messages: the strict review counts it as an edit.
         self.log_change(request, lesson, [{"changed": {"fields": [log]}}])

@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'course_feedback.dart';
+import 'course_feedback_widgets.dart';
 import 'course_models.dart';
 import 'course_notes_view.dart';
 import 'course_widgets.dart';
@@ -40,6 +42,16 @@ class CourseLessonScreen extends ConsumerWidget {
             number,
             document.lessons.length,
           ),
+          actions: <Widget>[
+            CourseShareButton(
+              title: '${document.course.title} · ${lesson.title}',
+              url: courseShareUrl(
+                document.course.language,
+                document.course.slug,
+                lesson.slug,
+              ),
+            ),
+          ],
         ),
         body: _LessonContents(document: document, lesson: lesson),
         bottomNavigationBar: _LessonBar(document: document, lesson: lesson),
@@ -71,7 +83,7 @@ class CourseLessonScreen extends ConsumerWidget {
 }
 
 /// Opening a lesson marks it as started: «Continue» follows the course
-/// opened last.
+/// opened last. Its counters go out when the lesson is closed.
 class _LessonContents extends ConsumerStatefulWidget {
   const _LessonContents({required this.document, required this.lesson});
 
@@ -83,11 +95,27 @@ class _LessonContents extends ConsumerStatefulWidget {
 }
 
 class _LessonContentsState extends ConsumerState<_LessonContents> {
+  late final CourseEventQueue _events;
+
+  /// Where the video is, once the student started it: a report says so.
+  Duration? _playback;
+
   @override
   void initState() {
     super.initState();
+    _events = ref.read(courseEventQueueProvider);
+    _track(CourseEvent.lessonOpened);
     unawaited(_recordOpen());
   }
+
+  @override
+  void dispose() {
+    unawaited(_events.flush());
+    super.dispose();
+  }
+
+  void _track(String event) =>
+      _events.add(widget.document.course.slug, widget.lesson.slug, event);
 
   Future<void> _recordOpen() async {
     final course = widget.document.course;
@@ -111,6 +139,14 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
     final lesson = widget.lesson;
     final course = widget.document.course;
     final theme = Theme.of(context);
+    // The last lesson studied asks how helpful the course was.
+    final askRating =
+        widget.document.next(lesson.slug) == null &&
+        (ref
+                .watch(courseProgressProvider(course.slug))
+                .valueOrNull
+                ?.isDone(lesson.slug) ??
+            false);
     return IqroPage(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -123,6 +159,9 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
               lessonTitle: lesson.title,
               video: video,
               language: course.language,
+              onStarted: () => _track(CourseEvent.videoStarted),
+              onWatched: () => _track(CourseEvent.videoFinished),
+              onPosition: (position) => _playback = position,
             ),
           ),
           if (lesson.notes.isNotEmpty) ...<Widget>[
@@ -142,9 +181,21 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
               child: CourseNotesView(blocks: lesson.notes),
             ),
           ],
+          const SizedBox(height: 12),
+          LessonVoteCard(course: course.slug, lesson: lesson.slug),
           if (lesson.sources.isNotEmpty) ...<Widget>[
             const SizedBox(height: 12),
             _Sources(sources: lesson.sources),
+          ],
+          const SizedBox(height: 4),
+          LessonReportButton(
+            document: widget.document,
+            lesson: lesson,
+            playback: () => _playback,
+          ),
+          if (askRating) ...<Widget>[
+            const SizedBox(height: 12),
+            CourseRatingCard(course: course.slug, language: course.language),
           ],
         ],
       ),
@@ -279,6 +330,9 @@ class _LessonBar extends ConsumerWidget {
 
     Future<void> mark(bool studied) async {
       if (studied) {
+        ref
+            .read(courseEventQueueProvider)
+            .add(slug, lesson.slug, CourseEvent.lessonCompleted);
         await store.markDone(
           course: slug,
           lesson: lesson.slug,

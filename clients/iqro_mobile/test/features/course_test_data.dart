@@ -1,9 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
+import 'package:iqro_mobile/features/courses/course_feedback.dart';
 import 'package:iqro_mobile/features/courses/course_repository.dart';
+import 'package:iqro_mobile/features/feedback/feedback_models.dart';
+import 'package:iqro_mobile/features/feedback/feedback_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// The shared examples of docs/courses, the same files the site and the
@@ -99,4 +103,71 @@ Future<(Database, LocalDatabase)> openCourseTestDatabase() async {
     )
   ''');
   return (sql, LocalDatabase.forTesting(sql));
+}
+
+class FakeCourseFeedbackGateway implements CourseFeedbackGateway {
+  /// An exception every rating request throws.
+  Object? ratingError;
+
+  final events = <Map<String, Object?>>[];
+  final platforms = <String>[];
+  final ratings = <(String, Map<String, Object?>)>[];
+
+  @override
+  Future<void> sendEvents(
+    String platform,
+    List<Map<String, Object?>> events,
+  ) async {
+    platforms.add(platform);
+    this.events.addAll(events);
+  }
+
+  @override
+  Future<Object?> rate(String course, Map<String, Object?> rating) async {
+    if (ratingError case final error?) throw error;
+    ratings.add((course, rating));
+    return <String, Object?>{...rating, 'updated_at': '2027-01-20T10:00:00Z'};
+  }
+}
+
+/// Records lesson reports; the rest of the repository is not used.
+class FakeFeedbackRepository implements FeedbackRepository {
+  final reports = <Map<String, Object?>>[];
+
+  @override
+  Future<FeedbackTicket> create({
+    required String category,
+    required String subject,
+    required String message,
+    String? contactEmail,
+    String route = '/feedback',
+    String? locale,
+    Map<String, Object?> context = const <String, Object?>{},
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    reports.add(<String, Object?>{
+      'category': category,
+      'subject': subject,
+      'message': message,
+      'contact_email': contactEmail,
+      'route': route,
+      'locale': locale,
+      'context': context,
+    });
+    return FeedbackTicket.fromJson(<String, Object?>{
+      'public_id': 'FB-test',
+      'category': category,
+      'subject': subject,
+      'status': 'new',
+      'priority': 'normal',
+      'locale': locale,
+      'channel': 'android',
+      'created_at': '2027-01-20T10:00:00Z',
+      'updated_at': '2027-01-20T10:00:00Z',
+      'messages': <Object?>[],
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

@@ -68,6 +68,9 @@ class FeedbackContextInputSerializer(serializers.Serializer[Any]):
         validators=[validate_external_id],
     )
     playback_ms = serializers.IntegerField(min_value=0, max_value=86_400_000, required=False)
+    course_slug = serializers.SlugField(max_length=64, required=False, allow_blank=True)
+    lesson_slug = serializers.SlugField(max_length=64, required=False, allow_blank=True)
+    slide_number = serializers.IntegerField(min_value=1, max_value=999, required=False)
     ad_campaign_id = serializers.CharField(
         max_length=128,
         required=False,
@@ -118,11 +121,15 @@ class FeedbackContextInputSerializer(serializers.Serializer[Any]):
         if "ayah_number" in attrs and "surah_number" not in attrs:
             raise serializers.ValidationError("ayah_number requires surah_number.")
         if "playback_ms" in attrs and not (
-            attrs.get("audio_track_id") or attrs.get("recitation_id")
+            attrs.get("audio_track_id") or attrs.get("recitation_id") or attrs.get("lesson_slug")
         ):
             raise serializers.ValidationError(
-                "playback_ms requires audio_track_id or recitation_id."
+                "playback_ms requires audio_track_id, recitation_id or lesson_slug."
             )
+        if (attrs.get("lesson_slug") or "slide_number" in attrs) and not attrs.get("course_slug"):
+            raise serializers.ValidationError("lesson_slug and slide_number require course_slug.")
+        if "slide_number" in attrs and not attrs.get("lesson_slug"):
+            raise serializers.ValidationError("slide_number requires lesson_slug.")
         return attrs
 
 
@@ -171,6 +178,9 @@ class FeedbackContextOutputSerializer(serializers.Serializer[Any]):
     recitation_id = serializers.CharField()
     audio_track_id = serializers.CharField()
     playback_ms = serializers.IntegerField(allow_null=True)
+    course_slug = serializers.CharField()
+    lesson_slug = serializers.CharField()
+    slide_number = serializers.IntegerField(allow_null=True)
     ad_campaign_id = serializers.CharField()
     ad_creative_id = serializers.CharField()
     route = serializers.CharField()
