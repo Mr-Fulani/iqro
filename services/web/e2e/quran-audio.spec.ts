@@ -1700,12 +1700,12 @@ async function expectLegendUnderSheet(page: Page) {
   const end = await boxes();
   ({ sheet, legend } = end);
   expect(legend.top).toBeGreaterThanOrEqual(sheet.bottom - 1);
-  expect(legend.bottom).toBeLessThanOrEqual(end.bar.top + 1);
+  // The bar keeps a gap above the chips: its shadow never falls on them.
+  expect(legend.bottom).toBeLessThanOrEqual(end.bar.top - 7);
   expect(legend.left).toBeGreaterThanOrEqual(0);
   expect(legend.right).toBeLessThanOrEqual(end.width);
-  // No empty band under the chips: a portrait page and its chips are centred
-  // above the reader bar, a scrolled landscape page ends right above it.
-  expect(end.bar.top - legend.bottom).toBeLessThanOrEqual(Math.max(16, sheet.top - end.stageTop) + 1);
+  // No empty band under the chips: a portrait page and its chips are centred above the reader bar.
+  expect(end.bar.top - legend.bottom).toBeLessThanOrEqual(Math.max(16, sheet.top - end.stageTop) + 8 + 1);
 }
 
 /** Every box stays inside the screen; nothing scrolls the page sideways. */
@@ -1734,9 +1734,7 @@ async function swipeDown(page: Page, x: number, y: number, distance: number) {
   await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 }
 
-const phones: [number, number, string][] = [
-  [360, 740, "ar"], [740, 360, "ar"], [390, 844, "ru"], [844, 390, "ru"], [412, 915, "ru"], [915, 412, "ru"],
-];
+const phones: [number, number, string][] = [[360, 740, "ar"], [390, 844, "ru"], [412, 915, "ru"]];
 for (const [width, height, locale] of phones) {
   test.describe(`tajweed on a ${width}×${height} phone (${locale})`, () => {
     test.use({ viewport: { width, height }, isMobile: true, hasTouch: true });
@@ -1774,6 +1772,77 @@ for (const [width, height, locale] of phones) {
       await foldReaderMenu(page);
       await expect(legend).toBeHidden();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    });
+  });
+}
+
+// The chips and the reader bar come and go together with a tap on the page.
+// Portrait keeps the chips under the sheet and the bar clear of them, the
+// browser's own bars included; landscape shows no chips, as in the app.
+const overlapPhones = [
+  { width: 390, height: 844, locale: "ru" }, { width: 412, height: 915, locale: "ar" },
+  { width: 390, height: 664, locale: "ar" }, { width: 412, height: 780, locale: "ru" },
+  { width: 844, height: 390, locale: "ru" }, { width: 915, height: 412, locale: "ar" },
+] as const;
+for (const { width, height, locale } of overlapPhones) {
+  test.describe(`tajweed chips and the reader bar on a ${width}×${height} phone (${locale})`, () => {
+    test.use({ viewport: { width, height }, isMobile: true, hasTouch: true });
+
+    test("never overlap, folded or shown, after quick taps on the page", async ({ page }) => {
+      await openPhoneReader(page, `/${locale}/quran?surah=6&page=128`);
+      const landscape = width > height;
+      const stage = page.locator(".is-reader-immersive .mushaf-page-container");
+      const bar = page.locator(".reader-actions");
+      const legend = page.getByTestId("tajweed-legend");
+      await stage.locator('[data-ayah-key="6:2"]').last().click();
+      // Measured as painted: two frames after the tap's render.
+      const rects = () => page.evaluate(async () => {
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const rect = (selector: string) => {
+          const element = document.querySelector(selector);
+          if (!element?.getClientRects().length) return null;
+          const { top, bottom, left, right } = element.getBoundingClientRect();
+          return { top, bottom, left, right };
+        };
+        return { legend: rect(".is-reader-immersive .mushaf-tajweed-legend"), bar: rect(".reader-actions") };
+      });
+      const expectApart = async () => {
+        const { legend: chips, bar: overlay } = await rects();
+        expect(overlay).not.toBeNull();
+        if (landscape) {
+          expect(chips).toBeNull();
+          return;
+        }
+        if (!chips) return;
+        const crosses = chips.top < overlay!.bottom && overlay!.top < chips.bottom
+          && chips.left < overlay!.right && overlay!.left < chips.right;
+        expect(crosses).toBe(false);
+        expect(chips.bottom).toBeLessThanOrEqual(overlay!.top - 7);
+      };
+
+      if (landscape) await expect(legend).toBeHidden();
+      else await expect(legend).toBeVisible();
+      await expectApart();
+      for (const pause of [0, 30, 90, 180]) {
+        await stage.tap({ position: { x: 6, y: 6 } });
+        await page.waitForTimeout(pause);
+        await stage.tap({ position: { x: 6, y: 6 } });
+        await expect(bar).not.toHaveClass(/is-folded/);
+        await expectApart();
+        await stage.tap({ position: { x: 6, y: 6 } });
+        await expect(bar).toHaveClass(/is-folded/);
+        await expect(legend).toBeHidden();
+        await expectApart();
+        // The bar folds whole: the round menu button, not an empty panel.
+        const folded = (await rects()).bar!;
+        expect(folded.right - folded.left).toBeLessThanOrEqual(56);
+        expect(folded.bottom - folded.top).toBeLessThanOrEqual(56);
+        await stage.tap({ position: { x: 6, y: 6 } });
+        await expect(bar).not.toHaveClass(/is-folded/);
+        if (landscape) await expect(legend).toBeHidden();
+        else await expect(legend).toBeVisible();
+        await expectApart();
+      }
     });
   });
 }
@@ -3484,12 +3553,13 @@ test.describe("Landscape Mushaf bottom space", () => {
     });
   }
 
-  test("the tajweed legend follows the sheet and goes with the controls", async ({ page }) => {
+  test("a landscape tajweed page shows no chips, as in the app", async ({ page }) => {
     await installTajweedMocks(page);
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/ru/quran?surah=6&page=128");
+    await expect(page.locator('.qf-mushaf-view[data-mushaf-id="19"]')).toHaveAttribute("data-font-status", "ready");
     const legend = page.getByTestId("tajweed-legend");
-    await expect(legend).toBeVisible();
+    await expect(legend).toBeHidden();
     await expectBothControlStates(page);
     await expect(legend).toBeHidden();
   });
@@ -3607,4 +3677,103 @@ test.describe("Desktop Mushaf page arrows", () => {
     await expect(surface.locator(".mushaf-page-arrow-rail.is-previous button")).toBeDisabled();
     await expect(surface.locator(".mushaf-page-arrow-rail.is-previous button")).toBeHidden();
   });
+});
+
+// The site's phone player stays on the Mushaf page outside the full-screen
+// reader. Rolled up, its own box is the round button: quick taps, taps on the
+// page and the reader hiding it mid-roll never leave the bar's body behind.
+for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }]) {
+  test.describe(`phone player on the Mushaf page at ${viewport.width}×${viewport.height}`, () => {
+    test.use({ viewport, isMobile: true, hasTouch: true });
+
+    test("rolls up whole into the round button, however quickly it is tapped", async ({ page }) => {
+      test.setTimeout(120_000);
+      await page.goto("/ru/audio");
+      await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+      const bar = page.getByTestId("mobile-audio-player");
+      await expect(bar.locator("audio")).toHaveAttribute("src", /\S/);
+      await page.locator(".mobile-navigation a[href='/ru/quran']").first().click();
+      await expect(page).toHaveURL(/\/ru\/quran/);
+      // Hidden under the full-screen reader, back once the reader is left.
+      const exit = page.getByRole("button", { name: "Выйти из читалки" });
+      await expect(exit).toBeVisible();
+      await expect(bar).toBeHidden();
+      await exit.click();
+      await expect(bar).toBeVisible();
+
+      const collapse = bar.getByRole("button", { name: "Свернуть панель плеера", exact: true });
+      const roundButton = bar.getByRole("button", { name: "Показать панель плеера", exact: true });
+      const pageSurface = page.locator(".mushaf-page-container").filter({ visible: true });
+      const box = async (locator: typeof bar) => (await locator.boundingBox())!;
+      const settledBox = async () => {
+        await expect(bar).toHaveClass(/is-(collapsed|bar)(\s|$)/);
+        await expect.poll(() => bar.evaluate((element) => element.getAnimations().length)).toBe(0);
+        return box(bar);
+      };
+      const expectRolledUp = async () => {
+        await expect(bar).toHaveClass(/is-collapsed/);
+        const body = await settledBox();
+        const button = await box(roundButton);
+        for (const key of ["x", "y", "width", "height"] as const) {
+          expect(Math.abs(body[key] - button[key])).toBeLessThanOrEqual(1);
+        }
+        expect(body.width).toBe(60);
+        expect(Math.round(body.x + body.width)).toBe(viewport.width - 10);
+      };
+      const expectBar = async () => {
+        await expect(bar).toHaveClass(/is-bar/);
+        const body = await settledBox();
+        expect(body.width).toBe(viewport.width - 20);
+        expect(body.height).toBe(66);
+        await expect(bar.locator(".mobile-player-sheet-body")).not.toHaveAttribute("inert", "");
+      };
+
+      for (const pause of [0, 40, 120, 250]) {
+        // A tap back while it still rolls, then up again.
+        await collapse.tap();
+        await page.waitForTimeout(pause);
+        await roundButton.tap();
+        await page.waitForTimeout(pause);
+        await collapse.tap();
+        await expectRolledUp();
+        // A tap on the page while it unrolls.
+        await roundButton.tap();
+        await page.waitForTimeout(pause);
+        await pageSurface.tap({ position: { x: 20, y: 20 } });
+        await expectBar();
+        // A tap on the page while it rolls up.
+        await collapse.tap();
+        await page.waitForTimeout(pause);
+        await pageSurface.tap({ position: { x: 20, y: 20 } });
+        await expectRolledUp();
+        await roundButton.tap();
+        await expectBar();
+      }
+
+      // The full-screen reader hides the bar mid-roll: no animation ends there,
+      // and the bar is the round button on the way back all the same.
+      await collapse.tap();
+      await page.getByRole("button", { name: "Открыть читалку" }).tap();
+      await expect(bar).toBeHidden();
+      await page.waitForTimeout(800);
+      await exit.tap();
+      await expectRolledUp();
+      await roundButton.tap();
+      await page.getByRole("button", { name: "Открыть читалку" }).tap();
+      await page.waitForTimeout(800);
+      await exit.tap();
+      await expectBar();
+    });
+  });
+}
+
+test("the desktop reader keeps its tajweed chips in landscape", async ({ page }) => {
+  await installTajweedMocks(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/ru/quran?surah=6&page=128");
+  await expect(page.locator('.qf-mushaf-view[data-mushaf-id="19"]')).toHaveAttribute("data-font-status", "ready");
+  const layout = page.locator(".quran-page-layout");
+  await expect(layout).toHaveAttribute("data-reader-orientation", "landscape");
+  await expect(layout).not.toHaveClass(/is-reader-immersive/);
+  await expect(page.getByTestId("tajweed-legend")).toBeVisible();
 });

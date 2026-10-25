@@ -63,6 +63,19 @@ async function settled(locator: Locator) {
   await expect.poll(() => locator.evaluate((element) => element.getAnimations().length)).toBe(0);
 }
 
+/**
+ * Rolled up, the player's own box is the round button: no part of the bar's
+ * body (its background, width or height) is left around it.
+ */
+async function expectBodyIsTheButton(bar: Locator, roundButton: Locator) {
+  await expect(bar).toHaveClass(/is-collapsed/);
+  const button = await box(roundButton);
+  const body = await box(bar);
+  for (const key of ["x", "y", "width", "height"] as const) {
+    expect(Math.abs(body[key] - button[key])).toBeLessThanOrEqual(1);
+  }
+}
+
 const PHONES = [
   { width: 360, height: 740 },
   { width: 390, height: 844 },
@@ -184,7 +197,7 @@ for (const phone of PHONES) {
     expect(roundBox.height).toBe(60);
     expect(Math.abs(roundBox.x + roundBox.width - (phone.width - 10))).toBeLessThanOrEqual(1);
     await expect(bar.locator(".mobile-player-sheet-body")).toHaveAttribute("inert", "");
-    await expect(bar).toHaveCSS("clip-path", /inset\(3px 0px 3px calc\(100% - 60px\) round 26px\)/);
+    await expectBodyIsTheButton(bar, roundButton);
     expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
     await roundButton.click();
     await expect(roundButton).toHaveCount(0);
@@ -480,9 +493,10 @@ test("the Arabic bar mirrors its layout and the full player stays within the scr
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
   await bar.getByRole("button", { name: "إخفاء شريط المشغل", exact: true }).click();
-  const roundButton = await box(bar.getByRole("button", { name: "إظهار شريط المشغل", exact: true }));
+  const roundButtonLocator = bar.getByRole("button", { name: "إظهار شريط المشغل", exact: true });
+  await expectBodyIsTheButton(bar, roundButtonLocator);
+  const roundButton = await box(roundButtonLocator);
   expect(Math.abs(roundButton.x - 10)).toBeLessThanOrEqual(1);
-  await expect(bar).toHaveCSS("clip-path", /inset\(3px calc\(100% - 60px\) 3px 0px round 26px\)/);
   expect(errors).toEqual([]);
 });
 
@@ -500,7 +514,12 @@ test("with reduced motion the bar and the full player switch without transitions
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await bar.getByRole("button", { name: "Свернуть панель плеера", exact: true }).click();
-  await expect(bar.getByRole("button", { name: "Показать панель плеера", exact: true })).toHaveCSS("animation-name", "none");
+  const roundButton = bar.getByRole("button", { name: "Показать панель плеера", exact: true });
+  await expect(roundButton).toHaveCSS("animation-name", "none");
+  await expectBodyIsTheButton(bar, roundButton);
+  await roundButton.click();
+  await expect(bar).toHaveClass(/is-bar/);
+  await expect.poll(async () => (await box(bar)).width).toBe(390 - 20);
 });
 
 test("a tablet shows the bar above its navigation and the desktop keeps the dock", async ({ page }) => {

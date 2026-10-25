@@ -870,25 +870,56 @@
     backdrop-filter: blur(14px);
     clip-path: inset(0 round 17px);
     transition:
-      clip-path 0.42s cubic-bezier(0.2, 0, 0, 1),
       border-color 0.42s cubic-bezier(0.2, 0, 0, 1),
       background-color 0.42s cubic-bezier(0.2, 0, 0, 1);
+    /* Where the round button sits in the bar: 60 px at the end of the row. */
+    --mobile-player-button-clip: inset(3px 0 3px calc(100% - 60px) round 26px);
+  }
+
+  [dir="rtl"] .mobile-audio-player {
+    --mobile-player-button-clip: inset(3px calc(100% - 60px) 3px 0 round 26px);
   }
 
   body:has(.is-reader-immersive) .mobile-audio-player {
     display: none;
   }
 
-  /* Collapsed: the 60 px round button at the end of the row, as _CollapsiblePlayer. */
-  .mobile-audio-player.is-collapsed {
-    clip-path: inset(3px 0 3px calc(100% - 60px) round 26px);
+  /* Collapsed: the 60 px round button at the end of the row, as _CollapsiblePlayer.
+     The bar rolls up into it ("collapsing"), then the player's own box becomes
+     the button, so no part of the bar is left behind whatever the animation
+     painted; "expanding" unrolls the bar from it. */
+  .mobile-audio-player:is(.is-collapsing, .is-collapsed) {
     border-color: transparent;
     background: var(--primary);
     backdrop-filter: none;
   }
 
-  [dir="rtl"] .mobile-audio-player.is-collapsed {
-    clip-path: inset(3px calc(100% - 60px) 3px 0 round 26px);
+  .mobile-audio-player.is-collapsing {
+    animation: mobile-player-roll-up 0.42s cubic-bezier(0.2, 0, 0, 1) forwards;
+  }
+
+  .mobile-audio-player.is-collapsed {
+    inset-inline-start: auto;
+    bottom: calc(var(--mobile-nav-space) + 9px);
+    width: 60px;
+    height: 60px;
+    clip-path: inset(0 round 26px);
+  }
+
+  .mobile-audio-player.is-expanding {
+    animation: mobile-player-unroll 0.42s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  @keyframes mobile-player-roll-up {
+    to {
+      clip-path: var(--mobile-player-button-clip);
+    }
+  }
+
+  @keyframes mobile-player-unroll {
+    from {
+      clip-path: var(--mobile-player-button-clip);
+    }
   }
 
   .mobile-player-sheet-body {
@@ -900,7 +931,7 @@
     transition: opacity 0.25s ease 0.12s;
   }
 
-  .mobile-audio-player.is-collapsed .mobile-player-sheet-body {
+  .mobile-audio-player:is(.is-collapsing, .is-collapsed) .mobile-player-sheet-body {
     opacity: 0;
     transition: opacity 0.2s ease;
   }
@@ -920,6 +951,11 @@
     color: #ffffff;
     cursor: pointer;
     animation: mobile-player-fab-in 0.3s ease 0.12s both;
+  }
+
+  /* The button keeps its place on screen when the box shrinks to it. */
+  .mobile-audio-player.is-collapsed .mobile-player-fab {
+    top: -1px;
   }
 
   @keyframes mobile-player-fab-in {
@@ -1698,6 +1734,8 @@ html.is-mobile-player-open {
   .mobile-audio-player,
   .mobile-audio-player.is-full,
   .mobile-audio-player.is-closing,
+  .mobile-audio-player.is-collapsing,
+  .mobile-audio-player.is-expanding,
   .mobile-player-sheet-body,
   .mobile-player-fab,
   .mobile-player-full-head,

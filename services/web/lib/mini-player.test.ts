@@ -5,6 +5,7 @@ import {
   MINI_PLAYER_SPACER_HEIGHT,
   adjacentSurah,
   miniPlayerReducer,
+  rolledUp,
   seekPositionMs,
   sheetDragOffset,
   sheetShown,
@@ -16,11 +17,32 @@ const at = (view: MiniPlayerView, controlsHidden = false): MiniPlayerState => ({
 const run = (state: MiniPlayerState, ...actions: MiniPlayerAction[]) =>
   actions.reduce(miniPlayerReducer, state);
 
-test("the bar collapses to the round button and expands back", () => {
-  assert.equal(miniPlayerReducer(at("bar"), { type: "collapse" }).view, "collapsed");
-  assert.equal(miniPlayerReducer(at("collapsed"), { type: "expand" }).view, "bar");
+test("the bar rolls up into the round button and unrolls back, each settling at its animation's end", () => {
+  assert.equal(miniPlayerReducer(at("bar"), { type: "collapse" }).view, "collapsing");
+  assert.equal(run(at("bar"), { type: "collapse" }, { type: "settled" }).view, "collapsed");
+  assert.equal(miniPlayerReducer(at("collapsed"), { type: "expand" }).view, "expanding");
+  assert.equal(run(at("collapsed"), { type: "expand" }, { type: "settled" }).view, "bar");
   assert.equal(miniPlayerReducer(at("bar"), { type: "expand" }).view, "bar");
   assert.equal(miniPlayerReducer(at("collapsed"), { type: "collapse" }).view, "collapsed");
+  assert.equal(miniPlayerReducer(at("collapsing"), { type: "collapse" }).view, "collapsing");
+  assert.equal(miniPlayerReducer(at("expanding"), { type: "expand" }).view, "expanding");
+});
+
+test("a tap during a roll turns it back, and the late end of the cancelled roll changes nothing", () => {
+  assert.equal(run(at("bar"), { type: "collapse" }, { type: "expand" }).view, "expanding");
+  assert.equal(run(at("collapsed"), { type: "expand" }, { type: "collapse" }).view, "collapsing");
+  // Quick taps always end in the state of the last tap.
+  assert.equal(run(at("bar"), { type: "collapse" }, { type: "expand" }, { type: "collapse" }, { type: "settled" }).view, "collapsed");
+  assert.equal(run(at("bar"), { type: "collapse" }, { type: "expand" }, { type: "settled" }, { type: "settled" }).view, "bar");
+  // Only a rolling bar settles; the sheet ends with "closed".
+  for (const view of ["bar", "collapsed", "full", "closing"] as const) {
+    assert.equal(miniPlayerReducer(at(view), { type: "settled" }).view, view);
+  }
+  assert.equal(miniPlayerReducer(at("collapsing"), { type: "closed" }).view, "collapsing");
+  assert.equal(rolledUp("collapsing"), true);
+  assert.equal(rolledUp("collapsed"), true);
+  assert.equal(rolledUp("expanding"), false);
+  assert.equal(rolledUp("bar"), false);
 });
 
 test("the full player opens from either state and closes through the sinking state", () => {
