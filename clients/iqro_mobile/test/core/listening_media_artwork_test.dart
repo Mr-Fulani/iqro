@@ -5,10 +5,10 @@ import 'package:iqro_mobile/core/audio/listening_media_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final logo = Uri.file('/app/iqro-media-seal-v1.png');
+  final logo = Uri.file('/app/iqro-reciter-default-v1.webp');
 
   test(
-    'background player uses local brand artwork when no portrait exists',
+    'background player uses the local default figure when no portrait exists',
     () {
       final handler = ListeningMediaService(defaultArtwork: logo);
       handler.publish(

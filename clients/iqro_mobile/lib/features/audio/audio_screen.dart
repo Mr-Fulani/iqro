@@ -21,8 +21,8 @@ import 'premium_reciter_portrait.dart';
 const _cardPortraitSize = 88.0;
 
 /// Loads the reciters and decodes their card portraits while another tab is
-/// open, so the Audio tab shows faces at once instead of a spinner, then
-/// initials, then a slow fade.
+/// open, so the Audio tab shows faces at once instead of a spinner, then a
+/// slow fade.
 Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
   try {
     final reciters = await ref.read(recitersProvider.future);
@@ -35,7 +35,7 @@ Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
         person.portraitSource,
         apiBaseUrl: apiBaseUrl,
       );
-      if (url == null || !context.mounted) continue;
+      if (!context.mounted) continue;
       unawaited(
         precacheImage(
           reciterPortraitImage(
@@ -861,7 +861,6 @@ class _ReciterCard extends StatelessWidget {
         child: Column(
           children: <Widget>[
             _ReciterPortrait(
-              initials: reciter.initials,
               portraitUrl: portraitUrl,
               active: active,
               loading: loading,
@@ -898,13 +897,11 @@ class _ReciterCard extends StatelessWidget {
 
 class _ReciterPortrait extends StatelessWidget {
   const _ReciterPortrait({
-    required this.initials,
     required this.portraitUrl,
     required this.active,
     required this.loading,
   });
 
-  final String initials;
   final String? portraitUrl;
   final bool active;
   final bool loading;
@@ -922,7 +919,6 @@ class _ReciterPortrait extends StatelessWidget {
             child: PremiumReciterPortrait(
               url: portraitUrl,
               size: _cardPortraitSize,
-              initials: initials,
               selected: active,
             ),
           ),

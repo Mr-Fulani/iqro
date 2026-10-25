@@ -1,13 +1,17 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+/// The owner's figure for every reciter without a portrait. Bundled, so it
+/// shows offline and before the network answers.
+const defaultReciterPortraitAsset = 'assets/reciters/default.webp';
+
 // The frame's width around the photograph.
 double _frameInset(double size) => size >= 150 ? 7.0 : 3.0;
 
-/// The decoded photograph a portrait of [size] shows. Precaching this exact
-/// image lets a screen open with faces instead of initials.
+/// The decoded photograph a portrait of [size] shows, the default figure when
+/// [url] is null. Precaching this exact image lets a screen open with faces.
 ImageProvider reciterPortraitImage(
-  String url, {
+  String? url, {
   required double size,
   required double devicePixelRatio,
 }) {
@@ -15,7 +19,9 @@ ImageProvider reciterPortraitImage(
   return ResizeImage.resizeIfNeeded(
     pixels,
     pixels,
-    CachedNetworkImageProvider(url),
+    url == null
+        ? const AssetImage(defaultReciterPortraitAsset)
+        : CachedNetworkImageProvider(url),
   );
 }
 
@@ -26,13 +32,11 @@ class PremiumReciterPortrait extends StatelessWidget {
     super.key,
     required this.url,
     required this.size,
-    this.initials,
     this.selected = false,
   });
 
   final String? url;
   final double size;
-  final String? initials;
   final bool selected;
 
   @override
@@ -40,30 +44,13 @@ class PremiumReciterPortrait extends StatelessWidget {
     final inset = _frameInset(size);
     final pixels = ((size - inset * 2) * MediaQuery.devicePixelRatioOf(context))
         .ceil();
-    final fallback = ColoredBox(
-      color: const Color(0xFF163C33),
-      child: Center(
-        child: initials == null
-            ? Icon(
-                Icons.person_rounded,
-                size: size * .48,
-                color: const Color(0xFFB6E8D9),
-              )
-            : Padding(
-                padding: const EdgeInsets.all(5),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    initials!,
-                    style: TextStyle(
-                      color: const Color(0xFFF5EAD5),
-                      fontSize: size * .24,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
+    final fallback = Image(
+      image: reciterPortraitImage(
+        null,
+        size: size,
+        devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
       ),
+      fit: BoxFit.cover,
     );
     return RepaintBoundary(
       child: Container(
@@ -106,7 +93,7 @@ class PremiumReciterPortrait extends StatelessWidget {
                   fit: BoxFit.cover,
                   memCacheWidth: pixels,
                   memCacheHeight: pixels,
-                  // A cached photo replaces the initials at once; the
+                  // A cached photo replaces the default figure at once; the
                   // default 1.5 s cross-fade looked like the screen hanging.
                   fadeOutDuration: Duration.zero,
                   fadeInDuration: const Duration(milliseconds: 120),

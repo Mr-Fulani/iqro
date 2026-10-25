@@ -102,7 +102,7 @@ flutter:
   assets:
     - assets/calendar/events-v1.json
     - assets/brand/iqro-logo.png
-    - assets/brand/iqro-media-logo.png
+    - assets/reciters/
     - assets/brand/startup.mp4
     - assets/player_backgrounds/
     - assets/plan/

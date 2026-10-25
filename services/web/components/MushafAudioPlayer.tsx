@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, Recitation, SurahPlayback } from "../lib/api";
 import { reciterName } from "../lib/audio-content";
+import { reciterPortraitUrl } from "../lib/reciter-portraits";
 import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant, recitationStyleLabel } from "../lib/reciter-catalog";
 import { useMushafReader } from "./MushafReaderLayout";
@@ -186,6 +187,7 @@ export function MushafAudioPlayer({
       title: ayah ? t("common.ayah", { ayah: `${ayah.surah}:${ayah.ayah}` }) : t("common.surah", { surah: selectedSurah }),
       artist: selectedRecitation ? recitationLabel(selectedRecitation) : t("audio.qfReciter"),
       album: t("audio.mushafAlbum"),
+      artworkUrl: selectedRecitation ? reciterPortraitUrl(selectedRecitation.reciter) : null,
       autoPlay: false,
     });
   }, [preparedPlayback, selectedAyah, selectedSurah, selectedRecitationId, selectedRecitation, recitationLabel, t]);
@@ -223,6 +225,7 @@ export function MushafAudioPlayer({
           ? recitationLabel(selectedRecitation)
           : t("audio.qfReciter"),
         album: t("audio.mushafAlbum"),
+        artworkUrl: selectedRecitation ? reciterPortraitUrl(selectedRecitation.reciter) : null,
         autoPlay: true,
       });
     } catch (reason) {
