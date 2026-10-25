@@ -159,9 +159,7 @@ void main() {
     const url = 'https://iqro.forum/media/reciters/admin-custom.webp?v=7';
     await tester.pumpWidget(
       const MaterialApp(
-        home: Center(
-          child: PremiumReciterPortrait(url: url, size: 88, initials: 'AB'),
-        ),
+        home: Center(child: PremiumReciterPortrait(url: url, size: 88)),
       ),
     );
     final image = tester.widget<CachedNetworkImage>(
@@ -173,15 +171,17 @@ void main() {
     expect(find.byType(ColorFiltered), findsNothing);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('portrait has a stable offline fallback', (tester) async {
+  testWidgets('a reciter without a portrait shows the bundled figure', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Center(
-          child: PremiumReciterPortrait(url: null, size: 48, initials: 'AB'),
-        ),
+        home: Center(child: PremiumReciterPortrait(url: null, size: 48)),
       ),
     );
-    expect(find.text('AB'), findsOneWidget);
+    final image = tester.widget<Image>(find.byType(Image));
+    final provider = (image.image as ResizeImage).imageProvider as AssetImage;
+    expect(provider.assetName, defaultReciterPortraitAsset);
     expect(find.byType(CachedNetworkImage), findsNothing);
     expect(tester.hasRunningAnimations, isFalse);
   });

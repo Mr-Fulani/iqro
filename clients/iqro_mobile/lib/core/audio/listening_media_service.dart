@@ -4,8 +4,12 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/audio/premium_reciter_portrait.dart';
+
 /// Android's media card belongs to the Audio tab, even while another section
 /// uses the app's shared decoder. Contextual audio never publishes its item.
+/// A reciter without a portrait shows the app's default figure, from a local
+/// file so the lock screen has it offline too.
 class ListeningMediaService extends BaseAudioHandler with SeekHandler {
   ListeningMediaService({this.defaultArtwork});
 
@@ -22,14 +26,17 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
 
   static Future<void> initialize() async {
     final directory = await getApplicationSupportDirectory();
-    final artwork = File('${directory.path}/iqro-media-seal-v1.png');
+    final artwork = File('${directory.path}/iqro-reciter-default-v1.webp');
     if (!await artwork.exists()) {
-      final data = await rootBundle.load('assets/brand/iqro-media-logo.png');
+      final data = await rootBundle.load(defaultReciterPortraitAsset);
       await artwork.writeAsBytes(
         data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
         flush: true,
       );
     }
+    // The brand seal shown before the default figure.
+    final legacy = File('${directory.path}/iqro-media-seal-v1.png');
+    if (await legacy.exists()) await legacy.delete();
     current = await AudioService.init<ListeningMediaService>(
       builder: () => ListeningMediaService(defaultArtwork: artwork.uri),
       config: const AudioServiceConfig(
