@@ -1,0 +1,111 @@
+{% with m=media %}
+<section class="cp cmedia" data-lesson-media data-url="{{ m.action_url }}" aria-labelledby="cmedia-title">
+  <div class="cp-row cvid-head">
+    <h2 id="cmedia-title">Медиа</h2>
+    <a href="{{ m.instruction_url }}" target="_blank" rel="noopener">Как подготовить видео, слайды и баннеры</a>
+  </div>
+  <p class="help">Видео, слайды и баннеры стоят над конспектом сверху вниз, в этом порядке. Порядок меняется перетаскиванием за ⠿ или кнопками ↑ ↓.</p>
+
+  {% if m.blocks %}
+    <ol class="cmedia-list" data-media-list>
+      {% for block in m.blocks %}
+        <li class="cmedia-block" data-media-block="{{ block.id }}" data-media-type="{{ block.type }}">
+          <div class="cp-row cmedia-head">
+            {% if m.can_edit %}<span class="cmedia-handle" data-media-handle title="Перетащите, чтобы изменить порядок" aria-hidden="true">⠿</span>{% endif %}
+            <h3 class="cmedia-title">{{ forloop.counter }}. {{ block.label }}</h3>
+            {% if block.count %}<span class="cmedia-count">{{ block.count }}</span>{% endif %}
+            {% if m.can_edit %}
+              <span class="cmedia-tools">
+                <button type="button" class="button" data-media-move="-1" aria-label="Блок «{{ block.label }}» выше"{% if forloop.first %} disabled data-media-locked{% endif %}>↑</button>
+                <button type="button" class="button" data-media-move="1" aria-label="Блок «{{ block.label }}» ниже"{% if forloop.last %} disabled data-media-locked{% endif %}>↓</button>
+                <button type="button" class="button" data-media-remove data-confirm="{{ block.confirm }}">Удалить блок</button>
+              </span>
+            {% endif %}
+          </div>
+
+          {% if block.type == "video" %}
+            {{ block.video_html }}
+          {% else %}
+            {% if block.slides %}
+              <div class="cvid-tabs cmedia-tabs" role="tablist" aria-label="Язык подписей">
+                {% for language in m.languages %}
+                  <button type="button" role="tab" data-media-tab="{{ language.code }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"{% if language.code == "ar" %} lang="ar"{% endif %}>{{ language.tab }}</button>
+                {% endfor %}
+              </div>
+              <ol class="cslides{% if block.type == 'banner' %} cslides--banner{% endif %}" data-slide-list>
+                {% for slide in block.slides %}
+                  <li class="cslide" data-media-slide="{{ slide.id }}">
+                    {% if block.type == "slides" %}
+                      <div class="cp-row cslide-head">
+                        {% if m.can_edit %}<span class="cmedia-handle" data-slide-handle title="Перетащите, чтобы изменить порядок" aria-hidden="true">⠿</span>{% endif %}
+                        <strong>Слайд {{ slide.number }}</strong>
+                        {% if m.can_edit %}
+                          <span class="cmedia-tools">
+                            <button type="button" class="button" data-slide-move="-1" aria-label="Слайд {{ slide.number }} раньше"{% if forloop.first %} disabled data-media-locked{% endif %}>←</button>
+                            <button type="button" class="button" data-slide-move="1" aria-label="Слайд {{ slide.number }} позже"{% if forloop.last %} disabled data-media-locked{% endif %}>→</button>
+                            <button type="button" class="button" data-slide-remove data-confirm="Удалить слайд {{ slide.number }}?">Удалить</button>
+                          </span>
+                        {% endif %}
+                      </div>
+                    {% endif %}
+                    {% for language in slide.languages %}
+                      <div class="cslide-lang" data-media-panel="{{ language.code }}"{% if not language.first %} hidden{% endif %}>
+                        <img class="cslide-img" src="{{ language.url }}" alt="" width="{{ language.width }}" height="{{ language.height }}" loading="lazy">
+                        <p class="help">
+                          {% if language.own %}Своя картинка для {{ language.name }} языка.{% elif language.first %}Общая картинка: её видят все языки без своей.{% else %}Общая картинка. Если на ней есть текст, загрузите картинку для {{ language.name }} языка.{% endif %}
+                        </p>
+                        {% if m.can_edit %}
+                          <div class="cp-row">
+                            {% if language.first %}
+                              <label class="button cvid-file">Заменить картинку<input type="file" accept="{{ m.accept }}" data-media-file="language_image" data-language=""></label>
+                            {% else %}
+                              <label class="button cvid-file">{% if language.own %}Заменить картинку языка{% else %}Своя картинка для языка {{ language.tab }}{% endif %}<input type="file" accept="{{ m.accept }}" data-media-file="language_image" data-language="{{ language.code }}"></label>
+                            {% endif %}
+                            {% if language.own %}<button type="button" class="button" data-media-common="{{ language.code }}">Вернуть общую</button>{% endif %}
+                          </div>
+                        {% endif %}
+                        <div class="cslide-texts">
+                          <label>Подпись ({{ language.tab }})
+                            <textarea rows="2" maxlength="300" data-media-text="caption" data-language="{{ language.code }}"{% if language.code == "ar" %} dir="rtl" lang="ar"{% endif %}{% if not m.can_edit %} readonly{% endif %}>{{ language.caption }}</textarea>
+                          </label>
+                          <label>Описание картинки для незрячих ({{ language.tab }})
+                            <input type="text" maxlength="300" value="{{ language.alt }}" placeholder="Пусто — как подпись" data-media-text="alt" data-language="{{ language.code }}"{% if language.code == "ar" %} dir="rtl" lang="ar"{% endif %}{% if not m.can_edit %} readonly{% endif %}>
+                          </label>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </li>
+                {% endfor %}
+              </ol>
+            {% endif %}
+            {% if m.can_edit %}
+              <div class="cp-row">
+                {% if block.type == "slides" %}
+                  <label class="button cvid-file">Добавить картинки<input type="file" accept="{{ m.accept }}" multiple data-media-file="images"></label>
+                  <span class="help">JPEG, PNG или WebP, можно выбрать или перетащить несколько сразу, до {{ m.max_slides }} слайдов. Пропорции сохраняются.</span>
+                {% else %}
+                  {% if not block.slides %}<label class="button cvid-file">Загрузить картинку<input type="file" accept="{{ m.accept }}" data-media-file="images"></label>{% endif %}
+                  <span class="help">Широкая картинка: админка обрежет её до 16:9 по центру.</span>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p>В теме пока нет медиа.</p>
+  {% endif %}
+
+  {% if m.can_edit %}
+    <div class="cp-row cmedia-add" data-media-drop>
+      <strong>Добавить:</strong>
+      {% if m.can_add_video %}<button type="button" class="button" data-media-add="video">Видео</button>{% endif %}
+      <label class="button cvid-file">Слайды<input type="file" accept="{{ m.accept }}" multiple data-media-add="slides"></label>
+      <label class="button cvid-file">Баннер<input type="file" accept="{{ m.accept }}" data-media-add="banner"></label>
+      <span class="help">Слайды можно перетащить сюда файлами.</span>
+    </div>
+  {% endif %}
+  <p class="cvid-status" role="status" aria-live="polite" data-media-status></p>
+</section>
+{% endwith %}

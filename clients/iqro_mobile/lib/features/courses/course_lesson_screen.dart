@@ -12,6 +12,7 @@ import 'course_feedback_widgets.dart';
 import 'course_models.dart';
 import 'course_notes_view.dart';
 import 'course_widgets.dart';
+import 'lesson_media_view.dart';
 import 'lesson_video_player.dart';
 
 /// A lesson: its notes and sources; «←», «Studied» and «→» stay at the
@@ -136,7 +137,6 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
   @override
   Widget build(BuildContext context) {
     final lesson = widget.lesson;
-    final video = lesson.video;
     final course = widget.document.course;
     final theme = Theme.of(context);
     // The last lesson studied asks how helpful the course was.
@@ -151,8 +151,9 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          if (video != null) ...<Widget>[
-            LessonVideo(
+          LessonMediaView(
+            media: lesson.media,
+            videoBuilder: (context, video) => LessonVideo(
               course: course.slug,
               lesson: lesson,
               video: video,
@@ -161,8 +162,7 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
               onWatched: () => _track(CourseEvent.videoFinished),
               onPosition: (position) => _playback = position,
             ),
-            const SizedBox(height: 16),
-          ],
+          ),
           if (lesson.notes.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
             Semantics(

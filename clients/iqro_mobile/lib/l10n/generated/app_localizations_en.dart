@@ -2763,6 +2763,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coursesVideoExitFullscreen => 'Exit full screen';
 
   @override
+  String get lessonMediaSlides => 'Slides';
+
+  @override
+  String lessonMediaSlideOf(int current, int total) {
+    return 'Slide $current of $total';
+  }
+
+  @override
+  String lessonMediaSlideCounter(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get lessonMediaPreviousSlide => 'Previous slide';
+
+  @override
+  String get lessonMediaNextSlide => 'Next slide';
+
+  @override
   String get coursesShare => 'Share';
 
   @override

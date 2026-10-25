@@ -22,6 +22,7 @@ import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'course_test_data.dart';
+import 'lesson_media_test_data.dart';
 import 'lesson_video_test_data.dart';
 
 const _lesson = '/courses/ramadan/namerenie';
@@ -63,6 +64,37 @@ void main() {
     );
     harness.dispose();
     semantics.dispose();
+  });
+
+  testWidgets('slides follow the video; an older document has its video', (
+    tester,
+  ) async {
+    var harness = await _pump(tester, location: _lesson);
+    final slides = find.byKey(const ValueKey('lesson-media-slides'));
+    expect(
+      tester.getRect(find.byKey(_facade)).bottom,
+      lessThan(tester.getRect(slides).top),
+    );
+    expect(
+      tester.getRect(slides).bottom,
+      lessThan(tester.getRect(find.text('Конспект')).top),
+    );
+    harness.dispose();
+
+    // Prepared before media: no `media` field.
+    final document = courseDocumentJson();
+    for (final lesson in (document['lessons']! as List).cast<Map>()) {
+      lesson.remove('media');
+    }
+    harness = await _pump(
+      tester,
+      location: _lesson,
+      remote: FakeCourseGateway(documents: {'1': document}),
+    );
+    expect(find.byKey(_facade), findsOneWidget);
+    expect(slides, findsNothing);
+    expect(find.text('Конспект'), findsOneWidget);
+    harness.dispose();
   });
 
   testWidgets('a video in another language says so', (tester) async {
@@ -431,6 +463,12 @@ Map<String, Object?> _documentWithVideo(
     (lesson) => lesson['slug'] == 'namerenie',
   );
   change((lesson['video']! as Map).cast<String, Object?>());
+  // The same video among the media.
+  for (final block in (lesson['media']! as List).cast<Map>()) {
+    if (block['type'] == 'video') {
+      change((block['video']! as Map).cast<String, Object?>());
+    }
+  }
   return document;
 }
 
@@ -536,6 +574,7 @@ Future<_Harness> _pump(
           ),
         ),
         courseImageProvider.overrideWithValue((_) => MemoryImage(Uint8List(0))),
+        ...lessonMediaOverrides(),
         lessonVideoControllerProvider.overrideWithValue(factory.call),
         lessonVideoWakeProvider.overrideWithValue((on) async => wake.add(on)),
         audioControllerProvider.overrideWith((ref) => audio),

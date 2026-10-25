@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
@@ -43,14 +45,19 @@ class CourseRepository {
   CourseRepository({
     required CourseRemoteGateway remote,
     required LocalDatabase database,
+    Future<void> Function(Iterable<LessonMedia> media)? keepMedia,
   }) : _remote = remote,
-       _database = database;
+       _database = database,
+       _keepMedia = keepMedia;
 
   // Expired entries stay usable and are removed long after expiry.
   static const _maxAge = Duration(days: 180);
 
   final CourseRemoteGateway _remote;
   final LocalDatabase _database;
+
+  /// Keeps the pictures of the lessons for offline with the document.
+  final Future<void> Function(Iterable<LessonMedia> media)? _keepMedia;
 
   static String documentCacheKey(
     String slug,
@@ -87,6 +94,8 @@ class CourseRepository {
     if (cached != null) {
       // After a rollback the older stored version is current again.
       await _rememberSaved(language, course.slug, course.version);
+      // Pictures that did not arrive with the document are fetched now.
+      _keepPictures(cached);
       return cached;
     }
     final Object? payload;
@@ -105,7 +114,19 @@ class CourseRepository {
     final version = document.course.version;
     await _write(documentCacheKey(course.slug, language, version), payload);
     await _rememberSaved(language, course.slug, version);
+    _keepPictures(document);
     return document;
+  }
+
+  /// In the background: the course opens without waiting for its pictures.
+  void _keepPictures(CourseDocument document) {
+    final keep = _keepMedia;
+    if (keep == null) return;
+    unawaited(
+      Future<void>.sync(
+        () => keep(document.lessons.expand((lesson) => lesson.media)),
+      ).catchError((Object _) {}),
+    );
   }
 
   Future<CourseCatalog> _offlineCatalog(String language) async {

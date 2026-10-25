@@ -21,6 +21,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'course_test_data.dart';
+import 'lesson_media_test_data.dart';
 
 void main() {
   testWidgets('«More» opens the courses, which hold prayer and tajweed', (
@@ -515,6 +516,7 @@ Future<_Harness> _pump(
         ),
         // Covers fall back to their placeholder.
         courseImageProvider.overrideWithValue((_) => MemoryImage(Uint8List(0))),
+        ...lessonMediaOverrides(),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,

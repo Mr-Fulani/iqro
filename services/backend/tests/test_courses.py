@@ -47,6 +47,52 @@ MEDIA = "https://media.iqro.forum"
 PUBLISHED_AT = datetime(2027, 1, 12, 10, 0, tzinfo=UTC)
 VIDEO_SHA = "abcdef0123456789abcd" + "0" * 44
 
+
+def picture(stem: str, kind: str, width: int, height: int) -> dict[str, Any]:
+    return {
+        "object_key": f"courses/{kind}/{stem}.webp",
+        "small_object_key": f"courses/{kind}/{stem}-800.webp",
+        "width": width,
+        "height": height,
+        "sha256": stem + "0" * 44,
+    }
+
+
+BANNER = {
+    "id": "banner000001",
+    "type": "banner",
+    "slides": [
+        {
+            "id": "slide0000001",
+            "image": picture("2222222222bbbbbbbbbb", "banners", 1600, 900),
+            "images": {},
+            "caption": {},
+            "alt": {"ru": "Полумесяц над минаретом на закате"},
+        }
+    ],
+}
+SLIDES = {
+    "id": "slides000001",
+    "type": "slides",
+    "slides": [
+        {
+            "id": "slide0000002",
+            "image": picture("1111111111aaaaaaaaaa", "slides", 1600, 1200),
+            "images": {},
+            "caption": {"ru": "[Когда делать намерение — схема после проверки]"},
+            "alt": {"ru": "Схема: ночь, рассвет и время намерения"},
+        },
+        {
+            "id": "slide0000003",
+            "image": picture("3333333333cccccccccc", "slides", 1600, 900),
+            # A picture with English text on it: students of other languages see the common one.
+            "images": {"en": picture("4444444444dddddddddd", "slides", 1600, 900)},
+            "caption": {"ru": "نويت صوم غد"},
+            "alt": {},
+        },
+    ],
+}
+
 LESSONS = [
     {
         "slug": "smysl-posta",
@@ -61,6 +107,7 @@ LESSONS = [
             "> [смысловой перевод аята — после проверки]"
         ),
         "sources_ru": "[источник 1 — после проверки]",
+        "media": [BANNER],
     },
     {
         "slug": "namerenie",
@@ -76,6 +123,7 @@ LESSONS = [
             "! [важное правило о времени намерения — после проверки]"
         ),
         "sources_ru": "[источник 1 — после проверки]\n\n  [источник 2 — после проверки]  ",
+        "media": [{"id": "video", "type": "video"}, SLIDES],
     },
     {
         "slug": "taraviikh",

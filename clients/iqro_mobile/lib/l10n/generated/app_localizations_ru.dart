@@ -2789,6 +2789,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get coursesVideoExitFullscreen => 'Выйти из полноэкранного режима';
 
   @override
+  String get lessonMediaSlides => 'Слайды';
+
+  @override
+  String lessonMediaSlideOf(int current, int total) {
+    return 'Слайд $current из $total';
+  }
+
+  @override
+  String lessonMediaSlideCounter(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get lessonMediaPreviousSlide => 'Предыдущий слайд';
+
+  @override
+  String get lessonMediaNextSlide => 'Следующий слайд';
+
+  @override
   String get coursesShare => 'Поделиться';
 
   @override

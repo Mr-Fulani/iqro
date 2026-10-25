@@ -2719,6 +2719,25 @@ class AppLocalizationsTr extends AppLocalizations {
   String get coursesVideoExitFullscreen => 'Tam ekrandan çık';
 
   @override
+  String get lessonMediaSlides => 'Slaytlar';
+
+  @override
+  String lessonMediaSlideOf(int current, int total) {
+    return 'Slayt $current / $total';
+  }
+
+  @override
+  String lessonMediaSlideCounter(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get lessonMediaPreviousSlide => 'Önceki slayt';
+
+  @override
+  String get lessonMediaNextSlide => 'Sonraki slayt';
+
+  @override
   String get coursesShare => 'Paylaş';
 
   @override
