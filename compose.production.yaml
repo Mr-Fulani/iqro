@@ -244,8 +244,11 @@ services:
       # Request bodies spool to disk, not the 64 MB in-memory /tmp: an admin surah
       # upload can be several hundred megabytes.
       TMPDIR: /var/tmp/iqro-uploads
+      # The host heartbeat's summary for «Требует внимания» (docs/alerts.md).
+      MONITOR_STATUS_FILE: /run/iqro-monitor/status.json
     volumes:
       - backend-uploads:/var/tmp/iqro-uploads
+      - ${QURAN_MONITOR_STATUS_DIR:-/var/lib/iqro-monitor/production}:/run/iqro-monitor:ro
     restart: unless-stopped
     depends_on:
       postgres:

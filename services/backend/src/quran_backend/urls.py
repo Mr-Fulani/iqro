@@ -36,6 +36,7 @@ urlpatterns = [
     path("api/v1/", include("quran_backend.modules.memorization.urls")),
     path("api/v1/", include("quran_backend.modules.reminders.urls")),
     path("api/v1/", include("quran_backend.modules.announcements.urls")),
+    path("api/v1/", include("quran_backend.modules.course_feedback.urls")),
     path("api/v1/", include("quran_backend.modules.courses.urls")),
     path(
         "api/schema",

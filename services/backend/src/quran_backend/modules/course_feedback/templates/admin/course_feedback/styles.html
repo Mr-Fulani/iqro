@@ -1,0 +1,27 @@
+<style>
+  .ca { display: flex; flex-direction: column; gap: 20px; max-width: 1100px; }
+  .ca section { padding: 14px 16px; border: 1px solid var(--hairline-color, #e8e8e8); border-radius: 6px; }
+  .ca h2 { margin: 0 0 10px; font-size: 15px; background: none; color: var(--body-fg, #333); padding: 0; }
+  .ca p { margin: 0 0 8px; }
+  .ca-periods { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ca-periods a[aria-current="page"] { font-weight: 700; text-decoration: none; color: var(--body-fg, #333); }
+  .ca-kpis { display: flex; flex-wrap: wrap; gap: 12px; }
+  .ca-kpi { min-width: 150px; padding: 10px 12px; border-radius: 6px; background: var(--darkened-bg, #f8f8f8); }
+  .ca-kpi strong { display: block; font-size: 22px; }
+  .ca table { width: 100%; }
+  .ca table.ca-stars { width: auto; min-width: 360px; }
+  .ca td, .ca th { vertical-align: middle; }
+  .ca .num { text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ca-bar { display: flex; align-items: center; gap: 6px; min-width: 140px; }
+  .ca-bar span.ca-fill { display: inline-block; height: 10px; border-radius: 3px; background: #417690; }
+  .ca-bar span.ca-fill.is-video { background: #79aec8; }
+  .ca-bar span.ca-fill.is-done { background: #2e7d32; }
+  .ca-bar span.ca-fill.is-bad { background: #c0392b; }
+  .ca-bar span.ca-fill.is-star { background: #e0a800; }
+  .ca-split { display: flex; width: 160px; }
+  .ca-split .ca-fill { border-radius: 0; }
+  .ca-quiet { color: var(--body-quiet-color, #666); }
+  .ca-comment { padding: 8px 0; border-bottom: 1px solid var(--hairline-color, #e8e8e8); }
+  .ca-comment:last-child { border-bottom: 0; }
+  .ca-comment p { white-space: pre-wrap; margin: 4px 0 0; }
+</style>

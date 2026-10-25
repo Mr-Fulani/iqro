@@ -3,7 +3,11 @@ from __future__ import annotations
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
-from quran_backend.error_reporting import sentry_options
+from quran_backend.error_reporting import (
+    drop_telegram_breadcrumb,
+    drop_telegram_spans,
+    sentry_options,
+)
 
 
 def test_error_reporting_is_off_without_a_dsn() -> None:
@@ -24,7 +28,24 @@ def test_reports_carry_no_personal_data_or_request_bodies() -> None:
         "send_default_pii": False,
         "max_request_body_size": "never",
         "traces_sample_rate": 0.0,
+        "before_breadcrumb": drop_telegram_breadcrumb,
+        "before_send_transaction": drop_telegram_spans,
     }
+
+
+def test_requests_to_telegram_never_reach_sentry() -> None:
+    telegram = {"category": "httplib", "data": {"url": "https://api.telegram.org/bot1:x/send"}}
+    other = {"category": "httplib", "data": {"url": "https://example.test/"}}
+
+    assert drop_telegram_breadcrumb(telegram, {}) is None
+    assert drop_telegram_breadcrumb(other, {}) == other
+    event = {
+        "spans": [
+            {"description": "POST https://api.telegram.org/bot1:x/sendMessage"},
+            {"description": "GET https://example.test/"},
+        ]
+    }
+    assert drop_telegram_spans(event, {})["spans"] == [{"description": "GET https://example.test/"}]
 
 
 @pytest.mark.parametrize("rate", ["often", "1.5", "-0.1"])
