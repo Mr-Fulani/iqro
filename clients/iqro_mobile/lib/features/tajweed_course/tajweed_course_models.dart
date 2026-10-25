@@ -2,7 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../courses/course_models.dart'
-    show LessonMedia, NoteBlock, parseLessonMedia, parseNoteBlocks;
+    show
+        LessonMedia,
+        NoteBlock,
+        optionalCourseSource,
+        optionalLessonSources,
+        parseLessonMedia,
+        parseNoteBlocks;
 import '../tajweed/tajweed_models.dart';
 
 /// The course of the first version (docs/tajweed/course.md).
@@ -122,6 +128,7 @@ class TajweedCourseInfo {
     required this.title,
     required this.summary,
     required this.reviewStatus,
+    this.source = '',
     this.publishedAt,
   });
 
@@ -134,6 +141,7 @@ class TajweedCourseInfo {
       title: _text(json, 'title'),
       summary: _text(json, 'summary'),
       reviewStatus: _text(json, 'review_status'),
+      source: optionalCourseSource(json['source']),
       publishedAt: json['published_at'] is String
           ? DateTime.tryParse(json['published_at']! as String)
           : null,
@@ -145,6 +153,9 @@ class TajweedCourseInfo {
   final String language;
   final String title;
   final String summary;
+
+  /// «Author and sources»; `''` without it and in older documents.
+  final String source;
   final String reviewStatus;
   final DateTime? publishedAt;
 }
@@ -218,6 +229,7 @@ class TajweedCourseLesson {
     this.how = '',
     this.letters = '',
     this.media = const [],
+    this.sources = const [],
     this.explanationBlocks,
     this.howBlocks,
   });
@@ -241,6 +253,8 @@ class TajweedCourseLesson {
       letters: json['letters'] is String ? json['letters']! as String : '',
       // Documents built before lesson media have none.
       media: parseLessonMedia(json['media']),
+      // Documents built before sources have none.
+      sources: optionalLessonSources(json['sources']),
       // Documents built before links and notes have no blocks.
       explanationBlocks: json['explanation_blocks'] == null
           ? null
@@ -271,6 +285,9 @@ class TajweedCourseLesson {
   /// Videos, slides and banners above the explanation, in the author's
   /// order, in the format of the thematic courses.
   final List<LessonMedia> media;
+
+  /// «Sources» at the end of the lesson.
+  final List<String> sources;
 }
 
 /// One entry of `GET /tajweed/courses`.

@@ -456,3 +456,29 @@ test("the prayer-times page links to the course", async ({ page }) => {
   await expect(link).toHaveText("Обучение намазу");
   await expect(link).toHaveAttribute("href", "/ru/salah");
 });
+
+test("the course shows «Author and sources» and fajr's last step its sources, not in practice", async ({ page, request }) => {
+  const course = await (await request.get("/ru/salah")).text();
+  // React separates the text runs with empty comments.
+  expect(course.replaceAll("<!-- -->", "")).toContain(
+    '<p class="course-source"><strong>Автор и источники:</strong> По книге «Умдат аль-фикх» Ибн Кудамы аль-Макдиси, ханбалитский мазхаб.</p>',
+  );
+
+  await openLesson(page, "/ru/salah/fajr");
+  const sources = page.getByTestId("course-lesson-sources");
+  // On the last step only: the earlier ones end without them.
+  await expect(sources).toHaveCount(1);
+  await expect(sources).toBeHidden();
+  await openLesson(page, "/ru/salah/fajr#fajr.r2.taslim");
+  await expect(sources).toBeVisible();
+  await expect(sources.getByRole("heading", { name: "Источники" })).toBeVisible();
+  await expect(sources.getByRole("listitem")).toHaveText([
+    "Ибн Кудама. Умдат аль-фикх, «Книга молитвы».",
+    "Аль-Бухари, 757; Муслим, 397 — хадис о том, кто плохо молился.",
+  ]);
+  await page.getByRole("button", { name: "Практика" }).click();
+  await expect(sources).toHaveCount(0);
+
+  // A lesson without sources has no block.
+  expect(await (await request.get("/ru/salah/wudu")).text()).not.toContain("course-lesson-sources");
+});

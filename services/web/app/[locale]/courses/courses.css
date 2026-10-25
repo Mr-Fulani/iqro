@@ -184,10 +184,6 @@
   border-radius: var(--radius-lg);
 }
 
-.course-source {
-  font-size: 14px;
-}
-
 .course-progress {
   display: flex;
   align-items: center;
@@ -299,25 +295,6 @@
 .course-lesson-notes {
   display: grid;
   gap: 14px;
-}
-
-.course-lesson-sources {
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.course-lesson-sources h3 {
-  margin-bottom: 6px;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.course-lesson-sources ol {
-  margin: 0;
-  padding-inline-start: 20px;
 }
 
 .course-lesson-bar {

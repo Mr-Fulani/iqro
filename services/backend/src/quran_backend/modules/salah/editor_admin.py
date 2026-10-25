@@ -716,7 +716,12 @@ class SalahEditorAdminMixin:
         languages: list[str],
         assets: dict[str, SalahMediaAsset],
     ) -> dict[str, Any] | None:
-        """What the live preview needs besides the form: picture, formulas, recordings."""
+        """What the live preview needs besides the form: picture, formulas, recordings.
+
+        The course and a lesson preview their sources, which the form already holds.
+        """
+        if node.kind in {"course", "lesson"}:
+            return {"kind": node.kind}
         if node.kind != "step":
             return None
         documents = {document.language: document.payload for document in version.documents.all()}
@@ -753,6 +758,7 @@ class SalahEditorAdminMixin:
             if asset is not None:
                 audio[slot] = public_audio_url(asset.object_key)
         return {
+            "kind": "step",
             "ruling": RULING_LABELS.get(node.data.get("ruling") or "", ""),
             "rakat": node.rakat,
             "image": image,

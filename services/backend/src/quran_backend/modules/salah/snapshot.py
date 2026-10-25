@@ -36,6 +36,10 @@ SCENE_VIEWS = frozenset({"full", "hand", "back"})
 # A step's notes open from small icons: «?» for a help note, «!» for a warning.
 NOTE_KINDS = frozenset({"help", "warning"})
 AUDIO_SUFFIXES = (".m4a", ".mp3")
+# «Автор и источники» of the course and «Источники» of a lesson, one per line
+# (docs/salah/sources.md).
+SOURCE_MAX_LENGTH = 300
+SOURCES_MAX_LENGTH = 2000
 
 
 @dataclass(frozen=True)
@@ -176,6 +180,19 @@ def _optional_localized(value: Any, where: str, problems: list[str]) -> None:
     _localized(value, where, problems)
 
 
+def _check_sources(value: Any, where: str, maximum: int, problems: list[str]) -> None:
+    """Optional texts: absent or empty everywhere, else in every language and not too long."""
+    if value is None:
+        return
+    _optional_localized(value, where, problems)
+    if isinstance(value, Mapping):
+        problems.extend(
+            f"{where} [{language}]: длиннее {maximum} знаков."
+            for language, text in value.items()
+            if isinstance(text, str) and len(text) > maximum
+        )
+
+
 def _check_course(snapshot: Mapping[str, Any], problems: list[str]) -> None:
     if snapshot.get("schema_version") != SNAPSHOT_SCHEMA_VERSION:
         problems.append(f"schema_version должен быть {SNAPSHOT_SCHEMA_VERSION}.")
@@ -186,6 +203,7 @@ def _check_course(snapshot: Mapping[str, Any], problems: list[str]) -> None:
         if not isinstance(course.get(field), str) or not course[field].strip()
     )
     _localized(course.get("source_title"), "course.source_title", problems)
+    _check_sources(course.get("source"), "course.source", SOURCE_MAX_LENGTH, problems)
 
 
 def _check_formula_source(formula_id: str, source: Mapping[str, Any], problems: list[str]) -> None:
@@ -381,6 +399,7 @@ def _check_lessons(
             problems.append(f"{where}: неизвестный вид «{lesson.get('kind')}».")
         _localized(lesson.get("title"), f"{where}.title", problems)
         _localized(lesson.get("summary"), f"{where}.summary", problems)
+        _check_sources(lesson.get("sources"), f"{where}.sources", SOURCES_MAX_LENGTH, problems)
         # Video, slides and banners of the lesson (docs/salah/lesson-media.md).
         if not media_valid(lesson.get("media", [])):
             problems.append(f"{where}: {MEDIA_PROBLEM}")

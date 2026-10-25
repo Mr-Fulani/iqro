@@ -6,6 +6,7 @@ import { CourseOutdated } from "@/components/courses/CourseOutdated";
 import { CourseProgressSummary, LessonStatusBadge } from "@/components/courses/CourseProgress";
 import { CourseRating } from "@/components/courses/CourseRating";
 import { CourseShareButton } from "@/components/courses/CourseShareButton";
+import { CourseSource } from "@/components/courses/CourseSources";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { getPublishedCourse, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
@@ -14,6 +15,7 @@ import { formatClock } from "@/lib/audio-content";
 import { courseOutline, isCourseSlug, videoMinutes } from "@/lib/thematic-courses";
 import { translate } from "@/lib/translate";
 import "../courses.css";
+import "@/components/courses/course-sources.css";
 
 export const revalidate = 3_600;
 
@@ -90,11 +92,7 @@ export default async function CoursePage({ params }: { params: Promise<RoutePara
             {translate(route.locale, "common.minutes", { count: format.format(minutes) })}
             {video ? ` · ${translate(route.locale, "courses.videoMinutes", { count: format.format(video) })}` : null}
           </p>
-          {course.source ? (
-            <p className="course-source">
-              <strong>{translate(route.locale, "courses.source")}:</strong> {course.source}
-            </p>
-          ) : null}
+          <CourseSource source={course.source} locale={route.locale} />
           <CourseProgressSummary course={courseOutline(document)} />
           <CourseShareButton
             title={course.title}

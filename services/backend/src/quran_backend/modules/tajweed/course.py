@@ -37,6 +37,12 @@ MAX_PREFERRED_EXAMPLES = 20
 LESSON_TEXTS = ("title", "summary", "explanation", "how")
 # Written in the markup of course notes: links and «!»/«?» notes (docs/tajweed/course.md).
 MARKUP_TEXTS = ("explanation", "how")
+# «Автор и источники» of the course and «Источники» of a lesson, one per line: optional,
+# but once written in one language due in all (docs/tajweed/course.md, «Источники»).
+COURSE_SOURCE = "source"
+LESSON_SOURCES = "sources"
+SOURCE_MAX_LENGTH = 300
+SOURCES_MAX_LENGTH = 2000
 
 
 class TajweedCourseError(ValueError):
@@ -80,13 +86,23 @@ def missing_texts(snapshot: Mapping[str, Any]) -> dict[str, int]:
     return counts
 
 
+def _written(value: object) -> bool:
+    """An optional text written in at least one language."""
+    return isinstance(value, Mapping) and any(
+        isinstance(text, str) and text.strip() for text in value.values()
+    )
+
+
 def _all_texts(snapshot: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     course = snapshot.get("course") or {}
     found: list[Any] = [course.get("title"), course.get("summary")]
+    optional: list[Any] = [course.get(COURSE_SOURCE)]
     found += [target.get("name") for target in snapshot.get("targets") or []]
     found += [section.get("title") for section in snapshot.get("sections") or []]
     for lesson in snapshot.get("lessons") or []:
         found += [lesson.get(field) for field in LESSON_TEXTS]
+        optional.append(lesson.get(LESSON_SOURCES))
+    found += [texts for texts in optional if _written(texts)]
     return [texts for texts in found if isinstance(texts, Mapping)]
 
 
@@ -97,7 +113,7 @@ class _Checker:
         self.complete = complete
         self.problems: list[str] = []
 
-    def texts(self, value: object, where: str) -> None:
+    def texts(self, value: object, where: str, *, required: bool = True) -> None:
         if not isinstance(value, Mapping):
             self.problems.append(f"{where}: нужен объект с текстами по языкам.")
             return
@@ -108,8 +124,20 @@ class _Checker:
             text = value.get(language, "")
             if not isinstance(text, str):
                 self.problems.append(f"{where} [{language}]: текст должен быть строкой.")
-            elif self.complete and not text.strip():
+            elif self.complete and required and not text.strip():
                 self.problems.append(f"{where} [{language}]: нет текста.")
+
+    def optional_texts(self, value: object, where: str, maximum: int) -> None:
+        """Absent or empty in every language is fine; once written, as `texts`."""
+        if value is None:
+            return
+        self.texts(value, where, required=_written(value))
+        if isinstance(value, Mapping):
+            self.problems += [
+                f"{where} [{language}]: длиннее {maximum} знаков."
+                for language, text in value.items()
+                if isinstance(text, str) and len(text) > maximum
+            ]
 
     def course(self, course: Mapping[str, Any]) -> None:
         if not SLUG.match(str(course.get("slug", ""))):
@@ -124,6 +152,7 @@ class _Checker:
             )
         self.texts(course.get("title"), "Курс: название")
         self.texts(course.get("summary"), "Курс: описание")
+        self.optional_texts(course.get(COURSE_SOURCE), "Курс: автор и источники", SOURCE_MAX_LENGTH)
 
     def targets(self, items: Sequence[Mapping[str, Any]]) -> set[str]:
         keys: set[str] = set()
@@ -160,6 +189,7 @@ class _Checker:
             self.problems.append(f"{where}: minutes — целое от 1 до 30.")
         for field in LESSON_TEXTS:
             self.texts(lesson.get(field), f"{where}: {field}")
+        self.optional_texts(lesson.get(LESSON_SOURCES), f"{where}: источники", SOURCES_MAX_LENGTH)
         letters = lesson.get("letters", "")
         if not isinstance(letters, str) or len(letters) > 80:
             self.problems.append(f"{where}: letters — строка до 80 знаков.")
@@ -237,6 +267,11 @@ def _text(value: Mapping[str, str] | None, language: str) -> str:
     return "" if value is None else str(value.get(language, ""))
 
 
+def _sources(value: Mapping[str, str] | None, language: str) -> list[str]:
+    """One source per line, in the author's order; empty lines are left out."""
+    return [line.strip() for line in _text(value, language).splitlines() if line.strip()]
+
+
 def compile_course_document(
     snapshot: Mapping[str, Any], *, language: str, course_meta: Mapping[str, Any]
 ) -> dict[str, Any]:
@@ -286,6 +321,7 @@ def compile_course_document(
                     },
                     "letters": str(lesson.get("letters", "")),
                     "media": lesson_media(lesson, language),
+                    "sources": _sources(lesson.get(LESSON_SOURCES), language),
                 }
             )
     return {
@@ -295,6 +331,7 @@ def compile_course_document(
             "language": language,
             "title": _text(course["title"], language),
             "summary": _text(course["summary"], language),
+            "source": _text(course.get(COURSE_SOURCE), language).strip(),
             "review_status": course["review_status"],
         },
         "targets": targets,

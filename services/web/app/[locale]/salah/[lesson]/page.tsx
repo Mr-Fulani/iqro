@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CourseLessonSources } from "@/components/courses/CourseSources";
 import { LessonMedia } from "@/components/courses/LessonMedia";
 import { SalahStepPlayer } from "@/components/SalahStepPlayer";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
@@ -18,6 +19,7 @@ import {
 import { createContentMetadata } from "@/lib/seo";
 import "../salah.css";
 import "@/components/courses/lesson-media.css";
+import "@/components/courses/course-sources.css";
 
 export const revalidate = 3_600;
 
@@ -104,6 +106,7 @@ export default async function SalahLessonPage({ params }: { params: Promise<Rout
             />
           ) : null
         }
+        sources={lesson.sources ? <CourseLessonSources sources={lesson.sources} locale={route.locale} /> : null}
       />
     </div>
   );
