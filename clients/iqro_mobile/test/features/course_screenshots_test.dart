@@ -27,6 +27,7 @@ import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/courses/course_catalog_screen.dart';
 import 'package:iqro_mobile/features/courses/course_home_screen.dart';
 import 'package:iqro_mobile/features/courses/course_lesson_screen.dart';
+import 'package:iqro_mobile/features/courses/course_notes_view.dart';
 import 'package:iqro_mobile/features/courses/course_progress_store.dart';
 import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
 import 'package:iqro_mobile/features/tajweed_course/tajweed_course_models.dart';
@@ -669,6 +670,56 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('lesson-media-slide-next')));
     await _capture(tester, 'app-tajweed-media-ar');
+  }, skip: _directory.isEmpty);
+
+  testWidgets(
+    'notes with «?» and «!» after words and an ayah link',
+    (tester) async {
+      await _pump(tester, location: '/courses/ramadan/namerenie');
+      await tester.scrollUntilVisible(
+        find.byType(NoteMarkButton).last,
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 260));
+      await _capture(tester, 'app-notes-marks-ru');
+      await tester.tap(find.byType(NoteMarkButton).first);
+      await _capture(tester, 'app-notes-sheet-ru');
+    },
+    skip: _directory.isEmpty,
+  );
+
+  testWidgets('a note in the Arabic interface', (tester) async {
+    final document = courseDocumentJson();
+    (document['course']! as Map)['language'] = 'ar';
+    await _pump(
+      tester,
+      location: '/courses/ramadan/namerenie',
+      locale: 'ar',
+      remote: FakeCourseGateway(documents: {'1': document}),
+    );
+    await tester.scrollUntilVisible(
+      find.byType(NoteMarkButton).last,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byType(NoteMarkButton).last);
+    await _capture(tester, 'app-notes-sheet-ar');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('tajweed explanation with a note', (tester) async {
+    await _pump(
+      tester,
+      location: '/tajweed/lesson/izhar',
+      tajweed: tajweedCourseExampleDocumentJson(),
+    );
+    await tester.scrollUntilVisible(
+      find.byType(NoteMarkButton).first,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
+    await _capture(tester, 'app-tajweed-notes-ru');
   }, skip: _directory.isEmpty);
 
   testWidgets('lesson in the dark theme', (tester) async {

@@ -15,6 +15,7 @@ import {
 } from "../../lib/course-feedback";
 import { isLocale } from "../../lib/i18n";
 import { useI18n } from "../../lib/i18n-context";
+import { slideOf } from "../../lib/lesson-slide";
 import { withGuestSession } from "./guestSession";
 import type { ReportedLesson } from "./LessonFeedback";
 
@@ -31,6 +32,7 @@ export default function LessonReportDialog({ lesson, onClose }: { lesson: Report
   const [sentId, setSentId] = useState("");
   // The moment is taken when the form opens: the student describes what was on screen then.
   const [playbackMs] = useState(() => videoTimeOf(lesson.courseSlug, lesson.lessonSlug));
+  const [slideNumber] = useState(() => slideOf(lesson.courseSlug, lesson.lessonSlug));
 
   useEffect(() => {
     const element = dialog.current;
@@ -49,7 +51,7 @@ export default function LessonReportDialog({ lesson, onClose }: { lesson: Report
           message: message.trim(),
           locale: isLocale(lesson.language) ? lesson.language : undefined,
           contact_email: email.trim() || undefined,
-          context: reportContext(lesson.courseSlug, lesson.lessonSlug, lesson.courseVersion, playbackMs),
+          context: reportContext(lesson.courseSlug, lesson.lessonSlug, lesson.courseVersion, playbackMs, slideNumber),
         }),
       );
       setSentId(ticket.public_id);
@@ -110,6 +112,11 @@ export default function LessonReportDialog({ lesson, onClose }: { lesson: Report
           {playbackMs !== undefined ? (
             <p className="course-report-note">
               {t("courses.reportVideoAt", { position: formatClock(playbackMs, (value) => formatNumber(value)) })}
+            </p>
+          ) : null}
+          {slideNumber !== undefined ? (
+            <p className="course-report-note" data-testid="report-slide">
+              {t("courses.reportSlide", { number: formatNumber(slideNumber) })}
             </p>
           ) : null}
           {state === "error" ? <p className="course-report-error" role="alert">{t("courses.reportError")}</p> : null}

@@ -1,5 +1,5 @@
 {
-  "about": "Разметка конспекта → блоки. Единые примеры для тестов бэкенда (разбор) и клиентов (отрисовка). Правила: docs/courses/README.md, раздел «Конспект». Порядок ключей в объектах не важен.",
+  "about": "Разметка конспекта → блоки. Единые примеры для тестов бэкенда (разбор и проверка при подготовке выпуска) и клиентов (отрисовка). Правила: docs/courses/README.md, раздел «Конспект». Порядок ключей в объектах не важен. `errors` — что найдёт проверка выпуска (по умолчанию пусто), если в «Разрешённых сайтах для ссылок» только sunnah.com, курс ramadan с темой namerenie опубликован, а в курсе таджвида есть урок izhar: `unclosed` — незакрытая скобка, `empty_note` — пустая пометка, `not_a_link` — адрес не раздел сайта и не https://, `domain_not_allowed` — сайта нет в списке.",
   "cases": [
     {
       "name": "empty",
@@ -147,6 +147,119 @@
       "blocks": [
         {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Строка"}], [{"text": "Вторая"}]]}
       ]
+    },
+    {
+      "name": "note_warning_after_word",
+      "input": "Намерение произносят в сердце[!Произносить его вслух не обязательно.] перед молитвой.",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Намерение произносят в сердце"}, {"text": "", "note": {"kind": "warning", "text": [{"text": "Произносить его вслух не обязательно."}]}}, {"text": " перед молитвой."}]]}
+      ]
+    },
+    {
+      "name": "note_help_with_bold_and_arabic",
+      "input": "Пост[?По-арабски **الصوم** — «воздержание».] обязателен.",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Пост"}, {"text": "", "note": {"kind": "help", "text": [{"text": "По-арабски "}, {"text": "الصوم", "bold": true, "lang": "ar"}, {"text": " — «воздержание»."}]}}, {"text": " обязателен."}]]}
+      ]
+    },
+    {
+      "name": "note_space_before_icon_dropped",
+      "input": "Сухур [?Предрассветная еда.]",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Сухур"}, {"text": "", "note": {"kind": "help", "text": [{"text": "Предрассветная еда."}]}}]]}
+      ]
+    },
+    {
+      "name": "notes_in_heading_list_quote_and_callout",
+      "input": "## Условия поста[!Для взрослых и здоровых.]\n- Намерение[?Каждую ночь.]\n> Простая цитата[?Пояснение к цитате.]\n! Важно помнить[!Не опаздывайте.]",
+      "blocks": [
+        {"type": "heading", "dir": "ltr", "text": [{"text": "Условия поста"}, {"text": "", "note": {"kind": "warning", "text": [{"text": "Для взрослых и здоровых."}]}}]},
+        {"type": "list", "dir": "ltr", "ordered": false, "items": [[{"text": "Намерение"}, {"text": "", "note": {"kind": "help", "text": [{"text": "Каждую ночь."}]}}]]},
+        {"type": "quote", "dir": "ltr", "lines": [[{"text": "Простая цитата"}, {"text": "", "note": {"kind": "help", "text": [{"text": "Пояснение к цитате."}]}}]], "source": null},
+        {"type": "note", "dir": "ltr", "lines": [[{"text": "Важно помнить"}, {"text": "", "note": {"kind": "warning", "text": [{"text": "Не опаздывайте."}]}}]]}
+      ]
+    },
+    {
+      "name": "note_inside_bold",
+      "input": "**Важно[!Пометка внутри жирного.]** дальше",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Важно", "bold": true}, {"text": "", "note": {"kind": "warning", "text": [{"text": "Пометка внутри жирного."}]}}, {"text": " дальше"}]]}
+      ]
+    },
+    {
+      "name": "link_internal_ayah",
+      "input": "Прочитайте [аят аль-Курси](/quran/2:255) перед сном.",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Прочитайте "}, {"text": "аят аль-Курси", "link": {"href": "/quran/2:255", "kind": "internal"}}, {"text": " перед сном."}]]}
+      ]
+    },
+    {
+      "name": "link_internal_sections",
+      "input": "[Сура](/quran/1), [тема](/courses/ramadan/namerenie), [дуа](/dua), [урок](/tajweed/izhar).",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Сура", "link": {"href": "/quran/1", "kind": "internal"}}, {"text": ", "}, {"text": "тема", "link": {"href": "/courses/ramadan/namerenie", "kind": "internal"}}, {"text": ", "}, {"text": "дуа", "link": {"href": "/dua", "kind": "internal"}}, {"text": ", "}, {"text": "урок", "link": {"href": "/tajweed/izhar", "kind": "internal"}}, {"text": "."}]]}
+      ]
+    },
+    {
+      "name": "link_external_allowed",
+      "input": "Хадис на [sunnah.com](https://sunnah.com/bukhari:1).",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Хадис на "}, {"text": "sunnah.com", "link": {"href": "https://sunnah.com/bukhari:1", "kind": "external"}}, {"text": "."}]]}
+      ]
+    },
+    {
+      "name": "link_with_bold_label",
+      "input": "[**Важная** тема](/courses/ramadan)",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Важная", "bold": true, "link": {"href": "/courses/ramadan", "kind": "internal"}}, {"text": " тема", "link": {"href": "/courses/ramadan", "kind": "internal"}}]]}
+      ]
+    },
+    {
+      "name": "link_arabic_label",
+      "input": "[الفاتحة](/quran/1)",
+      "blocks": [
+        {"type": "paragraph", "dir": "rtl", "lines": [[{"text": "الفاتحة", "lang": "ar", "link": {"href": "/quran/1", "kind": "internal"}}]]}
+      ]
+    },
+    {
+      "name": "link_external_domain_not_allowed",
+      "input": "Текст [чужой сайт](https://example.com/page).",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Текст "}, {"text": "чужой сайт", "link": {"href": "https://example.com/page", "kind": "external"}}, {"text": "."}]]}
+      ],
+      "errors": [{"line": 1, "error": "domain_not_allowed"}]
+    },
+    {
+      "name": "empty_note_stays_text",
+      "input": "Пустая пометка [!] и [?  ] остаётся текстом.",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Пустая пометка [!] и [?  ] остаётся текстом."}]]}
+      ],
+      "errors": [{"line": 1, "error": "empty_note"}, {"line": 1, "error": "empty_note"}]
+    },
+    {
+      "name": "unclosed_note_stays_text",
+      "input": "Первая строка\nНезакрытая [!пометка без скобки",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Первая строка"}], [{"text": "Незакрытая [!пометка без скобки"}]]}
+      ],
+      "errors": [{"line": 2, "error": "unclosed"}]
+    },
+    {
+      "name": "unclosed_link_stays_text",
+      "input": "Ссылка [текст](https://sunnah.com без скобки",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "Ссылка [текст](https://sunnah.com без скобки"}]]}
+      ],
+      "errors": [{"line": 1, "error": "unclosed"}]
+    },
+    {
+      "name": "unknown_section_stays_text",
+      "input": "[Админка](/admin) и [почта](mailto:a@b.c)",
+      "blocks": [
+        {"type": "paragraph", "dir": "ltr", "lines": [[{"text": "[Админка](/admin) и [почта](mailto:a@b.c)"}]]}
+      ],
+      "errors": [{"line": 1, "error": "not_a_link"}, {"line": 1, "error": "not_a_link"}]
     }
   ]
 }

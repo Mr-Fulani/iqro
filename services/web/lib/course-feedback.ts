@@ -201,6 +201,7 @@ export type ReportContext = {
   route: string;
   client_platform: "web";
   playback_ms?: number;
+  slide_number?: number;
 };
 
 export function reportContext(
@@ -208,6 +209,7 @@ export function reportContext(
   lesson: string,
   version: string,
   playbackMs: number | undefined,
+  slideNumber?: number,
 ): ReportContext {
   return {
     course_slug: course,
@@ -216,5 +218,6 @@ export function reportContext(
     route: `/courses/${course}/${lesson}`,
     client_platform: "web",
     ...(playbackMs === undefined ? {} : { playback_ms: playbackMs }),
+    ...(slideNumber === undefined ? {} : { slide_number: slideNumber }),
   };
 }

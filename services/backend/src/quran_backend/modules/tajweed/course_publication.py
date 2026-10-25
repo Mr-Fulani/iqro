@@ -21,7 +21,9 @@ from django.utils import timezone
 
 from quran_backend.modules.alerts.services import course_version_event
 from quran_backend.modules.core.content_revalidation import enqueue_tajweed_content_change
+from quran_backend.modules.courses.links import LinkChecker
 from quran_backend.modules.tajweed.course import (
+    MARKUP_TEXTS,
     TajweedCourseError,
     compile_course_document,
     course_video_files,
@@ -135,10 +137,29 @@ def mark_tajweed_watched(version: TajweedCourseVersion, *, sha256: str, watched:
     version.save(update_fields=["watched_videos", "updated_at"])
 
 
+MARKUP_LABELS = {"explanation": "объяснение правила", "how": "как читать"}
+
+
+def markup_problems(snapshot: Mapping[str, Any]) -> list[str]:
+    """Brackets that are not a link or a note and links that lead nowhere, lesson by lesson."""
+    lessons = snapshot.get("lessons") or []
+    links = LinkChecker(tajweed_lessons=[str(lesson.get("slug", "")) for lesson in lessons])
+    return [
+        f"Урок «{lesson.get('slug', '')}»: {MARKUP_LABELS[field]} [{language}], {problem}"
+        for lesson in lessons
+        for field in MARKUP_TEXTS
+        for language in TAJWEED_COURSE_LANGUAGES
+        for problem in links.problems(str((lesson.get(field) or {}).get(language) or ""))
+    ]
+
+
 def sign_tajweed_course(version: TajweedCourseVersion, user: Any, note: str = "") -> None:
-    """The owner's sign-off of a complete draft: every text in every language, every new video
-    watched."""
+    """The owner's sign-off of a complete draft: every text in every language, every link
+    leading somewhere, every new video watched."""
     validate_course_snapshot(version.snapshot)
+    problems = markup_problems(version.snapshot)
+    if problems:
+        raise TajweedCourseError(problems)
     if new_videos(version) - set(version.watched_videos):
         raise TajweedCourseError(["Отметьте «Просмотрено» у каждого нового видео и озвучки."])
     version.sign(user, note)

@@ -6,7 +6,7 @@
 <script src="{% static 'lesson_media/admin/media.js' %}" defer></script>
 {% endblock %}
 
-{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}
+{% block extrastyle %}{{ block.super }}{% include "admin/courses/styles.html" %}{% include "admin/lesson_media/styles.html" %}{% include "admin/courses/notes_styles.html" %}
 <style>
   .te { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); gap: 24px; align-items: start; }
   .te-tree { list-style: none; margin: 0; padding: 0; }
@@ -25,7 +25,11 @@
   .te-setting { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 8px; margin-bottom: 8px; }
   .te-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   .te-main > .cp { margin: 0; }
-  @media (max-width: 767px) { .te, .te-lang, .te-setting { grid-template-columns: minmax(0, 1fr); } }
+  .te-preview { margin: 0 0 10px 118px; }
+  .te-preview .cv { padding: 8px 12px; border: 1px dashed var(--hairline-color, #e8e8e8); font-size: 15px; line-height: 1.6; }
+  .te-preview .cv p { margin: 0 0 8px; }
+  .te-problems { margin: 0 0 10px 118px; color: var(--error-fg, #ba2121); }
+  @media (max-width: 767px) { .te, .te-lang, .te-setting { grid-template-columns: minmax(0, 1fr); } .te-preview, .te-problems { margin-inline-start: 0; } }
 </style>
 {% endblock %}
 
@@ -108,6 +112,7 @@
         {% for field in fields %}
           <div class="te-field">
             <h3>{{ field.label }}</h3>
+            {% if field.help %}<p class="help">{{ field.help }}</p>{% endif %}
             {% for lang in field.values %}
               <div class="te-lang{% if not lang.value %} is-empty{% endif %}">
                 <label for="id_{{ lang.input }}"><bdi>{{ lang.label }}</bdi></label>
@@ -117,6 +122,15 @@
                   <input type="text" id="id_{{ lang.input }}" name="{{ lang.input }}" value="{{ lang.value }}" lang="{{ lang.code }}"{% if lang.rtl %} dir="rtl"{% endif %}>
                 {% endif %}
               </div>
+              {% if lang.problems %}
+                <ul class="te-problems">{% for problem in lang.problems %}<li>{{ problem }}</li>{% endfor %}</ul>
+              {% endif %}
+              {% if lang.blocks %}
+                <details class="te-preview">
+                  <summary>Как увидят ученики (<bdi>{{ lang.label }}</bdi>)</summary>
+                  <div class="cv" lang="{{ lang.code }}" dir="{% if lang.rtl %}rtl{% else %}ltr{% endif %}">{% include "admin/courses/blocks.html" with blocks=lang.blocks language=lang.code %}</div>
+                </details>
+              {% endif %}
             {% endfor %}
           </div>
         {% endfor %}
@@ -137,6 +151,9 @@
       </fieldset>
       {% if editable %}<div class="submit-row"><input type="submit" class="default" value="Сохранить"></div>{% endif %}
     </form>
+    {% if node_id == "course" %}
+      <section class="cp">{% include "admin/courses/links.html" with links=links links_title="Ссылки в версии" %}</section>
+    {% endif %}
     </div>
   </div>
 </div>

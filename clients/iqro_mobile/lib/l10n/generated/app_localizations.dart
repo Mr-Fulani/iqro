@@ -4770,6 +4770,30 @@ abstract class AppLocalizations {
   /// **'Important'**
   String get coursesImportant;
 
+  /// No description provided for @coursesMarkWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Attention'**
+  String get coursesMarkWarning;
+
+  /// No description provided for @coursesMarkHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Explanation'**
+  String get coursesMarkHelp;
+
+  /// No description provided for @coursesMarkClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get coursesMarkClose;
+
+  /// No description provided for @coursesLinkOpensBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'opens in the browser'**
+  String get coursesLinkOpensBrowser;
+
   /// No description provided for @coursesMarkDone.
   ///
   /// In en, this message translates to:

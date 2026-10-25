@@ -99,6 +99,7 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
 
   /// Where the video is, once the student started it: a report says so.
   Duration? _playback;
+  int? _slide;
 
   @override
   void initState() {
@@ -163,6 +164,7 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
               onWatched: () => _track(CourseEvent.videoFinished),
               onPosition: (position) => _playback = position,
             ),
+            onSlide: (number) => _slide = number,
           ),
           if (lesson.notes.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
@@ -192,6 +194,7 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
             document: widget.document,
             lesson: lesson,
             playback: () => _playback,
+            slide: () => _slide,
           ),
           if (askRating) ...<Widget>[
             const SizedBox(height: 12),

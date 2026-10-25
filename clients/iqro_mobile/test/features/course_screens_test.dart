@@ -293,11 +293,37 @@ void main() {
     expect(report['locale'], 'ru');
     expect(report['route'], '/courses/ramadan/namerenie');
     expect(report['contact_email'], 'student@example.com');
+    // The lesson has slides: the report names the first, on screen.
     expect(report['context'], {
       'course_slug': 'ramadan',
       'lesson_slug': 'namerenie',
       'content_version': '1',
+      'slide_number': 1,
     });
+    harness.dispose();
+  });
+
+  testWidgets('a report names the slide on screen', (tester) async {
+    final harness = await _pump(tester, location: '/courses/ramadan/namerenie');
+    final next = find.byKey(const ValueKey('lesson-media-slide-next'));
+    await tester.ensureVisible(next);
+    await tester.tap(next);
+    await _settle(tester);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('course-lesson-report')),
+    );
+    await tester.tap(find.byKey(const ValueKey('course-lesson-report')));
+    await _settle(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('course-report-message')),
+      'На слайде опечатка',
+    );
+    await tester.tap(find.byKey(const ValueKey('course-report-send')));
+    await _settle(tester);
+    expect(
+      (harness.reports.reports.single['context']! as Map)['slide_number'],
+      2,
+    );
     harness.dispose();
   });
 

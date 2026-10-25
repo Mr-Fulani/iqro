@@ -143,6 +143,8 @@ export function TajweedLessonPlayer({
   reviewPending,
   nextLesson,
   media,
+  explanation,
+  how,
 }: {
   courseSlug: string;
   courseVersion: string;
@@ -152,6 +154,9 @@ export function TajweedLessonPlayer({
   nextLesson: { slug: string; title: string } | null;
   /** The lesson's video, slides and banners (LessonMedia), drawn on the server; on the rule step. */
   media?: ReactNode;
+  /** The explanation and «how» as notes blocks (CourseNotes), drawn on the server; null in older documents. */
+  explanation?: ReactNode;
+  how?: ReactNode;
 }) {
   const { direction, formatNumber, locale, t } = useI18n();
   const [examples, setExamples] = useState<Examples>({ status: "loading" });
@@ -365,7 +370,7 @@ export function TajweedLessonPlayer({
               <span className="tajweed-lesson-arabic-name" lang="ar" dir="rtl">{target.arabic_name}</span>
             ) : null}
           </h2>
-          <Paragraphs text={lesson.explanation} plain={locale === "ar"} />
+          {explanation ?? <Paragraphs text={lesson.explanation} plain={locale === "ar"} />}
           {lesson.letters ? (
             <>
               <h3>{t("tajweedCourse.letters")}</h3>
@@ -383,7 +388,7 @@ export function TajweedLessonPlayer({
       return (
         <>
           <h2>{t("tajweed.howToRead")}</h2>
-          <Paragraphs text={lesson.how} plain={locale === "ar"} />
+          {how ?? <Paragraphs text={lesson.how} plain={locale === "ar"} />}
         </>
       );
     }
