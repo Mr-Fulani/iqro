@@ -179,6 +179,15 @@ class PreferencesStore {
   AppPreferences readForAccount(String? ownerId) =>
       _read(recitationOwnerId: ownerId, accountScoped: true);
 
+  /// The answer on the statistics card, kept for this device whatever account
+  /// is signed in: «granted», «denied» or nothing yet. The site keeps it under
+  /// the same name in localStorage.
+  String? get analyticsConsent =>
+      _preferences.getString('iqro_analytics_consent_v1');
+
+  Future<void> writeAnalyticsConsent(String value) =>
+      _preferences.setString('iqro_analytics_consent_v1', value);
+
   AppPreferences _read({
     required String? recitationOwnerId,
     required bool accountScoped,

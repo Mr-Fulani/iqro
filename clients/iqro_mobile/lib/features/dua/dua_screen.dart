@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/audio/playback_speed.dart';
 import '../../core/auth/account_scope.dart';
@@ -1469,7 +1470,8 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
     final origin = box is RenderBox
         ? box.localToGlobal(Offset.zero) & box.size
         : null;
-    await shareContent(
+    final analytics = ref.read(analyticsProvider.notifier);
+    final shared = await shareContent(
       context,
       duaContentShare(
         widget.entry,
@@ -1479,6 +1481,12 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
       ),
       origin: origin,
     );
+    if (shared) {
+      analytics.track(AnalyticsEvent.share, const {
+        'content_type': 'dua',
+        'method': 'native',
+      });
+    }
   }
 }
 

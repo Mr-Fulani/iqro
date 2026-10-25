@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
@@ -907,7 +908,8 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         .where((item) => item.sourceId == _translationSourceId)
         .firstOrNull;
     final box = context.findRenderObject();
-    await shareContent(
+    final analytics = ref.read(analyticsProvider.notifier);
+    final shared = await shareContent(
       context,
       ayahContentShare(
         locale: locale,
@@ -927,6 +929,12 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           ? box.localToGlobal(Offset.zero) & box.size
           : null,
     );
+    if (shared) {
+      analytics.track(AnalyticsEvent.share, const {
+        'content_type': 'ayah',
+        'method': 'native',
+      });
+    }
   }
 
   Future<void> _play() async {

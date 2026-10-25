@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/providers.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/iqro_theme.dart';
@@ -27,19 +28,24 @@ class CourseShareButton extends ConsumerWidget {
         key: const ValueKey('course-share'),
         tooltip: context.l10n.coursesShare,
         icon: const Icon(Icons.share_outlined),
-        onPressed: () {
+        onPressed: () async {
           final box = buttonContext.findRenderObject();
-          unawaited(
-            ref.read(courseShareProvider)(
-              ShareParams(
-                text: '$title\n$url',
-                subject: title,
-                sharePositionOrigin: box is RenderBox
-                    ? box.localToGlobal(Offset.zero) & box.size
-                    : null,
-              ),
+          final analytics = ref.read(analyticsProvider.notifier);
+          final result = await ref.read(courseShareProvider)(
+            ShareParams(
+              text: '$title\n$url',
+              subject: title,
+              sharePositionOrigin: box is RenderBox
+                  ? box.localToGlobal(Offset.zero) & box.size
+                  : null,
             ),
           );
+          if (result.status == ShareResultStatus.success) {
+            analytics.track(AnalyticsEvent.share, const {
+              'content_type': 'course',
+              'method': 'native',
+            });
+          }
         },
       ),
     );

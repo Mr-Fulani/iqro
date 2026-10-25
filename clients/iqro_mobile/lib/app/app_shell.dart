@@ -15,6 +15,7 @@ import '../features/more/more_screen.dart';
 import '../features/plan/plan_screen.dart';
 import '../features/quran/quran_screen.dart';
 import '../features/quran/surah_name_art.dart';
+import '../features/settings/analytics_consent.dart';
 import 'providers.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -96,7 +97,10 @@ class _AppShellState extends ConsumerState<AppShell> {
             start: 0,
             end: 0,
             bottom: 72,
-            child: IqroMiniPlayer(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[AnalyticsConsentCard(), IqroMiniPlayer()],
+            ),
           ),
         ],
       ),

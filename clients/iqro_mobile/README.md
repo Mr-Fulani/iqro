@@ -136,7 +136,7 @@ make mobile-ios-config-check
 cd clients/iqro_mobile && bundle exec flutter build ios --debug --no-codesign --dart-define=APP_ENV=local
 ```
 
-iOS target имеет bundle ID `forum.iqro.app`, поддерживает iOS/iPadOS 14+, UIScene,
+iOS target имеет bundle ID `forum.iqro.app`, поддерживает iOS/iPadOS 15+, UIScene,
 фоновое аудио, локальные уведомления и локализованные permission-тексты RU/EN/AR/TR.
 Геопозиция запрашивается только во время использования приложения для расчёта времени
 намаза; фоновый location-доступ не включён.

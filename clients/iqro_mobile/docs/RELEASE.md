@@ -53,6 +53,9 @@ make mobile-android-production
 Результат: `clients/iqro_mobile/build/app/outputs/bundle/release/app-release.aab`.
 Команда явно закрепляет `APP_ENV=production`, API `https://iqro.forum` и публичную
 страницу загрузки. Release без этих значений не получает рабочую конфигурацию.
+Идентификаторы Firebase для статистики берутся из `config/firebase.json`
+(`--dart-define-from-file`, см. `docs/analytics.md`); сборка без них не спрашивает
+согласие и ничего не отправляет.
 
 Перед загрузкой в Play Console:
 
@@ -86,7 +89,7 @@ make mobile-ios-config-check
 make mobile-ios-production
 ```
 
-Target поддерживает iOS/iPadOS 14+ и bundle ID `forum.iqro.app`. Команда собирает
+Target поддерживает iOS/iPadOS 15+ (этого требует Firebase) и bundle ID `forum.iqro.app`. Команда собирает
 неподписанное приложение для проверки кода, CocoaPods, background modes и production
 API. Для установки на устройство потребуется полный Xcode, Apple Developer Team и
 development provisioning profile.

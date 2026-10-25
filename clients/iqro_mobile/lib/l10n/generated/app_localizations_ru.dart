@@ -1578,6 +1578,34 @@ class AppLocalizationsRu extends AppLocalizations {
   String get privacy => 'Конфиденциальность';
 
   @override
+  String get analyticsTitle => 'Статистика использования';
+
+  @override
+  String get analyticsCardText =>
+      'С вашего согласия мы считаем использование приложения через Google Analytics, чтобы понимать, какие разделы полезны. Без согласия приложение работает так же.';
+
+  @override
+  String get analyticsPolicy => 'Политика конфиденциальности';
+
+  @override
+  String get analyticsAccept => 'Принять';
+
+  @override
+  String get analyticsDecline => 'Отклонить';
+
+  @override
+  String get analyticsStateGranted =>
+      'Вы разрешили статистику: Google Analytics включён на этом устройстве.';
+
+  @override
+  String get analyticsStateDenied =>
+      'Вы отказались от статистики: Google Analytics на этом устройстве выключен.';
+
+  @override
+  String get analyticsStateUnset =>
+      'Вы ещё не выбрали. Пока выбора нет, Google Analytics выключен.';
+
+  @override
   String get reminders => 'Напоминания';
 
   @override

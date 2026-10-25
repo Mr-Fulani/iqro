@@ -1574,6 +1574,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacy => 'Privacy';
 
   @override
+  String get analyticsTitle => 'Usage statistics';
+
+  @override
+  String get analyticsCardText =>
+      'With your consent we count app usage with Google Analytics to learn which sections help. Without consent the app works the same.';
+
+  @override
+  String get analyticsPolicy => 'Privacy policy';
+
+  @override
+  String get analyticsAccept => 'Accept';
+
+  @override
+  String get analyticsDecline => 'Decline';
+
+  @override
+  String get analyticsStateGranted =>
+      'You allowed statistics: Google Analytics is on for this device.';
+
+  @override
+  String get analyticsStateDenied =>
+      'You declined statistics: Google Analytics is off on this device.';
+
+  @override
+  String get analyticsStateUnset =>
+      'You have not chosen yet. Until you do, Google Analytics stays off.';
+
+  @override
   String get reminders => 'Reminders';
 
   @override
