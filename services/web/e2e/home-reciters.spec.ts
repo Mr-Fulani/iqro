@@ -294,6 +294,21 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
   await expect(page.getByLabel("Чтец (Кари)")).toHaveValue(mishari.id);
 });
 
+test("a reciter whose portrait does not load shows the default figure", async ({ page }) => {
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
+  await page.route("**/reciters/mishari-rashid-al-afasy.webp", (route) => route.fulfill({ status: 404 }));
+
+  await page.goto("/");
+
+  const avatar = page.getByTestId("featured-reciters").getByTestId("reciter-avatar").first();
+  // Portraits load lazily: bring the card on screen so the browser asks for it.
+  await avatar.scrollIntoViewIfNeeded();
+  await expect(avatar.locator("img")).toHaveAttribute("src", /\/reciters\/default\.webp$/);
+  await expect(avatar.locator(".reciter-avatar-initials")).toHaveCount(0);
+  await expect.poll(() => avatar.locator("img").evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
+});
+
 test("one reciter exposes multiple reading styles without duplicate person options", async ({ page }) => {
   // The shared catalog publishes two murattal versions and a mujawwad from
   // the person's second source.

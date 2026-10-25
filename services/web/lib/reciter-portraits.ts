@@ -21,8 +21,12 @@ export const RECITER_PORTRAITS: Readonly<Record<string, string>> = {
   "qf-176-ahmed-tahoun": "/reciters/ahmed-tahoun.webp",
 };
 
+/** The owner's figure for every reciter without a portrait, as in the app. */
+export const DEFAULT_RECITER_PORTRAIT = "/reciters/default.webp";
+
+/** The portrait uploaded in the admin, else the curated one, else the default figure. */
 export function reciterPortraitUrl(
   reciter: Pick<Reciter, "portrait_url" | "slug">,
-): string | null {
-  return reciter.portrait_url || RECITER_PORTRAITS[reciter.slug] || null;
+): string {
+  return reciter.portrait_url || RECITER_PORTRAITS[reciter.slug] || DEFAULT_RECITER_PORTRAIT;
 }

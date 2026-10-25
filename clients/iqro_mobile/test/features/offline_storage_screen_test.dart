@@ -10,14 +10,17 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
+import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/design_system/iqro_icon.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/audio/premium_reciter_portrait.dart';
 import 'package:iqro_mobile/features/quran/mushaf_edition.dart';
 import 'package:iqro_mobile/features/quran/mushaf_edition_picker.dart';
 import 'package:iqro_mobile/features/quran/mushaf_paper.dart';
@@ -47,6 +50,29 @@ final _tajweed = _edition(
   'QCF V4 Таджвид',
 );
 final _madinah = _edition('qf-1', 'Madinah Mushaf', 'Мединский Мусхаф');
+
+/// An audio package as the server's manifest names its reciter.
+OfflinePackageSummary _audio(
+  String id,
+  String nameRu, {
+  String slug = 'local-reciter',
+  String? portraitUrl,
+  int bytes = 1024,
+}) => _package(
+  id,
+  'surah_audio',
+  'recitation:$id',
+  bytes: bytes,
+  manifest: {
+    'quality': 'standard',
+    'reciter': {
+      'slug': slug,
+      'name_en': 'Reciter',
+      'name_ru': nameRu,
+      'portrait_url': portraitUrl,
+    },
+  },
+);
 
 OfflinePackageSummary _package(
   String id,
@@ -135,6 +161,14 @@ Future<_Pages> _pump(
       key: _boundary,
       child: ProviderScope(
         overrides: [
+          appConfigProvider.overrideWithValue(
+            const AppConfig(
+              apiBaseUrl: 'https://iqro.forum',
+              fallbackDownloadUrl: 'https://iqro.forum',
+              environment: 'production',
+            ),
+          ),
+          recitersProvider.overrideWith((ref) async => []),
           offlinePackagesProvider.overrideWith((ref) async => packages),
           availableMushafRenditionsProvider.overrideWithValue([
             _tajweed,
@@ -239,6 +273,40 @@ void main() {
     expect(find.byIcon(Icons.self_improvement), findsNothing);
   });
 
+  testWidgets('a downloaded recitation shows its reciter portrait', (
+    tester,
+  ) async {
+    await _pump(tester, [
+      _audio(
+        'admin',
+        'Чтец с портретом',
+        portraitUrl: 'https://cdn.example.test/admin.webp',
+      ),
+      _audio('plain', 'Чтец без портрета'),
+    ], stored: const []);
+
+    expect(find.byType(PremiumReciterPortrait), findsNWidgets(2));
+    // The portrait uploaded in the admin comes first.
+    expect(
+      tester
+          .widget<CachedNetworkImage>(find.byType(CachedNetworkImage))
+          .imageUrl,
+      'https://cdn.example.test/admin.webp',
+    );
+    // A reciter without one shows the app's default figure.
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is ResizeImage &&
+            (widget.image as ResizeImage).imageProvider ==
+                const AssetImage(defaultReciterPortraitAsset),
+      ),
+      findsWidgets,
+    );
+    expect(find.byIcon(Icons.headphones_outlined), findsNothing);
+  });
+
   testWidgets('screenshot', (tester) async {
     tester.view.physicalSize = _size;
     tester.view.devicePixelRatio = _pixelRatio;
@@ -248,6 +316,7 @@ void main() {
       tester,
       [
         _package('salah', 'salah_course', 'salah-course:v1', bytes: 384000),
+        _audio('reciter', 'Чтец без портрета', bytes: 56623104),
         _package(
           'tajweed',
           'mushaf_pages',

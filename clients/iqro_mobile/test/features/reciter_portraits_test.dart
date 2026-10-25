@@ -24,15 +24,18 @@ void main() {
     );
   });
 
-  test('unknown reciter without a managed portrait uses initials', () {
-    expect(
-      resolveReciterPortraitUrl(
-        _reciter(slug: 'unknown'),
-        apiBaseUrl: 'https://iqro.forum',
-      ),
-      isNull,
-    );
-  });
+  test(
+    'unknown reciter without a managed portrait gets the default figure',
+    () {
+      expect(
+        resolveReciterPortraitUrl(
+          _reciter(slug: 'unknown'),
+          apiBaseUrl: 'https://iqro.forum',
+        ),
+        isNull,
+      );
+    },
+  );
 
   test('player variants use the canonical person portrait', () {
     final mujawwad = _reciter(
