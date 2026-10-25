@@ -1536,6 +1536,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get completeMushafPages => 'Eksiksiz Mushaf sayfaları';
 
   @override
+  String get offlinePreviousVersion => 'Önceki sürüm';
+
+  @override
   String get completeRecitation => 'Eksiksiz Kur\'an tilaveti';
 
   @override

@@ -1545,6 +1545,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get completeMushafPages => 'Полные страницы Мусхафа';
 
   @override
+  String get offlinePreviousVersion => 'Прежняя версия';
+
+  @override
   String get completeRecitation => 'Полная запись Корана';
 
   @override
