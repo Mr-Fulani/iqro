@@ -32,8 +32,10 @@ import {
 import { parseSalahCourseDocument, type SalahCourseDocument } from "./salah";
 import { parseTajweedCourseDocument, type TajweedCourseDocument } from "./tajweed-course";
 import {
+  parseBuiltInCovers,
   parseCourseDocument,
   parseCourseList,
+  type BuiltInCourseCovers,
   type CourseDocumentResult,
   type CourseListItem,
 } from "./thematic-courses";
@@ -572,13 +574,13 @@ export const getPublishedTajweedCourse = cache(
   },
 );
 
-export const getPublishedCourses = cache(
-  async (locale: SupportedLocale): Promise<CourseListItem[]> => {
+export const getPublishedCourseCatalog = cache(
+  async (locale: SupportedLocale): Promise<{ courses: CourseListItem[]; builtIn: BuiltInCourseCovers }> => {
     const list = await fetchPublishedJson<unknown>(
       `/api/v1/courses?language=${encodeURIComponent(locale)}`,
       ["courses:catalog"],
     );
-    return parseCourseList(list);
+    return { courses: parseCourseList(list), builtIn: parseBuiltInCovers(list) };
   },
 );
 

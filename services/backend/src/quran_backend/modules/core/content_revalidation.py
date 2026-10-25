@@ -119,6 +119,11 @@ def enqueue_course_change(*, action: str, course: str, version: str) -> None:
     )
 
 
+def enqueue_courses_catalog_change(*, action: str) -> None:
+    """The catalog cards changed outside a course release: `updated` (a built-in course cover)."""
+    enqueue_content_revalidation({"type": "courses.catalog.changed", "action": action})
+
+
 def enqueue_social_profiles_change(*, action: str) -> None:
     enqueue_content_revalidation(
         {

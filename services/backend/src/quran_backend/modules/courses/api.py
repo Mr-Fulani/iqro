@@ -20,8 +20,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from quran_backend.modules.core.public_api import PublicReadOnlyViewMixin
+from quran_backend.modules.courses.document import cover_payload
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
+    BuiltInCourse,
+    BuiltInCourseCover,
     CourseDocument,
     CourseReleaseStatus,
 )
@@ -57,9 +60,21 @@ class CourseCardSerializer(serializers.Serializer[Any]):
     published_at = serializers.DateTimeField()
 
 
+class BuiltInCourseCardSerializer(serializers.Serializer[Any]):
+    cover = CourseCoverSerializer(allow_null=True)
+
+
+class BuiltInCoursesSerializer(serializers.Serializer[Any]):
+    """The prayer and tajweed cards of the catalog; their texts are the clients' own."""
+
+    salah = BuiltInCourseCardSerializer()
+    tajweed = BuiltInCourseCardSerializer()
+
+
 class CourseListSerializer(serializers.Serializer[Any]):
     language = serializers.ChoiceField(choices=COURSE_LANGUAGES)
     courses = CourseCardSerializer(many=True)
+    built_in = BuiltInCoursesSerializer()
 
 
 class CourseSegmentSerializer(serializers.Serializer[Any]):
@@ -178,6 +193,23 @@ def visible_documents(language: str) -> QuerySet[CourseDocument]:
     ).select_related("release", "release__course")
 
 
+def built_in_courses() -> dict[str, dict[str, Any]]:
+    covers = {row.course: row for row in BuiltInCourseCover.objects.all()}
+    cards: dict[str, dict[str, Any]] = {}
+    for course in BuiltInCourse.values:
+        row = covers.get(course)
+        cover = None
+        if row is not None and row.cover_object_key:
+            cover = {
+                "object_key": row.cover_object_key,
+                "thumb_object_key": row.cover_thumb_object_key,
+                "width": row.cover_width,
+                "height": row.cover_height,
+            }
+        cards[course] = {"cover": cover_payload(cover)}
+    return cards
+
+
 def _published_at(document: CourseDocument) -> str:
     published_at = document.release.published_at
     assert published_at is not None  # a published release always has the date
@@ -190,7 +222,10 @@ class CourseListView(PublicReadOnlyViewMixin, APIView):
         operation_id="courses_list",
         parameters=[LANGUAGE_PARAMETER],
         responses={200: CourseListSerializer, 400: BAD_LANGUAGE},
-        description="Видимые курсы с выпуском на этом языке, по порядку каталога.",
+        description=(
+            "Видимые курсы с выпуском на этом языке, по порядку каталога, "
+            "и обложки карточек «Обучение намазу» и «Таджвид»."
+        ),
     )
     def get(self, request: Request) -> Response:
         language = course_language(request)
@@ -205,6 +240,7 @@ class CourseListView(PublicReadOnlyViewMixin, APIView):
                     {**document.card, "published_at": _published_at(document)}
                     for document in documents
                 ],
+                "built_in": built_in_courses(),
             }
         )
 

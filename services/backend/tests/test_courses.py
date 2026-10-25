@@ -23,6 +23,7 @@ from quran_backend.modules.core.tasks import notify_web_content_change_task
 from quran_backend.modules.courses.document import build_snapshot, changes, readiness
 from quran_backend.modules.courses.links import LinkChecker
 from quran_backend.modules.courses.models import (
+    BuiltInCourseCover,
     Course,
     CourseDocument,
     CourseLesson,
@@ -705,6 +706,13 @@ def test_course_list_matches_the_contract_example(
     draft = Course.objects.create(slug="hajj", title_ru="Хадж", summary_ru="Скоро")
     CourseLesson.objects.create(course=draft, slug="ihram", title_ru="Ихрам", notes_ru="Текст")
 
+    BuiltInCourseCover.objects.filter(course="salah").update(
+        cover_object_key="courses/covers/fedcba9876543210fedc.webp",
+        cover_thumb_object_key="courses/covers/fedcba9876543210fedc-640.webp",
+        cover_width=1280,
+        cover_height=720,
+    )
+
     response = api_client.get("/api/v1/courses?language=ru")
 
     assert response.status_code == 200
@@ -726,6 +734,19 @@ def test_course_list_orders_by_position_then_title(owner: User, api_client: APIC
 
 
 @pytest.mark.django_db
+def test_built_in_courses_are_listed_without_covers_until_uploaded(
+    api_client: APIClient,
+) -> None:
+    response = api_client.get("/api/v1/courses?language=en")
+
+    assert response.json() == {
+        "language": "en",
+        "courses": [],
+        "built_in": {"salah": {"cover": None}, "tajweed": {"cover": None}},
+    }
+
+
+@pytest.mark.django_db
 def test_course_is_visible_only_on_released_languages_and_while_shown(
     ramadan: Course, owner: User, api_client: APIClient
 ) -> None:
@@ -735,10 +756,7 @@ def test_course_is_visible_only_on_released_languages_and_while_shown(
     english = api_client.get("/api/v1/courses/ramadan?language=en")
     assert english.status_code == 404
     assert english.json()["detail"] == "Такого курса нет."
-    assert api_client.get("/api/v1/courses?language=en").json() == {
-        "language": "en",
-        "courses": [],
-    }
+    assert api_client.get("/api/v1/courses?language=en").json()["courses"] == []
     bad = api_client.get("/api/v1/courses?language=de")
     assert bad.status_code == 400
     # Problem details of the project, as in salah/api.py.

@@ -14,6 +14,8 @@ import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/courses/course_catalog_screen.dart';
 import 'package:iqro_mobile/features/courses/course_home_screen.dart';
 import 'package:iqro_mobile/features/courses/course_lesson_screen.dart';
+import 'package:iqro_mobile/features/courses/course_widgets.dart';
+import 'package:iqro_mobile/features/dua/dua_thematic_icon.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/features/more/more_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
@@ -88,6 +90,64 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('courses-tajweed')));
     await _settle(tester);
     expect(find.text('tajweed-opened'), findsOneWidget);
+    harness.dispose();
+  });
+
+  testWidgets('prayer with a cover is a large card; tajweed keeps its icon', (
+    tester,
+  ) async {
+    final harness = await _pump(tester);
+    final salah = find.byKey(const ValueKey('courses-salah'));
+    final cover = tester.widget<CourseCoverImage>(
+      find.descendant(of: salah, matching: find.byType(CourseCoverImage)),
+    );
+    expect(
+      cover.cover!.cardUrl,
+      'https://media.iqro.forum/courses/covers/fedcba9876543210fedc-640.webp',
+    );
+    expect(cover.small, isTrue);
+    // As wide as the thematic course's card, the picture in 16:9.
+    final picture = tester.getRect(
+      find.descendant(of: salah, matching: find.byType(AspectRatio)),
+    );
+    expect(picture.width / picture.height, closeTo(16 / 9, .01));
+    expect(
+      tester.getRect(salah).width,
+      tester.getRect(find.byKey(const ValueKey('course-ramadan'))).width,
+    );
+    expect(
+      find.descendant(of: salah, matching: find.byType(DuaThematicIcon)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: salah, matching: find.text('Обучение намазу')),
+      findsOneWidget,
+    );
+
+    final tajweed = find.byKey(const ValueKey('courses-tajweed'));
+    expect(
+      find.descendant(of: tajweed, matching: find.byType(CourseCoverImage)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: tajweed, matching: find.byType(DuaThematicIcon)),
+      findsOneWidget,
+    );
+
+    await tester.tap(salah);
+    await _settle(tester);
+    expect(find.text('salah-opened'), findsOneWidget);
+    harness.dispose();
+  });
+
+  testWidgets('without covers both cards keep their icons', (tester) async {
+    final harness = await _pump(
+      tester,
+      remote: FakeCourseGateway(list: courseListJson()..remove('built_in')),
+    );
+    expect(find.byType(DuaThematicIcon), findsNWidgets(2));
+    // Only the thematic course has a cover.
+    expect(find.byType(CourseCoverImage), findsOneWidget);
     harness.dispose();
   });
 

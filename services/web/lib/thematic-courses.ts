@@ -405,6 +405,26 @@ export function parseCourseList(value: unknown): CourseListItem[] {
   });
 }
 
+export type BuiltInCourse = "salah" | "tajweed";
+export type BuiltInCourseCovers = Record<BuiltInCourse, CourseCover | null>;
+
+/**
+ * `built_in` of `GET /api/v1/courses`: the covers of the prayer and tajweed cards.
+ * An older server without the field, or a cover that does not parse, means the card's icon.
+ */
+export function parseBuiltInCovers(value: unknown): BuiltInCourseCovers {
+  const builtIn = isRecord(value) && isRecord(value.built_in) ? value.built_in : {};
+  const card = (course: BuiltInCourse): CourseCover | null => {
+    const item = builtIn[course];
+    try {
+      return isRecord(item) ? cover(item.cover, `built_in.${course}.cover`) : null;
+    } catch {
+      return null;
+    }
+  };
+  return { salah: card("salah"), tajweed: card("tajweed") };
+}
+
 /** `GET /api/v1/courses/{slug}`; fields this site does not know are ignored. */
 export function parseCourseDocument(value: unknown): CourseDocumentResult {
   if (!isRecord(value)) throw new CourseDocumentError("not an object");

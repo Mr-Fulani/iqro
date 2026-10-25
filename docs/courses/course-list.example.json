@@ -18,5 +18,18 @@
       "video_minutes": 10,
       "published_at": "2027-01-12T10:00:00+00:00"
     }
-  ]
+  ],
+  "built_in": {
+    "salah": {
+      "cover": {
+        "url": "https://media.iqro.forum/courses/covers/fedcba9876543210fedc.webp",
+        "thumb_url": "https://media.iqro.forum/courses/covers/fedcba9876543210fedc-640.webp",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    "tajweed": {
+      "cover": null
+    }
+  }
 }

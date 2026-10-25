@@ -6,10 +6,16 @@ import type { ReactNode } from "react";
 
 import { CourseCardProgress, CourseContinueStrip } from "@/components/courses/CourseProgress";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
-import { getPublishedCourse, getPublishedCourses, PublicContentNotFoundError } from "@/lib/public-content";
+import { getPublishedCourse, getPublishedCourseCatalog, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
 import { createPageMetadata } from "@/lib/seo";
-import { courseOutline, type CourseListItem, type CourseOutline } from "@/lib/thematic-courses";
+import {
+  courseOutline,
+  type BuiltInCourseCovers,
+  type CourseCover,
+  type CourseListItem,
+  type CourseOutline,
+} from "@/lib/thematic-courses";
 import { translate } from "@/lib/translate";
 import "./courses.css";
 
@@ -20,16 +26,24 @@ function localeParam(value: string): Locale {
   return value;
 }
 
-/** The published courses with their lesson outlines; the old courses stay when the API is down. */
-async function publishedCourses(locale: Locale): Promise<{ course: CourseListItem; outline: CourseOutline | null }[]> {
-  let courses: CourseListItem[];
+type PublishedCourses = {
+  courses: { course: CourseListItem; outline: CourseOutline | null }[];
+  builtIn: BuiltInCourseCovers;
+};
+
+/**
+ * The published courses with their lesson outlines, and the covers of the prayer and tajweed
+ * cards; without the API the built-in courses keep their icons.
+ */
+async function publishedCourses(locale: Locale): Promise<PublishedCourses> {
+  let catalog: { courses: CourseListItem[]; builtIn: BuiltInCourseCovers };
   try {
-    courses = await getPublishedCourses(locale);
+    catalog = await getPublishedCourseCatalog(locale);
   } catch (error) {
     if (!(error instanceof PublicContentNotFoundError)) console.error("Courses are temporarily unavailable", error);
-    return [];
+    return { courses: [], builtIn: { salah: null, tajweed: null } };
   }
-  return Promise.all(courses.map(async (course) => {
+  const courses = await Promise.all(catalog.courses.map(async (course) => {
     try {
       const result = await getPublishedCourse(locale, course.slug);
       return { course, outline: result.outdated ? null : courseOutline(result.document) };
@@ -37,6 +51,7 @@ async function publishedCourses(locale: Locale): Promise<{ course: CourseListIte
       return { course, outline: null };
     }
   }));
+  return { courses, builtIn: catalog.builtIn };
 }
 
 export async function generateMetadata({ params }: { params: Promise<RouteParams> }): Promise<Metadata> {
@@ -57,13 +72,30 @@ function CourseIcon({ children }: { children: ReactNode }) {
   );
 }
 
+/** A ready 16:9 WebP from the media host: the small copy, the large one on wide screens. */
+function CardCover({ cover }: { cover: CourseCover }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- a ready 16:9 WebP from the media host
+    <img
+      src={cover.thumb_url}
+      srcSet={`${cover.thumb_url} 640w, ${cover.url} 1280w`}
+      sizes="(max-width: 768px) 100vw, 400px"
+      width={cover.width}
+      height={cover.height}
+      alt=""
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
 export default async function CoursesPage({ params }: { params: Promise<RouteParams> }) {
   // Only the locale parametrises this page, so `next build` would prerender it
   // without a backend (CI, Docker images). Render it per request instead; the
   // course list itself still comes from the tagged fetch cache.
   await connection();
   const locale = localeParam((await params).locale);
-  const courses = await publishedCourses(locale);
+  const { courses, builtIn: builtInCovers } = await publishedCourses(locale);
   const format = new Intl.NumberFormat(localeTag(locale));
   const outlines = courses.flatMap(({ outline }) => (outline ? [outline] : []));
   // The prayer and tajweed courses keep their own pages and come first.
@@ -74,6 +106,7 @@ export default async function CoursesPage({ params }: { params: Promise<RoutePar
       summary: translate(locale, "courses.salahSummary"),
       meta: translate(locale, "courses.salahMeta"),
       icon: <><path d="M6 21V9a6 6 0 0 1 12 0v12Z" /><path d="M6 17h12M12 7v3" /></>,
+      cover: builtInCovers.salah,
     },
     {
       href: "/tajweed",
@@ -81,6 +114,7 @@ export default async function CoursesPage({ params }: { params: Promise<RoutePar
       summary: translate(locale, "courses.tajweedSummary"),
       meta: translate(locale, "courses.tajweedMeta"),
       icon: <><path d="M4 10c0 5 3.6 8 8 8s8-3 8-8" /><circle cx="9.5" cy="6" r="1.3" fill="currentColor" stroke="none" /><circle cx="14.5" cy="6" r="1.3" fill="currentColor" stroke="none" /></>,
+      cover: builtInCovers.tajweed,
     },
   ];
 
@@ -100,9 +134,13 @@ export default async function CoursesPage({ params }: { params: Promise<RoutePar
           {builtIn.map((item) => (
             <li key={item.href}>
               <Link href={localizedPath(locale, item.href)} className="courses-card">
-                <span className="courses-card-art courses-card-art-builtin">
-                  <span className="courses-card-icon"><CourseIcon>{item.icon}</CourseIcon></span>
-                </span>
+                {item.cover ? (
+                  <span className="courses-card-art"><CardCover cover={item.cover} /></span>
+                ) : (
+                  <span className="courses-card-art courses-card-art-builtin">
+                    <span className="courses-card-icon"><CourseIcon>{item.icon}</CourseIcon></span>
+                  </span>
+                )}
                 <span className="courses-card-body">
                   <span className="courses-card-title">{item.title}</span>
                   <span className="courses-card-summary">{item.summary}</span>
@@ -116,17 +154,7 @@ export default async function CoursesPage({ params }: { params: Promise<RoutePar
               <Link href={localizedPath(locale, `/courses/${course.slug}`)} className="courses-card">
                 <span className="courses-card-art">
                   {course.cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- a ready 16:9 WebP from the media host
-                    <img
-                      src={course.cover.thumb_url}
-                      srcSet={`${course.cover.thumb_url} 640w, ${course.cover.url} 1280w`}
-                      sizes="(max-width: 768px) 100vw, 400px"
-                      width={course.cover.width}
-                      height={course.cover.height}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                    />
+                    <CardCover cover={course.cover} />
                   ) : (
                     <span className="courses-card-icon">
                       <CourseIcon><path d="M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v15" /></CourseIcon>

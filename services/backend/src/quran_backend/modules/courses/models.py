@@ -384,3 +384,32 @@ class CourseDocument(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.release} · {self.language}"
+
+
+class BuiltInCourse(models.TextChoices):
+    SALAH = "salah", "Обучение намазу"
+    TAJWEED = "tajweed", "Таджвид"
+
+
+class BuiltInCourseCover(BaseModel):
+    """The catalog cover of the prayer or tajweed course (docs/courses/README.md).
+
+    Kept outside their immutable versions: a new picture needs no new version.
+    """
+
+    course = models.CharField(max_length=16, choices=BuiltInCourse.choices, unique=True)
+    cover_object_key = models.CharField(
+        max_length=512, blank=True, editable=False, validators=[validate_relative_object_key]
+    )
+    cover_thumb_object_key = models.CharField(
+        max_length=512, blank=True, editable=False, validators=[validate_relative_object_key]
+    )
+    cover_width = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
+    cover_height = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
+
+    class Meta:
+        db_table = "course_builtin_cover"
+        ordering = ("course",)
+
+    def __str__(self) -> str:
+        return str(self.get_course_display())

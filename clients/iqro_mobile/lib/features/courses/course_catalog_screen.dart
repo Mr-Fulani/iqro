@@ -47,6 +47,7 @@ class CourseCatalogScreen extends ConsumerWidget {
     final catalog = ref.watch(courseCatalogProvider);
     final resume = ref.watch(courseResumeProvider).valueOrNull;
     final offline = catalog.valueOrNull?.offline ?? false;
+    final covers = catalog.valueOrNull?.builtIn;
     return Scaffold(
       appBar: IqroTopBar(
         title: l10n.coursesTitle,
@@ -74,6 +75,7 @@ class CourseCatalogScreen extends ConsumerWidget {
             _FixedCourseCard(
               key: const ValueKey('courses-salah'),
               art: 'remembrance',
+              cover: covers?.salah,
               title: l10n.salahTitle,
               subtitle: l10n.salahHint,
               onTap: () => context.push('/salah'),
@@ -82,6 +84,7 @@ class CourseCatalogScreen extends ConsumerWidget {
             _FixedCourseCard(
               key: const ValueKey('courses-tajweed'),
               art: 'quran',
+              cover: covers?.tajweed,
               title: l10n.tajweedCourseTitle,
               subtitle: l10n.tajweedCourseHint,
               onTap: () => context.push('/tajweed'),
@@ -170,10 +173,13 @@ class _ResumeCard extends ConsumerWidget {
   }
 }
 
-/// The prayer and tajweed courses open their own screens.
+/// The prayer and tajweed courses open their own screens. With a cover from
+/// the list the card looks like a thematic course's; without one it keeps
+/// its icon.
 class _FixedCourseCard extends StatelessWidget {
   const _FixedCourseCard({
     required this.art,
+    required this.cover,
     required this.title,
     required this.subtitle,
     required this.onTap,
@@ -181,6 +187,7 @@ class _FixedCourseCard extends StatelessWidget {
   });
 
   final String art;
+  final CourseCover? cover;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -188,6 +195,35 @@ class _FixedCourseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cover = this.cover;
+    if (cover != null) {
+      return IqroCard(
+        padding: EdgeInsets.zero,
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            CourseCoverImage(cover: cover, small: true),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(subtitle, style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return IqroCard(
       onTap: onTap,
       child: Row(

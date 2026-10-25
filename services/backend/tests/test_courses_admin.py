@@ -12,12 +12,14 @@ import pytest
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.models import Group, Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client
+from django.test import Client, override_settings
 
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.core.object_storage import ImmutableObjectSpec, StoredObject
+from quran_backend.modules.core.tasks import notify_web_content_change_task
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
+    BuiltInCourseCover,
     Course,
     CourseLesson,
     CourseRelease,
@@ -612,6 +614,101 @@ def test_cover_becomes_two_webp_pictures(
     )
     course.refresh_from_db()
     assert course.cover_object_key == ""
+
+
+# Built-in course covers ---------------------------------------------------
+
+
+def _built_in(course: str) -> BuiltInCourseCover:
+    return BuiltInCourseCover.objects.get(course=course)
+
+
+@needs_ffmpeg
+@pytest.mark.django_db
+@override_settings(WEB_CONTENT_REVALIDATION_URL="http://web:3000/api/internal/content-revalidation")
+def test_built_in_course_cover_is_uploaded_replaced_and_removed(
+    owner_client: Client,
+    tmp_path: Path,
+    django_capture_on_commit_callbacks: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    queued: list[dict[str, str]] = []
+    monkeypatch.setattr(notify_web_content_change_task, "delay", queued.append)
+    tajweed = _built_in("tajweed")
+    url = f"/admin/courses/builtincoursecover/{tajweed.pk}/change/"
+    page = owner_client.get(url).content.decode()
+    assert "Она видна сразу после сохранения: новая версия курса для этого не нужна." in page
+
+    keys = []
+    for color in ("0x2e7d32", "0xd5a34c"):
+        source = tmp_path / f"{color}.png"
+        subprocess.run(  # noqa: S603 - a test picture
+            [
+                shutil.which("ffmpeg") or "ffmpeg", "-nostdin", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", f"color=c={color}:s=1600x700", "-frames:v", "1", str(source),
+            ],
+            check=True,
+        )  # fmt: skip
+        uploader = FakeUploader()
+        upload = SimpleUploadedFile("cover.png", source.read_bytes(), content_type="image/png")
+        with (
+            patch(UPLOADER, return_value=uploader),
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            assert owner_client.post(url, {"cover_upload": upload}).status_code == 302
+        tajweed.refresh_from_db()
+        assert tajweed.cover_object_key.startswith("courses/covers/")
+        assert tajweed.cover_thumb_object_key == tajweed.cover_object_key.replace(
+            ".webp", "-640.webp"
+        )
+        assert (tajweed.cover_width, tajweed.cover_height) == (1280, 720)
+        assert [spec.size_bytes <= 50 * 1024 for spec in uploader.specs][1]
+        keys.append(tajweed.cover_object_key)
+    assert keys[0] != keys[1]
+    assert f"/{keys[1].replace('.webp', '-640.webp')}" in owner_client.get(url).content.decode()
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert owner_client.post(url, {"remove_cover": "on"}).status_code == 302
+    tajweed.refresh_from_db()
+    assert (tajweed.cover_object_key, tajweed.cover_width) == ("", None)
+    # Saving without a change does not reach the site.
+    with django_capture_on_commit_callbacks(execute=True):
+        assert owner_client.post(url, {}).status_code == 302
+    assert queued == [{"type": "courses.catalog.changed", "action": "updated"}] * 3
+    assert _built_in("salah").cover_object_key == ""
+
+
+@pytest.mark.django_db
+def test_built_in_course_cover_must_be_a_picture(owner_client: Client) -> None:
+    salah = _built_in("salah")
+    upload = SimpleUploadedFile("cover.png", b"not a picture", content_type="image/png")
+    response = owner_client.post(
+        f"/admin/courses/builtincoursecover/{salah.pk}/change/", {"cover_upload": upload}
+    )
+
+    assert response.status_code == 200
+    assert "Нужна картинка JPEG, PNG или WebP." in response.content.decode()
+    salah.refresh_from_db()
+    assert salah.cover_object_key == ""
+
+
+@pytest.mark.django_db
+def test_built_in_course_covers_are_two_rows_the_publisher_changes(owner_client: Client) -> None:
+    assert sorted(BuiltInCourseCover.objects.values_list("course", flat=True)) == [
+        "salah",
+        "tajweed",
+    ]
+    salah = _built_in("salah")
+    assert owner_client.get("/admin/courses/builtincoursecover/add/").status_code == 403
+    delete = f"/admin/courses/builtincoursecover/{salah.pk}/delete/"
+    assert owner_client.get(delete).status_code == 403
+
+    def codenames(name: str) -> set[str]:
+        return set(Group.objects.get(name=name).permissions.values_list("codename", flat=True))
+
+    assert "change_builtincoursecover" in codenames("Публикатор")
+    assert "view_builtincoursecover" in codenames("Редактор курсов")
+    assert "change_builtincoursecover" not in codenames("Редактор курсов")
 
 
 @pytest.mark.django_db
