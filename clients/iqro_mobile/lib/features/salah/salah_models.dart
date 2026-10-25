@@ -1,6 +1,11 @@
 import 'package:flutter/foundation.dart';
 
-import '../courses/course_models.dart' show LessonMedia, parseLessonMedia;
+import '../courses/course_models.dart'
+    show
+        LessonMedia,
+        optionalCourseSource,
+        optionalLessonSources,
+        parseLessonMedia;
 
 /// The compiled course document (`docs/salah/learning-spec.md` §6).
 ///
@@ -104,6 +109,7 @@ class SalahCourseInfo {
     required this.language,
     this.methodology = '',
     this.sourceTitle = '',
+    this.source = '',
     this.reviewedBy = '',
     this.reviewedAt,
     this.publishedAt,
@@ -118,6 +124,7 @@ class SalahCourseInfo {
       language: _string(json['language']),
       methodology: _string(json['methodology']),
       sourceTitle: _string(json['source_title']),
+      source: optionalCourseSource(json['source']),
       reviewedBy: _string(json['reviewed_by']),
       reviewedAt: _date(json['reviewed_at']),
       publishedAt: _date(json['published_at']),
@@ -130,6 +137,9 @@ class SalahCourseInfo {
   final String language;
   final String methodology;
   final String sourceTitle;
+
+  /// «Author and sources»; `''` when the course has none.
+  final String source;
   final String reviewedBy;
   final DateTime? reviewedAt;
   final DateTime? publishedAt;
@@ -202,6 +212,7 @@ class SalahLesson {
     this.minutes = 0,
     this.prayer,
     this.media = const [],
+    this.sources = const [],
   });
 
   factory SalahLesson.fromJson(Object? value) {
@@ -219,6 +230,8 @@ class SalahLesson {
       ],
       // A lesson without media has no field, as do documents built before.
       media: parseLessonMedia(json['media']),
+      // A lesson without sources has no field either.
+      sources: optionalLessonSources(json['sources']),
     );
   }
 
@@ -235,6 +248,9 @@ class SalahLesson {
   /// Videos, slides and banners on the first step, in the author's order,
   /// in the format of the thematic courses (docs/salah/lesson-media.md).
   final List<LessonMedia> media;
+
+  /// «Sources» at the end of the lesson (docs/salah/sources.md).
+  final List<String> sources;
 
   int indexOfStep(String slug) => steps.indexWhere((step) => step.slug == slug);
 }

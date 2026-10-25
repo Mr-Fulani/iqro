@@ -362,6 +362,50 @@ void main() {
     });
   }
 
+  testWidgets('the course shows «Author and sources» and the last step the '
+      "lesson's sources", (tester) async {
+    await _pump(tester, sources: true);
+    expect(find.text('Автор и источники'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('course-source')),
+        matching: find.textContaining('Риваят Хафса от Асыма'),
+        matchRoot: true,
+      ),
+      findsOneWidget,
+    );
+
+    final block = find.byKey(const ValueKey('course-lesson-sources'));
+    await _pump(tester, location: '/tajweed/lesson/izhar', sources: true);
+    expect(_label(tester), 'Шаг 1 из 6');
+    expect(block, findsNothing);
+    await _pump(
+      tester,
+      location: '/tajweed/lesson/izhar',
+      sources: true,
+      progress: _progress({
+        'izhar': ('in_progress', 'find', '2026-10-22T10:00:00.000Z'),
+      }),
+    );
+    expect(_label(tester), 'Шаг 6 из 6');
+    await tester.ensureVisible(block);
+    await tester.tap(
+      find.descendant(of: block, matching: find.text('Источники')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Ибн аль-Джазари. Аль-Мукаддима аль-джазария, глава о нуне и миме.',
+      ),
+      findsOneWidget,
+    );
+
+    // A course without them, as documents built before, has no blocks.
+    await _pump(tester);
+    expect(find.byKey(const ValueKey('course-source')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the media come first; the video pauses the sound and keeps '
       'its place under the tajweed course', (tester) async {
     final videos = FakeVideoFactory();
@@ -468,6 +512,7 @@ Future<_Harness> _pump(
   Completer<void>? gate,
   int failures = 0,
   bool media = false,
+  bool sources = false,
   FakeVideoFactory? videos,
   CourseProgressStore? positions,
 }) async {
@@ -476,7 +521,11 @@ Future<_Harness> _pump(
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
   final document = TajweedCourseDocument.fromJson(
-    media ? tajweedCourseDocumentWithMediaJson() : tajweedCourseDocumentJson(),
+    media
+        ? tajweedCourseDocumentWithMediaJson()
+        : sources
+        ? tajweedCourseDocumentWithSourcesJson()
+        : tajweedCourseDocumentJson(),
   );
   final store = _MemoryStore(progress);
   final repository = _FakeRepository(gate: gate, failures: failures);

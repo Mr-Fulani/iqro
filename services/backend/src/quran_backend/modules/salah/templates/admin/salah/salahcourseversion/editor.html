@@ -372,14 +372,14 @@
     {% if preview %}
       <aside class="se-preview" aria-labelledby="se-preview-title">
         <div class="se-preview-head">
-          <h3 id="se-preview-title">Предпросмотр шага</h3>
+          <h3 id="se-preview-title">{% if preview.kind == "step" %}Предпросмотр шага{% else %}Как увидят ученики{% endif %}</h3>
           <label>Язык
             <select class="se-preview-lang">
               {% for language in languages %}<option value="{{ language.code }}">{{ language.name }}</option>{% endfor %}
             </select>
           </label>
         </div>
-        <p class="help">Как шаг увидит ученик, с несохранёнными правками. Значки «?» и «!» нажимаются.</p>
+        <p class="help">{% if preview.kind == "course" %}Главная курса: «Автор и источники» под описанием, с несохранёнными правками. Пустое поле ученики не увидят.{% elif preview.kind == "lesson" %}«Источники» на последнем шаге урока, по строке на источник, с несохранёнными правками. В режиме «Практика» их нет.{% else %}Как шаг увидит ученик, с несохранёнными правками. Значки «?» и «!» нажимаются.{% endif %}</p>
         <div class="se-phone" data-preview-root></div>
         {{ preview|json_script:"se-preview-data" }}
       </aside>

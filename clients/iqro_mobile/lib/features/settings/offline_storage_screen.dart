@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +8,9 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../quran/mushaf_edition.dart';
+import '../quran/mushaf_edition_picker.dart';
+import '../quran/mushaf_paper.dart';
 import 'offline_storage_repository.dart';
 
 class OfflineStorageScreen extends ConsumerStatefulWidget {
@@ -52,6 +57,11 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
   }
 
   Widget _content(List<OfflinePackageSummary> packages) {
+    // The names and miniatures of the Mushaf picker, from the same catalog.
+    final editions = <String, NativeMushafEdition>{
+      for (final edition in ref.watch(availableMushafRenditionsProvider))
+        edition.identity.code: edition,
+    };
     final totalUsed = packages.fold<int>(
       0,
       (sum, package) => sum + package.usedBytes,
@@ -91,6 +101,7 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
             ) ...<Widget>[
               _OfflinePackageCard(
                 package: packages[index],
+                edition: editions[packages[index].mushafCode],
                 deleting: _deletingPackageId == packages[index].packageId,
                 onDelete: packages[index].isDownloading
                     ? null
@@ -106,6 +117,10 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
   Future<void> _confirmDelete(OfflinePackageSummary package) async {
     if (_deletingPackageId != null) return;
     final player = ref.read(audioControllerProvider);
+    final edition = ref
+        .read(availableMushafRenditionsProvider)
+        .where((item) => item.identity.code == package.mushafCode)
+        .firstOrNull;
     final isPlayingFromPackage =
         package.isAudio &&
         player.track?.url.startsWith('file:') == true &&
@@ -117,11 +132,11 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
         content: Text(
           isPlayingFromPackage
               ? context.l10n.deletePlayingAudioConfirmation(
-                  _packageTitle(context, package),
+                  _packageTitle(context, package, edition),
                   formatOfflineBytes(package.usedBytes),
                 )
               : context.l10n.deleteOfflinePackageConfirmation(
-                  _packageTitle(context, package),
+                  _packageTitle(context, package, edition),
                   formatOfflineBytes(package.usedBytes),
                 ),
         ),
@@ -171,11 +186,15 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
 class _OfflinePackageCard extends StatelessWidget {
   const _OfflinePackageCard({
     required this.package,
+    required this.edition,
     required this.deleting,
     required this.onDelete,
   });
 
   final OfflinePackageSummary package;
+
+  /// The catalog entry of a Mushaf package, when the catalog still has it.
+  final NativeMushafEdition? edition;
   final bool deleting;
   final VoidCallback? onDelete;
 
@@ -194,30 +213,38 @@ class _OfflinePackageCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: package.isMushaf
-                      ? context.iqroColors.sand
-                      : Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(14),
+              if (edition case final edition?)
+                SizedBox(
+                  width: 44,
+                  child: MushafEditionThumbnail(edition: edition),
+                )
+              else if (package.mushafPreviewPath case final path?)
+                SizedBox(width: 44, child: _DownloadedPage(path: path))
+              else
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: package.isMushaf
+                        ? context.iqroColors.sand
+                        : Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: IqroIcon(
+                    package.isMushaf
+                        ? Icons.menu_book_outlined
+                        : package.isSalah
+                        ? iqroSalahIcon
+                        : Icons.headphones_outlined,
+                  ),
                 ),
-                child: IqroIcon(
-                  package.isMushaf
-                      ? Icons.menu_book_outlined
-                      : package.isSalah
-                      ? Icons.self_improvement
-                      : Icons.headphones_outlined,
-                ),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      _packageTitle(context, package),
+                      _packageTitle(context, package, edition),
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: 3),
@@ -263,15 +290,65 @@ class _OfflinePackageCard extends StatelessWidget {
   }
 }
 
-String _packageTitle(BuildContext context, OfflinePackageSummary package) {
-  if (package.isMushaf) return context.l10n.offlineMushaf;
+/// The last page of a Mushaf package the catalog no longer lists, from the
+/// package's own file, framed like the picker's miniatures.
+class _DownloadedPage extends StatelessWidget {
+  const _DownloadedPage({required this.path});
+
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = (44 * MediaQuery.devicePixelRatioOf(context)).round();
+    return AspectRatio(
+      aspectRatio: mushafEditionPageSize.aspectRatio,
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: context.iqroColors.line),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: ColoredBox(
+            color: mushafPaperColor,
+            child: Image(
+              image: ResizeImage(FileImage(File(path)), width: width),
+              fit: BoxFit.contain,
+              excludeFromSemantics: true,
+              // The page was removed from disk: the package's seal instead.
+              errorBuilder: (context, error, stackTrace) =>
+                  const Center(child: IqroIcon(Icons.menu_book_outlined)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _packageTitle(
+  BuildContext context,
+  OfflinePackageSummary package,
+  NativeMushafEdition? edition,
+) {
+  final locale = Localizations.localeOf(context).languageCode;
+  if (package.isMushaf) {
+    return edition?.nameFor(locale) ??
+        package.mushafName ??
+        context.l10n.offlineMushaf;
+  }
   if (package.isSalah) return context.l10n.salahTitle;
-  return package.reciterNameFor(Localizations.localeOf(context).languageCode) ??
-      context.l10n.offlineAudio;
+  return package.reciterNameFor(locale) ?? context.l10n.offlineAudio;
 }
 
 String _packageSubtitle(BuildContext context, OfflinePackageSummary package) {
-  if (package.isMushaf) return context.l10n.completeMushafPages;
+  if (package.isMushaf) {
+    return package.active
+        ? context.l10n.completeMushafPages
+        : '${context.l10n.completeMushafPages} · '
+              '${context.l10n.offlinePreviousVersion}';
+  }
   if (package.isSalah) return context.l10n.salahOfflineImages;
   final quality = switch (package.quality) {
     'economy' => context.l10n.qualityEconomy,

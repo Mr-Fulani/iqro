@@ -801,6 +801,51 @@ void main() {
     expect(find.text('Шаг 1 из 5'), findsOneWidget);
     expect(facade, findsNothing);
   });
+
+  testWidgets('the course shows «Author and sources» and the last step the '
+      "lesson's sources, folded, not in practice", (tester) async {
+    await _pump(tester, location: '/salah');
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('course-source')),
+        matching: find.textContaining('«Умдат аль-фикх» Ибн Кудамы'),
+        matchRoot: true,
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Автор и источники'), findsOneWidget);
+
+    final sources = find.byKey(const ValueKey('course-lesson-sources'));
+    await _pump(tester, location: '/salah/lesson/fajr');
+    expect(sources, findsNothing);
+    await _pump(tester, location: '/salah/lesson/fajr/step/fajr.r2.taslim');
+    expect(find.text('Шаг 5 из 5'), findsOneWidget);
+    await tester.ensureVisible(sources);
+    expect(find.text('Источники'), findsOneWidget);
+    expect(
+      find.descendant(of: sources, matching: find.text('2')),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Ибн Кудама. Умдат аль-фикх, «Книга молитвы».'),
+      findsNothing,
+    );
+    await tester.tap(find.text('Источники'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Ибн Кудама. Умдат аль-фикх, «Книга молитвы».'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Практика'));
+    await tester.pumpAndSettle();
+    expect(sources, findsNothing);
+
+    // A lesson without sources has no block on its last step.
+    await _pump(tester, location: '/salah/lesson/wudu/step/wudu.face');
+    expect(sources, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 ButtonStyleButton _button(WidgetTester tester, String key) =>

@@ -50,7 +50,26 @@ class OfflinePackageSummary {
   bool get isSalah => packageType == _salahPackageType;
   bool get isDownloading => status == 'downloading';
 
+  /// The edition code of a Mushaf package (its content key is
+  /// `mushaf-rendition:<code>`).
+  String? get mushafCode {
+    const prefix = 'mushaf-rendition:';
+    if (!isMushaf || !contentKey.startsWith(prefix)) return null;
+    final code = contentKey.substring(prefix.length);
+    return code.isEmpty ? null : code;
+  }
+
   String? get quality => isAudio ? manifest['quality']?.toString() : null;
+
+  /// The edition name the Mushaf package was downloaded with.
+  String? get mushafName {
+    final name = isMushaf ? manifest['name']?.toString().trim() ?? '' : '';
+    return name.isEmpty ? null : name;
+  }
+
+  /// A downloaded page of the Mushaf package (the last one), to show it by.
+  String? get mushafPreviewPath =>
+      isMushaf ? manifest['preview_path']?.toString() : null;
 
   String? reciterNameFor(String locale) {
     final raw = manifest['reciter'];
@@ -87,9 +106,17 @@ class OfflineStorageRepository {
     for (final row in rows) {
       final packageId = row['package_id']?.toString() ?? '';
       final packageType = row['package_type']?.toString() ?? '';
-      final manifest = packageType == _audioPackageType
-          ? await readOfflineAudioSummary(_database.database, packageId)
-          : const <String, Object?>{};
+      final manifest = switch (packageType) {
+        _audioPackageType => await readOfflineAudioSummary(
+          _database.database,
+          packageId,
+        ),
+        _mushafPackageType => await readOfflineMushafSummary(
+          _database.database,
+          packageId,
+        ),
+        _ => const <String, Object?>{},
+      };
       var usedBytes = 0;
       final directory = _packageDirectory(support, packageType, packageId);
       if (directory != null) usedBytes = await _directoryBytes(directory);

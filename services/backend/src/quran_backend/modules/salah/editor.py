@@ -29,6 +29,8 @@ from quran_backend.modules.salah.snapshot import (
     AUDIO_SUFFIXES,
     NOTE_KINDS,
     RULINGS,
+    SOURCE_MAX_LENGTH,
+    SOURCES_MAX_LENGTH,
     STEP_KINDS,
     prayer_step_sources,
 )
@@ -73,6 +75,15 @@ COURSE_FIELDS = (
         200,
         rows=2,
     ),
+    TextField(
+        "source",
+        "Автор и источники",
+        "Кто составил курс, по каким книгам и изданиям, кто проверял. Видно на главной курса. "
+        "Можно оставить пустым на всех языках.",
+        SOURCE_MAX_LENGTH,
+        rows=3,
+        required=False,
+    ),
 )
 SECTION_FIELDS = (TextField("title", "Название раздела", "", 120, rows=1),)
 LESSON_FIELDS = (
@@ -83,6 +94,15 @@ LESSON_FIELDS = (
         "Одно-два предложения: видны в списке уроков и в поиске.",
         400,
         rows=2,
+    ),
+    TextField(
+        "sources",
+        "Источники",
+        "По одному источнику на строку: книга, глава или хадис. Видны в конце урока. "
+        "Можно оставить пустыми на всех языках.",
+        SOURCES_MAX_LENGTH,
+        rows=4,
+        required=False,
     ),
 )
 STEP_FIELDS = (

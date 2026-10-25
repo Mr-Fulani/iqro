@@ -13,6 +13,8 @@ import {
 import { highlightRuns, joinedRuns, wordTiming, type TajweedRun } from "./tajweed.ts";
 import {
   CourseDocumentError,
+  optionalCourseSource,
+  optionalLessonSources,
   parseLessonMedia,
   parseNoteBlocks,
   type CourseMediaBlock,
@@ -53,6 +55,8 @@ export type TajweedCourseLesson = {
   letters: string;
   /** Video, slides and banners above the explanation, in the author's order; `[]` without them. */
   media: CourseMediaBlock[];
+  /** «Sources» at the end of the lesson; `[]` without them and in older documents. */
+  sources: string[];
 };
 
 export type TajweedCourseSection = { slug: string; title: string; lessons: string[] };
@@ -65,6 +69,8 @@ export type TajweedCourseDocument = {
     language: string;
     title: string;
     summary: string;
+    /** «Author and sources»; `""` without it and in older documents (docs/tajweed/course.md). */
+    source: string;
     review_status: string;
     published_at: string | null;
   };
@@ -173,6 +179,7 @@ export function parseTajweedCourseDocument(value: unknown): TajweedCourseDocumen
       how_blocks: blocks(lesson.how_blocks, `lessons[${index}].how_blocks`),
       letters: typeof lesson.letters === "string" ? lesson.letters : "",
       media: media(lesson.media, `lessons[${index}].media`),
+      sources: optionalLessonSources(lesson.sources),
     };
   });
   const known = new Set(lessons.map((lesson) => lesson.slug));
@@ -195,6 +202,7 @@ export function parseTajweedCourseDocument(value: unknown): TajweedCourseDocumen
       language: text(course.language, "course.language"),
       title: text(course.title, "course.title"),
       summary: text(course.summary, "course.summary"),
+      source: optionalCourseSource(course.source),
       review_status: text(course.review_status, "course.review_status"),
       published_at: typeof course.published_at === "string" ? course.published_at : null,
     },
