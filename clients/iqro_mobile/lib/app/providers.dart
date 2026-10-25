@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../core/analytics/analytics.dart';
 import '../core/audio/audio_controller.dart';
 import '../core/audio/audio_playback_store.dart';
 import '../core/audio/audio_playback_sync_service.dart';
@@ -1125,11 +1127,45 @@ final courseRatingProvider = FutureProvider.autoDispose
       return ref.watch(courseFeedbackStoreProvider).rating(course);
     });
 
+/// Firebase for this platform when the build carries its IDs; tests put a
+/// fake in.
+final analyticsBackendProvider = Provider<AnalyticsBackend?>((ref) {
+  final options = firebaseOptionsFor(defaultTargetPlatform);
+  return options == null ? null : FirebaseAnalyticsBackend(options);
+});
+final analyticsProvider =
+    StateNotifierProvider<AnalyticsController, AnalyticsConsent?>((ref) {
+      final backend = ref.watch(analyticsBackendProvider);
+      return backend == null
+          ? AnalyticsController.disabled()
+          : AnalyticsController(ref.watch(preferencesStoreProvider), backend);
+    });
+
+/// «audio_play» as the site sends it, the reciter named in the reader's
+/// language.
+Map<String, Object> audioPlayParameters(
+  IqroAudioState state, {
+  required String locale,
+}) {
+  final start = state.rangeStartAyah;
+  final end = state.rangeEndAyah;
+  return <String, Object>{
+    'kind': start == null
+        ? 'surah'
+        : start == end
+        ? 'ayah'
+        : 'range',
+    'surah': state.track?.surah ?? 0,
+    'reciter': state.reciter?.nameFor(locale) ?? '',
+  };
+}
+
 /// The system share sheet; tests put a fake in.
-final courseShareProvider = Provider<Future<void> Function(ShareParams params)>(
-  (ref) =>
-      (params) => SharePlus.instance.share(params),
-);
+final courseShareProvider =
+    Provider<Future<ShareResult> Function(ShareParams params)>(
+      (ref) =>
+          (params) => SharePlus.instance.share(params),
+    );
 
 /// Course covers, kept in the image disk cache after the first view.
 final courseImageProvider = Provider<ImageProvider Function(String url)>(
@@ -1602,6 +1638,15 @@ final audioControllerProvider =
         playbackStore: boundScope == null
             ? null
             : AudioPlaybackStore(database, accountScope: boundScope),
+        onPlaybackStarted: (state) => ref
+            .read(analyticsProvider.notifier)
+            .track(
+              AnalyticsEvent.audioPlay,
+              audioPlayParameters(
+                state,
+                locale: ref.read(appPreferencesProvider).locale,
+              ),
+            ),
       );
       if (boundScope != null) unawaited(controller.restore());
       return controller;

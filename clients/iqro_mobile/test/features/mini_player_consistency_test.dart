@@ -12,7 +12,10 @@ void main() {
       'lib/features/audio/mini_player.dart',
     ).readAsString();
 
-    expect(appShell, contains('child: IqroMiniPlayer()'));
+    expect(
+      appShell,
+      contains('children: <Widget>[AnalyticsConsentCard(), IqroMiniPlayer()]'),
+    );
     expect(appShell, contains('const PositionedDirectional('));
     expect(
       appShell,

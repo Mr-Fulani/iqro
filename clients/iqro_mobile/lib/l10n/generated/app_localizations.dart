@@ -2964,6 +2964,54 @@ abstract class AppLocalizations {
   /// **'Privacy'**
   String get privacy;
 
+  /// No description provided for @analyticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage statistics'**
+  String get analyticsTitle;
+
+  /// No description provided for @analyticsCardText.
+  ///
+  /// In en, this message translates to:
+  /// **'With your consent we count app usage with Google Analytics to learn which sections help. Without consent the app works the same.'**
+  String get analyticsCardText;
+
+  /// No description provided for @analyticsPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get analyticsPolicy;
+
+  /// No description provided for @analyticsAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get analyticsAccept;
+
+  /// No description provided for @analyticsDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get analyticsDecline;
+
+  /// No description provided for @analyticsStateGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'You allowed statistics: Google Analytics is on for this device.'**
+  String get analyticsStateGranted;
+
+  /// No description provided for @analyticsStateDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'You declined statistics: Google Analytics is off on this device.'**
+  String get analyticsStateDenied;
+
+  /// No description provided for @analyticsStateUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'You have not chosen yet. Until you do, Google Analytics stays off.'**
+  String get analyticsStateUnset;
+
   /// No description provided for @reminders.
   ///
   /// In en, this message translates to:

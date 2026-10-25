@@ -115,7 +115,7 @@ mobile-check:
 	cd clients/iqro_mobile && flutter test
 
 mobile-android-production:
-	cd clients/iqro_mobile && flutter build appbundle --release --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+	cd clients/iqro_mobile && flutter build appbundle --release --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum --dart-define-from-file=config/firebase.json
 
 mobile-ios-config-check: mobile-ios-deps
 	cd clients/iqro_mobile && bundle exec ruby -c ios/Podfile
@@ -124,7 +124,7 @@ mobile-ios-config-check: mobile-ios-deps
 	cd clients/iqro_mobile/ios && bundle exec pod install --deployment
 
 mobile-ios-production: mobile-ios-deps
-	cd clients/iqro_mobile && bundle exec flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+	cd clients/iqro_mobile && bundle exec flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://iqro.forum --dart-define=APP_ENV=production --dart-define=APP_DOWNLOAD_URL=https://iqro.forum --dart-define-from-file=config/firebase.json
 
 production-config:
 	$(PRODUCTION_COMPOSE) config --quiet

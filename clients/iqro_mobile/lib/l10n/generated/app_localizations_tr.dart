@@ -1566,6 +1566,34 @@ class AppLocalizationsTr extends AppLocalizations {
   String get privacy => 'Gizlilik';
 
   @override
+  String get analyticsTitle => 'Kullanım istatistikleri';
+
+  @override
+  String get analyticsCardText =>
+      'Onayınızla, hangi bölümlerin yararlı olduğunu anlamak için uygulama kullanımını Google Analytics ile sayarız. Onay vermeseniz de uygulama aynı şekilde çalışır.';
+
+  @override
+  String get analyticsPolicy => 'Gizlilik politikası';
+
+  @override
+  String get analyticsAccept => 'Kabul et';
+
+  @override
+  String get analyticsDecline => 'Reddet';
+
+  @override
+  String get analyticsStateGranted =>
+      'İstatistiğe izin verdiniz: Google Analytics bu cihazda açık.';
+
+  @override
+  String get analyticsStateDenied =>
+      'İstatistiği reddettiniz: Google Analytics bu cihazda kapalı.';
+
+  @override
+  String get analyticsStateUnset =>
+      'Henüz seçim yapmadınız. Seçim yapana kadar Google Analytics kapalı kalır.';
+
+  @override
   String get reminders => 'Hatırlatıcılar';
 
   @override

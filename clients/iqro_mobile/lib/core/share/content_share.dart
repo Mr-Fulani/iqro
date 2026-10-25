@@ -63,8 +63,9 @@ String contentShareText(ContentShare share) {
 }
 
 /// Shares the text with a picture of it, so messengers show a preview card.
-/// Without the picture (rendering failed) the text still goes.
-Future<void> shareContent(
+/// Without the picture (rendering failed) the text still goes. True once the
+/// user picked where to send it.
+Future<bool> shareContent(
   BuildContext context,
   ContentShare share, {
   Rect? origin,
@@ -73,7 +74,7 @@ Future<void> shareContent(
   XFile? picture;
   try {
     final logo = await _decodeAsset('assets/brand/iqro-logo.png');
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     final bytes = await renderShareCard(context, share, logo: logo);
     final directory = await getTemporaryDirectory();
     final file = File('${directory.path}/iqro-share.png');
@@ -82,7 +83,7 @@ Future<void> shareContent(
   } on Object {
     picture = null;
   }
-  await SharePlus.instance.share(
+  final result = await SharePlus.instance.share(
     ShareParams(
       text: text,
       subject: share.title,
@@ -91,6 +92,7 @@ Future<void> shareContent(
       sharePositionOrigin: origin,
     ),
   );
+  return result.status == ShareResultStatus.success;
 }
 
 Future<ui.Image> _decodeAsset(String path) async {

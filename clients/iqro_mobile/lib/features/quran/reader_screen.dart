@@ -21,8 +21,10 @@ import 'quran_models.dart';
 import '../../core/audio/playback_speed.dart';
 import 'ayah_share.dart';
 import '../dua/dua_arabic.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/share/content_share.dart';
 import '../../core/text/arabic_digits.dart';
+import 'surah_open_reporter.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({
@@ -230,6 +232,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         ),
         data: (items) => Column(
           children: <Widget>[
+            SurahOpenReporter(surah: widget.surah),
             if (!presentation.focusMode)
               Padding(
                 padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 14, 8),
@@ -575,11 +578,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     return scope == null ? null : accountScopeKey(scope);
   }
 
-  Future<void> _share(QuranAyah ayah, String surahName, Rect? origin) {
+  Future<void> _share(QuranAyah ayah, String surahName, Rect? origin) async {
     final edition = _translationEditions
         .where((item) => item.sourceId == _translationSourceId)
         .firstOrNull;
-    return shareContent(
+    final analytics = ref.read(analyticsProvider.notifier);
+    final shared = await shareContent(
       context,
       ayahContentShare(
         locale: Localizations.localeOf(context).languageCode,
@@ -597,6 +601,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       ),
       origin: origin,
     );
+    if (shared) {
+      analytics.track(AnalyticsEvent.share, const {
+        'content_type': 'ayah',
+        'method': 'native',
+      });
+    }
   }
 
   Future<void> _play(QuranAyah ayah, String surahName) async {

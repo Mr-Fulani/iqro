@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_step_flow.dart';
@@ -269,6 +270,11 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
       // The lesson still closes; the next visit records it again.
     }
     if (!mounted) return;
+    // The site reports every prayer course as «salah».
+    ref.read(analyticsProvider.notifier).track(AnalyticsEvent.lessonComplete, {
+      'course': 'salah',
+      'lesson': widget.lesson.slug,
+    });
     ref.invalidate(salahProgressProvider(widget.courseSlug));
     ScaffoldMessenger.maybeOf(
       context,

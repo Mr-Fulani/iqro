@@ -70,6 +70,7 @@ jobs:
           --dart-define=API_BASE_URL=https://iqro.forum
           --dart-define=APP_ENV=production
           --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+          --dart-define-from-file=config/firebase.json
 
   ios:
     needs: checks
@@ -120,6 +121,7 @@ jobs:
           --dart-define=API_BASE_URL=https://iqro.forum
           --dart-define=APP_ENV=production
           --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+          --dart-define-from-file=config/firebase.json
       - name: Select an available iPhone simulator
         id: simulator
         run: |
