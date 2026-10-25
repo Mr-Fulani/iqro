@@ -1,6 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/courses/course_models.dart';
 import 'package:iqro_mobile/features/courses/course_notes_view.dart';
@@ -47,7 +50,22 @@ List<(String, TextStyle)> _leaves(InlineSpan root) {
 
 /// What a block is expected to show, segment by segment; headings are bold
 /// as a whole.
-Iterable<({String text, bool arabic, bool bold})> _segments(
+/// The texts of the runs that open a link.
+List<String> _links(InlineSpan root) {
+  final found = <String>[];
+  root.visitChildren((span) {
+    if (span is TextSpan && span.recognizer is TapGestureRecognizer) {
+      found.add(span.text ?? '');
+    }
+    return true;
+  });
+  return found;
+}
+
+String _shownText(({String text, bool arabic, bool bold, Object? link}) s) =>
+    s.arabic ? '$_isolateStart${s.text}$_isolateEnd' : s.text;
+
+Iterable<({String text, bool arabic, bool bold, Object? link})> _segments(
   Map<Object?, Object?> block,
 ) sync* {
   final heading = block['type'] == 'heading';
@@ -58,10 +76,13 @@ Iterable<({String text, bool arabic, bool bold})> _segments(
   };
   for (final line in lines) {
     for (final segment in (line! as List).cast<Map<Object?, Object?>>()) {
+      // A note is an icon, not text: its own test follows.
+      if (segment['note'] != null) continue;
       yield (
         text: segment['text']! as String,
         arabic: segment['lang'] == 'ar',
         bold: heading || segment['bold'] == true,
+        link: segment['link'],
       );
     }
   }
@@ -100,13 +121,25 @@ void main() {
               matching: find.byType(RichText),
             ),
           )
-          // Not the glyph of the «Important» icon.
+          // Not the glyph of the «Important» icon nor of a note's «!» or «?».
           .where((text) => text.text.style?.fontFamily != 'MaterialIcons')
+          .where(
+            (text) => find
+                .ancestor(
+                  of: find.byWidget(text),
+                  matching: find.byType(NoteMarkButton),
+                )
+                .evaluate()
+                .isEmpty,
+          )
           .toList();
       final drawn = <(String, TextStyle)>[
         for (final text in texts) ..._leaves(text.text),
       ];
-      final shown = drawn.where((leaf) => leaf.$1 != '\n').toList();
+      // «↗» after a link to another site is checked on its own.
+      final shown = drawn
+          .where((leaf) => leaf.$1 != '\n' && leaf.$1 != ' ↗')
+          .toList();
 
       final segments = [for (final block in expected) ..._segments(block)];
       final labels = <String>[];
@@ -127,12 +160,7 @@ void main() {
       }
       expect(
         shown.map((leaf) => leaf.$1).where((text) => !labels.contains(text)),
-        [
-          for (final segment in segments)
-            segment.arabic
-                ? '$_isolateStart${segment.text}$_isolateEnd'
-                : segment.text,
-        ],
+        [for (final segment in segments) _shownText(segment)],
       );
       for (final label in labels) {
         expect(find.text(label), findsOneWidget, reason: label);
@@ -171,6 +199,29 @@ void main() {
         paragraphs.map((paragraph) => paragraph.textDirection),
         directions,
       );
+
+      // Every note is its icon, every link a tappable run.
+      final notes = [
+        for (final block in expected)
+          for (final line in switch (block['type']) {
+            'heading' => [block['text']],
+            'list' => block['items']! as List,
+            _ => block['lines']! as List,
+          })
+            for (final segment in (line! as List).cast<Map<Object?, Object?>>())
+              if (segment['note'] case {'kind': final String kind}) kind,
+      ];
+      expect(
+        tester
+            .widgetList<NoteMarkButton>(find.byType(NoteMarkButton))
+            .map((button) => button.mark.kind.name),
+        notes,
+      );
+      final links = segments.where((segment) => segment.link != null);
+      final tappable = [
+        for (final text in texts) ..._links(text.text),
+      ].where((leaf) => leaf != ' ↗');
+      expect(tappable, [for (final link in links) _shownText(link)]);
     });
   }
 
@@ -301,5 +352,189 @@ void main() {
     // It stays at the start edge of the block, the right one.
     final width = tester.getSize(find.byType(CourseNotesView)).width;
     expect(tester.getRect(source).right, closeTo(width - 12, 1));
+  });
+
+  testWidgets('a note opens in a sheet that a tap outside, Esc or «Close» '
+      'closes', (tester) async {
+    final byName = {for (final item in cases) item['name']: item['blocks']};
+    await _pump(tester, parseNoteBlocks(byName['note_warning_after_word']));
+    final mark = find.byType(NoteMarkButton);
+    // A 22 dp circle in a 44 dp target, named for the screen reader.
+    expect(tester.getSize(mark), const Size(44, 44));
+    final semantics = tester.ensureSemantics();
+    expect(find.bySemanticsLabel('Внимание'), findsOneWidget);
+    semantics.dispose();
+
+    await tester.tap(mark);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('course-note-sheet-title')), findsOne);
+    expect(find.text('Внимание'), findsOneWidget);
+    expect(
+      find.textContaining('Произносить его вслух не обязательно.'),
+      findsOneWidget,
+    );
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('course-note-sheet-title')), findsNothing);
+
+    await tester.tap(mark);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('course-note-sheet-title')), findsNothing);
+
+    await tester.tap(mark);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('course-note-sheet-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('course-note-sheet-title')), findsNothing);
+  });
+
+  testWidgets('a help note in Arabic sits left of its word', (tester) async {
+    await _pump(
+      tester,
+      parseNoteBlocks([
+        {
+          'type': 'paragraph',
+          'dir': 'rtl',
+          'lines': [
+            [
+              {'text': 'النية', 'lang': 'ar'},
+              {
+                'text': '',
+                'note': {
+                  'kind': 'help',
+                  'text': [
+                    {'text': 'توضيح', 'lang': 'ar'},
+                  ],
+                },
+              },
+            ],
+          ],
+        },
+      ]),
+      locale: 'ar',
+    );
+    final mark = tester.getRect(find.byType(NoteMarkButton));
+    final word = tester.getRect(find.byType(RichText).first);
+    expect(mark.center.dx, lessThan(word.right - 30));
+    final semantics = tester.ensureSemantics();
+    expect(find.bySemanticsLabel('توضيح'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('an internal link opens its screen in the app', (tester) async {
+    final byName = {for (final item in cases) item['name']: item['blocks']};
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: CourseNotesView(
+              blocks: parseNoteBlocks(byName['link_internal_ayah']),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/reader/:surah',
+          builder: (context, state) => Text(
+            'reader ${state.pathParameters['surah']} '
+            '${state.uri.queryParameters['ayah']}',
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp.router(
+        locale: const Locale('ru'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        theme: IqroTheme.light(),
+        routerConfig: router,
+      ),
+    );
+    await tester.tapOnText(find.textRange.ofSubstring('аят аль-Курси'));
+    await tester.pumpAndSettle();
+    expect(find.text('reader 2 255'), findsOneWidget);
+  });
+
+  testWidgets('a link to another site says it opens in the browser', (
+    tester,
+  ) async {
+    final byName = {for (final item in cases) item['name']: item['blocks']};
+    await _pump(tester, parseNoteBlocks(byName['link_external_allowed']));
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.byType(RichText).first,
+    );
+    final arrow = <TextSpan>[];
+    paragraph.text.visitChildren((span) {
+      if (span is TextSpan && span.text == ' ↗') arrow.add(span);
+      return true;
+    });
+    expect(arrow.single.semanticsLabel, ' (откроется в браузере)');
+    expect(arrow.single.recognizer, isA<TapGestureRecognizer>());
+  });
+
+  test('links map to the app\'s routes; others stay text', () {
+    String? route(String href) =>
+        NoteLink.tryParse({'href': href, 'kind': 'internal'})?.route;
+    expect(route('/quran/2'), '/reader/2');
+    expect(route('/quran/2:255'), '/reader/2?ayah=255');
+    expect(route('/courses/ramadan/namerenie'), '/courses/ramadan/namerenie');
+    expect(route('/dua/hisn/12'), '/dua/hisn/12');
+    expect(route('/tajweed/izhar'), '/tajweed/lesson/izhar');
+    expect(route('/tajweed/practice'), '/tajweed/practice');
+    expect(route('/tajweed'), '/tajweed');
+    expect(route('/admin'), isNull);
+    expect(
+      NoteLink.tryParse({'href': 'http://sunnah.com', 'kind': 'external'}),
+      isNull,
+    );
+    expect(
+      NoteLink.tryParse({'href': 'javascript:alert(1)', 'kind': 'external'}),
+      isNull,
+    );
+    expect(
+      NoteLink.tryParse({
+        'href': 'https://sunnah.com/x',
+        'kind': 'external',
+      })?.external,
+      isTrue,
+    );
+    final broken = NoteSegment.fromJson({
+      'text': '',
+      'note': {'kind': 'other', 'text': []},
+    });
+    expect(broken.note, isNull);
+  });
+
+  testWidgets('a tajweed lesson in Arabic keeps the text font', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ar'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        theme: IqroTheme.light(),
+        home: Scaffold(
+          body: CourseNotesView(
+            plainArabic: true,
+            blocks: parseNoteBlocks([
+              {
+                'type': 'paragraph',
+                'dir': 'rtl',
+                'lines': [
+                  [
+                    {'text': 'الإظهار', 'lang': 'ar'},
+                  ],
+                ],
+              },
+            ]),
+          ),
+        ),
+      ),
+    );
+    final leaves = _leaves(tester.widget<RichText>(find.byType(RichText)).text);
+    expect(leaves.single.$1, 'الإظهار');
+    expect(leaves.single.$2.fontFamily, isNot(IqroTheme.arabicFontFamily));
   });
 }

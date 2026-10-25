@@ -363,6 +363,70 @@ test("Arabic lesson reads right to left with Arabic runs in the Arabic font", as
   await expect(bar.getByRole("link", { name: "التالي: التراويح" })).toHaveAttribute("href", "/ar/courses/ramadan/taraviikh");
 });
 
+test("«!» and «?» after a word open their note; Escape and a tap outside close it; links lead into the site", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/ru/courses/ramadan/namerenie");
+  const notes = page.locator(".course-notes");
+  const help = notes.getByRole("button", { name: "Пояснение" });
+  const warning = notes.getByRole("button", { name: "Внимание" });
+  await expect(help).toHaveText("?");
+  await expect(warning).toHaveText("!");
+  // The icon stands right after its word, in the line of text.
+  expect(await help.evaluate((element) => [
+    element.previousSibling?.textContent?.endsWith("ради Аллаха"),
+    element.nextElementSibling?.getAttribute("popover"),
+    element.nextElementSibling?.nextSibling?.textContent,
+  ])).toEqual([true, "auto", "."]);
+  const icon = (await help.boundingBox())!;
+  const line = (await notes.locator("p").first().boundingBox())!;
+  expect(icon.y).toBeLessThan(line.y + 40);
+  // A 20 px circle with a 44 px tap target.
+  const target = await help.evaluate((element) => {
+    const after = getComputedStyle(element, "::after");
+    return element.getBoundingClientRect().width - 2 * parseFloat(after.left);
+  });
+  expect(target).toBeGreaterThanOrEqual(44);
+
+  const popover = page.getByRole("dialog", { name: "Пояснение" });
+  await expect(popover).toBeHidden();
+  await help.click();
+  await expect(popover).toBeVisible();
+  await expect(popover).toContainText("Пояснение о намерении — после проверки.");
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+
+  await warning.click();
+  const warningNote = page.getByRole("dialog", { name: "Внимание" });
+  await expect(warningNote).toContainText("Предупреждение — после проверки.");
+  await page.mouse.click(10, 10);
+  await expect(warningNote).toBeHidden();
+  await warning.click();
+  await warningNote.getByRole("button", { name: "Закрыть" }).click();
+  await expect(warningNote).toBeHidden();
+
+  const ayah = notes.getByRole("link", { name: "Коран, 2:183" });
+  await expect(ayah).toHaveAttribute("href", "/ru/quran?surah=2&ayah=183");
+  await expect(ayah).not.toHaveAttribute("target", /.+/);
+});
+
+test("Arabic notes mirror the «?» icon and its note", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ar/courses/ramadan/namerenie");
+  const notes = page.locator(".course-notes");
+  const help = notes.getByRole("button", { name: "توضيح" });
+  const word = notes.locator("strong", { hasText: "عزم القلب" });
+  // In a right-to-left line the icon after a word stands to its left.
+  expect((await help.boundingBox())!.x).toBeLessThan((await word.boundingBox())!.x);
+  await help.click();
+  const popover = page.getByRole("dialog", { name: "توضيح" });
+  await expect(popover).toBeVisible();
+  expect(await popover.evaluate((element) => getComputedStyle(element).direction)).toBe("rtl");
+  await expect(popover.getByRole("button", { name: "إغلاق" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+  await expect(notes.getByRole("link", { name: "آية الصيام" })).toHaveAttribute("href", "/ar/quran?surah=2&ayah=183");
+});
+
 test("Arabic slides mirror the order, the arrows and the keys", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/ar/courses/ramadan/namerenie");

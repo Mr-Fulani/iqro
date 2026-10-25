@@ -128,6 +128,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "feedback.FeedbackAudit": ("изменение обращения", "история изменений обращений"),
     "feedback.FeedbackContext": ("контекст обращения", "контекст обращений"),
     "website.SocialProfile": ("социальная сеть", "социальные сети"),
+    "website.AllowedLinkSite": ("разрешённый сайт для ссылок", "Разрешённые сайты для ссылок"),
     "announcements.Announcement": ("объявление", "объявления"),
     "announcements.AnnouncementSettings": ("показ объявлений", "показ объявлений"),
     "share_referrals.ShareCampaign": (
@@ -185,6 +186,8 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
 
 
 FIELD_LABELS: dict[str, str] = {
+    "domain": "Сайт",
+    "note": "Заметка",
     "course": "Курс",
     "methodology": "Методология",
     "source_title": "Источник по языкам",
@@ -702,6 +705,8 @@ MODEL_FIELD_LABELS = {
     ("announcements.Announcement", "wave"): "Волна показа",
     ("announcements.AnnouncementSettings", "is_enabled"): "Показывать объявления",
     ("audio.AudioCatalogSettings", "teaching_recitation"): "Учебный чтец",
+    ("website.AllowedLinkSite", "domain"): "Сайт",
+    ("website.AllowedLinkSite", "note"): "Что это за сайт",
     ("courses.Course", "slug"): "Адрес в ссылке",
     ("courses.Course", "position"): "Порядок в каталоге",
     ("courses.CourseLesson", "slug"): "Адрес в ссылке",

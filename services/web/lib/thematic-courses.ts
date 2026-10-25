@@ -57,7 +57,11 @@ export type CourseListItem = {
   video_minutes: number;
 };
 
-export type Segment = { text: string; bold?: true; lang?: "ar" };
+/** Where a link of the notes leads: a section of the site or an allowed site (README, «Ссылки»). */
+export type SegmentLink = { href: string; kind: "internal" | "external" };
+/** «!» (warning) or «?» (help) after a word; its text has only bold and Arabic runs. */
+export type SegmentNote = { kind: "warning" | "help"; text: Segment[] };
+export type Segment = { text: string; bold?: true; lang?: "ar"; link?: SegmentLink; note?: SegmentNote };
 export type TextDirection = "ltr" | "rtl";
 
 export type NoteBlock =
@@ -300,14 +304,53 @@ export function lessonImageSrcSet(image: CourseImage): string {
   return `${image.small_url} ${small}w, ${image.url} ${image.width}w`;
 }
 
-function segments(value: unknown, where: string): Segment[] {
+// The sections a note may link to, as the server checks them.
+const INTERNAL_LINK =
+  /^\/(?:quran\/\d{1,3}(?::\d{1,3})?|courses(?:\/[a-z0-9-]+){0,2}|dua(?:\/[A-Za-z0-9_-]+){0,3}|tajweed(?:\/[a-z0-9-]+)?)$/;
+
+function isExternalLink(href: string): boolean {
+  try {
+    const url = new URL(href);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+/** A link this site can follow; any other stays plain text, as in a client that predates links. */
+function segmentLink(value: unknown): SegmentLink | null {
+  if (!isRecord(value) || typeof value.href !== "string") return null;
+  if (value.kind === "internal" && INTERNAL_LINK.test(value.href)) return { href: value.href, kind: "internal" };
+  if (value.kind === "external" && isExternalLink(value.href)) return { href: value.href, kind: "external" };
+  return null;
+}
+
+function segmentNote(value: unknown, where: string): SegmentNote | null {
+  if (!isRecord(value) || (value.kind !== "warning" && value.kind !== "help")) return null;
+  const content = segments(value.text, `${where}.text`, false);
+  return content.length ? { kind: value.kind, text: content } : null;
+}
+
+function segments(value: unknown, where: string, inline = true): Segment[] {
   return list(value, where).map((item, index) => {
     if (!isRecord(item)) throw new CourseDocumentError(`${where}[${index}] is not a segment`);
     const segment: Segment = { text: text(item.text, `${where}[${index}].text`) };
     if (item.bold === true) segment.bold = true;
     if (item.lang === "ar") segment.lang = "ar";
+    if (!inline) return segment;
+    const link = segmentLink(item.link);
+    if (link) segment.link = link;
+    const note = segmentNote(item.note, `${where}[${index}].note`);
+    if (note) segment.note = note;
     return segment;
   });
+}
+
+/** The site path of an internal link, without the language: an ayah opens in the reader. */
+export function noteLinkPath(href: string): string {
+  const ayah = /^\/quran\/(\d+)(?::(\d+))?$/.exec(href);
+  if (ayah) return `/quran?surah=${ayah[1]}${ayah[2] ? `&ayah=${ayah[2]}` : ""}`;
+  return href;
 }
 
 function lines(value: unknown, where: string): Segment[][] {

@@ -9,7 +9,7 @@ from django.http import HttpRequest
 from django.utils.html import format_html
 
 from quran_backend.modules.core.content_revalidation import enqueue_social_profiles_change
-from quran_backend.modules.website.models import SocialProfile
+from quran_backend.modules.website.models import AllowedLinkSite, SocialProfile
 
 
 @admin.register(SocialProfile)
@@ -74,3 +74,13 @@ class SocialProfileAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def delete_queryset(self, request: HttpRequest, queryset: Any) -> None:
         super().delete_queryset(request, queryset)
         enqueue_social_profiles_change(action="deleted")
+
+
+@admin.register(AllowedLinkSite)
+class AllowedLinkSiteAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """External links of course notes may lead only to these sites."""
+
+    list_display = ("domain", "note", "updated_at")
+    search_fields = ("domain", "note")
+    ordering = ("domain",)
+    fields = ("domain", "note")

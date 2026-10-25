@@ -40,6 +40,7 @@ from quran_backend.modules.tajweed.quran_foundation_sync import (
     VerseWords,
     sync_quran_foundation_tajweed,
 )
+from quran_backend.modules.website.models import AllowedLinkSite
 from tests.test_tajweed import FakeTajweedClient
 
 # Real Quran.Foundation `text_uthmani_tajweed` rows.
@@ -271,6 +272,73 @@ def test_import_compiles_a_document_per_language_and_reimport_is_a_no_op() -> No
     changed["course"]["summary"]["ru"] = "Другое"
     with pytest.raises(TajweedCourseError, match=r"Поднимите course\.version"):
         import_tajweed_course(changed)
+
+
+def _izhar(snapshot: dict[str, Any]) -> dict[str, Any]:
+    return next(lesson for lesson in snapshot["lessons"] if lesson["slug"] == "izhar")
+
+
+@pytest.mark.django_db
+def test_explanations_get_blocks_with_notes_and_links_and_stay_plain_for_old_clients() -> None:
+    snapshot = _snapshot()
+    explanation = _izhar(snapshot)["explanation"]
+    explanation["ru"] = (
+        "Нун читается ясно[!Без гунны.].\n\nСм. [аль-Фатиха](/quran/1) и [урок](/tajweed/izhar)."
+    )
+    version = import_tajweed_course(snapshot)
+    lesson = _izhar(version.documents.get(language="ru").payload)
+    assert lesson["explanation"] == "Нун читается ясно.\n\nСм. аль-Фатиха и урок."
+    assert lesson["explanation_blocks"][0]["lines"] == [
+        [
+            {"text": "Нун читается ясно"},
+            {"text": "", "note": {"kind": "warning", "text": [{"text": "Без гунны."}]}},
+            {"text": "."},
+        ]
+    ]
+    assert lesson["explanation_blocks"][1]["lines"][0][1] == {
+        "text": "аль-Фатиха",
+        "link": {"href": "/quran/1", "kind": "internal"},
+    }
+    arabic = _izhar(version.documents.get(language="ar").payload)
+    assert arabic["how_blocks"][0]["dir"] == "rtl"
+    assert arabic["how"] == _izhar(snapshot)["how"]["ar"]
+
+
+@pytest.mark.django_db
+def test_signing_refuses_broken_markup_and_links_to_unknown_sites(owner: User) -> None:
+    snapshot = _snapshot()
+    _izhar(snapshot)["how"]["en"] = "Read it clearly.\nSee [this](https://sunnah.com/x) and [!]"
+    version = import_tajweed_course(snapshot)
+    with pytest.raises(TajweedCourseError) as error:
+        sign_tajweed_course(version, owner)
+    assert error.value.problems == [
+        "Урок «izhar»: как читать [en], строка 2: пустая пометка «[!]»: напишите текст подсказки",
+        "Урок «izhar»: как читать [en], строка 2: сайта sunnah.com нет в «Разрешённых сайтах "
+        "для ссылок» (раздел «Сайт и настройки»)",
+    ]
+    version.refresh_from_db()
+    assert not version.is_signed
+
+
+@pytest.mark.django_db
+def test_the_editor_previews_the_markup_and_lists_the_links(client: Any, owner: User) -> None:
+    AllowedLinkSite.objects.create(domain="sunnah.com")
+    snapshot = _snapshot()
+    _izhar(snapshot)["explanation"]["ru"] = (
+        "Ясно[?Без гунны.] — [хадис](https://sunnah.com/x) [x](/foo)"
+    )
+    version = import_tajweed_course(snapshot)
+    client.force_login(owner)
+    editor = reverse("admin:tajweed_tajweedcourseversion_editor", args=[version.pk])
+    page = client.get(editor, {"node": "lesson:izhar"}).content.decode()
+    assert "слово[!текст]" in page
+    assert "Как увидят ученики" in page
+    assert 'class="cv-mark is-help"' in page
+    assert "строка 1: «/foo» — не адрес ссылки" in page
+    course = client.get(editor, {"node": "course"}).content.decode()
+    assert "Ссылки в версии" in course
+    assert "Урок «izhar»: объяснение правила (ru), строка 1" in course
+    assert "<code>https://sunnah.com/x</code>" in course
 
 
 @pytest.mark.django_db

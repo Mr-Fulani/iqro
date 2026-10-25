@@ -2669,6 +2669,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coursesImportant => 'Important';
 
   @override
+  String get coursesMarkWarning => 'Attention';
+
+  @override
+  String get coursesMarkHelp => 'Explanation';
+
+  @override
+  String get coursesMarkClose => 'Close';
+
+  @override
+  String get coursesLinkOpensBrowser => 'opens in the browser';
+
+  @override
   String get coursesMarkDone => 'Mark as studied';
 
   @override

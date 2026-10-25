@@ -337,6 +337,7 @@ class LessonReportButton extends StatelessWidget {
     required this.document,
     required this.lesson,
     required this.playback,
+    this.slide,
     super.key,
   });
 
@@ -345,6 +346,9 @@ class LessonReportButton extends StatelessWidget {
 
   /// Where the video is, when the student started it.
   final Duration? Function() playback;
+
+  /// The slide on screen, counted through the lesson; null without slides.
+  final int? Function()? slide;
 
   @override
   Widget build(BuildContext context) {
@@ -360,6 +364,7 @@ class LessonReportButton extends StatelessWidget {
             document: document,
             lesson: lesson,
             playback: playback(),
+            slide: slide?.call(),
           ),
         ),
         icon: const Icon(Icons.flag_outlined),
@@ -376,12 +381,14 @@ class LessonReportSheet extends ConsumerStatefulWidget {
     required this.document,
     required this.lesson,
     this.playback,
+    this.slide,
     super.key,
   });
 
   final CourseDocument document;
   final CourseLesson lesson;
   final Duration? playback;
+  final int? slide;
 
   @override
   ConsumerState<LessonReportSheet> createState() => _LessonReportSheetState();
@@ -425,6 +432,7 @@ class _LessonReportSheetState extends ConsumerState<LessonReportSheet> {
               document,
               widget.lesson,
               playback: widget.playback,
+              slide: widget.slide,
             ),
           );
       if (!mounted) return;

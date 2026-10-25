@@ -1,0 +1,194 @@
+/* The notes of a thematic lesson and of a tajweed lesson (lib/course-notes.ts): blocks,
+   «!» and «?» notes and links. Imported by both lesson pages. */
+
+.course-notes {
+  display: grid;
+  gap: 14px;
+  line-height: 1.7;
+}
+
+.course-notes > * {
+  margin: 0;
+}
+
+.course-notes-heading {
+  font-size: 17px;
+}
+
+.course-notes-list {
+  padding-inline-start: 22px;
+}
+
+/* On a phone the Quran font waits until the page has loaded (LateArabicFont), as in the
+   tajweed course; a wider screen uses it from the first paint. */
+.course-notes-ar {
+  font-family: "Scheherazade New", "Traditional Arabic", serif;
+  font-size: 1.25em;
+  line-height: 1.9;
+}
+
+.has-arabic-font .course-notes-ar {
+  font-family: var(--font-arabic);
+}
+
+@media (min-width: 900px) {
+  .course-notes-ar {
+    font-family: var(--font-arabic);
+  }
+}
+
+.course-notes-quote {
+  padding: 14px 16px;
+  border-inline-start: 4px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.course-notes-quote blockquote {
+  margin: 0;
+}
+
+.course-notes-quote figcaption {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.course-notes-note {
+  padding: 12px 14px;
+  border: 1px solid var(--warning-border);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--warning-subtle);
+}
+
+.course-notes-note-label {
+  color: var(--text-primary);
+}
+
+/* «!» and «?» after a word, as in the prayer course: a small circle in a 44 px tap target.
+   The note opens in an HTML popover, which the browser closes on Escape and on a tap outside. */
+.course-mark {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-inline: 3px 1px;
+  padding: 0;
+  border: 1.5px solid var(--primary-border);
+  border-radius: 50%;
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: 0.12em;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.course-mark::after {
+  position: absolute;
+  inset: -12px;
+  content: "";
+}
+
+/* Darker than --warning: the glyph is text and needs 4.5:1 on the subtle fill. */
+.course-mark.is-warning {
+  border-color: var(--warning);
+  background: var(--warning-subtle);
+  color: #92400e;
+}
+
+.course-mark:hover {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--text-inverse);
+}
+
+.course-mark.is-warning:hover {
+  border-color: #b45309;
+  background: #b45309;
+  color: var(--text-inverse);
+}
+
+.course-mark:focus-visible,
+.course-mark-close:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.course-mark-popover {
+  width: min(28rem, calc(100vw - 32px));
+  max-height: min(70vh, 32rem);
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--primary-border);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: start;
+}
+
+.course-mark-popover:popover-open {
+  display: grid;
+  gap: 6px;
+}
+
+.course-mark-popover::backdrop {
+  background: rgb(0 0 0 / 0.18);
+}
+
+.course-mark-popover.is-warning {
+  border-color: var(--warning);
+}
+
+.course-mark-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.course-mark-popover.is-warning .course-mark-head strong {
+  color: #92400e;
+}
+
+.course-mark-close {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.course-mark-close:hover {
+  background: var(--panel-hover);
+  color: var(--text-primary);
+}
+
+.course-notes-link {
+  color: var(--primary-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.course-notes-external {
+  margin-inline-start: 2px;
+  font-size: 0.85em;
+}
