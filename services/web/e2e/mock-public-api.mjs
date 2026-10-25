@@ -177,9 +177,11 @@ function tajweedPracticeState() {
   };
 }
 
+// The izhar lesson's video and two slides come from this mock's /media, as a thematic course's.
 function tajweedCourse(language) {
   const document = structuredClone(tajweedCourseExample);
   document.course.language = language;
+  for (const lesson of document.lessons) lesson.media = lesson.media?.map(mockMediaBlock);
   return document;
 }
 
@@ -241,6 +243,7 @@ const courseMediaPictures = {
   "4444444444dddddddddd": "slide-lantern",
   "5555555555eeeeeeeeee": "slide-timeline",
   "6666666666ffffffffff": "slide-pattern",
+  "7777777777aaaaaaaaaa": "banner-minaret",
   "2222222222bbbbbbbbbb": "banner-minaret",
 };
 const courseImage = (image) => ({ ...image, url: toMockMedia(image.url), small_url: toMockMedia(image.small_url) });
@@ -256,13 +259,18 @@ const courseSlide = (hash, width, height, caption, dir = "ltr") => ({
   dir,
 });
 
+function mockMediaBlock(block) {
+  if (block.type === "video") return { ...block, video: courseVideo(block.video) };
+  if (block.type === "banner") return { ...block, image: courseImage(block.image) };
+  if (block.type === "slides") return { ...block, slides: block.slides.map((slide) => ({ ...slide, image: courseImage(slide.image) })) };
+  return block;
+}
+
 // The example's two slides and three more: a tall one (3:4, above the frame's 4:5 limit) among them.
 function courseMedia(media, language) {
-  return media.map((block) => {
-    if (block.type === "video") return { ...block, video: courseVideo(block.video) };
-    if (block.type === "banner") return { ...block, image: courseImage(block.image) };
+  return media.map(mockMediaBlock).map((block) => {
     if (block.type !== "slides") return block;
-    const slides = block.slides.map((slide) => ({ ...slide, image: courseImage(slide.image) }));
+    const { slides } = block;
     slides.push(
       courseSlide("4444444444dddddddddd", 1200, 1600, "Фонарь Рамадана"),
       courseSlide("5555555555eeeeeeeeee", 1600, 1200, ""),

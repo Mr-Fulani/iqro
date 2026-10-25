@@ -18,6 +18,7 @@ import { localizedPath } from "@/lib/routing";
 import { absoluteSiteUrl, createContentMetadata } from "@/lib/seo";
 import { isCourseSlug, isLessonSlug, mediaVideo } from "@/lib/thematic-courses";
 import { translate } from "@/lib/translate";
+import "@/components/courses/lesson-media.css";
 import "../../courses.css";
 
 export const revalidate = 3_600;

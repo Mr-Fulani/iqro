@@ -2,10 +2,39 @@
 // docs/tajweed/course-document.example.json (three lessons of two sections;
 // «iqlab» is listed but absent, so the section drops it) and
 // services/web/e2e/fixtures/tajweed-course-examples.json (API order).
+// The trimmed lessons have no `media`, as documents built before it.
 import 'dart:convert';
+import 'dart:io';
 
 Map<String, Object?> tajweedCourseDocumentJson() =>
     jsonDecode(_document) as Map<String, Object?>;
+
+/// docs/tajweed/course-document.example.json itself, the file the site and
+/// the backend test with.
+Map<String, Object?> tajweedCourseExampleDocumentJson() =>
+    jsonDecode(
+          File(
+            '../../docs/tajweed/course-document.example.json',
+          ).readAsStringSync(),
+        )
+        as Map<String, Object?>;
+
+/// [tajweedCourseDocumentJson] with the media of the example's lessons:
+/// a video and two slides in «izhar», `[]` in the others.
+Map<String, Object?> tajweedCourseDocumentWithMediaJson() {
+  final media = {
+    for (final lesson
+        in (tajweedCourseExampleDocumentJson()['lessons']! as List)
+            .cast<Map<String, Object?>>())
+      lesson['slug']: lesson['media'],
+  };
+  final json = tajweedCourseDocumentJson();
+  for (final lesson
+      in (json['lessons']! as List).cast<Map<String, Object?>>()) {
+    lesson['media'] = media[lesson['slug']];
+  }
+  return json;
+}
 
 /// The examples of [lesson] in API order: a page is `offset..offset+limit`.
 List<Object?> tajweedCourseExamplesJson(String lesson) =>

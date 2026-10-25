@@ -11,6 +11,7 @@ import {
   type LessonOutline,
 } from "./course-progress.ts";
 import { highlightRuns, joinedRuns, wordTiming, type TajweedRun } from "./tajweed.ts";
+import { CourseDocumentError, parseLessonMedia, type CourseMediaBlock } from "./thematic-courses.ts";
 
 export const TAJWEED_COURSE_SLUG = "tajweed";
 export const TAJWEED_COURSE_SCHEMA_VERSION = 1;
@@ -40,6 +41,8 @@ export type TajweedCourseLesson = {
   explanation: string;
   how: string;
   letters: string;
+  /** Video, slides and banners above the explanation, in the author's order; `[]` without them. */
+  media: CourseMediaBlock[];
 };
 
 export type TajweedCourseSection = { slug: string; title: string; lessons: string[] };
@@ -94,6 +97,16 @@ function text(value: unknown, where: string): string {
   return value;
 }
 
+/** The blocks are those of thematic courses; a broken one breaks this document like any field. */
+function media(value: unknown, where: string): CourseMediaBlock[] {
+  try {
+    return parseLessonMedia(value, where);
+  } catch (error) {
+    if (error instanceof CourseDocumentError) throw new TajweedCourseDocumentError(error.detail);
+    throw error;
+  }
+}
+
 export function isTajweedLessonSlug(value: string): boolean {
   return value.length <= 64 && SLUG_PATTERN.test(value);
 }
@@ -137,6 +150,7 @@ export function parseTajweedCourseDocument(value: unknown): TajweedCourseDocumen
       explanation: text(lesson.explanation, `lessons[${index}].explanation`),
       how: text(lesson.how, `lessons[${index}].how`),
       letters: typeof lesson.letters === "string" ? lesson.letters : "",
+      media: media(lesson.media, `lessons[${index}].media`),
     };
   });
   const known = new Set(lessons.map((lesson) => lesson.slug));

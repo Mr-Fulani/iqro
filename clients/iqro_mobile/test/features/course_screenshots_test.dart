@@ -1,5 +1,5 @@
 // Screenshots of the courses for the pull request, on the shared examples
-// of docs/courses:
+// of docs/courses (and docs/tajweed for the media of a tajweed lesson):
 //
 //   flutter test test/features/course_screenshots_test.dart \
 //     --dart-define=SCREENSHOT_DIR=/tmp/shots
@@ -23,16 +23,22 @@ import 'package:iqro_mobile/core/auth/auth_session.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/courses/course_catalog_screen.dart';
 import 'package:iqro_mobile/features/courses/course_home_screen.dart';
 import 'package:iqro_mobile/features/courses/course_lesson_screen.dart';
 import 'package:iqro_mobile/features/courses/course_progress_store.dart';
 import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
+import 'package:iqro_mobile/features/tajweed_course/tajweed_course_models.dart';
+import 'package:iqro_mobile/features/tajweed_course/tajweed_course_progress.dart';
+import 'package:iqro_mobile/features/tajweed_course/tajweed_course_repository.dart';
+import 'package:iqro_mobile/features/tajweed_course/tajweed_lesson_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 import 'course_test_data.dart';
 import 'lesson_media_test_data.dart';
 import 'lesson_video_test_data.dart';
+import 'tajweed_course_test_data.dart';
 
 const _directory = String.fromEnvironment('SCREENSHOT_DIR');
 const _size = Size(1080, 2340); // Redmi Note 7
@@ -93,6 +99,7 @@ Future<void> _pump(
   FakeVideoFactory? videos,
   String locale = 'ru',
   bool dark = false,
+  Map<String, Object?>? tajweed,
 }) async {
   tester.view.physicalSize = _size;
   tester.view.devicePixelRatio = _pixelRatio;
@@ -135,6 +142,11 @@ Future<void> _pump(
           courseSlug: state.pathParameters['course']!,
           lessonSlug: state.pathParameters['lesson']!,
         ),
+      ),
+      GoRoute(
+        path: '/tajweed/lesson/:lesson',
+        builder: (context, state) =>
+            TajweedLessonScreen(lessonSlug: state.pathParameters['lesson']!),
       ),
     ],
   );
@@ -181,6 +193,21 @@ Future<void> _pump(
           audioControllerProvider.overrideWith(
             (ref) => RecordingAudioController(),
           ),
+          // A tajweed lesson on its first step; the examples never arrive.
+          tajweedCourseProvider.overrideWith(
+            (ref, slug) async => TajweedCourseDocument.fromJson(
+              tajweed ?? tajweedCourseDocumentWithMediaJson(),
+            ),
+          ),
+          tajweedCourseRepositoryProvider.overrideWithValue(
+            _PendingTajweedExamples(),
+          ),
+          tajweedCourseProgressStoreProvider.overrideWithValue(
+            TajweedCourseProgressStore(database),
+          ),
+          tajweedProgressSyncProvider.overrideWithValue(_NoTajweedSync()),
+          tajweedCourseRecitationProvider.overrideWithValue(() async => null),
+          audioRepositoryProvider.overrideWithValue(_NoAudioRepository()),
           courseFeedbackGatewayProvider.overrideWithValue(
             FakeCourseFeedbackGateway(),
           ),
@@ -381,7 +408,89 @@ Future<Map<String, Uint8List>> _pictures() async {
       ..drawRect(const Rect.fromLTWH(320, 300, 280, 90), dark)
       ..drawCircle(const Offset(460, 300), 70, dark);
   });
-  return {'1111111111': scheme, '3333333333': niyya, '2222222222': banner};
+  // The slides of the tajweed example's «izhar».
+  final letters = await draw(const Size(800, 450), (canvas) {
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 800, 450),
+      Paint()..color = const Color(0xFFF7F1E3),
+    );
+    text(canvas, 'Гортанные буквы изхара', const Offset(400, 62), 700);
+    // From the depth of the throat to its start, right to left.
+    const groups = <(String, String)>[
+      ('ء ه', 'глубина'),
+      ('ع ح', 'середина'),
+      ('غ خ', 'начало'),
+    ];
+    for (final (index, (pair, note)) in groups.indexed) {
+      final left = 540.0 - index * 240;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, 130, 200, 210),
+          const Radius.circular(24),
+        ),
+        Paint()..color = const Color(0xFF7B5EA7),
+      );
+      text(
+        canvas,
+        pair,
+        Offset(left + 100, 200),
+        190,
+        size: 60,
+        color: Colors.white,
+        family: IqroTheme.arabicFontFamily,
+        weight: FontWeight.w400,
+        direction: TextDirection.rtl,
+      );
+      text(
+        canvas,
+        note,
+        Offset(left + 100, 310),
+        190,
+        size: 22,
+        weight: FontWeight.w400,
+        color: Colors.white,
+      );
+    }
+    text(
+      canvas,
+      'нун звучит ясно, без гунны',
+      const Offset(400, 395),
+      600,
+      size: 24,
+      weight: FontWeight.w400,
+    );
+  });
+  final word = await draw(const Size(800, 450), (canvas) {
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 800, 450),
+      Paint()..color = const Color(0xFF073E34),
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(24, 24, 752, 402),
+      Paint()
+        ..color = gold
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    text(
+      canvas,
+      'مِنْ خَوْفٍ',
+      const Offset(400, 225),
+      700,
+      size: 104,
+      color: Colors.white,
+      family: IqroTheme.arabicFontFamily,
+      weight: FontWeight.w400,
+      direction: TextDirection.rtl,
+    );
+  });
+  return {
+    '1111111111': scheme,
+    '3333333333': niyya,
+    '2222222222': banner,
+    '6666666666': letters,
+    '7777777777': word,
+  };
 }
 
 Future<void> _settle(WidgetTester tester) async {
@@ -544,6 +653,24 @@ void main() {
     await _capture(tester, 'app-media-banner-ru');
   }, skip: _directory.isEmpty);
 
+  testWidgets('tajweed lesson media: a video, then slides', (tester) async {
+    await _pump(tester, location: '/tajweed/lesson/izhar');
+    await _capture(tester, 'app-tajweed-media-ru');
+  }, skip: _directory.isEmpty);
+
+  testWidgets('tajweed lesson media in the Arabic interface', (tester) async {
+    final document = tajweedCourseDocumentWithMediaJson();
+    (document['course']! as Map)['language'] = 'ar';
+    await _pump(
+      tester,
+      location: '/tajweed/lesson/izhar',
+      locale: 'ar',
+      tajweed: document,
+    );
+    await tester.tap(find.byKey(const ValueKey('lesson-media-slide-next')));
+    await _capture(tester, 'app-tajweed-media-ar');
+  }, skip: _directory.isEmpty);
+
   testWidgets('lesson in the dark theme', (tester) async {
     await _pump(tester, location: '/courses/ramadan/taraviikh', dark: true);
     await _capture(tester, 'app-course-lesson-dark-ru');
@@ -615,6 +742,32 @@ void main() {
 class _Guest extends StateNotifier<AsyncValue<AuthSession?>>
     implements SessionController {
   _Guest() : super(const AsyncData(null));
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _PendingTajweedExamples implements TajweedCourseRepository {
+  @override
+  Future<TajweedExamplesPage> examples(
+    String slug,
+    String lesson, {
+    required int offset,
+    required int limit,
+  }) => Completer<TajweedExamplesPage>().future;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _NoTajweedSync implements TajweedProgressSync {
+  @override
+  Future<TajweedCourseProgress?> sync(String course) async => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _NoAudioRepository implements AudioRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

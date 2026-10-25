@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { api } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
@@ -142,6 +142,7 @@ export function TajweedLessonPlayer({
   target,
   reviewPending,
   nextLesson,
+  media,
 }: {
   courseSlug: string;
   courseVersion: string;
@@ -149,6 +150,8 @@ export function TajweedLessonPlayer({
   target: TajweedCourseTarget;
   reviewPending: boolean;
   nextLesson: { slug: string; title: string } | null;
+  /** The lesson's video, slides and banners (LessonMedia), drawn on the server; on the rule step. */
+  media?: ReactNode;
 }) {
   const { direction, formatNumber, locale, t } = useI18n();
   const [examples, setExamples] = useState<Examples>({ status: "loading" });
@@ -163,6 +166,7 @@ export function TajweedLessonPlayer({
   // The Quran font comes after the page has loaded on a phone (tajweed.css, .has-arabic-font).
   const arabicFont = usePageLoaded();
   const sync = useTajweedProgressSync(courseSlug);
+  const section = useRef<HTMLElement>(null);
 
   const loaded = examples.status === "ready" ? examples : null;
   const shownCount = loaded?.shown.length ?? 1;
@@ -244,6 +248,11 @@ export function TajweedLessonPlayer({
     stopFragment();
     stopAyah();
   }, [index, findExample, stopAyah, stopFragment]);
+
+  // The lesson video stays on the hidden rule step; leaving the step pauses it too.
+  useEffect(() => {
+    section.current?.querySelectorAll("video").forEach((video) => video.pause());
+  }, [index]);
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => { onKeyDown(event); };
@@ -348,6 +357,7 @@ export function TajweedLessonPlayer({
     if (step === "intro") {
       return (
         <>
+          {media}
           <h2>
             <span className="tajweed-dot" style={{ background: target.color }} aria-hidden="true" />
             {target.name}
@@ -472,6 +482,7 @@ export function TajweedLessonPlayer({
 
   return (
     <section
+      ref={section}
       className={`surface tajweed-lesson${arabicFont ? " has-arabic-font" : ""}`}
       aria-label={lesson.title}
       aria-busy={!ready}

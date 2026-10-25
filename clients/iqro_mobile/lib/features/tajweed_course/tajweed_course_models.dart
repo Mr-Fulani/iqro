@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../courses/course_models.dart' show LessonMedia, parseLessonMedia;
 import '../tajweed/tajweed_models.dart';
 
 /// The course of the first version (docs/tajweed/course.md).
@@ -215,6 +216,7 @@ class TajweedCourseLesson {
     this.explanation = '',
     this.how = '',
     this.letters = '',
+    this.media = const [],
   });
 
   factory TajweedCourseLesson.fromJson(Object? value) {
@@ -234,6 +236,8 @@ class TajweedCourseLesson {
       explanation: _text(json, 'explanation'),
       how: _text(json, 'how'),
       letters: json['letters'] is String ? json['letters']! as String : '',
+      // Documents built before lesson media have none.
+      media: parseLessonMedia(json['media']),
     );
   }
 
@@ -248,6 +252,10 @@ class TajweedCourseLesson {
   final String explanation;
   final String how;
   final String letters;
+
+  /// Videos, slides and banners above the explanation, in the author's
+  /// order, in the format of the thematic courses.
+  final List<LessonMedia> media;
 }
 
 /// One entry of `GET /tajweed/courses`.

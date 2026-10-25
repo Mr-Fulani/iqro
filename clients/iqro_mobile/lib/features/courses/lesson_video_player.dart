@@ -45,6 +45,7 @@ class LessonVideo extends ConsumerStatefulWidget {
   const LessonVideo({
     required this.course,
     required this.lesson,
+    required this.lessonTitle,
     required this.video,
     required this.language,
     this.onStarted,
@@ -53,8 +54,12 @@ class LessonVideo extends ConsumerStatefulWidget {
     super.key,
   });
 
+  /// Where the position is kept: a thematic course, or the tajweed course.
   final String course;
-  final CourseLesson lesson;
+
+  /// The lesson's slug.
+  final String lesson;
+  final String lessonTitle;
   final CourseVideo video;
 
   /// The language of the document.
@@ -148,7 +153,7 @@ class _LessonVideoState extends ConsumerState<LessonVideo>
         ref
             .read(coursePositionsProvider(widget.course))
             .valueOrNull
-            ?.of(widget.lesson.slug);
+            ?.of(widget.lesson);
     final controller = ref.read(lessonVideoControllerProvider)(uri);
     controller.addListener(_onValue);
     setState(() {
@@ -243,7 +248,7 @@ class _LessonVideoState extends ConsumerState<LessonVideo>
       _store
           .savePosition(
             course: course,
-            lesson: widget.lesson.slug,
+            lesson: widget.lesson,
             position: ended ? Duration.zero : value.position,
           )
           .then(
@@ -287,6 +292,7 @@ class _LessonVideoState extends ConsumerState<LessonVideo>
                 : _VideoFacade(
                     course: widget.course,
                     lesson: widget.lesson,
+                    lessonTitle: widget.lessonTitle,
                     video: widget.video,
                     onPlay: _start,
                   ),
@@ -309,12 +315,14 @@ class _VideoFacade extends ConsumerWidget {
   const _VideoFacade({
     required this.course,
     required this.lesson,
+    required this.lessonTitle,
     required this.video,
     required this.onPlay,
   });
 
   final String course;
-  final CourseLesson lesson;
+  final String lesson;
+  final String lessonTitle;
   final CourseVideo video;
   final VoidCallback onPlay;
 
@@ -324,12 +332,12 @@ class _VideoFacade extends ConsumerWidget {
     final resume = ref
         .watch(coursePositionsProvider(course))
         .valueOrNull
-        ?.of(lesson.slug);
+        ?.of(lesson);
     final meta = courseVideoMeta(context, video);
     final resumeLabel = resume == null
         ? null
         : l10n.coursesVideoResumeFrom(courseVideoTime(resume));
-    final watch = l10n.coursesVideoWatch(lesson.title, meta);
+    final watch = l10n.coursesVideoWatch(lessonTitle, meta);
     final poster = video.poster;
     return Semantics(
       button: true,

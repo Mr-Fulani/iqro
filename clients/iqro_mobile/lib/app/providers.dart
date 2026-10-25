@@ -1018,6 +1018,10 @@ final tajweedCourseRepositoryProvider = Provider<TajweedCourseRepository>(
   (ref) => TajweedCourseRepository(
     remote: ref.watch(tajweedCourseGatewayProvider),
     database: ref.watch(localDatabaseProvider),
+    keepMedia: LessonMediaPrefetcher(
+      cache: ref.watch(lessonMediaCacheManagerProvider),
+      apiBase: Uri.parse(ref.watch(appConfigProvider).apiBaseUrl),
+    ).keep,
   ),
 );
 final tajweedCourseProvider =
