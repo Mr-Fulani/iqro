@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
@@ -451,6 +452,10 @@ class _TajweedLessonPlayerState extends ConsumerState<TajweedLessonPlayer>
     }
     unawaited(sync.sync(widget.courseSlug));
     if (!mounted) return;
+    ref.read(analyticsProvider.notifier).track(AnalyticsEvent.lessonComplete, {
+      'course': widget.courseSlug,
+      'lesson': widget.lesson.slug,
+    });
     ref.invalidate(tajweedCourseProgressProvider(widget.courseSlug));
     setState(() {
       _finishing = false;

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import 'analytics_consent.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -113,6 +114,10 @@ class SettingsScreen extends ConsumerWidget {
                     title: context.l10n.privacy,
                     subtitle: context.l10n.prayerLocationPrivacy,
                   ),
+                  if (ref.read(analyticsProvider.notifier).available) ...[
+                    const Divider(height: 1),
+                    const AnalyticsConsentTile(),
+                  ],
                   const Divider(height: 1),
                   IqroListTile(
                     icon: Icons.description_outlined,

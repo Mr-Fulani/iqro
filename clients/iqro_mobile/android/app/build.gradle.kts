@@ -1,9 +1,10 @@
+import java.util.Base64
 import java.util.Properties
 
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.3.21"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -25,6 +26,18 @@ if (hasReleaseSigning) {
     }
 }
 
+// Firebase Analytics reads its app ID from resources when the app starts. The
+// values come from the same --dart-define-from-file=config/firebase.json as the
+// Dart side (docs/analytics.md); builds without it get none.
+val dartDefines: Map<String, String> =
+    (project.findProperty("dart-defines") as String?)
+        .orEmpty()
+        .split(",")
+        .filter { it.isNotEmpty() }
+        .map { String(Base64.getDecoder().decode(it)).split("=", limit = 2) }
+        .filter { it.size == 2 }
+        .associate { it[0] to it[1] }
+
 android {
     namespace = "forum.iqro.app"
     compileSdk = flutter.compileSdkVersion
@@ -34,10 +47,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     lint {
@@ -54,6 +63,14 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        mapOf(
+            "google_app_id" to "FIREBASE_ANDROID_APP_ID",
+            "google_api_key" to "FIREBASE_ANDROID_API_KEY",
+            "gcm_defaultSenderId" to "FIREBASE_SENDER_ID",
+            "project_id" to "FIREBASE_PROJECT_ID",
+        ).forEach { (resource, define) ->
+            dartDefines[define]?.let { resValue("string", resource, it) }
+        }
     }
 
     signingConfigs {
@@ -80,6 +97,12 @@ android {
         compose = true
     }
 
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 dependencies {

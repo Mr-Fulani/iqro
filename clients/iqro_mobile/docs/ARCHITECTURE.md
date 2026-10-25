@@ -102,7 +102,7 @@ Screen → Riverpod controller/provider → Feature repository
 ## Apple platform
 
 Один iOS target обслуживает iPhone и iPad (`TARGETED_DEVICE_FAMILY = 1,2`) с minimum
-iOS/iPadOS 14. UIScene является единственным lifecycle. `AppDelegate` до завершения
+iOS/iPadOS 15. UIScene является единственным lifecycle. `AppDelegate` до завершения
 launch регистрирует BGTaskScheduler handlers и plugin registrant для отдельного
 background Flutter engine. Идентификатор `forum.iqro.app.periodic-maintenance-v1`
 одинаков в Dart, `Info.plist` и native registration, поэтому outbox, playback sync и

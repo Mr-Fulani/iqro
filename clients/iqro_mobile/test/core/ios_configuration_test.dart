@@ -42,7 +42,7 @@ void main() {
     ).readAsStringSync();
     expect(project, isNot(contains('IPHONEOS_DEPLOYMENT_TARGET = 13.0')));
     expect(
-      RegExp(r'IPHONEOS_DEPLOYMENT_TARGET = 14\.0;').allMatches(project).length,
+      RegExp(r'IPHONEOS_DEPLOYMENT_TARGET = 15\.0;').allMatches(project).length,
       9,
     );
     expect(
@@ -64,7 +64,7 @@ void main() {
     }
 
     final podfile = File('ios/Podfile').readAsStringSync();
-    expect(podfile, contains("platform :ios, '14.0'"));
+    expect(podfile, contains("platform :ios, '15.0'"));
     expect(podfile, contains('BYPASS_PERMISSION_LOCATION_ALWAYS=1'));
   });
 }

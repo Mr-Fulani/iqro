@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import 'course_feedback.dart';
@@ -336,6 +337,10 @@ class _LessonBar extends ConsumerWidget {
         ref
             .read(courseEventQueueProvider)
             .add(slug, lesson.slug, CourseEvent.lessonCompleted);
+        ref.read(analyticsProvider.notifier).track(
+          AnalyticsEvent.lessonComplete,
+          {'course': slug, 'lesson': lesson.slug},
+        );
         await store.markDone(
           course: slug,
           lesson: lesson.slug,

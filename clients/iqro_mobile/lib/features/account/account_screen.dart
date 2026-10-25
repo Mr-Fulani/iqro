@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app/providers.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/auth/auth_session.dart';
 import '../../core/design_system/iqro_widgets.dart';
@@ -517,8 +518,11 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
       _working = true;
       _message = null;
     });
+    // Read before the await: a new account replaces this screen.
+    final analytics = ref.read(analyticsProvider.notifier);
     try {
       await widget.controller.verify(challenge, code);
+      analytics.track(AnalyticsEvent.login, const {'method': 'email'});
       if (!mounted || !_isScreenCurrent(request)) return;
       final error = ref.read(sessionProvider).error;
       if (error is ApiException) throw error;

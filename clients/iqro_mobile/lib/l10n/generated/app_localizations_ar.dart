@@ -1551,6 +1551,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get privacy => 'الخصوصية';
 
   @override
+  String get analyticsTitle => 'إحصاءات الاستخدام';
+
+  @override
+  String get analyticsCardText =>
+      'بموافقتك نحصي استخدام التطبيق عبر Google Analytics لنعرف الأقسام المفيدة. ومن دون موافقتك يعمل التطبيق كما هو.';
+
+  @override
+  String get analyticsPolicy => 'سياسة الخصوصية';
+
+  @override
+  String get analyticsAccept => 'قبول';
+
+  @override
+  String get analyticsDecline => 'رفض';
+
+  @override
+  String get analyticsStateGranted =>
+      'سمحت بالإحصاءات: Google Analytics مفعّل على هذا الجهاز.';
+
+  @override
+  String get analyticsStateDenied =>
+      'رفضت الإحصاءات: Google Analytics معطّل على هذا الجهاز.';
+
+  @override
+  String get analyticsStateUnset =>
+      'لم تختر بعد. وحتى تختار يبقى Google Analytics معطّلًا.';
+
+  @override
   String get reminders => 'التذكيرات';
 
   @override

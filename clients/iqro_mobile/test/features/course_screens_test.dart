@@ -585,6 +585,7 @@ Future<_Harness> _pump(
         feedbackRepositoryProvider.overrideWithValue(reports),
         courseShareProvider.overrideWithValue((params) async {
           shares.add(params);
+          return const ShareResult('', ShareResultStatus.dismissed);
         }),
         sessionProvider.overrideWith((ref) => _Guest()),
         localDatabaseProvider.overrideWithValue(database),

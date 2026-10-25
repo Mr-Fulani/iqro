@@ -68,6 +68,10 @@ dependencies:
   geomag: ^0.3.0
   webview_flutter: ^4.14.1
   url_launcher: ^6.3.3
+  # Pinned: later releases need a Firebase iOS SDK that CocoaPods trunk no
+  # longer receives (firebase_core/ios/firebase_sdk_version.rb).
+  firebase_core: 5.0.0
+  firebase_analytics: 13.0.0
 
 dev_dependencies:
   flutter_test:

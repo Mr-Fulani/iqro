@@ -427,11 +427,13 @@ class AudioController extends StateNotifier<IqroAudioState> {
     AudioPlaybackStore? playbackStore,
     ListeningMediaService? mediaService,
     Duration persistenceDelay = const Duration(seconds: 5),
+    void Function(IqroAudioState state)? onPlaybackStarted,
   }) : assert(player == null || engine == null),
        _player = engine ?? JustAudioEngine(player),
        _playbackStore = playbackStore,
        _persistenceDelay = persistenceDelay,
        _mediaService = mediaService ?? ListeningMediaService.current,
+       _onPlaybackStarted = onPlaybackStarted,
        super(const IqroAudioState()) {
     _subscriptions.add(
       _player.playerStateStream.listen((playerState) {
@@ -473,6 +475,11 @@ class AudioController extends StateNotifier<IqroAudioState> {
               playerState.processingState == ProcessingState.loading ||
               playerState.processingState == ProcessingState.buffering,
         );
+        // Once per loaded recitation, when the sound actually starts.
+        if (state.playing && _reportedGeneration != generation) {
+          _reportedGeneration = generation;
+          _onPlaybackStarted?.call(state);
+        }
         if (completed && playerState.playing) {
           _pauseCompletedSource(
             generation: generation,
@@ -586,6 +593,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
   final IqroAudioEngine _player;
   final AudioPlaybackStore? _playbackStore;
   final ListeningMediaService? _mediaService;
+  final void Function(IqroAudioState state)? _onPlaybackStarted;
+  int? _reportedGeneration;
   void Function()? _removeMediaListener;
   final List<StreamSubscription<Object?>> _subscriptions =
       <StreamSubscription<Object?>>[];

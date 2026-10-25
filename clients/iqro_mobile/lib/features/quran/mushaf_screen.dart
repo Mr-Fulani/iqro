@@ -30,6 +30,7 @@ import 'mushaf_reader_controls.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
+import 'surah_open_reporter.dart';
 
 typedef _PendingPositionSave = ({
   int page,
@@ -316,6 +317,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         backgroundColor: mushafPaperColor,
         body: Stack(
           children: <Widget>[
+            SurahOpenReporter(surah: reference?.surah),
             SafeArea(
               child: PageView.builder(
                 controller: _pageController,
