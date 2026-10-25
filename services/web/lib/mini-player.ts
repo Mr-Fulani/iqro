@@ -5,8 +5,12 @@
  * apart from the components.
  */
 
-/** "closing" is the full player sinking out of view; it ends in "bar". */
-export type MiniPlayerView = "collapsed" | "bar" | "full" | "closing";
+/**
+ * "closing" is the full player sinking out of view; it ends in "bar".
+ * "collapsing" rolls the bar up into the round button and ends in "collapsed",
+ * "expanding" unrolls it and ends in "bar".
+ */
+export type MiniPlayerView = "collapsed" | "collapsing" | "expanding" | "bar" | "full" | "closing";
 
 export type MiniPlayerState = {
   view: MiniPlayerView;
@@ -17,6 +21,7 @@ export type MiniPlayerState = {
 export type MiniPlayerAction =
   | { type: "collapse" }
   | { type: "expand" }
+  | { type: "settled" }
   | { type: "open-full" }
   | { type: "close-full" }
   | { type: "closed" }
@@ -39,6 +44,14 @@ export const MOBILE_PLAYER_MEDIA_QUERY = "(max-width: 768px)";
 /** The sink animation in app/mobile.css; "closed" follows its animationend, or this fallback. */
 export const SHEET_CLOSE_MS = 260;
 export const SHEET_CLOSE_FALLBACK_MS = SHEET_CLOSE_MS + 200;
+/** The roll-up and unroll animations in app/mobile.css; "settled" follows their animationend, or this fallback. */
+export const BAR_ROLL_MS = 420;
+export const BAR_ROLL_FALLBACK_MS = BAR_ROLL_MS + 200;
+
+/** The bar is the round button, or on its way to or from it. */
+export function rolledUp(view: MiniPlayerView): boolean {
+  return view === "collapsed" || view === "collapsing";
+}
 
 /** The full player is on screen while open and while it sinks away. */
 export function sheetShown(view: MiniPlayerView): boolean {
@@ -49,9 +62,13 @@ export function miniPlayerReducer(state: MiniPlayerState, action: MiniPlayerActi
   const { view } = state;
   switch (action.type) {
     case "collapse":
-      return view === "bar" ? { ...state, view: "collapsed" } : state;
+      // A tap while the bar still unrolls rolls it straight back up.
+      return view === "bar" || view === "expanding" ? { ...state, view: "collapsing" } : state;
     case "expand":
-      return view === "collapsed" ? { ...state, view: "bar" } : state;
+      return view === "collapsed" || view === "collapsing" ? { ...state, view: "expanding" } : state;
+    case "settled":
+      if (view === "collapsing") return { ...state, view: "collapsed" };
+      return view === "expanding" ? { ...state, view: "bar" } : state;
     case "open-full":
       // A tap while the sheet still sinks brings it straight back.
       return view === "full" ? state : { view: "full", controlsHidden: false };

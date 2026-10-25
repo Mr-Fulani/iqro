@@ -28,12 +28,14 @@ import { api } from "./api";
 import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
 import {
+  BAR_ROLL_FALLBACK_MS,
   INITIAL_MINI_PLAYER_STATE,
   MOBILE_PLAYER_MEDIA_QUERY,
   PLAYER_CONTROL_SELECTOR,
   SHEET_CLOSE_FALLBACK_MS,
   adjacentSurah,
   miniPlayerReducer,
+  rolledUp,
   sheetShown,
 } from "./mini-player";
 import {
@@ -181,30 +183,42 @@ export function AudioPlayerProvider({
   const fullOpen = mobile && view === "full";
   // On screen while open and while it sinks away; only then does the dock wear the sheet's markup.
   const sheetOpen = mobile && sheetShown(view);
-  const collapsed = mobile && view === "collapsed";
+  // The round button shows from the moment the bar starts rolling up into it.
+  const collapsed = mobile && rolledUp(view);
 
   const closeFull = useCallback(() => {
     setDragOffset(0);
     dispatchView({ type: "close-full" });
   }, []);
 
-  // The sheet is gone once its sink animation ends (app/mobile.css); a fallback
-  // timer covers a skipped animation and reduced motion skips the wait. Leaving
-  // the closing state for any other reason, such as a tap that reopens the
-  // player, cancels both, so a late "closed" can never shut the reopened sheet.
+  // The sheet is gone once its sink animation ends, and the bar is the round
+  // button (or the bar again) once its roll animation ends (app/mobile.css). A
+  // fallback timer covers a skipped animation, such as on a bar hidden under
+  // the full-screen reader, and reduced motion skips the wait. Leaving the
+  // state for any other reason, such as a tap that reopens the player, cancels
+  // both, so a late end can never undo the newer state.
   useEffect(() => {
-    if (view !== "closing") return;
+    const ending = view === "closing"
+      ? { animation: "mobile-player-sink", action: { type: "closed" } as const, fallbackMs: SHEET_CLOSE_FALLBACK_MS }
+      : view === "collapsing" || view === "expanding"
+        ? {
+          animation: view === "collapsing" ? "mobile-player-roll-up" : "mobile-player-unroll",
+          action: { type: "settled" } as const,
+          fallbackMs: BAR_ROLL_FALLBACK_MS,
+        }
+        : null;
+    if (!ending) return;
     if (reduceMotion) {
-      dispatchView({ type: "closed" });
+      dispatchView(ending.action);
       return;
     }
     const dock = dockRef.current;
-    const finish = () => dispatchView({ type: "closed" });
+    const finish = () => dispatchView(ending.action);
     const onAnimationEnd = (event: AnimationEvent) => {
-      if (event.target === dock && event.animationName === "mobile-player-sink") finish();
+      if (event.target === dock && event.animationName === ending.animation) finish();
     };
     dock?.addEventListener("animationend", onAnimationEnd);
-    const timer = setTimeout(finish, SHEET_CLOSE_FALLBACK_MS);
+    const timer = setTimeout(finish, ending.fallbackMs);
     return () => {
       dock?.removeEventListener("animationend", onAnimationEnd);
       clearTimeout(timer);

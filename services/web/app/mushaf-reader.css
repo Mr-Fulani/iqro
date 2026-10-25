@@ -290,8 +290,8 @@ body:has(.quran-reader-boot) .app-footer {
   width: var(--reader-sheet-width, 100cqw);
 }
 
-/* In the full-screen reader the tajweed chips follow the sheet in its scroller,
-   in one scrolling row as under the page in the app. They come and go with the
+/* In the full-screen portrait reader the tajweed chips sit under the sheet, in
+   one scrolling row as under the page in the app. They come and go with the
    reader controls: reading with the controls folded shows the page alone. */
 .is-reader-immersive .mushaf-tajweed-legend {
   display: flex;
@@ -305,6 +305,17 @@ body:has(.quran-reader-boot) .app-footer {
 }
 
 .quran-page-layout:has(.reader-actions.is-folded) .mushaf-tajweed-legend {
+  display: none;
+}
+
+/* A portrait sheet keeps a gap between its chips and the reader bar. */
+.is-reader-immersive[data-reader-orientation="portrait"] .mushaf-tajweed-legend {
+  margin-bottom: 8px;
+}
+
+/* As in the app, the chips are a portrait part of the page: a landscape page
+   scrolls under the reader bar, so it shows no chips. */
+.is-reader-immersive[data-reader-orientation="landscape"] .mushaf-tajweed-legend {
   display: none;
 }
 

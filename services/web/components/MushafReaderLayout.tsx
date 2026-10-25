@@ -121,15 +121,16 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
         .map((overlay) => overlay.getBoundingClientRect().top);
       element.style.setProperty("--reader-bottom-reserve", `${Math.ceil(Math.max(0, ...tops.map((top) => bottom - top)))}px`);
     };
-    // The tajweed chips follow the sheet in the stage. A portrait sheet leaves
-    // them room, so the page and its chips fit above the reader bar together.
+    // The tajweed chips follow a portrait sheet in the stage. It leaves them
+    // room, so the page and its chips fit above the reader bar together.
     const fitSheet = () => {
       const style = getComputedStyle(stage);
       const width = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
       const height = stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       const legend = stage.querySelector<HTMLElement>(":scope > .mushaf-tajweed-legend");
-      const legendHeight = legend?.getClientRects().length
-        ? legend.getBoundingClientRect().height + parseFloat(getComputedStyle(legend).marginTop)
+      const legendStyle = legend && getComputedStyle(legend);
+      const legendHeight = legend?.getClientRects().length && legendStyle
+        ? legend.getBoundingClientRect().height + parseFloat(legendStyle.marginTop) + parseFloat(legendStyle.marginBottom)
         : 0;
       const sheetWidth = landscape ? width : Math.min(width, Math.max(0, height - legendHeight) * pageRatio);
       element.style.setProperty("--reader-sheet-width", `${sheetWidth}px`);
