@@ -11,6 +11,7 @@ import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/audio/audio_screen.dart';
+import 'package:iqro_mobile/features/audio/premium_reciter_portrait.dart';
 import 'package:iqro_mobile/features/audio/reciter_launch_screen.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
@@ -31,6 +32,17 @@ void main() {
     expect(find.text('Воспроизвести'), findsNothing);
     expect(find.text('Тестовый чтец'), findsOneWidget);
     expect(find.text('Чтец муджаввада'), findsNothing);
+    // The test reciter has no portrait: its card shows the default figure.
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is ResizeImage &&
+            (widget.image as ResizeImage).imageProvider ==
+                const AssetImage(defaultReciterPortraitAsset),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Тестовый чтец'));
     await tester.pumpAndSettle();

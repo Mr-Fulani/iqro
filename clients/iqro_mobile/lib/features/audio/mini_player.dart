@@ -69,11 +69,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
     final collapsed =
         widget.allowCollapse && ref.watch(miniPlayerCollapsedProvider);
     final artwork = standalone == null
-        ? PremiumReciterPortrait(
-            url: portraitUrl,
-            size: 44,
-            initials: reciter?.initials,
-          )
+        ? PremiumReciterPortrait(url: portraitUrl, size: 44)
         : Container(
             width: 44,
             height: 44,

@@ -32,7 +32,6 @@ if not args.mobile_only:
     apple = Image.new("RGB", (180, 180), "#160704")
     apple.paste(square(180), mask=square(180).getchannel("A"))
     apple.save(WEB / "app/apple-icon.png")
-square(512).save(MOBILE / "assets/brand/iqro-media-logo.png")
 square(192).save(RES / "iqro_seal_notification_large.png")
 
 # Android tints small icons. Keep the wax outline, lettering and flourish,

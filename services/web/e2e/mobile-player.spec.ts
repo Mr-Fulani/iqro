@@ -109,8 +109,11 @@ for (const phone of PHONES) {
     await expect(bar).toContainText("Слушайте Коран");
     await expect(bar.getByRole("button", { name: "Открыть плеер", exact: true })).toBeDisabled();
     await expect(bar.getByRole("button", { name: "Воспроизвести", exact: true })).toBeDisabled();
+    // Without a reciter yet, the bar shows the default figure, as the app does.
+    await expect(bar.locator(".mobile-player-artwork img")).toHaveAttribute("src", "/reciters/default.webp");
 
     await page.getByRole("button", { name: "Слушать", exact: true }).first().click();
+    await expect(bar.locator(".mobile-player-artwork img")).toHaveAttribute("src", "/reciters/maher-al-muaiqly.webp");
     const audio = bar.locator("audio");
     await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
     await expect(bar.getByRole("button", { name: "Поставить на паузу", exact: true })).toBeVisible();

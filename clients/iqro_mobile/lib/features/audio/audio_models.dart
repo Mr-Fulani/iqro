@@ -172,12 +172,6 @@ class Reciter {
     if (locale == 'tr' && biographyTr.isNotEmpty) return biographyTr;
     return biographyEn;
   }
-
-  String get initials {
-    final words = nameEn.trim().split(RegExp(r'\s+'));
-    if (words.isEmpty || words.first.isEmpty) return 'IQ';
-    return words.take(2).map((word) => word[0].toUpperCase()).join();
-  }
 }
 
 class Recitation {

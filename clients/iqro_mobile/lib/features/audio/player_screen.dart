@@ -1470,7 +1470,6 @@ class _PickerReciterCard extends StatelessWidget {
                     PremiumReciterPortrait(
                       url: portraitUrl,
                       size: 70,
-                      initials: person.primary.initials,
                       selected: selected,
                     ),
                     if (selected)
