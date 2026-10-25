@@ -114,6 +114,9 @@ export function createRootMetadata(locale: Locale): Metadata {
       description,
       images: ["/opengraph-image"],
     },
+    other: {
+      "p:domain_verify": "e7570247a1ff85e692e4650cf140775b",
+    },
     manifest: "/manifest.webmanifest",
     formatDetection: {
       email: false,
