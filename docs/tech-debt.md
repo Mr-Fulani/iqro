@@ -131,15 +131,19 @@ PR #125. Без ID при сборке баннер и счётчики выкл
 Instagram [iqro.forum](https://www.instagram.com/iqro.forum/),
 Threads [@iqro.forum](https://www.threads.net/@iqro.forum).
 
-**Что сделать:**
+**Сделано 25.10.2026:** в Search Console (fulani.dev@gmail.com) привязаны Instagram @iqro.forum
+и TikTok @iqro.forum; данные появляются в течение 48 часов. Instagram для этого переведён в
+аккаунт автора («Автор цифрового контента», категория в профиле скрыта) и стал открытым.
+Важно: в Chrome Instagram помнит и mudaroba_store — при повторной привязке проверять, что окно
+согласия называет iqro.forum.
 
-1. В Search Console (fulani.dev@gmail.com) «Добавить ресурс» → Instagram и TikTok. Привязка идёт
-   через вход в саму соцсеть (OAuth) — входит владелец.
-2. Threads Search Console пока не поддерживает (только Instagram, TikTok, X, YouTube) —
+**Что осталось:**
+
+1. Threads Search Console пока не поддерживает (только Instagram, TikTok, X, YouTube) —
    проверить позже. Когда появятся аккаунты X и YouTube — добавить их так же.
-3. Опубликовать аккаунты в админке «Соцсети» (`/api/v1/site/social-profiles` сейчас пустой):
+2. Опубликовать аккаунты в админке «Соцсети» (`/api/v1/site/social-profiles` сейчас пустой):
    тогда они появятся в подвале сайта и в `sameAs` разметки Organization (флаг «для SEO»).
-4. Ссылки на сайт в постах и профилях помечать UTM-метками
+3. Ссылки на сайт в постах и профилях помечать UTM-метками
    (`?utm_source=instagram&utm_medium=social&utm_campaign=<кампания>`), чтобы в GA и Метрике
    было видно, какой пост привёл людей.
 
