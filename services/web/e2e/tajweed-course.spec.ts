@@ -108,7 +108,9 @@ test("header, mobile navigation and footer lead to the course next to the prayer
   const header = page.locator(".app-menu");
   await expect(header.getByRole("link", { name: "Курсы" })).toHaveClass(/menu-link-active/);
   await expect(header.getByRole("link", { name: "Таджвид" })).toHaveCount(0);
-  await expect(page.locator("footer").getByRole("link", { name: "Таджвид" })).toHaveAttribute("href", "/ru/tajweed");
+  // The footer leads to the catalog only; the course is a card there.
+  await expect(page.locator("footer").getByRole("link", { name: "Таджвид" })).toHaveCount(0);
+  await expect(page.locator('footer a[href="/ru/courses"]')).toHaveCount(1);
 
   await page.setViewportSize({ width: 390, height: 844 });
   const navigation = page.locator(".mobile-navigation");

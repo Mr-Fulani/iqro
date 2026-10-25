@@ -70,8 +70,9 @@ test("header and mobile navigation mark the prayer course without the prayer tim
     await navigation.locator(".mobile-more > summary").click();
     await expect(more.getByRole("link", { name: label })).toHaveAttribute("href", `/${locale}/courses`);
   }
-  // The footer keeps the direct way in (folded on a phone).
-  await expect(page.locator('footer a[href="/tr/salah"]')).toHaveText("Namaz öğrenimi");
+  // The footer leads to the catalog only; the prayer course is a card there.
+  await expect(page.locator('footer a[href="/tr/salah"]')).toHaveCount(0);
+  await expect(page.locator('footer a[href="/tr/courses"]')).toHaveCount(1);
 });
 
 test("the step player moves with buttons and arrow keys and keeps the step in the URL", async ({ page }) => {
