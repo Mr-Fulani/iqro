@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -60,6 +61,19 @@ _SENSITIVE_KEY_SUFFIXES = (
     "_token",
     "_tokens",
 )
+
+
+def is_cancelled_request(record: logging.LogRecord) -> bool:
+    """A client that hung up mid-request, not a server error.
+
+    The ASGI server cancels the request; asgiref finishes the cancelled view and
+    asyncio still logs the shielded future's CancelledError at ERROR level.
+    """
+    return (
+        record.name == "asyncio"
+        and record.exc_info is not None
+        and isinstance(record.exc_info[1], asyncio.CancelledError)
+    )
 
 
 class RequestIdFilter(logging.Filter):

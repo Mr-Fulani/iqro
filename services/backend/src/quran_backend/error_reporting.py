@@ -6,6 +6,8 @@ from typing import Any
 import sentry_sdk
 from django.core.exceptions import ImproperlyConfigured
 
+from quran_backend.modules.core.logging import is_cancelled_request
+
 # Telegram puts the bot token in the request path (modules/alerts/telegram.py).
 TELEGRAM_API_HOST = "api.telegram.org"
 
@@ -25,6 +27,14 @@ def drop_telegram_spans(event: dict[str, Any], _hint: dict[str, Any]) -> dict[st
         if TELEGRAM_API_HOST
         not in f"{span.get('description', '')} {(span.get('data') or {}).get('url', '')}"
     ]
+    return event
+
+
+def drop_cancelled_requests(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any] | None:
+    """A client hanging up mid-request is logged as an asyncio error; it is not one."""
+    record = hint.get("log_record")
+    if record is not None and is_cancelled_request(record):
+        return None
     return event
 
 
@@ -52,6 +62,7 @@ def sentry_options(environ: Mapping[str, str], *, release: str) -> dict[str, Any
         "send_default_pii": False,
         "max_request_body_size": "never",
         "traces_sample_rate": traces_sample_rate,
+        "before_send": drop_cancelled_requests,
         "before_breadcrumb": drop_telegram_breadcrumb,
         "before_send_transaction": drop_telegram_spans,
     }

@@ -2,6 +2,7 @@
 # ruff: noqa: RUF001
 from __future__ import annotations
 
+import asyncio
 import copy
 import logging
 import uuid
@@ -265,6 +266,18 @@ def test_noise_and_the_alerts_own_logs_are_not_alerts(
         "celery.app.trace", logging.ERROR, __file__, 1, "Task %s failed", ("alerts.send",), None
     )
     handler.handle(celery)
+    # A client that hung up mid-request: asyncio logs the cancelled shielded future.
+    cancelled = asyncio.CancelledError()
+    hung_up = logging.LogRecord(
+        "asyncio",
+        logging.ERROR,
+        __file__,
+        1,
+        "CancelledError exception in shielded future",
+        None,
+        (asyncio.CancelledError, cancelled, None),
+    )
+    handler.handle(hung_up)
     assert sent == []
 
 

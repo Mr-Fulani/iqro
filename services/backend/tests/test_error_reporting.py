@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import logging
+
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
 from quran_backend.error_reporting import (
+    drop_cancelled_requests,
     drop_telegram_breadcrumb,
     drop_telegram_spans,
     sentry_options,
@@ -28,6 +32,7 @@ def test_reports_carry_no_personal_data_or_request_bodies() -> None:
         "send_default_pii": False,
         "max_request_body_size": "never",
         "traces_sample_rate": 0.0,
+        "before_send": drop_cancelled_requests,
         "before_breadcrumb": drop_telegram_breadcrumb,
         "before_send_transaction": drop_telegram_spans,
     }
@@ -58,3 +63,22 @@ def test_invalid_trace_sample_rate_is_rejected(rate: str) -> None:
             },
             release="1",
         )
+
+
+def test_a_client_hanging_up_is_not_a_sentry_event() -> None:
+    cancelled = asyncio.CancelledError()
+    hung_up = logging.LogRecord(
+        "asyncio",
+        logging.ERROR,
+        __file__,
+        1,
+        "CancelledError exception in shielded future",
+        None,
+        (asyncio.CancelledError, cancelled, None),
+    )
+    other = logging.LogRecord("asyncio", logging.ERROR, __file__, 1, "Task exception", None, None)
+    event = {"logger": "asyncio"}
+
+    assert drop_cancelled_requests(event, {"log_record": hung_up}) is None
+    assert drop_cancelled_requests(event, {"log_record": other}) is event
+    assert drop_cancelled_requests(event, {}) is event
