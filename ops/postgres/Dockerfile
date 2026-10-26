@@ -14,6 +14,9 @@ ENV LANG=en_US.utf8 \
 
 VOLUME /var/lib/postgresql/data
 
+# The upstream image stops with SIGINT (fast shutdown); FROM scratch drops that, and the
+# default SIGTERM is a smart shutdown that waits for pooled clients until Docker kills it.
+STOPSIGNAL SIGINT
 ENTRYPOINT ["docker-entrypoint.sh"]
 EXPOSE 5432
 CMD ["postgres"]
