@@ -620,7 +620,11 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
   /// The Google gateway when Google sign-in is configured, otherwise null.
   Future<GoogleSignInGateway?> _availableGoogle() async {
     try {
-      if (await ref.read(googleSignInAvailableProvider.future)) {
+      // Offline, the first availability check must not hold up logout.
+      final available = await ref
+          .read(googleSignInAvailableProvider.future)
+          .timeout(const Duration(seconds: 2), onTimeout: () => false);
+      if (available) {
         return ref.read(googleSignInGatewayProvider);
       }
     } on Object {
