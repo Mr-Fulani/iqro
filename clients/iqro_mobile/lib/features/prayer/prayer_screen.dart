@@ -755,7 +755,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => _PrayerCitySheet(locale: locale),
+      builder: (context) => PrayerCitySheet(locale: locale),
     );
     if (city == null || !mounted) return;
     final database = ref.read(localDatabaseProvider);
@@ -1203,16 +1203,16 @@ const _adjustmentCodes = <String>[
   'isha',
 ];
 
-class _PrayerCitySheet extends StatefulWidget {
-  const _PrayerCitySheet({required this.locale});
+class PrayerCitySheet extends StatefulWidget {
+  const PrayerCitySheet({super.key, required this.locale});
 
   final String locale;
 
   @override
-  State<_PrayerCitySheet> createState() => _PrayerCitySheetState();
+  State<PrayerCitySheet> createState() => _PrayerCitySheetState();
 }
 
-class _PrayerCitySheetState extends State<_PrayerCitySheet> {
+class _PrayerCitySheetState extends State<PrayerCitySheet> {
   var _query = '';
 
   @override

@@ -2963,4 +2963,227 @@ class AppLocalizationsEn extends AppLocalizations {
   String recitationSomeSurahs(int count) {
     return '$count of 114 surahs';
   }
+
+  @override
+  String get onboardingWelcomeTitle => 'Welcome to IQRO';
+
+  @override
+  String get onboardingWelcomeBody =>
+      'Quran, du‘a, prayer and learning in one app. Choose a language: the app switches right away.';
+
+  @override
+  String get onboardingLanguageHint =>
+      'Your phone\'s language is preselected. You can change it any time in Settings.';
+
+  @override
+  String get onboardingRtl => 'right to left';
+
+  @override
+  String get onboardingSkipTour => 'Skip tour';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String onboardingStepOf(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String onboardingSlideOf(int current, int total) {
+    return 'Slide $current of $total';
+  }
+
+  @override
+  String get onboardingTourQuranTitle => 'Quran and Mushaf';
+
+  @override
+  String get onboardingTourQuran1 =>
+      'The Quran text with translations and tafsirs in four languages.';
+
+  @override
+  String get onboardingTourQuran2 =>
+      'The Mushaf page by page, like a printed copy.';
+
+  @override
+  String get onboardingTourQuran3 =>
+      'Colour-coded tajweed, bookmarks and notes on ayahs.';
+
+  @override
+  String get onboardingTourAudioTitle => 'Audio and reciters';
+
+  @override
+  String get onboardingTourAudio1 =>
+      'Well-known reciters and a player that highlights the current ayah.';
+
+  @override
+  String get onboardingTourAudio2 =>
+      'A listening queue and controls on the lock screen.';
+
+  @override
+  String get onboardingTourAudio3 =>
+      'Download surahs to listen without internet.';
+
+  @override
+  String get onboardingTourStudyTitle => 'Learn step by step';
+
+  @override
+  String get onboardingTourStudy1 =>
+      'A reading plan: a daily goal and reading after prayer.';
+
+  @override
+  String get onboardingTourStudy2 => 'Memorize surahs with scheduled review.';
+
+  @override
+  String get onboardingTourStudy3 =>
+      'Courses on prayer and tajweed: video, practice and quizzes.';
+
+  @override
+  String get onboardingTourDailyTitle => 'Every day';
+
+  @override
+  String get onboardingTourDaily1 =>
+      'Prayer times, qibla direction and the Hijri calendar.';
+
+  @override
+  String get onboardingTourDaily2 => 'Du‘a and adhkar for many occasions.';
+
+  @override
+  String get onboardingTourDaily3 =>
+      'Works offline: what you download stays with you.';
+
+  @override
+  String get onboardingGoalTitle => 'Your goal';
+
+  @override
+  String get onboardingGoalBody =>
+      'We\'ll tailor the home screen and daily plan. You can change it later in Plan.';
+
+  @override
+  String get onboardingDailyNorm => 'Daily goal';
+
+  @override
+  String onboardingPerDay(String amount) {
+    return '$amount a day';
+  }
+
+  @override
+  String get onboardingLess => 'Less';
+
+  @override
+  String get onboardingMore => 'More';
+
+  @override
+  String get onboardingPrayerTitle => 'Prayer times';
+
+  @override
+  String get onboardingPrayerBody =>
+      'To calculate prayer times and the qibla we need your city. Coordinates stay on your phone.';
+
+  @override
+  String get onboardingUseLocation => 'Detect my location';
+
+  @override
+  String get onboardingUseLocationHint => 'Approximate, to the neighbourhood';
+
+  @override
+  String get onboardingChooseCity => 'Choose a city from the list';
+
+  @override
+  String get onboardingChooseCityHint => 'No location access needed';
+
+  @override
+  String onboardingLocationSelected(String place) {
+    return 'Selected: $place';
+  }
+
+  @override
+  String get onboardingPrayerOffline =>
+      'No connection to the server. You can set up prayer times later on the Prayer screen.';
+
+  @override
+  String get onboardingLater => 'Later';
+
+  @override
+  String get onboardingRemindersTitle => 'Reminders';
+
+  @override
+  String get onboardingRemindersBody =>
+      'We\'ll notify you when each prayer time begins. Without permission everything still works, just without reminders.';
+
+  @override
+  String get onboardingFivePrayers => 'Five daily prayers';
+
+  @override
+  String get onboardingPreviewBody => 'Prayer time has begun';
+
+  @override
+  String get onboardingNotificationsOn => 'Notifications are allowed';
+
+  @override
+  String get onboardingNotificationsBlocked =>
+      'Notifications are off. You can turn them on in your phone\'s settings.';
+
+  @override
+  String get onboardingExactTitle => 'Right on time';
+
+  @override
+  String get onboardingExactBody =>
+      'Android may delay notifications by a few minutes to save battery. To get prayer reminders exactly on time, allow IQRO “Alarms & reminders”.';
+
+  @override
+  String get onboardingExactStep1 => 'Tap “Open settings”';
+
+  @override
+  String get onboardingExactStep2 =>
+      'Turn on “Allow setting alarms and reminders”';
+
+  @override
+  String get onboardingExactStep3 => 'Come back to IQRO';
+
+  @override
+  String get onboardingOpenSettings => 'Open settings';
+
+  @override
+  String get onboardingKeepApproximate => 'Keep approximate time';
+
+  @override
+  String get onboardingAnalyticsCounts =>
+      'Counted: surah opens, audio plays, completed lessons, shares and sign-ins';
+
+  @override
+  String get onboardingAnalyticsNever =>
+      'Never sent: your location, notes, name or email';
+
+  @override
+  String get onboardingDoneTitle => 'All set';
+
+  @override
+  String get onboardingDoneBody =>
+      'May Allah make your reading easy and blessed.';
+
+  @override
+  String get onboardingSummaryPlan => 'Plan';
+
+  @override
+  String get onboardingRemindersOn => 'On';
+
+  @override
+  String get onboardingAnalyticsOn => 'Allowed';
+
+  @override
+  String get onboardingAnalyticsOff => 'Not allowed';
+
+  @override
+  String get onboardingDoneHint =>
+      'You can change all of this in Settings, and replay this introduction there too.';
+
+  @override
+  String get onboardingStart => 'Start';
+
+  @override
+  String get onboardingReplay => 'Replay the introduction';
+
+  @override
+  String get onboardingReplayHint => 'Features, language and permissions';
 }

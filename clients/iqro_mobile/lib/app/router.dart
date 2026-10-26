@@ -83,7 +83,9 @@ GoRouter createRouter({required bool onboardingComplete}) {
     routes: <RouteBase>[
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => const OnboardingScreen(),
+        builder: (context, state) => OnboardingScreen(
+          replay: state.uri.queryParameters['replay'] == '1',
+        ),
       ),
       GoRoute(path: '/plan', redirect: (context, state) => '/app?tab=2'),
       GoRoute(

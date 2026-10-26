@@ -8,6 +8,7 @@ import { TodayReadingCard } from "./TodayReadingCard";
 import { PrayerReadingPlanCard } from "./PrayerReadingPlanCard";
 import { MemorizationPlannerCard } from "./MemorizationPlannerCard";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
+import { defaultPrayerMethod } from "../lib/prayer-input";
 import type { PublishedHomeInitialData } from "../lib/public-content";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
@@ -104,7 +105,6 @@ export default function HomePage({
 
     const loadPrayerPreview = async () => {
       const manifest = await api.getPrayerMethods();
-      const availableMethods = manifest.methods.filter((method) => method.available);
       const profile = sessionUserId
         ? await api.getPrayerProfile().catch(() => null)
         : null;
@@ -117,8 +117,7 @@ export default function HomePage({
         manifest.methods.find(
           (candidate) => candidate.available && candidate.id === profile?.method_config.id,
         ) ||
-        availableMethods[0] ||
-        manifest.methods[0];
+        defaultPrayerMethod(manifest.methods);
       if (!method) return;
 
       const location = preference || DEFAULT_PRAYER_LOCATION;

@@ -220,7 +220,11 @@ class NotificationGateway {
     return ReminderPermission.denied;
   }
 
-  Future<ReminderPermission> requestPermission() async {
+  /// Onboarding passes [exactAlarms] false: it explains the alarm setting on
+  /// its own step before sending the user there.
+  Future<ReminderPermission> requestPermission({
+    bool exactAlarms = true,
+  }) async {
     bool? granted;
     if (Platform.isAndroid) {
       final android = _plugin
@@ -228,7 +232,8 @@ class NotificationGateway {
             AndroidFlutterLocalNotificationsPlugin
           >();
       granted = await android?.requestNotificationsPermission();
-      if (granted == true &&
+      if (exactAlarms &&
+          granted == true &&
           await android?.canScheduleExactNotifications() != true) {
         await android?.requestExactAlarmsPermission();
       }
@@ -242,6 +247,30 @@ class NotificationGateway {
     return granted == true
         ? ReminderPermission.granted
         : ReminderPermission.denied;
+  }
+
+  /// Android 12+ may withhold exact alarms; other platforms always deliver
+  /// on time.
+  Future<bool> canScheduleExactReminders() async {
+    if (!Platform.isAndroid) return true;
+    return await _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.canScheduleExactNotifications() ??
+        true;
+  }
+
+  /// Opens the system "Alarms & reminders" page and reports the result after
+  /// the user comes back.
+  Future<bool> requestExactReminders() async {
+    if (!Platform.isAndroid) return true;
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestExactAlarmsPermission();
+    return canScheduleExactReminders();
   }
 
   Future<ReminderSchedulingResult> reschedule({

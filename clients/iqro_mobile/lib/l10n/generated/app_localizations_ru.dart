@@ -2988,4 +2988,229 @@ class AppLocalizationsRu extends AppLocalizations {
   String recitationSomeSurahs(int count) {
     return '$count из 114 сур';
   }
+
+  @override
+  String get onboardingWelcomeTitle => 'Добро пожаловать в IQRO';
+
+  @override
+  String get onboardingWelcomeBody =>
+      'Коран, ду‘а, намаз и учёба в одном приложении. Выберите язык: интерфейс сменится сразу.';
+
+  @override
+  String get onboardingLanguageHint =>
+      'Заранее выбран язык телефона. Поменять его можно в любой момент в «Настройках».';
+
+  @override
+  String get onboardingRtl => 'справа налево';
+
+  @override
+  String get onboardingSkipTour => 'Пропустить тур';
+
+  @override
+  String get onboardingNext => 'Дальше';
+
+  @override
+  String onboardingStepOf(int current, int total) {
+    return 'Шаг $current из $total';
+  }
+
+  @override
+  String onboardingSlideOf(int current, int total) {
+    return 'Слайд $current из $total';
+  }
+
+  @override
+  String get onboardingTourQuranTitle => 'Коран и Мусхаф';
+
+  @override
+  String get onboardingTourQuran1 =>
+      'Текст Корана с переводами и тафсирами на четырёх языках.';
+
+  @override
+  String get onboardingTourQuran2 =>
+      'Мусхаф по страницам, как печатное издание.';
+
+  @override
+  String get onboardingTourQuran3 =>
+      'Цветной таджвид, закладки и заметки к аятам.';
+
+  @override
+  String get onboardingTourAudioTitle => 'Аудио и чтецы';
+
+  @override
+  String get onboardingTourAudio1 =>
+      'Известные чтецы и плеер с подсветкой текущего аята.';
+
+  @override
+  String get onboardingTourAudio2 =>
+      'Очередь прослушивания и управление с экрана блокировки.';
+
+  @override
+  String get onboardingTourAudio3 =>
+      'Скачайте суры, чтобы слушать без интернета.';
+
+  @override
+  String get onboardingTourStudyTitle => 'Учёба шаг за шагом';
+
+  @override
+  String get onboardingTourStudy1 =>
+      'План чтения: дневная норма и чтение после намаза.';
+
+  @override
+  String get onboardingTourStudy2 =>
+      'Заучивание сур с повторением по расписанию.';
+
+  @override
+  String get onboardingTourStudy3 =>
+      'Курсы по намазу и таджвиду: видео, упражнения и тесты.';
+
+  @override
+  String get onboardingTourDailyTitle => 'На каждый день';
+
+  @override
+  String get onboardingTourDaily1 =>
+      'Время намаза, направление киблы и календарь хиджры.';
+
+  @override
+  String get onboardingTourDaily2 => 'Ду‘а и азкары на разные случаи жизни.';
+
+  @override
+  String get onboardingTourDaily3 =>
+      'Работает без интернета: скачанное всегда с вами.';
+
+  @override
+  String get onboardingGoalTitle => 'Ваша цель';
+
+  @override
+  String get onboardingGoalBody =>
+      'Подстроим главный экран и дневной план. Изменить можно потом в «Плане».';
+
+  @override
+  String get onboardingDailyNorm => 'Дневная норма';
+
+  @override
+  String onboardingPerDay(String amount) {
+    return '$amount в день';
+  }
+
+  @override
+  String get onboardingLess => 'Меньше';
+
+  @override
+  String get onboardingMore => 'Больше';
+
+  @override
+  String get onboardingPrayerTitle => 'Время намаза';
+
+  @override
+  String get onboardingPrayerBody =>
+      'Чтобы считать время намаза и киблу, нужен ваш город. Координаты остаются на телефоне.';
+
+  @override
+  String get onboardingUseLocation => 'Определить по геолокации';
+
+  @override
+  String get onboardingUseLocationHint =>
+      'Приблизительно, с точностью до района';
+
+  @override
+  String get onboardingChooseCity => 'Выбрать город из списка';
+
+  @override
+  String get onboardingChooseCityHint => 'Без доступа к местоположению';
+
+  @override
+  String onboardingLocationSelected(String place) {
+    return 'Выбрано: $place';
+  }
+
+  @override
+  String get onboardingPrayerOffline =>
+      'Нет связи с сервером. Время намаза можно настроить позже на экране «Намаз».';
+
+  @override
+  String get onboardingLater => 'Позже';
+
+  @override
+  String get onboardingRemindersTitle => 'Напоминания';
+
+  @override
+  String get onboardingRemindersBody =>
+      'Пришлём уведомление ко времени каждого намаза. Без разрешения всё работает, просто без напоминаний.';
+
+  @override
+  String get onboardingFivePrayers => 'Пять ежедневных намазов';
+
+  @override
+  String get onboardingPreviewBody => 'Время намаза наступило';
+
+  @override
+  String get onboardingNotificationsOn => 'Уведомления разрешены';
+
+  @override
+  String get onboardingNotificationsBlocked =>
+      'Уведомления выключены. Их можно включить в настройках телефона.';
+
+  @override
+  String get onboardingExactTitle => 'Минута в минуту';
+
+  @override
+  String get onboardingExactBody =>
+      'Android может откладывать уведомления на несколько минут ради экономии батареи. Чтобы напоминание о намазе приходило точно, разрешите IQRO «Будильники и напоминания».';
+
+  @override
+  String get onboardingExactStep1 => 'Нажмите «Открыть настройки»';
+
+  @override
+  String get onboardingExactStep2 =>
+      'Включите «Разрешить установку будильников и напоминаний»';
+
+  @override
+  String get onboardingExactStep3 => 'Вернитесь в IQRO';
+
+  @override
+  String get onboardingOpenSettings => 'Открыть настройки';
+
+  @override
+  String get onboardingKeepApproximate => 'Оставить примерное время';
+
+  @override
+  String get onboardingAnalyticsCounts =>
+      'Считаем: открытие сур, запуск аудио, пройденные уроки, «поделиться» и вход в аккаунт';
+
+  @override
+  String get onboardingAnalyticsNever =>
+      'Не отправляем: координаты, заметки, имя и почту';
+
+  @override
+  String get onboardingDoneTitle => 'Всё готово';
+
+  @override
+  String get onboardingDoneBody =>
+      'Пусть Аллах сделает ваше чтение лёгким и благословенным.';
+
+  @override
+  String get onboardingSummaryPlan => 'План';
+
+  @override
+  String get onboardingRemindersOn => 'Включены';
+
+  @override
+  String get onboardingAnalyticsOn => 'Разрешена';
+
+  @override
+  String get onboardingAnalyticsOff => 'Не разрешена';
+
+  @override
+  String get onboardingDoneHint =>
+      'Всё это можно поменять в «Настройках». Там же можно пройти знакомство заново.';
+
+  @override
+  String get onboardingStart => 'Начать';
+
+  @override
+  String get onboardingReplay => 'Пройти знакомство заново';
+
+  @override
+  String get onboardingReplayHint => 'Возможности, язык и разрешения';
 }

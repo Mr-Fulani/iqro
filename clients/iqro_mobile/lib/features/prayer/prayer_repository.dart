@@ -191,6 +191,13 @@ class PrayerMethod {
   );
 }
 
+/// The method a new user starts with, on the site as well.
+const defaultPrayerMethodCode = 'muslim-world-league';
+
+PrayerMethod defaultPrayerMethod(List<PrayerMethod> methods) =>
+    methods.where((item) => item.code == defaultPrayerMethodCode).firstOrNull ??
+    methods.first;
+
 class PrayerPreferences {
   const PrayerPreferences({
     required this.asrMethod,
@@ -438,7 +445,7 @@ class PrayerRepository {
     final selectedCode = await selectedMethodCode(accountScope: scope);
     var method =
         methods.where((item) => item.code == selectedCode).firstOrNull ??
-        methods.first;
+        defaultPrayerMethod(methods);
     var preferences = await _storedPreferencesFor(method, scope);
     try {
       if (preferences.syncPending) {
