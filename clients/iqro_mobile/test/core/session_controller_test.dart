@@ -29,6 +29,99 @@ void main() {
     );
   });
 
+  test('Google sign-in sends the ID token and adopts the account', () async {
+    final storage = _MemorySecureStorage(<String, String>{
+      'session.v1': jsonEncode(_storedSession('guest-a').toJson()),
+      'installation_id.v1': 'installation-a',
+      'installation_credential.v1': 'credential-a',
+    });
+    final requests = <RequestOptions>[];
+    final auth = _repository(
+      storage,
+      _ScriptedAdapter((request) {
+        requests.add(request);
+        if (request.path == '/auth/google') {
+          return _jsonResponse(<String, Object?>{
+            ..._apiSession('guest-a', status: 'active'),
+            'merged_guest': false,
+            'replayed': false,
+          });
+        }
+        throw StateError('Unexpected request ${request.path}');
+      }),
+    );
+    final fixture = await _notificationFixture();
+    addTearDown(fixture.database.close);
+    final controller = SessionController(auth, fixture.gateway, () => 'ru');
+    addTearDown(controller.dispose);
+    await _waitFor(() => controller.state.valueOrNull?.userId == 'guest-a');
+
+    await controller.signInWithGoogle('google-id-token');
+
+    final request = requests.single;
+    expect(request.headers['Authorization'], 'Bearer access-guest-a');
+    expect(request.data, <String, Object?>{'id_token': 'google-id-token'});
+    expect(controller.state.valueOrNull?.isVerified, isTrue);
+    expect(controller.state.valueOrNull?.email, 'guest-a@example.test');
+    final stored = jsonDecode(storage.values['session.v1']!) as Map;
+    expect(stored['access_token'], 'access-guest-a');
+  });
+
+  test('a rejected Google token keeps the current account', () async {
+    final storage = _MemorySecureStorage(<String, String>{
+      'session.v1': jsonEncode(_storedSession('guest-a').toJson()),
+      'installation_id.v1': 'installation-a',
+      'installation_credential.v1': 'credential-a',
+    });
+    final auth = _repository(
+      storage,
+      _ScriptedAdapter((request) {
+        if (request.path == '/auth/google') {
+          return _jsonResponse(const <String, Object?>{
+            'code': 'google_token_invalid',
+          }, status: 400);
+        }
+        throw StateError('Unexpected request ${request.path}');
+      }),
+    );
+    final fixture = await _notificationFixture();
+    addTearDown(fixture.database.close);
+    final controller = SessionController(auth, fixture.gateway, () => 'ru');
+    addTearDown(controller.dispose);
+    await _waitFor(() => controller.state.valueOrNull?.userId == 'guest-a');
+
+    await expectLater(
+      controller.signInWithGoogle('forged'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.code,
+          'code',
+          'google_token_invalid',
+        ),
+      ),
+    );
+    expect(controller.state.valueOrNull?.userId, 'guest-a');
+    expect(controller.state.valueOrNull?.isVerified, isFalse);
+  });
+
+  test('Google server client ID comes from the backend config', () async {
+    var enabled = true;
+    final auth = _repository(
+      _MemorySecureStorage(<String, String>{}),
+      _ScriptedAdapter((request) {
+        expect(request.path, '/auth/google/config');
+        return _jsonResponse(<String, Object?>{
+          'enabled': enabled,
+          'client_id': enabled ? 'web.apps.googleusercontent.com' : null,
+        });
+      }),
+    );
+
+    expect(await auth.googleServerClientId(), 'web.apps.googleusercontent.com');
+    enabled = false;
+    expect(await auth.googleServerClientId(), isNull);
+  });
+
   test(
     'invalid verification preserves the current account and rethrows',
     () async {

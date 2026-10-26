@@ -1173,6 +1173,13 @@ class _DoneStep extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
+          // First launch: an account already on the phone signs in with one
+          // tap. Hidden until Google sign-in is configured on the server.
+          const GoogleSignInButton(
+            trySilentSignIn: true,
+            showSignedInAs: true,
+            padding: EdgeInsets.only(bottom: 14),
+          ),
           _Hint(l10n.onboardingDoneHint),
         ],
       ),

@@ -1181,10 +1181,28 @@ class AppLocalizationsTr extends AppLocalizations {
   String get sendCode => 'Kodu gönder';
 
   @override
+  String get googleContinue => 'Google ile devam et';
+
+  @override
+  String get googleOrEmail => 'veya e-posta koduyla';
+
+  @override
+  String googleSignedInAs(String email) {
+    return '$email olarak giriş yapıldı';
+  }
+
+  @override
   String get verify => 'Doğrula';
 
   @override
   String get signOut => 'Çıkış yap';
+
+  @override
+  String get accountSwitch => 'Hesap değiştir';
+
+  @override
+  String get accountSwitchHint =>
+      'Çıkış yapın ve başka bir Google hesabı veya e-posta seçin';
 
   @override
   String get devices => 'Cihazlar';
@@ -2252,6 +2270,18 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get apiErrorEmailDelivery =>
       'Kod gönderilemedi. Daha sonra tekrar deneyin.';
+
+  @override
+  String get apiErrorGoogleFailed =>
+      'Google ile giriş yapılamadı. Tekrar deneyin veya e-posta koduyla giriş yapın.';
+
+  @override
+  String get apiErrorGoogleEmailUnverified =>
+      'Bu Google hesabının e-postası doğrulanmamış. E-posta koduyla giriş yapın.';
+
+  @override
+  String get apiErrorGoogleUnavailable =>
+      'Google ile giriş şu anda kullanılamıyor. E-posta koduyla giriş yapın.';
 
   @override
   String get apiErrorRateLimited =>
