@@ -14,6 +14,8 @@ import traceback
 from html import escape
 from pathlib import Path
 
+from quran_backend.modules.core.logging import is_cancelled_request
+
 # Bots knocking with a foreign Host header: Django logs each one as an error.
 IGNORED_LOGGERS = frozenset({"django.security.DisallowedHost"})
 
@@ -29,6 +31,8 @@ def process_role(argv: list[str] | None = None) -> str:
 
 def _ignored(record: logging.LogRecord) -> bool:
     if record.name in IGNORED_LOGGERS or record.name.startswith("quran_backend.modules.alerts"):
+        return True
+    if is_cancelled_request(record):
         return True
     # Celery's own report of a failed alerts task.
     return record.name.startswith("celery") and "alerts." in record.getMessage()
