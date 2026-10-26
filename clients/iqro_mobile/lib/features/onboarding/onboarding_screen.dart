@@ -85,6 +85,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void initState() {
     super.initState();
     final analytics = ref.read(analyticsProvider.notifier);
+    final preferences = ref.read(appPreferencesProvider);
+    _goal = preferences.goal;
+    _unit = preferences.dailyUnit;
+    _target = preferences.dailyTarget;
     _steps = <OnboardingStep>[
       OnboardingStep.language,
       OnboardingStep.tour,
@@ -352,6 +356,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   duration: _motion(context),
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
+                  // The default centres a short step; steps start at the top.
+                  layoutBuilder: (current, previous) => Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[...previous, ?current],
+                  ),
                   child: KeyedSubtree(
                     key: ValueKey<OnboardingStep>(step),
                     child: _body(step),

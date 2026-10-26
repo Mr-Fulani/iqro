@@ -99,6 +99,33 @@ void main() {
     expect(harness.services.savedProfiles, isEmpty);
   });
 
+  testWidgets('the plan step starts from the stored goal', (tester) async {
+    final harness = await pumpOnboarding(
+      tester,
+      stored: const <String, Object>{
+        'locale': 'ru',
+        'daily_unit': 'pages',
+        'daily_target': 5,
+      },
+      initialStep: OnboardingStep.plan,
+    );
+    expect(find.text(_ru.onboardingPerDay(_ru.planPages(5))), findsOneWidget);
+    expect(harness.store.read().dailyTarget, 5);
+  });
+
+  testWidgets('a short step sits at the top of a tall screen', (tester) async {
+    await pumpOnboarding(
+      tester,
+      stored: const <String, Object>{'locale': 'ru'},
+      initialStep: OnboardingStep.exactReminders,
+      size: const Size(400, 1600),
+    );
+    expect(
+      tester.getTopLeft(find.text(_ru.onboardingExactTitle)).dy,
+      lessThan(260),
+    );
+  });
+
   testWidgets('the tour pages through all four slides', (tester) async {
     await pumpOnboarding(
       tester,
