@@ -664,7 +664,9 @@ class ApiPlanRemoteGateway implements PlanRemoteGateway {
     AccountScopeSnapshot? accountScope,
   }) => _api.get(
     '/me/reading-sessions',
-    query: <String, Object?>{'limit': limit},
+    // The plan lists manual records only; automatic reading comes as daily
+    // totals in the planner, so its many sessions would only crowd them out.
+    query: <String, Object?>{'limit': limit, 'source': 'manual'},
     accountScope: accountScope,
   );
 
@@ -887,6 +889,33 @@ class PlanRepository {
     }
   }
 
+  /// The dashboard saved by the last successful [load], shown at once while
+  /// the next one waits for the server. Null when there is nothing saved.
+  Future<DailyPlan?> cached({AccountScopeSnapshot? accountScope}) async {
+    if (_remote == null) return null;
+    final scope = accountScope ?? await _database.captureAccount();
+    final entry = await _database.readAccountCache(
+      _cacheKey,
+      accountScope: scope,
+    );
+    if (entry == null) return null;
+    DailyPlan plan;
+    try {
+      plan = DailyPlan.fromRemote(jsonMap(entry.value));
+    } on Object {
+      return null;
+    }
+    // A copy saved on an earlier day keeps the goal but not that day's reading.
+    if (_dateOnly(entry.updatedAt.toLocal()) != _dateOnly(DateTime.now())) {
+      plan = plan.copyWith(
+        achieved: 0,
+        prayerPages: <String, int>{for (final code in _prayerCodes) code: 0},
+        prayerCheckIns: const <String, PrayerReadingCheckIn>{},
+      );
+    }
+    return _withQueuedReading(plan, scope);
+  }
+
   Future<DailyPlan> _loadRemote(
     AccountScopeSnapshot scope, {
     int? preferredTarget,
@@ -896,9 +925,8 @@ class PlanRepository {
     final timezoneName = await _safeTimezone();
     _database.ensureCurrent(scope);
     await _flushAutomaticSessions(remote, scope);
-    var today = jsonMap(await remote.today(timezoneName, accountScope: scope));
-    _database.ensureCurrent(scope);
-    if (today['goal'] == null && preferredTarget != null) {
+    var snapshot = await _fetchSnapshot(remote, timezoneName, scope);
+    if (jsonMap(snapshot['today'])['goal'] == null && preferredTarget != null) {
       await _setRemoteGoal(
         remote,
         metric: preferredMetric ?? ReadingGoalMetric.pages,
@@ -907,20 +935,8 @@ class PlanRepository {
         timezoneName: timezoneName,
         scope: scope,
       );
-      today = jsonMap(await remote.today(timezoneName, accountScope: scope));
+      snapshot = await _fetchSnapshot(remote, timezoneName, scope);
     }
-    final results = await Future.wait<Object?>(<Future<Object?>>[
-      remote.planner(timezoneName, accountScope: scope),
-      remote.prayerDay(timezoneName, accountScope: scope),
-      remote.sessions(accountScope: scope),
-    ]);
-    _database.ensureCurrent(scope);
-    final snapshot = <String, Object?>{
-      'today': today,
-      'planner': jsonMap(results[0]),
-      'prayer': jsonMap(results[1]),
-      'sessions': results[2],
-    };
     final plan = DailyPlan.fromRemote(snapshot);
     await _database.writeAccountCache(
       _cacheKey,
@@ -930,6 +946,27 @@ class PlanRepository {
     );
     await _storeLocal(plan, scope);
     return plan;
+  }
+
+  /// All four reads go out at once: on a phone each round trip is the cost.
+  Future<Map<String, Object?>> _fetchSnapshot(
+    PlanRemoteGateway remote,
+    String timezoneName,
+    AccountScopeSnapshot scope,
+  ) async {
+    final results = await Future.wait<Object?>(<Future<Object?>>[
+      remote.today(timezoneName, accountScope: scope),
+      remote.planner(timezoneName, accountScope: scope),
+      remote.prayerDay(timezoneName, accountScope: scope),
+      remote.sessions(accountScope: scope),
+    ]);
+    _database.ensureCurrent(scope);
+    return <String, Object?>{
+      'today': jsonMap(results[0]),
+      'planner': jsonMap(results[1]),
+      'prayer': jsonMap(results[2]),
+      'sessions': results[3],
+    };
   }
 
   Future<DailyPlan> setGoal(
