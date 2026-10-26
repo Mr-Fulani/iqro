@@ -204,6 +204,14 @@
   "pause": "Pause",
   "previousSurah": "Previous surah",
   "nextSurah": "Next surah",
+  "mediaBack10": "Back 10 seconds",
+  "mediaForward10": "Forward 10 seconds",
+  "mediaSpeed": "Speed {speed}×",
+  "@mediaSpeed": {
+    "placeholders": {
+      "speed": {"type": "String"}
+    }
+  },
   "speed": "Speed",
   "audioQuality": "Audio quality",
   "playerBackground": "Player background",

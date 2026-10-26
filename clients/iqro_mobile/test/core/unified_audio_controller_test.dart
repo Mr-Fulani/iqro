@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/audio/audio_playback_store.dart';
+import 'package:iqro_mobile/core/audio/listening_media_controls.dart';
 import 'package:iqro_mobile/core/audio/listening_media_service.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
@@ -1568,15 +1569,18 @@ void main() {
         surahName: 'Al-Fatiha',
         autoplay: false,
       );
+      // Off Android (iOS Now Playing): surahs and ten-second steps.
       expect(controls(), <MediaAction>[
         MediaAction.skipToPrevious,
+        MediaAction.rewind,
         MediaAction.play,
+        MediaAction.fastForward,
         MediaAction.skipToNext,
       ]);
       expect(media.playbackState.value.androidCompactActionIndices, <int>[
         0,
-        1,
         2,
+        4,
       ]);
 
       await media.skipToPrevious();
@@ -1601,6 +1605,76 @@ void main() {
       await media.skipToNext();
       expect(controller.state.track?.id, 'track-2');
       expect(controller.state.channel, AudioPlaybackChannel.mushaf);
+    });
+
+    test('the Android 10 card steps ten seconds, cycles the speed and '
+        'pauses when swiped away', () async {
+      final media = ListeningMediaService(androidSdk: 29);
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        mediaService: media,
+        queueSource: _FakeQueueSource(<int>[1, 36]).source,
+      );
+      addTearDown(controller.dispose);
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+        autoplay: true,
+      );
+
+      await media.fastForward();
+      expect(engine.seekCalls.last, const Duration(seconds: 10));
+      await media.rewind();
+      expect(engine.seekCalls.last, Duration.zero);
+
+      // The speed button sends the stop key on this card.
+      await media.stop();
+      expect(controller.state.speed, 1.25);
+      expect(engine.speed, 1.25);
+      expect(
+        media.playbackState.value.controls.last.androidIcon,
+        'drawable/iqro_media_speed_125',
+      );
+      // A press delivered twice while the first still applies is one step.
+      await Future.wait(<Future<void>>[media.stop(), media.stop()]);
+      expect(controller.state.speed, 1.5);
+      await media.stop();
+      await media.stop();
+      expect(controller.state.speed, .75);
+      expect(engine.playing, isTrue);
+
+      await media.onNotificationDeleted();
+      expect(engine.playing, isFalse);
+      expect(controller.state.speed, .75);
+    });
+
+    test('Android 13 changes the speed through its custom action', () async {
+      final media = ListeningMediaService(androidSdk: 34);
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        mediaService: media,
+        queueSource: _FakeQueueSource(<int>[1, 36]).source,
+      );
+      addTearDown(controller.dispose);
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+        autoplay: true,
+      );
+
+      await media.customAction(listeningSpeedAction);
+      expect(controller.state.speed, 1.25);
+      // The stop key stays a pause here.
+      await media.stop();
+      expect(engine.playing, isFalse);
+      expect(controller.state.speed, 1.25);
+      // iOS Now Playing and Android Auto set a rate directly.
+      await media.setSpeed(1.5);
+      expect(controller.state.speed, 1.5);
     });
   });
 }

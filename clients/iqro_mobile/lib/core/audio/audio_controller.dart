@@ -8,6 +8,7 @@ import 'package:just_audio/just_audio.dart';
 import '../../features/audio/audio_models.dart';
 import '../../features/audio/listening_queue.dart';
 import 'audio_playback_store.dart';
+import 'listening_media_controls.dart';
 import 'listening_media_service.dart';
 
 abstract interface class IqroAudioEngine {
@@ -461,6 +462,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
     AudioPlaybackStore? playbackStore,
     ListeningMediaService? mediaService,
     ListeningQueueSource? queueSource,
+    ListeningMediaLabels Function()? mediaLabels,
     Duration persistenceDelay = const Duration(seconds: 5),
     void Function(IqroAudioState state)? onPlaybackStarted,
   }) : assert(player == null || engine == null),
@@ -469,6 +471,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
        _persistenceDelay = persistenceDelay,
        _mediaService = mediaService ?? ListeningMediaService.current,
        _queueSource = queueSource,
+       _mediaLabels = mediaLabels,
        _onPlaybackStarted = onPlaybackStarted,
        super(const IqroAudioState()) {
     _subscriptions.add(
@@ -607,6 +610,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
       seek: seekListening,
       skipToNext: () => skipListeningSurah(1),
       skipToPrevious: () => skipListeningSurah(-1),
+      setSpeed: setListeningSpeed,
+      labels: _mediaLabels,
     );
     _removeMediaListener = addListener(
       (_) => _publishListeningMedia(),
@@ -635,6 +640,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
   final AudioPlaybackStore? _playbackStore;
   final ListeningMediaService? _mediaService;
   final ListeningQueueSource? _queueSource;
+  final ListeningMediaLabels Function()? _mediaLabels;
   _QueuePrefetch? _queuePrefetch;
   final void Function(IqroAudioState state)? _onPlaybackStarted;
   int? _reportedGeneration;
@@ -2027,6 +2033,16 @@ class AudioController extends StateNotifier<IqroAudioState> {
       state = state.copyWith(speed: speed);
       _schedulePersistence(immediate: true);
     });
+  }
+
+  /// The media card's speed button and the rate command of iOS Now Playing:
+  /// they change the Audio tab's speed, never another section's.
+  Future<void> setListeningSpeed(double speed) {
+    if (state.channel != AudioPlaybackChannel.listening ||
+        state.standalone != null) {
+      return Future<void>.value();
+    }
+    return setSpeed(speed);
   }
 
   void updateReciterMetadata(Reciter reciter, {String? currentReciterId}) {
