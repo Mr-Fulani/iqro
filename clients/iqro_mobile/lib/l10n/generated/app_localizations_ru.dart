@@ -668,6 +668,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get nextSurah => 'Следующая сура';
 
   @override
+  String get mediaBack10 => 'Назад на 10 секунд';
+
+  @override
+  String get mediaForward10 => 'Вперёд на 10 секунд';
+
+  @override
+  String mediaSpeed(String speed) {
+    return 'Скорость $speed×';
+  }
+
+  @override
   String get speed => 'Скорость';
 
   @override

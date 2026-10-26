@@ -658,6 +658,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String get nextSurah => 'Sonraki sure';
 
   @override
+  String get mediaBack10 => '10 saniye geri';
+
+  @override
+  String get mediaForward10 => '10 saniye ileri';
+
+  @override
+  String mediaSpeed(String speed) {
+    return 'Hız $speed×';
+  }
+
+  @override
   String get speed => 'Hız';
 
   @override

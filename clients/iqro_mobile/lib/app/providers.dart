@@ -5,12 +5,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../core/analytics/analytics.dart';
 import '../core/audio/audio_controller.dart';
 import '../core/audio/audio_playback_store.dart';
 import '../core/audio/audio_playback_sync_service.dart';
+import '../core/audio/listening_media_controls.dart';
 import '../core/auth/account_scope.dart';
 import '../core/auth/auth_repository.dart';
 import '../core/auth/auth_session.dart';
@@ -1637,6 +1639,8 @@ final audioControllerProvider =
           ? currentScope
           : null;
       final controller = AudioController(
+        mediaLabels: () =>
+            _listeningMediaLabels(ref.read(appPreferencesProvider).locale),
         playbackStore: boundScope == null
             ? null
             : AudioPlaybackStore(database, accountScope: boundScope),
@@ -1672,6 +1676,21 @@ final audioControllerProvider =
       if (boundScope != null) unawaited(controller.restore());
       return controller;
     });
+
+/// The media card's button labels, in the app's language.
+ListeningMediaLabels _listeningMediaLabels(String locale) {
+  final l10n = lookupAppLocalizations(Locale(locale));
+  final speedFormat = NumberFormat('0.##', locale);
+  return (
+    previous: l10n.previousSurah,
+    next: l10n.nextSurah,
+    play: l10n.play,
+    pause: l10n.pause,
+    back10: l10n.mediaBack10,
+    forward10: l10n.mediaForward10,
+    speed: (speed) => l10n.mediaSpeed(speedFormat.format(speed)),
+  );
+}
 
 /// The name the queue gives a surah it plays without a screen, in the app's
 /// language, as the player screens name it.
