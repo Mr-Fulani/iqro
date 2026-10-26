@@ -1,451 +1,579 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
-import '../../core/design_system/iqro_widgets.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/design_system/iqro_animated_logo.dart';
+import '../../core/design_system/iqro_icon.dart';
+import '../../core/design_system/iqro_widgets.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/share/content_share.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../prayer/prayer_places.dart';
+import '../prayer/prayer_repository.dart';
+import '../prayer/prayer_screen.dart' show PrayerCitySheet;
+import '../reminders/reminder_models.dart';
+import 'onboarding_services.dart';
 
+part 'onboarding_steps.dart';
+
+enum OnboardingStep {
+  language,
+  tour,
+  plan,
+  prayer,
+  reminders,
+  exactReminders,
+  analytics,
+  done,
+}
+
+const _tourSlides = 4;
+
+/// First launch, and a replay from Settings. Every permission has "Later":
+/// nothing in the app depends on it, and nothing asks again on its own.
 class OnboardingScreen extends ConsumerStatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({
+    super.key,
+    this.replay = false,
+    this.initialStep,
+    this.initialTourSlide = 0,
+  });
+
+  /// From Settings: no plan step (it would reset today's progress) and the
+  /// flag is already set.
+  final bool replay;
+
+  /// Screenshot tests open a step directly.
+  final OnboardingStep? initialStep;
+  final int initialTourSlide;
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  final _controller = PageController();
-  var _page = 0;
+  late final List<OnboardingStep> _steps;
+  var _index = 0;
+  late final _tour = PageController(initialPage: widget.initialTourSlide);
+  late var _tourSlide = widget.initialTourSlide;
+  var _busy = false;
+
   var _goal = 'reading';
   var _unit = DailyUnit.pages;
   var _target = 6;
 
+  OnboardingPrayerSetup? _prayer;
+  String? _methodCode;
+  var _asrMethod = 'standard';
+  PrayerLocation? _location;
+  var _locating = false;
+  Object? _locationError;
+
+  var _remindPrayers = true;
+  ReminderPermission? _notifications;
+  var _notificationsBlocked = false;
+  var _remindersOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final analytics = ref.read(analyticsProvider.notifier);
+    _steps = <OnboardingStep>[
+      OnboardingStep.language,
+      OnboardingStep.tour,
+      if (!widget.replay) OnboardingStep.plan,
+      OnboardingStep.prayer,
+      OnboardingStep.reminders,
+      if (widget.initialStep == OnboardingStep.exactReminders)
+        OnboardingStep.exactReminders,
+      if (analytics.available &&
+          (ref.read(analyticsProvider) == null ||
+              widget.initialStep == OnboardingStep.analytics))
+        OnboardingStep.analytics,
+      OnboardingStep.done,
+    ];
+    final initial = widget.initialStep;
+    if (initial != null && _steps.contains(initial)) {
+      _index = _steps.indexOf(initial);
+    }
+    if (!widget.replay) {
+      final locales = WidgetsBinding.instance.platformDispatcher.locales;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(appPreferencesProvider.notifier).adoptDeviceLocale(locales);
+        }
+      });
+    }
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final services = ref.read(onboardingServicesProvider);
+    try {
+      final status = await services.reminderStatus();
+      if (mounted) {
+        setState(() {
+          _notifications = status.permission;
+          _remindersOn = status.prayerReminders;
+        });
+      }
+    } on Object {
+      // Unknown status reads as "not yet": the step still offers the request.
+    }
+    final OnboardingPrayerSetup setup;
+    try {
+      setup = await services.loadPrayer();
+    } on Object {
+      if (mounted) {
+        setState(
+          () => _prayer = const OnboardingPrayerSetup(
+            methods: <PrayerMethod>[],
+            methodCode: null,
+            asrMethod: 'standard',
+            location: null,
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _prayer = setup;
+      _methodCode = setup.methodCode;
+      _asrMethod = setup.asrMethod;
+      _location = setup.location;
+    });
+  }
+
   @override
   void dispose() {
-    _controller.dispose();
+    _tour.dispose();
     super.dispose();
   }
 
-  Future<void> _next() async {
-    if (_page < 2) {
-      await _controller.nextPage(
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
-      );
-      return;
-    }
-    final preferences = ref.read(appPreferencesProvider);
-    await ref
-        .read(appPreferencesProvider.notifier)
-        .completeOnboarding(
-          locale: preferences.locale,
-          goal: _goal,
-          unit: _unit,
-          target: _target,
-        );
-    if (mounted) context.go('/app');
+  OnboardingStep get _step => _steps[_index];
+
+  PrayerMethod? get _method =>
+      _prayer?.methods.where((item) => item.code == _methodCode).firstOrNull;
+
+  Duration _motion(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context)
+      ? Duration.zero
+      : const Duration(milliseconds: 280);
+
+  void _advance() {
+    if (_index < _steps.length - 1) setState(() => _index++);
   }
+
+  void _back() {
+    if (_index > 0) setState(() => _index--);
+  }
+
+  Future<void> _run(Future<void> Function() work) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await work();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _nextTourSlide() async {
+    if (_tourSlide >= _tourSlides - 1) return _advance();
+    final duration = _motion(context);
+    if (duration == Duration.zero) {
+      _tour.jumpToPage(_tourSlide + 1);
+    } else {
+      await _tour.nextPage(duration: duration, curve: Curves.easeOutCubic);
+    }
+  }
+
+  Future<void> _useDeviceLocation() async {
+    final method = _method;
+    if (method == null || _locating) return;
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    try {
+      final location = await ref
+          .read(onboardingServicesProvider)
+          .useDeviceLocation(method);
+      if (mounted) setState(() => _location = location);
+    } on Object catch (error) {
+      if (mounted) setState(() => _locationError = error);
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  Future<void> _chooseCity() async {
+    final method = _method;
+    if (method == null || _locating) return;
+    final city = await showModalBottomSheet<PrayerCity>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) =>
+          PrayerCitySheet(locale: Localizations.localeOf(context).languageCode),
+    );
+    if (city == null || !mounted) return;
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    try {
+      final location = await ref
+          .read(onboardingServicesProvider)
+          .useCity(city, method);
+      if (mounted) setState(() => _location = location);
+    } on Object catch (error) {
+      if (mounted) setState(() => _locationError = error);
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  Future<void> _savePrayer() => _run(() async {
+    final method = _method;
+    if (method != null) {
+      try {
+        await ref
+            .read(onboardingServicesProvider)
+            .savePrayerProfile(
+              method: method,
+              asrMethod: _asrMethod,
+              locale: Localizations.localeOf(context).languageCode,
+            );
+      } on Object catch (error, stackTrace) {
+        // Offline or a server hiccup: the prayer screen can save it later.
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'IQRO onboarding',
+          ),
+        );
+      }
+    }
+    _advance();
+  });
+
+  Future<void> _allowNotifications() => _run(() async {
+    final services = ref.read(onboardingServicesProvider);
+    final permission = await services.requestNotifications();
+    if (!mounted) return;
+    setState(() {
+      _notifications = permission;
+      _notificationsBlocked = permission != ReminderPermission.granted;
+    });
+    if (permission != ReminderPermission.granted) return;
+    if (_remindPrayers) {
+      try {
+        await services.enablePrayerReminders();
+        if (mounted) setState(() => _remindersOn = true);
+      } on Object catch (error, stackTrace) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'IQRO onboarding',
+          ),
+        );
+      }
+    }
+    final needsExact =
+        _remindersOn && await services.needsExactReminderAccess();
+    if (!mounted) return;
+    if (needsExact && !_steps.contains(OnboardingStep.exactReminders)) {
+      _steps.insert(_index + 1, OnboardingStep.exactReminders);
+    }
+    _advance();
+  });
+
+  Future<void> _openExactSettings() => _run(() async {
+    await ref.read(onboardingServicesProvider).requestExactReminders();
+    if (mounted) _advance();
+  });
+
+  Future<void> _answerAnalytics(AnalyticsConsent consent) async {
+    await ref.read(analyticsProvider.notifier).setConsent(consent);
+    if (mounted) _advance();
+  }
+
+  Future<void> _finish() => _run(() async {
+    if (!widget.replay) {
+      await ref
+          .read(appPreferencesProvider.notifier)
+          .completeOnboarding(
+            locale: ref.read(appPreferencesProvider).locale,
+            goal: _goal,
+            unit: _unit,
+            target: _target,
+          );
+    }
+    if (!mounted) return;
+    if (widget.replay && context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/app');
+    }
+  });
 
   @override
   Widget build(BuildContext context) {
-    final preferences = ref.watch(appPreferencesProvider);
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(20, 14, 20, 4),
-              child: Row(
-                children: <Widget>[
-                  _Logo(locale: preferences.locale),
-                  const Spacer(),
-                  Text(
-                    '${_page + 1} / 3',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                ],
+    final l10n = context.l10n;
+    final step = _step;
+    return PopScope(
+      canPop: _index == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              _Header(
+                index: _index,
+                total: _steps.length,
+                onBack: _index == 0 ? null : _back,
+                onSkipTour: step == OnboardingStep.tour ? _advance : null,
               ),
-            ),
-            Expanded(
-              child: PageView(
-                controller: _controller,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (value) => setState(() => _page = value),
-                children: <Widget>[
-                  _LanguageStep(
-                    selected: preferences.locale,
-                    onSelected: (value) {
-                      ref
-                          .read(appPreferencesProvider.notifier)
-                          .setLocale(value);
-                    },
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: _motion(context),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: KeyedSubtree(
+                    key: ValueKey<OnboardingStep>(step),
+                    child: _body(step),
                   ),
-                  _GoalStep(
-                    selected: _goal,
-                    onSelected: (value) => setState(() => _goal = value),
-                  ),
-                  _NormStep(
-                    unit: _unit,
-                    target: _target,
-                    onUnit: (value) => setState(() {
-                      _unit = value;
-                      _target = switch (value) {
-                        DailyUnit.minutes => 10,
-                        DailyUnit.pages => 6,
-                        DailyUnit.ayahs => 10,
-                      };
-                    }),
-                    onTarget: (value) => setState(() => _target = value),
-                  ),
-                ],
+                ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(
-                20,
-                12,
-                20,
-                16 + MediaQuery.paddingOf(context).bottom,
-              ),
-              child: Column(
-                children: <Widget>[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List<Widget>.generate(3, (index) {
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        width: index == _page ? 28 : 8,
-                        height: 8,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: index == _page
-                              ? Theme.of(context).colorScheme.primary
-                              : context.iqroColors.line,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _next,
-                      icon: Icon(
-                        _page == 2
-                            ? Icons.shield_outlined
-                            : Icons.arrow_forward,
-                      ),
-                      label: Text(
-                        _page == 2
-                            ? context.l10n.startAsGuest
-                            : context.l10n.continueLabel,
-                      ),
-                    ),
-                  ),
-                  if (_page == 2) ...<Widget>[
-                    const SizedBox(height: 10),
-                    Text(
-                      context.l10n.guestNote,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+              _Footer(children: _actions(step, l10n)),
+            ],
+          ),
         ),
       ),
     );
   }
-}
 
-class _Logo extends StatelessWidget {
-  const _Logo({required this.locale});
-  final String locale;
+  Widget _body(OnboardingStep step) => switch (step) {
+    OnboardingStep.language => _LanguageStep(
+      selected: ref.watch(appPreferencesProvider).locale,
+      onSelected: ref.read(appPreferencesProvider.notifier).setLocale,
+    ),
+    OnboardingStep.tour => _TourStep(
+      controller: _tour,
+      slide: _tourSlide,
+      onSlide: (value) => setState(() => _tourSlide = value),
+    ),
+    OnboardingStep.plan => _PlanStep(
+      goal: _goal,
+      unit: _unit,
+      target: _target,
+      onGoal: (value) => setState(() => _goal = value),
+      onUnit: (value) => setState(() {
+        _unit = value;
+        _target = switch (value) {
+          DailyUnit.minutes => 10,
+          DailyUnit.pages => 6,
+          DailyUnit.ayahs => 10,
+        };
+      }),
+      onTarget: (value) => setState(() => _target = value),
+    ),
+    OnboardingStep.prayer => _PrayerStep(
+      setup: _prayer,
+      methodCode: _methodCode,
+      asrMethod: _asrMethod,
+      location: _location,
+      locating: _locating,
+      error: _locationError,
+      onUseLocation: _useDeviceLocation,
+      onChooseCity: _chooseCity,
+      onMethod: (value) => setState(() => _methodCode = value),
+      onAsr: (value) => setState(() => _asrMethod = value),
+      onOpenLocationSettings: () =>
+          ref.read(onboardingServicesProvider).openLocationSettings(),
+      onOpenAppSettings: () =>
+          ref.read(onboardingServicesProvider).openAppSettings(),
+    ),
+    OnboardingStep.reminders => _RemindersStep(
+      remindPrayers: _remindPrayers,
+      permission: _notifications,
+      blocked: _notificationsBlocked,
+      onRemindPrayers: (value) => setState(() => _remindPrayers = value),
+    ),
+    OnboardingStep.exactReminders => const _ExactRemindersStep(),
+    OnboardingStep.analytics => _AnalyticsStep(
+      consent: ref.watch(analyticsProvider),
+      onPolicy: _openPolicy,
+    ),
+    OnboardingStep.done => _DoneStep(rows: _summary(context)),
+  };
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        const IqroAnimatedLogo(size: 42),
-        const SizedBox(width: 10),
-        Text(
-          locale == 'ar' ? 'إقرأ' : 'IQRO',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-            letterSpacing: locale == 'ar' ? 0 : 2,
-          ),
+  List<Widget> _actions(OnboardingStep step, AppLocalizations l10n) {
+    Widget primary(String label, VoidCallback? onPressed, {Key? key}) =>
+        FilledButton(
+          key: key,
+          onPressed: _busy ? null : onPressed,
+          child: Text(label, textAlign: TextAlign.center),
+        );
+    Widget secondary(String label, VoidCallback? onPressed, {Key? key}) =>
+        TextButton(
+          key: key,
+          onPressed: _busy ? null : onPressed,
+          child: Text(label, textAlign: TextAlign.center),
+        );
+    return switch (step) {
+      OnboardingStep.language => <Widget>[
+        primary(
+          l10n.continueLabel,
+          _advance,
+          key: const Key('onboarding-next'),
         ),
       ],
-    );
-  }
-}
-
-class _StepFrame extends StatelessWidget {
-  const _StepFrame({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.child,
-  });
-  final IconData icon;
-  final String title;
-  final String body;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsetsDirectional.fromSTEB(20, 24, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 34,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(title, style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: 10),
-          Text(
-            body,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 28),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _LanguageStep extends StatelessWidget {
-  const _LanguageStep({required this.selected, required this.onSelected});
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    const languages = <(String, String, String)>[
-      ('ru', 'Русский', 'RU'),
-      ('en', 'English', 'EN'),
-      ('ar', 'العربية', 'عر'),
-      ('tr', 'Türkçe', 'TR'),
-    ];
-    return _StepFrame(
-      icon: Icons.translate,
-      title: context.l10n.welcomeTitle,
-      body: context.l10n.welcomeBody,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          IqroEyebrow(context.l10n.chooseLanguage),
-          const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.1,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: languages
-                .map((item) {
-                  final active = selected == item.$1;
-                  return Semantics(
-                    selected: active,
-                    button: true,
-                    child: IqroCard(
-                      onTap: () => onSelected(item.$1),
-                      color: active
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : null,
-                      borderColor: active
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: <Widget>[
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: active
-                                ? Theme.of(context).colorScheme.primary
-                                : context.iqroColors.panelSoft,
-                            foregroundColor: active
-                                ? Theme.of(context).colorScheme.onPrimary
-                                : Theme.of(context).colorScheme.onSurface,
-                            child: Text(
-                              item.$3,
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              item.$2,
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                })
-                .toList(growable: false),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GoalStep extends StatelessWidget {
-  const _GoalStep({required this.selected, required this.onSelected});
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final goals = <(String, IconData, String)>[
-      ('reading', Icons.menu_book_outlined, context.l10n.goalReading),
-      ('memorization', Icons.repeat, context.l10n.goalMemorization),
-      ('prayer', Icons.mosque_outlined, context.l10n.goalPrayer),
-      ('dua', iqroDuaIcon, context.l10n.goalDua),
-    ];
-    return _StepFrame(
-      icon: Icons.explore_outlined,
-      title: context.l10n.chooseGoal,
-      body: context.l10n.welcomeBody,
-      child: Column(
-        children: goals
-            .map((goal) {
-              final active = goal.$1 == selected;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: IqroCard(
-                  onTap: () => onSelected(goal.$1),
-                  color: active
-                      ? Theme.of(context).colorScheme.primaryContainer
-                      : null,
-                  borderColor: active
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                  child: Row(
-                    children: <Widget>[
-                      IqroIcon(
-                        goal.$2,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          goal.$3,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      Icon(active ? Icons.check_circle : Icons.circle_outlined),
-                    ],
-                  ),
-                ),
-              );
-            })
-            .toList(growable: false),
-      ),
-    );
-  }
-}
-
-class _NormStep extends StatelessWidget {
-  const _NormStep({
-    required this.unit,
-    required this.target,
-    required this.onUnit,
-    required this.onTarget,
-  });
-  final DailyUnit unit;
-  final int target;
-  final ValueChanged<DailyUnit> onUnit;
-  final ValueChanged<int> onTarget;
-
-  @override
-  Widget build(BuildContext context) {
-    final max = switch (unit) {
-      DailyUnit.minutes => 60,
-      DailyUnit.pages => 30,
-      DailyUnit.ayahs => 50,
+      OnboardingStep.tour => <Widget>[
+        primary(
+          l10n.onboardingNext,
+          _nextTourSlide,
+          key: const Key('onboarding-next'),
+        ),
+      ],
+      OnboardingStep.plan => <Widget>[
+        primary(
+          l10n.continueLabel,
+          _advance,
+          key: const Key('onboarding-next'),
+        ),
+      ],
+      OnboardingStep.prayer => <Widget>[
+        primary(
+          l10n.continueLabel,
+          _prayer == null || _locating ? null : _savePrayer,
+          key: const Key('onboarding-next'),
+        ),
+        secondary(
+          l10n.onboardingLater,
+          _advance,
+          key: const Key('onboarding-later'),
+        ),
+      ],
+      OnboardingStep.reminders => <Widget>[
+        primary(
+          _notifications == ReminderPermission.granted
+              ? l10n.continueLabel
+              : l10n.allowNotifications,
+          _allowNotifications,
+          key: const Key('onboarding-next'),
+        ),
+        secondary(
+          l10n.onboardingLater,
+          _advance,
+          key: const Key('onboarding-later'),
+        ),
+      ],
+      OnboardingStep.exactReminders => <Widget>[
+        primary(
+          l10n.onboardingOpenSettings,
+          _openExactSettings,
+          key: const Key('onboarding-next'),
+        ),
+        secondary(
+          l10n.onboardingKeepApproximate,
+          _advance,
+          key: const Key('onboarding-later'),
+        ),
+      ],
+      OnboardingStep.analytics => <Widget>[
+        primary(
+          l10n.analyticsAccept,
+          () => _answerAnalytics(AnalyticsConsent.granted),
+          key: const Key('onboarding-next'),
+        ),
+        OutlinedButton(
+          key: const Key('onboarding-later'),
+          onPressed: _busy
+              ? null
+              : () => _answerAnalytics(AnalyticsConsent.denied),
+          child: Text(l10n.analyticsDecline, textAlign: TextAlign.center),
+        ),
+      ],
+      OnboardingStep.done => <Widget>[
+        primary(
+          l10n.onboardingStart,
+          _finish,
+          key: const Key('onboarding-next'),
+        ),
+      ],
     };
-    final label = switch (unit) {
-      DailyUnit.minutes => context.l10n.minutes,
-      DailyUnit.pages => context.l10n.pages,
-      DailyUnit.ayahs => context.l10n.ayahs,
-    };
-    return _StepFrame(
-      icon: Icons.track_changes_outlined,
-      title: context.l10n.dailyNorm,
-      body: context.l10n.guestNote,
-      child: Column(
-        children: <Widget>[
-          SegmentedButton<DailyUnit>(
-            segments: <ButtonSegment<DailyUnit>>[
-              ButtonSegment(
-                value: DailyUnit.minutes,
-                label: Text(context.l10n.minutes),
-              ),
-              ButtonSegment(
-                value: DailyUnit.pages,
-                label: Text(context.l10n.pages),
-              ),
-              ButtonSegment(
-                value: DailyUnit.ayahs,
-                label: Text(context.l10n.ayahs),
-              ),
-            ],
-            selected: <DailyUnit>{unit},
-            onSelectionChanged: (value) => onUnit(value.first),
-            showSelectedIcon: false,
-          ),
-          const SizedBox(height: 28),
-          IqroCard(
-            color: context.iqroColors.sand,
-            borderColor: Colors.transparent,
-            child: Column(
-              children: <Widget>[
-                Text(
-                  '$target',
-                  style: Theme.of(context).textTheme.displaySmall,
-                ),
-                Text(label),
-                Slider(
-                  value: target.toDouble(),
-                  min: 1,
-                  max: max.toDouble(),
-                  divisions: max - 1,
-                  label: '$target',
-                  onChanged: (value) => onTarget(value.round()),
-                ),
-              ],
-            ),
-          ),
-        ],
+  }
+
+  List<(String, String, bool)> _summary(BuildContext context) {
+    final l10n = context.l10n;
+    final locale = ref.watch(appPreferencesProvider).locale;
+    final analytics = ref.read(analyticsProvider.notifier);
+    final consent = ref.watch(analyticsProvider);
+    final city = prayerCityById(_location?.cityId);
+    final place = _location == null
+        ? null
+        : city?.nameFor(locale) ?? l10n.currentLocation;
+    return <(String, String, bool)>[
+      (l10n.language, _languageName(locale), true),
+      if (!widget.replay)
+        (l10n.onboardingSummaryPlan, _planAmount(l10n, _unit, _target), true),
+      (
+        l10n.onboardingPrayerTitle,
+        place ?? l10n.onboardingLater,
+        place != null,
       ),
+      (
+        l10n.reminders,
+        _remindersOn ? l10n.onboardingRemindersOn : l10n.onboardingLater,
+        _remindersOn,
+      ),
+      if (analytics.available)
+        (
+          l10n.analyticsTitle,
+          consent == AnalyticsConsent.granted
+              ? l10n.onboardingAnalyticsOn
+              : l10n.onboardingAnalyticsOff,
+          true,
+        ),
+    ];
+  }
+
+  Future<void> _openPolicy() async {
+    final locale = Localizations.localeOf(context).languageCode;
+    await launchUrl(
+      Uri.parse('$iqroPublicSite/$locale/privacy'),
+      mode: LaunchMode.externalApplication,
     );
   }
 }
+
+const _languages = <(String, String, String)>[
+  ('ru', 'Русский', 'RU'),
+  ('en', 'English', 'EN'),
+  ('ar', 'العربية', 'عر'),
+  ('tr', 'Türkçe', 'TR'),
+];
+
+String _languageName(String code) =>
+    _languages.where((item) => item.$1 == code).firstOrNull?.$2 ?? code;
+
+String _planAmount(AppLocalizations l10n, DailyUnit unit, int target) =>
+    l10n.onboardingPerDay(switch (unit) {
+      DailyUnit.minutes => l10n.planMinutes(target),
+      DailyUnit.pages => l10n.planPages(target),
+      DailyUnit.ayahs => l10n.planAyahs(target),
+    });

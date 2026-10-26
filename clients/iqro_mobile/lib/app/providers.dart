@@ -233,6 +233,20 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
     );
   }
 
+  /// First launch: start in the phone's language when IQRO has it.
+  Future<void> adoptDeviceLocale(List<Locale> deviceLocales) async {
+    if (_store.hasStoredLocale) return;
+    final locale = deviceLocales
+        .map((item) => item.languageCode)
+        .where(PreferencesStore.supportedLocales.contains)
+        .firstOrNull;
+    if (locale != null && locale != state.locale) await setLocale(locale);
+  }
+
+  /// Debug builds only: the next cold start opens the first-launch flow.
+  Future<void> resetOnboarding() =>
+      _set(state.copyWith(onboardingComplete: false));
+
   Future<void> setLocale(String locale) => _set(state.copyWith(locale: locale));
   Future<void> setTheme(ThemeMode mode) =>
       _set(state.copyWith(themeMode: mode));

@@ -2919,4 +2919,225 @@ class AppLocalizationsTr extends AppLocalizations {
   String recitationSomeSurahs(int count) {
     return '114 sureden $count';
   }
+
+  @override
+  String get onboardingWelcomeTitle => 'IQRO\'ya hoş geldiniz';
+
+  @override
+  String get onboardingWelcomeBody =>
+      'Kur\'an, dua, namaz ve öğrenme tek bir uygulamada. Bir dil seçin: arayüz hemen değişir.';
+
+  @override
+  String get onboardingLanguageHint =>
+      'Telefonunuzun dili önceden seçildi. İstediğiniz zaman Ayarlar\'dan değiştirebilirsiniz.';
+
+  @override
+  String get onboardingRtl => 'sağdan sola';
+
+  @override
+  String get onboardingSkipTour => 'Turu geç';
+
+  @override
+  String get onboardingNext => 'İleri';
+
+  @override
+  String onboardingStepOf(int current, int total) {
+    return 'Adım $current / $total';
+  }
+
+  @override
+  String onboardingSlideOf(int current, int total) {
+    return 'Slayt $current / $total';
+  }
+
+  @override
+  String get onboardingTourQuranTitle => 'Kur\'an ve Mushaf';
+
+  @override
+  String get onboardingTourQuran1 =>
+      'Dört dilde meal ve tefsirlerle Kur\'an metni.';
+
+  @override
+  String get onboardingTourQuran2 => 'Basılı nüsha gibi sayfa sayfa Mushaf.';
+
+  @override
+  String get onboardingTourQuran3 =>
+      'Renkli tecvid, yer imleri ve ayetlere notlar.';
+
+  @override
+  String get onboardingTourAudioTitle => 'Ses ve kâriler';
+
+  @override
+  String get onboardingTourAudio1 =>
+      'Tanınmış kâriler ve okunan ayeti vurgulayan oynatıcı.';
+
+  @override
+  String get onboardingTourAudio2 =>
+      'Dinleme sırası ve kilit ekranından kontrol.';
+
+  @override
+  String get onboardingTourAudio3 =>
+      'İnternetsiz dinlemek için sureleri indirin.';
+
+  @override
+  String get onboardingTourStudyTitle => 'Adım adım öğrenme';
+
+  @override
+  String get onboardingTourStudy1 =>
+      'Okuma planı: günlük hedef ve namaz sonrası okuma.';
+
+  @override
+  String get onboardingTourStudy2 => 'Düzenli tekrarla sure ezberi.';
+
+  @override
+  String get onboardingTourStudy3 =>
+      'Namaz ve tecvid kursları: video, alıştırma ve testler.';
+
+  @override
+  String get onboardingTourDailyTitle => 'Her gün için';
+
+  @override
+  String get onboardingTourDaily1 =>
+      'Namaz vakitleri, kıble yönü ve hicri takvim.';
+
+  @override
+  String get onboardingTourDaily2 => 'Farklı durumlar için dualar ve zikirler.';
+
+  @override
+  String get onboardingTourDaily3 =>
+      'İnternetsiz çalışır: indirdikleriniz hep yanınızda.';
+
+  @override
+  String get onboardingGoalTitle => 'Hedefiniz';
+
+  @override
+  String get onboardingGoalBody =>
+      'Ana ekranı ve günlük planı buna göre hazırlarız. Daha sonra Plan bölümünden değiştirebilirsiniz.';
+
+  @override
+  String get onboardingDailyNorm => 'Günlük hedef';
+
+  @override
+  String onboardingPerDay(String amount) {
+    return 'Günde $amount';
+  }
+
+  @override
+  String get onboardingLess => 'Azalt';
+
+  @override
+  String get onboardingMore => 'Artır';
+
+  @override
+  String get onboardingPrayerTitle => 'Namaz vakitleri';
+
+  @override
+  String get onboardingPrayerBody =>
+      'Namaz vakitlerini ve kıbleyi hesaplamak için şehrinizi bilmemiz gerekir. Koordinatlar telefonunuzda kalır.';
+
+  @override
+  String get onboardingUseLocation => 'Konumumu bul';
+
+  @override
+  String get onboardingUseLocationHint => 'Yaklaşık, semt düzeyinde';
+
+  @override
+  String get onboardingChooseCity => 'Listeden şehir seç';
+
+  @override
+  String get onboardingChooseCityHint => 'Konum erişimi gerekmez';
+
+  @override
+  String onboardingLocationSelected(String place) {
+    return 'Seçilen: $place';
+  }
+
+  @override
+  String get onboardingPrayerOffline =>
+      'Sunucuya bağlanılamadı. Namaz vakitlerini daha sonra Namaz ekranından ayarlayabilirsiniz.';
+
+  @override
+  String get onboardingLater => 'Sonra';
+
+  @override
+  String get onboardingRemindersTitle => 'Hatırlatmalar';
+
+  @override
+  String get onboardingRemindersBody =>
+      'Her namaz vakti girdiğinde bildirim göndeririz. İzin vermezseniz her şey yine çalışır, yalnızca hatırlatma olmaz.';
+
+  @override
+  String get onboardingFivePrayers => 'Beş vakit namaz';
+
+  @override
+  String get onboardingPreviewBody => 'Namaz vakti girdi';
+
+  @override
+  String get onboardingNotificationsOn => 'Bildirimlere izin verildi';
+
+  @override
+  String get onboardingNotificationsBlocked =>
+      'Bildirimler kapalı. Telefon ayarlarından açabilirsiniz.';
+
+  @override
+  String get onboardingExactTitle => 'Tam vaktinde';
+
+  @override
+  String get onboardingExactBody =>
+      'Android pil tasarrufu için bildirimleri birkaç dakika geciktirebilir. Namaz hatırlatmalarının tam vaktinde gelmesi için IQRO\'ya “Alarmlar ve hatırlatıcılar” izni verin.';
+
+  @override
+  String get onboardingExactStep1 => '“Ayarları aç”a dokunun';
+
+  @override
+  String get onboardingExactStep2 =>
+      '“Alarm ve hatırlatıcı ayarlamaya izin ver”i açın';
+
+  @override
+  String get onboardingExactStep3 => 'IQRO\'ya geri dönün';
+
+  @override
+  String get onboardingOpenSettings => 'Ayarları aç';
+
+  @override
+  String get onboardingKeepApproximate => 'Yaklaşık vakit kalsın';
+
+  @override
+  String get onboardingAnalyticsCounts =>
+      'Sayılanlar: sure açma, ses başlatma, tamamlanan dersler, paylaşma ve giriş';
+
+  @override
+  String get onboardingAnalyticsNever =>
+      'Asla gönderilmez: konumunuz, notlarınız, adınız veya e-postanız';
+
+  @override
+  String get onboardingDoneTitle => 'Her şey hazır';
+
+  @override
+  String get onboardingDoneBody => 'Allah okumanızı kolay ve bereketli kılsın.';
+
+  @override
+  String get onboardingSummaryPlan => 'Plan';
+
+  @override
+  String get onboardingRemindersOn => 'Açık';
+
+  @override
+  String get onboardingAnalyticsOn => 'İzin verildi';
+
+  @override
+  String get onboardingAnalyticsOff => 'İzin verilmedi';
+
+  @override
+  String get onboardingDoneHint =>
+      'Bunların hepsini Ayarlar\'dan değiştirebilir, bu tanıtımı da oradan yeniden izleyebilirsiniz.';
+
+  @override
+  String get onboardingStart => 'Başla';
+
+  @override
+  String get onboardingReplay => 'Tanıtımı yeniden izle';
+
+  @override
+  String get onboardingReplayHint => 'Özellikler, dil ve izinler';
 }

@@ -5267,6 +5267,390 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} of 114 surahs'**
   String recitationSomeSurahs(int count);
+
+  /// No description provided for @onboardingWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to IQRO'**
+  String get onboardingWelcomeTitle;
+
+  /// No description provided for @onboardingWelcomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Quran, du‘a, prayer and learning in one app. Choose a language: the app switches right away.'**
+  String get onboardingWelcomeBody;
+
+  /// No description provided for @onboardingLanguageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone\'s language is preselected. You can change it any time in Settings.'**
+  String get onboardingLanguageHint;
+
+  /// No description provided for @onboardingRtl.
+  ///
+  /// In en, this message translates to:
+  /// **'right to left'**
+  String get onboardingRtl;
+
+  /// No description provided for @onboardingSkipTour.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip tour'**
+  String get onboardingSkipTour;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingStepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String onboardingStepOf(int current, int total);
+
+  /// No description provided for @onboardingSlideOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide {current} of {total}'**
+  String onboardingSlideOf(int current, int total);
+
+  /// No description provided for @onboardingTourQuranTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quran and Mushaf'**
+  String get onboardingTourQuranTitle;
+
+  /// No description provided for @onboardingTourQuran1.
+  ///
+  /// In en, this message translates to:
+  /// **'The Quran text with translations and tafsirs in four languages.'**
+  String get onboardingTourQuran1;
+
+  /// No description provided for @onboardingTourQuran2.
+  ///
+  /// In en, this message translates to:
+  /// **'The Mushaf page by page, like a printed copy.'**
+  String get onboardingTourQuran2;
+
+  /// No description provided for @onboardingTourQuran3.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour-coded tajweed, bookmarks and notes on ayahs.'**
+  String get onboardingTourQuran3;
+
+  /// No description provided for @onboardingTourAudioTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio and reciters'**
+  String get onboardingTourAudioTitle;
+
+  /// No description provided for @onboardingTourAudio1.
+  ///
+  /// In en, this message translates to:
+  /// **'Well-known reciters and a player that highlights the current ayah.'**
+  String get onboardingTourAudio1;
+
+  /// No description provided for @onboardingTourAudio2.
+  ///
+  /// In en, this message translates to:
+  /// **'A listening queue and controls on the lock screen.'**
+  String get onboardingTourAudio2;
+
+  /// No description provided for @onboardingTourAudio3.
+  ///
+  /// In en, this message translates to:
+  /// **'Download surahs to listen without internet.'**
+  String get onboardingTourAudio3;
+
+  /// No description provided for @onboardingTourStudyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn step by step'**
+  String get onboardingTourStudyTitle;
+
+  /// No description provided for @onboardingTourStudy1.
+  ///
+  /// In en, this message translates to:
+  /// **'A reading plan: a daily goal and reading after prayer.'**
+  String get onboardingTourStudy1;
+
+  /// No description provided for @onboardingTourStudy2.
+  ///
+  /// In en, this message translates to:
+  /// **'Memorize surahs with scheduled review.'**
+  String get onboardingTourStudy2;
+
+  /// No description provided for @onboardingTourStudy3.
+  ///
+  /// In en, this message translates to:
+  /// **'Courses on prayer and tajweed: video, practice and quizzes.'**
+  String get onboardingTourStudy3;
+
+  /// No description provided for @onboardingTourDailyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get onboardingTourDailyTitle;
+
+  /// No description provided for @onboardingTourDaily1.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer times, qibla direction and the Hijri calendar.'**
+  String get onboardingTourDaily1;
+
+  /// No description provided for @onboardingTourDaily2.
+  ///
+  /// In en, this message translates to:
+  /// **'Du‘a and adhkar for many occasions.'**
+  String get onboardingTourDaily2;
+
+  /// No description provided for @onboardingTourDaily3.
+  ///
+  /// In en, this message translates to:
+  /// **'Works offline: what you download stays with you.'**
+  String get onboardingTourDaily3;
+
+  /// No description provided for @onboardingGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your goal'**
+  String get onboardingGoalTitle;
+
+  /// No description provided for @onboardingGoalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll tailor the home screen and daily plan. You can change it later in Plan.'**
+  String get onboardingGoalBody;
+
+  /// No description provided for @onboardingDailyNorm.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily goal'**
+  String get onboardingDailyNorm;
+
+  /// No description provided for @onboardingPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} a day'**
+  String onboardingPerDay(String amount);
+
+  /// No description provided for @onboardingLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Less'**
+  String get onboardingLess;
+
+  /// No description provided for @onboardingMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get onboardingMore;
+
+  /// No description provided for @onboardingPrayerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer times'**
+  String get onboardingPrayerTitle;
+
+  /// No description provided for @onboardingPrayerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'To calculate prayer times and the qibla we need your city. Coordinates stay on your phone.'**
+  String get onboardingPrayerBody;
+
+  /// No description provided for @onboardingUseLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect my location'**
+  String get onboardingUseLocation;
+
+  /// No description provided for @onboardingUseLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate, to the neighbourhood'**
+  String get onboardingUseLocationHint;
+
+  /// No description provided for @onboardingChooseCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a city from the list'**
+  String get onboardingChooseCity;
+
+  /// No description provided for @onboardingChooseCityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No location access needed'**
+  String get onboardingChooseCityHint;
+
+  /// No description provided for @onboardingLocationSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected: {place}'**
+  String onboardingLocationSelected(String place);
+
+  /// No description provided for @onboardingPrayerOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection to the server. You can set up prayer times later on the Prayer screen.'**
+  String get onboardingPrayerOffline;
+
+  /// No description provided for @onboardingLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get onboardingLater;
+
+  /// No description provided for @onboardingRemindersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders'**
+  String get onboardingRemindersTitle;
+
+  /// No description provided for @onboardingRemindersBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll notify you when each prayer time begins. Without permission everything still works, just without reminders.'**
+  String get onboardingRemindersBody;
+
+  /// No description provided for @onboardingFivePrayers.
+  ///
+  /// In en, this message translates to:
+  /// **'Five daily prayers'**
+  String get onboardingFivePrayers;
+
+  /// No description provided for @onboardingPreviewBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer time has begun'**
+  String get onboardingPreviewBody;
+
+  /// No description provided for @onboardingNotificationsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are allowed'**
+  String get onboardingNotificationsOn;
+
+  /// No description provided for @onboardingNotificationsBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are off. You can turn them on in your phone\'s settings.'**
+  String get onboardingNotificationsBlocked;
+
+  /// No description provided for @onboardingExactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Right on time'**
+  String get onboardingExactTitle;
+
+  /// No description provided for @onboardingExactBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Android may delay notifications by a few minutes to save battery. To get prayer reminders exactly on time, allow IQRO “Alarms & reminders”.'**
+  String get onboardingExactBody;
+
+  /// No description provided for @onboardingExactStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap “Open settings”'**
+  String get onboardingExactStep1;
+
+  /// No description provided for @onboardingExactStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on “Allow setting alarms and reminders”'**
+  String get onboardingExactStep2;
+
+  /// No description provided for @onboardingExactStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Come back to IQRO'**
+  String get onboardingExactStep3;
+
+  /// No description provided for @onboardingOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get onboardingOpenSettings;
+
+  /// No description provided for @onboardingKeepApproximate.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep approximate time'**
+  String get onboardingKeepApproximate;
+
+  /// No description provided for @onboardingAnalyticsCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Counted: surah opens, audio plays, completed lessons, shares and sign-ins'**
+  String get onboardingAnalyticsCounts;
+
+  /// No description provided for @onboardingAnalyticsNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never sent: your location, notes, name or email'**
+  String get onboardingAnalyticsNever;
+
+  /// No description provided for @onboardingDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All set'**
+  String get onboardingDoneTitle;
+
+  /// No description provided for @onboardingDoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'May Allah make your reading easy and blessed.'**
+  String get onboardingDoneBody;
+
+  /// No description provided for @onboardingSummaryPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get onboardingSummaryPlan;
+
+  /// No description provided for @onboardingRemindersOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get onboardingRemindersOn;
+
+  /// No description provided for @onboardingAnalyticsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed'**
+  String get onboardingAnalyticsOn;
+
+  /// No description provided for @onboardingAnalyticsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed'**
+  String get onboardingAnalyticsOff;
+
+  /// No description provided for @onboardingDoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change all of this in Settings, and replay this introduction there too.'**
+  String get onboardingDoneHint;
+
+  /// No description provided for @onboardingStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get onboardingStart;
+
+  /// No description provided for @onboardingReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay the introduction'**
+  String get onboardingReplay;
+
+  /// No description provided for @onboardingReplayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Features, language and permissions'**
+  String get onboardingReplayHint;
 }
 
 class _AppLocalizationsDelegate

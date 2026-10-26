@@ -207,7 +207,7 @@ class _DelayedPermissionNotifications extends _NoopNotifications {
   var rescheduleCalls = 0;
 
   @override
-  Future<ReminderPermission> requestPermission() {
+  Future<ReminderPermission> requestPermission({bool exactAlarms = true}) {
     started.complete();
     return result.future;
   }

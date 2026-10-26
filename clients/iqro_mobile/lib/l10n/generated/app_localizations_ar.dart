@@ -2944,4 +2944,219 @@ class AppLocalizationsAr extends AppLocalizations {
   String recitationSomeSurahs(int count) {
     return '$count من 114 سورة';
   }
+
+  @override
+  String get onboardingWelcomeTitle => 'مرحبًا بك في إقرأ';
+
+  @override
+  String get onboardingWelcomeBody =>
+      'القرآن والأدعية والصلاة والتعلّم في تطبيق واحد. اختر اللغة وستتغيّر الواجهة فورًا.';
+
+  @override
+  String get onboardingLanguageHint =>
+      'اخترنا لغة هاتفك مسبقًا. يمكنك تغييرها في أي وقت من الإعدادات.';
+
+  @override
+  String get onboardingRtl => 'من اليمين إلى اليسار';
+
+  @override
+  String get onboardingSkipTour => 'تخطَّ الجولة';
+
+  @override
+  String get onboardingNext => 'التالي';
+
+  @override
+  String onboardingStepOf(int current, int total) {
+    return 'الخطوة $current من $total';
+  }
+
+  @override
+  String onboardingSlideOf(int current, int total) {
+    return 'الشريحة $current من $total';
+  }
+
+  @override
+  String get onboardingTourQuranTitle => 'القرآن والمصحف';
+
+  @override
+  String get onboardingTourQuran1 =>
+      'نص القرآن مع الترجمات والتفاسير بأربع لغات.';
+
+  @override
+  String get onboardingTourQuran2 => 'المصحف صفحةً صفحة كالنسخة المطبوعة.';
+
+  @override
+  String get onboardingTourQuran3 => 'تجويد ملوّن وعلامات وملاحظات على الآيات.';
+
+  @override
+  String get onboardingTourAudioTitle => 'التلاوات والقرّاء';
+
+  @override
+  String get onboardingTourAudio1 =>
+      'قرّاء مشهورون ومشغّل يُبرز الآية الحالية.';
+
+  @override
+  String get onboardingTourAudio2 => 'قائمة استماع والتحكم من شاشة القفل.';
+
+  @override
+  String get onboardingTourAudio3 => 'نزّل السور لتستمع بلا إنترنت.';
+
+  @override
+  String get onboardingTourStudyTitle => 'التعلّم خطوة بخطوة';
+
+  @override
+  String get onboardingTourStudy1 => 'خطة القراءة: ورد يومي وقراءة بعد الصلاة.';
+
+  @override
+  String get onboardingTourStudy2 => 'حفظ السور مع مراجعة مجدولة.';
+
+  @override
+  String get onboardingTourStudy3 =>
+      'دورات في الصلاة والتجويد: فيديو وتمارين واختبارات.';
+
+  @override
+  String get onboardingTourDailyTitle => 'لكل يوم';
+
+  @override
+  String get onboardingTourDaily1 =>
+      'مواقيت الصلاة واتجاه القبلة والتقويم الهجري.';
+
+  @override
+  String get onboardingTourDaily2 => 'أدعية وأذكار لمختلف المناسبات.';
+
+  @override
+  String get onboardingTourDaily3 => 'يعمل بلا إنترنت: ما تنزّله يبقى معك.';
+
+  @override
+  String get onboardingGoalTitle => 'هدفك';
+
+  @override
+  String get onboardingGoalBody =>
+      'سنهيّئ الشاشة الرئيسية والخطة اليومية. يمكنك تغيير ذلك لاحقًا من «الخطة».';
+
+  @override
+  String get onboardingDailyNorm => 'الورد اليومي';
+
+  @override
+  String onboardingPerDay(String amount) {
+    return '$amount يوميًا';
+  }
+
+  @override
+  String get onboardingLess => 'أقل';
+
+  @override
+  String get onboardingMore => 'أكثر';
+
+  @override
+  String get onboardingPrayerTitle => 'مواقيت الصلاة';
+
+  @override
+  String get onboardingPrayerBody =>
+      'لحساب مواقيت الصلاة والقبلة نحتاج إلى مدينتك. تبقى الإحداثيات على هاتفك.';
+
+  @override
+  String get onboardingUseLocation => 'تحديد موقعي';
+
+  @override
+  String get onboardingUseLocationHint => 'تقريبي، على مستوى الحي';
+
+  @override
+  String get onboardingChooseCity => 'اختيار مدينة من القائمة';
+
+  @override
+  String get onboardingChooseCityHint => 'دون الوصول إلى الموقع';
+
+  @override
+  String onboardingLocationSelected(String place) {
+    return 'المختار: $place';
+  }
+
+  @override
+  String get onboardingPrayerOffline =>
+      'لا اتصال بالخادم. يمكنك ضبط مواقيت الصلاة لاحقًا من شاشة «الصلاة».';
+
+  @override
+  String get onboardingLater => 'لاحقًا';
+
+  @override
+  String get onboardingRemindersTitle => 'التذكيرات';
+
+  @override
+  String get onboardingRemindersBody =>
+      'سنرسل إشعارًا عند دخول وقت كل صلاة. بدون الإذن يعمل كل شيء، لكن بلا تذكيرات.';
+
+  @override
+  String get onboardingFivePrayers => 'الصلوات الخمس';
+
+  @override
+  String get onboardingPreviewBody => 'حان وقت الصلاة';
+
+  @override
+  String get onboardingNotificationsOn => 'الإشعارات مسموح بها';
+
+  @override
+  String get onboardingNotificationsBlocked =>
+      'الإشعارات متوقفة. يمكنك تفعيلها من إعدادات الهاتف.';
+
+  @override
+  String get onboardingExactTitle => 'في الوقت تمامًا';
+
+  @override
+  String get onboardingExactBody =>
+      'قد يؤخّر أندرويد الإشعارات بضع دقائق لتوفير البطارية. لكي يصل تذكير الصلاة في وقته تمامًا، اسمح لتطبيق إقرأ بـ«المنبّهات والتذكيرات».';
+
+  @override
+  String get onboardingExactStep1 => 'اضغط «فتح الإعدادات»';
+
+  @override
+  String get onboardingExactStep2 => 'فعّل «السماح بضبط المنبّهات والتذكيرات»';
+
+  @override
+  String get onboardingExactStep3 => 'عُد إلى إقرأ';
+
+  @override
+  String get onboardingOpenSettings => 'فتح الإعدادات';
+
+  @override
+  String get onboardingKeepApproximate => 'الإبقاء على الوقت التقريبي';
+
+  @override
+  String get onboardingAnalyticsCounts =>
+      'نحتسب: فتح السور وتشغيل التلاوات والدروس المكتملة والمشاركة وتسجيل الدخول';
+
+  @override
+  String get onboardingAnalyticsNever =>
+      'لا نرسل: موقعك أو ملاحظاتك أو اسمك أو بريدك';
+
+  @override
+  String get onboardingDoneTitle => 'كل شيء جاهز';
+
+  @override
+  String get onboardingDoneBody => 'نسأل الله أن يجعل قراءتك ميسّرة ومباركة.';
+
+  @override
+  String get onboardingSummaryPlan => 'الخطة';
+
+  @override
+  String get onboardingRemindersOn => 'مفعّلة';
+
+  @override
+  String get onboardingAnalyticsOn => 'مسموح بها';
+
+  @override
+  String get onboardingAnalyticsOff => 'غير مسموح بها';
+
+  @override
+  String get onboardingDoneHint =>
+      'يمكنك تغيير كل ذلك من الإعدادات، ومن هناك يمكنك إعادة هذه الجولة أيضًا.';
+
+  @override
+  String get onboardingStart => 'ابدأ';
+
+  @override
+  String get onboardingReplay => 'إعادة جولة التعريف';
+
+  @override
+  String get onboardingReplayHint => 'الميزات واللغة والأذونات';
 }

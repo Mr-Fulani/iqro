@@ -172,6 +172,9 @@ class PreferencesStore {
   static const supportedMushafVariants = <String>{defaultMushafVariant};
   final SharedPreferences _preferences;
 
+  /// False until the user, or anything that saves preferences, stores one.
+  bool get hasStoredLocale => _preferences.containsKey('locale');
+
   AppPreferences read() => _read(recitationOwnerId: null, accountScoped: false);
 
   /// Recitation choices belong to the active account. Other app settings are

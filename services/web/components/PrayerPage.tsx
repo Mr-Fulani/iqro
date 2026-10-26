@@ -25,7 +25,11 @@ import {
   loadPrayerLocationPreference,
   savePrayerLocationPreference,
 } from "../lib/prayer-location";
-import { isValidPrayerAdjustment, isValidPrayerDate } from "../lib/prayer-input";
+import {
+  defaultPrayerMethod,
+  isValidPrayerAdjustment,
+  isValidPrayerDate,
+} from "../lib/prayer-input";
 
 const PRESET_CITIES = [
   { label: "prayer.city.makkah" as MessageKey, lat: DEFAULT_PRAYER_LOCATION.latitude, lng: DEFAULT_PRAYER_LOCATION.longitude, tz: DEFAULT_PRAYER_LOCATION.timezone },
@@ -99,7 +103,7 @@ export default function PrayerPage() {
         const nextMethods = res.methods || [];
         setCatalog(res);
         setMethods(nextMethods);
-        const defaultMethod = nextMethods.find((m) => m.available) || nextMethods[0];
+        const defaultMethod = defaultPrayerMethod(nextMethods);
         if (defaultMethod) {
           setSelectedMethodId((currentMethodId) =>
             nextMethods.some((method) => method.id === currentMethodId)

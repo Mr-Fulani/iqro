@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -87,6 +88,30 @@ class SettingsScreen extends ConsumerWidget {
                         .read(appPreferencesProvider.notifier)
                         .setReaderHaptics,
                   ),
+                  const Divider(height: 1),
+                  IqroListTile(
+                    key: const Key('settings-onboarding-replay'),
+                    icon: Icons.tour_outlined,
+                    title: context.l10n.onboardingReplay,
+                    subtitle: context.l10n.onboardingReplayHint,
+                    onTap: () => context.push('/onboarding?replay=1'),
+                  ),
+                  if (kDebugMode) ...[
+                    const Divider(height: 1),
+                    // Debug builds: test the real first launch without
+                    // clearing app data.
+                    IqroListTile(
+                      icon: Icons.restart_alt,
+                      title: 'Debug: reset onboarding',
+                      subtitle: 'Opens the first-launch flow now',
+                      onTap: () async {
+                        await ref
+                            .read(appPreferencesProvider.notifier)
+                            .resetOnboarding();
+                        if (context.mounted) context.go('/onboarding');
+                      },
+                    ),
+                  ],
                   const Divider(height: 1),
                   IqroListTile(
                     icon: Icons.ios_share_outlined,

@@ -67,10 +67,12 @@ class ReminderController extends StateNotifier<ReminderState> {
     }
   }
 
-  Future<void> requestPermission() async {
+  Future<void> requestPermission({bool exactAlarms = true}) async {
     final scope = _requireScope();
     try {
-      final permission = await _notifications.requestPermission();
+      final permission = await _notifications.requestPermission(
+        exactAlarms: exactAlarms,
+      );
       _database.ensureCurrent(scope);
       if (!mounted) return;
       state = state.copyWith(permission: permission, clearError: true);

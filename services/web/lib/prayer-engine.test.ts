@@ -14,7 +14,11 @@ import {
   prayerCalendarDates,
 } from "./prayer-engine.ts";
 import type { LocalPrayerMethod } from "./prayer-engine.ts";
-import { isValidPrayerAdjustment, isValidPrayerDate } from "./prayer-input.ts";
+import {
+  defaultPrayerMethod,
+  isValidPrayerAdjustment,
+  isValidPrayerDate,
+} from "./prayer-input.ts";
 import { magneticDeclination } from "./geomag.ts";
 import {
   angleDifference,
@@ -359,4 +363,24 @@ test("distance to the Kaaba separates the Haram from the rest of Makkah", () => 
   assert.ok((distanceToKaabaMeters(21.4228, 39.8262) ?? Infinity) < 50);
   assert.ok((distanceToKaabaMeters(21.4266, 39.8262) ?? 0) > 400);
   assert.equal(distanceToKaabaMeters(100, 0), null);
+});
+
+test("new visitors start with the Muslim World League method", () => {
+  const methods = [
+    { code: "dubai", available: true },
+    { code: "muslim-world-league", available: true },
+  ];
+  assert.equal(defaultPrayerMethod(methods)?.code, "muslim-world-league");
+  assert.equal(
+    defaultPrayerMethod([{ code: "dubai", available: true }])?.code,
+    "dubai",
+  );
+  assert.equal(
+    defaultPrayerMethod([
+      { code: "muslim-world-league", available: false },
+      { code: "egyptian", available: true },
+    ])?.code,
+    "egyptian",
+  );
+  assert.equal(defaultPrayerMethod([]), undefined);
 });

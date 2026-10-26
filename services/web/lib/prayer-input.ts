@@ -24,3 +24,17 @@ export function isValidPrayerAdjustment(value: unknown): value is number {
     Math.abs(value) <= PRAYER_ADJUSTMENT_LIMIT
   );
 }
+
+// The method a new visitor starts with, as in the app.
+export const DEFAULT_PRAYER_METHOD_CODE = "muslim-world-league";
+
+export function defaultPrayerMethod<T extends { code: string; available: boolean }>(
+  methods: readonly T[],
+): T | undefined {
+  const available = methods.filter((method) => method.available);
+  return (
+    available.find((method) => method.code === DEFAULT_PRAYER_METHOD_CODE) ||
+    available[0] ||
+    methods[0]
+  );
+}
