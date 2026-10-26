@@ -1639,9 +1639,8 @@ final audioControllerProvider =
           ? currentScope
           : null;
       final controller = AudioController(
-        mediaLabels: () => _listeningMediaLabels(
-          ref.read(appPreferencesProvider).locale,
-        ),
+        mediaLabels: () =>
+            _listeningMediaLabels(ref.read(appPreferencesProvider).locale),
         playbackStore: boundScope == null
             ? null
             : AudioPlaybackStore(database, accountScope: boundScope),
