@@ -67,22 +67,32 @@ class ReminderController extends StateNotifier<ReminderState> {
     }
   }
 
-  Future<void> requestPermission({bool exactAlarms = true}) async {
-    final scope = _requireScope();
+  /// The OS permission belongs to the device, not to an account: onboarding
+  /// on a fresh install asks before the guest account exists.
+  Future<ReminderPermission> requestPermission({
+    bool exactAlarms = true,
+  }) async {
+    final scope = _accountScope;
     try {
       final permission = await _notifications.requestPermission(
         exactAlarms: exactAlarms,
       );
-      _database.ensureCurrent(scope);
-      if (!mounted) return;
+      if (scope != null) _database.ensureCurrent(scope);
+      if (!mounted) return permission;
       state = state.copyWith(permission: permission, clearError: true);
-      if (permission == ReminderPermission.granted) await replan();
+      if (scope != null && permission == ReminderPermission.granted) {
+        await replan();
+      }
+      return permission;
     } on AccountScopeChanged {
       // The permission sheet may outlive the account-bound controller.
+      return _notifications.permissionStatus();
     } on Object catch (error) {
-      if (mounted && _database.accountScope.isCurrent(scope)) {
+      if (mounted &&
+          (scope == null || _database.accountScope.isCurrent(scope))) {
         state = state.copyWith(error: error);
       }
+      return state.permission;
     }
   }
 

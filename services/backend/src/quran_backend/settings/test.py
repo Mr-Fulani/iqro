@@ -46,6 +46,8 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
     "email_start_ip_burst": "10000/minute",
     "email_verify_challenge": "10000/minute",
     "email_verify_ip_burst": "10000/minute",
+    "google_sign_in_identity": "10000/minute",
+    "google_sign_in_ip_burst": "10000/minute",
     "feedback_write": "10000/minute",
     "share_event": "10000/minute",
     "announcement_event": "10000/minute",

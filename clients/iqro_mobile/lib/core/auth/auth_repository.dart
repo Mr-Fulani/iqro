@@ -67,6 +67,7 @@ class AuthRepository {
   AuthSession? _session;
   Future<AuthSession>? _refreshFlight;
   _AuthTransitionStamp? _refreshStamp;
+  Future<AuthSession>? _renewalFlight;
   Future<AuthSession?>? _startupRecoveryFlight;
   Future<AuthSession?>? _verificationRecoveryFlight;
   bool _startupResolved = false;
@@ -195,6 +196,23 @@ class AuthRepository {
       cached = await _retryPendingVerificationGate();
     }
     if (cached?.accessIsFresh ?? false) return cached!;
+    // A fresh install sends its first requests all at once. Each guest
+    // bootstrap of an installation revokes the sessions before it, so separate
+    // bootstraps would leave the app holding a revoked token: share one.
+    final active = _renewalFlight;
+    if (active != null) return active;
+    late final Future<AuthSession> flight;
+    flight = _renewSession(cached, locale: locale).whenComplete(() {
+      if (identical(_renewalFlight, flight)) _renewalFlight = null;
+    });
+    _renewalFlight = flight;
+    return flight;
+  }
+
+  Future<AuthSession> _renewSession(
+    AuthSession? cached, {
+    required String locale,
+  }) async {
     if (cached?.canRefresh ?? false) {
       try {
         return await refresh();
@@ -421,6 +439,60 @@ class AuthRepository {
       expected: stamp,
     );
     return _submitVerificationIntent(intent, expected: stamp);
+  }
+
+  /// Web OAuth client ID that Android requests Google ID tokens for, or null
+  /// while Google sign-in is not configured on the server.
+  Future<String?> googleServerClientId() async {
+    try {
+      final response = await _dio.get<Object?>('/auth/google/config');
+      final json = _jsonMap(response.data);
+      final clientId = json['client_id'];
+      return json['enabled'] == true &&
+              clientId is String &&
+              clientId.isNotEmpty
+          ? clientId
+          : null;
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  /// Signs this installation in with a Google ID token. Like a verified email
+  /// code, it may merge the current guest into an existing account. The
+  /// server revokes the guest's tokens on success; if the response is lost,
+  /// the next refresh falls back to device recovery, which returns the same
+  /// account because the installation already moved there.
+  Future<AuthSession> signInWithGoogle({
+    required String idToken,
+    required String locale,
+  }) async {
+    final token = await validAccessToken(locale: locale);
+    final stamp = _stamp();
+    try {
+      final response = await _dio.post<Object?>(
+        '/auth/google',
+        data: <String, Object?>{'id_token': idToken},
+        options: _bearer(token),
+      );
+      final json = _jsonMap(response.data);
+      final previous = stamp.session;
+      final next = AuthSession.fromApi(json, previous: previous);
+      await _persist(
+        next,
+        expected: stamp,
+        transferFrom:
+            json['merged_guest'] == true &&
+                previous != null &&
+                previous.userId != next.userId
+            ? previous.userId
+            : null,
+      );
+      return next;
+    } on DioException catch (error) {
+      _ensureMatches(stamp);
+      throw ApiException.fromDio(error);
+    }
   }
 
   /// Retries a verification whose response may have been lost after the

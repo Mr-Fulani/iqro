@@ -22,17 +22,21 @@ const analyticsScriptSources = [
 ].join(" ");
 const analyticsFrameSources = metricaHosts.map((host) => `https://${host}`).join(" ");
 const analyticsSocketSources = metricaHosts.map((host) => `wss://${host}`).join(" ");
+// "Sign in with Google" (components/GoogleSignIn.tsx): the GIS script, its
+// button stylesheet and the One Tap / button iframe. Its requests go over
+// https:, which connect-src already allows.
+const googleIdentitySource = "https://accounts.google.com/gsi/";
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} ${analyticsScriptSources}`,
-  "style-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} ${analyticsScriptSources} ${googleIdentitySource}client`,
+  `style-src 'self' 'unsafe-inline' ${googleIdentitySource}style`,
   "font-src 'self' data: https://verses.quran.foundation https://static-cdn.tarteel.ai",
   `img-src 'self' blob: data: https:${isDevelopment ? " http:" : ""}`,
   `media-src 'self' blob: https:${isDevelopment ? " http:" : ""}`,
   `connect-src 'self' https: ${analyticsSocketSources}${isDevelopment ? " http: ws: wss:" : ""}`,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
-  `frame-src ${analyticsFrameSources}`,
+  `frame-src ${analyticsFrameSources} ${googleIdentitySource}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -42,7 +46,8 @@ const contentSecurityPolicy = [
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
-  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // GIS falls back to a popup where FedCM is unavailable; it must keep its opener.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), payment=(), usb=()" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },

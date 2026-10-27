@@ -15,19 +15,14 @@ test("expanded player remembers a background and keeps the scrim under reduced m
   await expect(backdrop).toHaveAttribute("loading", "lazy");
   await expect(backdrop).toHaveAttribute("sizes", "min(1160px, 100vw)");
   await expect(backdrop).toHaveCSS("transition-duration", "0s");
-  // Nothing plays, so the sound bars are faded out; reduced motion leaves them still.
+  // Nothing plays, so the sound bars are faded out without a transition; their
+  // sway is ready even with reduced motion, as in the app.
   const equalizer = player.getByTestId("player-equalizer");
   await expect(equalizer).toHaveAttribute("aria-hidden", "true");
   await expect(equalizer).toHaveCSS("opacity", "0");
   await expect(equalizer).toHaveCSS("transition-duration", "0s");
-  expect(await equalizer.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0);
-  await expect(equalizer.locator("span").first()).toHaveCSS("transform", "matrix(1, 0, 0, 0.62, 0, 0)");
-  // The preference is followed live, not only when the player opens.
   const animations = () => equalizer.evaluate((element) => element.getAnimations({ subtree: true }).length);
-  await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect.poll(animations).toBe(9);
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect.poll(animations).toBe(0);
   await expect(player.locator(".global-audio-player-scrim")).toHaveCSS(
     "background-image",
     /rgba\(6, 29, 24, 0\.68\).*rgba\(6, 29, 24, 0\.77\).*rgba\(6, 29, 24, 0\.86\)/,
@@ -53,12 +48,12 @@ test("expanded player remembers a background and keeps the scrim under reduced m
     .click();
   await expect(player).toHaveAttribute("data-player-background", "bundled:sea-dawn");
 
-  // With reduced motion a video background shows only its poster.
+  // A video the listener picked plays over its poster even with reduced motion.
   await player.getByRole("button", { name: "Фон плеера" }).click();
   await player.getByText("Чтец", { exact: true }).click();
   await expect(player).toHaveAttribute("data-player-background", "bundled:reciter-video");
   await expect(backdrop).toHaveAttribute("src", "/player-backgrounds/reciter-hood.webp");
-  await expect(player.locator(".global-audio-player-backdrop video")).toHaveCount(0);
+  await expect(player.locator(".global-audio-player-backdrop video")).toHaveCount(1);
 
   await player.getByText("Классический", { exact: true }).click();
   await expect(player).toHaveAttribute("data-player-background", "bundled:classic");

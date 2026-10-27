@@ -8,6 +8,7 @@ import {
   recitationStyleLabel,
   recitationsForRole,
   supportsRecitationRole,
+  tajweedCourseRecitation,
 } from "./reciter-catalog.ts";
 
 const reciter: Reciter = {
@@ -129,4 +130,22 @@ test("recitation styles are translated, including the children's repeat", () => 
   assert.equal(recitationStyleLabel("kids-repeat", t), "t:audio.style.kidsRepeat");
   assert.equal(recitationStyleLabel("mujawwad", t), "t:audio.style.mujawwad");
   assert.equal(recitationStyleLabel("hadr", t), "hadr");
+});
+
+test("the tajweed course always plays al-Husary's Muallim when the catalog has it", () => {
+  const withCode = (id: string, code: string, teaching = false): Recitation => ({
+    ...recitation(id, "2026-10-01T00:00:00Z", timed.capabilities),
+    code,
+    teaching_default: teaching,
+  });
+  const maher = withCode("maher", "maher-murattal");
+  const afasy = withCode("afasy", "qf-7-murattal-01a15bc65dc9");
+  const teaching = withCode("teaching", "qf-6-murattal-01a15bc65dc9", true);
+  const husary = withCode("husary", "qf-12-muallim-01a15bc65dc9");
+
+  assert.equal(tajweedCourseRecitation([maher, afasy, teaching, husary])?.id, "husary");
+  assert.equal(tajweedCourseRecitation([maher, afasy, teaching])?.id, "teaching");
+  assert.equal(tajweedCourseRecitation([maher, afasy])?.id, "afasy");
+  assert.equal(tajweedCourseRecitation([maher])?.id, "maher");
+  assert.equal(tajweedCourseRecitation([]), undefined);
 });

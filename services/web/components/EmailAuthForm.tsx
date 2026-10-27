@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { generateUuidV7 } from "../lib/api";
+import { EmailVerificationResponse, generateUuidV7 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { consumePostAuthReturnPath } from "../lib/auth-navigation";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
+import { GoogleSignIn } from "./GoogleSignIn";
 
 export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
@@ -55,6 +56,11 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
         ? t("authForm.merged")
         : t("authForm.activated"),
     );
+    router.replace(consumePostAuthReturnPath(locale));
+  }
+
+  function handleGoogleSignedIn(result: EmailVerificationResponse) {
+    setSuccess(result.merged_guest ? t("authForm.merged") : t("authForm.activated"));
     router.replace(consumePostAuthReturnPath(locale));
   }
 
@@ -121,6 +127,8 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
           </button>
         </form>
       ) : (
+        <>
+        <GoogleSignIn oneTap onSignedIn={handleGoogleSignedIn} />
         <form onSubmit={(event) => void handleStart(event)} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <label className="form-label" htmlFor="auth-email">Email</label>
           <input
@@ -149,6 +157,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
             </button>
           )}
         </form>
+        </>
       )}
 
       <div style={{ marginTop: 18, padding: 14, background: "var(--bg-subtle)", borderRadius: "var(--radius-md)" }}>

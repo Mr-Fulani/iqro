@@ -40,6 +40,10 @@ class EmailVerifyIPBurstThrottle(_IPBurstThrottle):
     scope = "email_verify_ip_burst"
 
 
+class GoogleSignInIPBurstThrottle(_IPBurstThrottle):
+    scope = "google_sign_in_ip_burst"
+
+
 class GuestBootstrapInstallationThrottle(AtomicFixedWindowRateThrottle):
     """Limit one installation proof without coupling unrelated CGNAT users."""
 
@@ -139,6 +143,21 @@ class EmailVerifyChallengeThrottle(AtomicFixedWindowRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": identity}
 
 
+class GoogleSignInIdentityThrottle(AtomicFixedWindowRateThrottle):
+    scope = "google_sign_in_identity"
+
+    def get_cache_key(self, request: Request, view: Any) -> str | None:  # noqa: ARG002
+        user_id = getattr(request.user, "id", None)
+        if user_id is None:
+            return None
+        identity = _keyed_cache_identity(
+            setting_name="QURAN_EMAIL_CODE_HASH_KEY",
+            namespace="google-sign-in",
+            value=str(user_id),
+        )
+        return self.cache_format % {"scope": self.scope, "ident": identity}
+
+
 class _ShortCircuitThrottle(BaseThrottle):
     """Apply an IP breaker before any identity lookup that may touch the database."""
 
@@ -191,6 +210,13 @@ class EmailVerifyThrottle(_ShortCircuitThrottle):
     throttle_classes = (
         EmailVerifyIPBurstThrottle,
         EmailVerifyChallengeThrottle,
+    )
+
+
+class GoogleSignInThrottle(_ShortCircuitThrottle):
+    throttle_classes = (
+        GoogleSignInIPBurstThrottle,
+        GoogleSignInIdentityThrottle,
     )
 
 

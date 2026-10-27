@@ -2262,6 +2262,24 @@ abstract class AppLocalizations {
   /// **'Send code'**
   String get sendCode;
 
+  /// No description provided for @googleContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get googleContinue;
+
+  /// No description provided for @googleOrEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'or with an email code'**
+  String get googleOrEmail;
+
+  /// No description provided for @googleSignedInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {email}'**
+  String googleSignedInAs(String email);
+
   /// No description provided for @verify.
   ///
   /// In en, this message translates to:
@@ -2273,6 +2291,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign out'**
   String get signOut;
+
+  /// No description provided for @accountSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch account'**
+  String get accountSwitch;
+
+  /// No description provided for @accountSwitchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out and choose another Google account or email'**
+  String get accountSwitchHint;
 
   /// No description provided for @devices.
   ///
@@ -4133,6 +4163,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not send the code. Try again later.'**
   String get apiErrorEmailDelivery;
+
+  /// No description provided for @apiErrorGoogleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not sign in with Google. Try again or use an email code.'**
+  String get apiErrorGoogleFailed;
+
+  /// No description provided for @apiErrorGoogleEmailUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'This Google account\'s email is not verified. Sign in with an email code.'**
+  String get apiErrorGoogleEmailUnverified;
+
+  /// No description provided for @apiErrorGoogleUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in is unavailable right now. Sign in with an email code.'**
+  String get apiErrorGoogleUnavailable;
 
   /// No description provided for @apiErrorRateLimited.
   ///

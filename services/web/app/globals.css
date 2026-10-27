@@ -8420,3 +8420,33 @@ svg.track-surah-name-ar {
   gap: 8px;
   margin-inline-start: auto;
 }
+
+/* "Sign in with Google" above the email code form (components/GoogleSignIn.tsx).
+   The button itself is Google's iframe; the box only reserves its height. */
+.google-sign-in {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.google-sign-in-button {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.google-sign-in-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.google-sign-in-divider::before,
+.google-sign-in-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}

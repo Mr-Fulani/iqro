@@ -14,6 +14,10 @@ String apiErrorText(
     'email_challenge_invalid' => l10n.apiErrorEmailInvalid,
     'email_challenge_expired' => l10n.apiErrorEmailExpired,
     'email_delivery_failed' => l10n.apiErrorEmailDelivery,
+    'google_token_invalid' => l10n.apiErrorGoogleFailed,
+    'google_email_unverified' => l10n.apiErrorGoogleEmailUnverified,
+    'google_sign_in_disabled' ||
+    'google_sign_in_unavailable' => l10n.apiErrorGoogleUnavailable,
     'auth_rate_limited' || 'reading_rate_limited' => l10n.apiErrorRateLimited,
     'installation_identity_missing' => l10n.apiErrorInstallationMissing,
     'account_link_unavailable' => l10n.apiErrorLinkUnavailable,

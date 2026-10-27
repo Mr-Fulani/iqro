@@ -1188,10 +1188,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendCode => 'Send code';
 
   @override
+  String get googleContinue => 'Continue with Google';
+
+  @override
+  String get googleOrEmail => 'or with an email code';
+
+  @override
+  String googleSignedInAs(String email) {
+    return 'Signed in as $email';
+  }
+
+  @override
   String get verify => 'Verify';
 
   @override
   String get signOut => 'Sign out';
+
+  @override
+  String get accountSwitch => 'Switch account';
+
+  @override
+  String get accountSwitchHint =>
+      'Sign out and choose another Google account or email';
 
   @override
   String get devices => 'Devices';
@@ -2290,6 +2308,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get apiErrorEmailDelivery =>
       'Could not send the code. Try again later.';
+
+  @override
+  String get apiErrorGoogleFailed =>
+      'Could not sign in with Google. Try again or use an email code.';
+
+  @override
+  String get apiErrorGoogleEmailUnverified =>
+      'This Google account\'s email is not verified. Sign in with an email code.';
+
+  @override
+  String get apiErrorGoogleUnavailable =>
+      'Google sign-in is unavailable right now. Sign in with an email code.';
 
   @override
   String get apiErrorRateLimited => 'Too many attempts. Try again later.';
