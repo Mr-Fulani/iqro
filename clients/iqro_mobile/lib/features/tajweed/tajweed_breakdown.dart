@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -466,8 +467,10 @@ class _TajweedBreakdownSheetState extends ConsumerState<TajweedBreakdownSheet> {
 }
 
 /// The ayah in its Mushaf glyphs with the step's words lit, and the word the
-/// reciter is on while the whole ayah plays.
-class _AyahLine extends ConsumerWidget {
+/// reciter is on while the whole ayah plays. A long ayah scrolls in two and a
+/// half lines, the cut line showing there is more; the step's words, or the
+/// reciter's word, are scrolled to the middle, as on the site.
+class _AyahLine extends ConsumerStatefulWidget {
   const _AyahLine({
     required this.ayah,
     required this.reference,
@@ -481,7 +484,61 @@ class _AyahLine extends ConsumerWidget {
   final int? reading;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AyahLine> createState() => _AyahLineState();
+}
+
+class _AyahLineState extends ConsumerState<_AyahLine> {
+  final _scroll = ScrollController();
+  final _content = GlobalKey();
+  final _words = <int, GlobalKey>{};
+  // The words last scrolled to; a new step or reading word scrolls again.
+  Set<int>? _shown;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _reveal(Set<int> positions) {
+    final content = _content.currentContext?.findRenderObject() as RenderBox?;
+    if (content == null || !_scroll.hasClients) return;
+    final boxes = [
+      for (final position in positions)
+        if (_words[position]?.currentContext?.findRenderObject()
+            case final RenderBox box)
+          box,
+    ];
+    if (boxes.isEmpty) return;
+    final tops = [
+      for (final box in boxes)
+        box.localToGlobal(Offset.zero, ancestor: content).dy,
+    ];
+    final top = tops.reduce((a, b) => a < b ? a : b);
+    final bottom = [
+      for (final (index, box) in boxes.indexed) tops[index] + box.size.height,
+    ].reduce((a, b) => a > b ? a : b);
+    final position = _scroll.position;
+    final offset = ((top + bottom - position.viewportDimension) / 2).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _scroll.jumpTo(offset);
+    } else {
+      unawaited(
+        _scroll.animateTo(
+          offset,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ayah = widget.ayah;
     final glyphs = ref
         .watch(
           tajweedAyahGlyphsProvider((page: ayah.page, verseKey: ayah.verseKey)),
@@ -489,57 +546,83 @@ class _AyahLine extends ConsumerWidget {
         .valueOrNull;
     if (glyphs == null || glyphs.isEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
+    final step = widget.step;
+    final reading = widget.reading;
     final lit = {...?step?.parts.map((part) => part.word.position)};
-    final color = step == null ? null : reference.rule(step!.code)?.color;
+    final color = step == null ? null : widget.reference.rule(step.code)?.color;
+    final shown = reading == null ? lit : {reading};
+    if (shown.isNotEmpty && !setEquals(shown, _shown)) {
+      _shown = shown;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reveal(shown);
+      });
+    }
     final style = TextStyle(
       fontSize: 26,
       height: 1.8,
       color: IqroTheme.arabicInk(context),
     );
+    const padding = EdgeInsets.symmetric(horizontal: 8, vertical: 10);
+    final lineHeight =
+        MediaQuery.textScalerOf(context).scale(style.fontSize!) * style.height!;
     return ExcludeSemantics(
       child: Container(
         key: const ValueKey('tajweed-ayah-line'),
         margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        constraints: BoxConstraints(maxHeight: lineHeight * 2.5 + padding.top),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Wrap(
-          textDirection: TextDirection.rtl,
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 2,
-          children: <Widget>[
-            for (final glyph in glyphs)
-              AnimatedContainer(
-                key: glyph.position == null
-                    ? null
-                    : ValueKey('tajweed-glyph-${glyph.position}'),
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: glyph.position != null && glyph.position == reading
-                      ? scheme.primaryContainer
-                      : lit.contains(glyph.position) && color != null
-                      ? color.withValues(alpha: .18)
-                      : null,
-                  border: lit.contains(glyph.position) && color != null
-                      ? Border(bottom: BorderSide(color: color, width: 2))
-                      : null,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text.rich(
-                  foundationWordSpan(
-                    glyph.word,
-                    style.copyWith(fontFamily: glyph.fontFamily),
+        child: SingleChildScrollView(
+          controller: _scroll,
+          child: Padding(
+            key: _content,
+            padding: padding,
+            child: Wrap(
+              textDirection: TextDirection.rtl,
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 2,
+              children: <Widget>[
+                for (final glyph in glyphs)
+                  KeyedSubtree(
+                    key: glyph.position == null
+                        ? null
+                        : _words.putIfAbsent(glyph.position!, GlobalKey.new),
+                    child: AnimatedContainer(
+                      key: glyph.position == null
+                          ? null
+                          : ValueKey('tajweed-glyph-${glyph.position}'),
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color:
+                            glyph.position != null && glyph.position == reading
+                            ? scheme.primaryContainer
+                            : lit.contains(glyph.position) && color != null
+                            ? color.withValues(alpha: .18)
+                            : null,
+                        border: lit.contains(glyph.position) && color != null
+                            ? Border(bottom: BorderSide(color: color, width: 2))
+                            : null,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text.rich(
+                        foundationWordSpan(
+                          glyph.word,
+                          style.copyWith(fontFamily: glyph.fontFamily),
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ),
                   ),
-                  textDirection: TextDirection.rtl,
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

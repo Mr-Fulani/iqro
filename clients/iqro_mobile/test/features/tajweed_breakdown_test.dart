@@ -150,6 +150,72 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a long ayah scrolls the step\'s words into view', (
+    tester,
+  ) async {
+    final harness = await _pumpBreakdown(
+      tester,
+      size: const Size(375, 812),
+      ayah: _longAyahJson,
+      glyphs: _longGlyphs,
+      timings: {
+        2: _timings[2]!,
+        3: _timings[3]!,
+        88: (
+          start: const Duration(milliseconds: 11500),
+          end: const Duration(milliseconds: 11900),
+        ),
+      },
+    );
+    final line = find.byKey(const ValueKey('tajweed-ayah-line'));
+    // Far longer than the phone is wide, the ayah wraps in a short box.
+    expect(tester.getSize(line).height, lessThan(160));
+    void expectShown(List<int> positions) {
+      final box = tester.getRect(line);
+      for (final position in positions) {
+        final word = tester.getRect(
+          find.byKey(ValueKey('tajweed-glyph-$position')),
+        );
+        expect(
+          box.inflate(1).contains(word.topLeft) &&
+              box.inflate(1).contains(word.bottomRight),
+          isTrue,
+          reason: 'word $position at $word, box $box',
+        );
+      }
+    }
+
+    expect(_label(tester), '1 из 5');
+    expectShown([2, 3]);
+    await _next(tester);
+    expectShown([3]);
+    await _next(tester);
+    expectShown([5]);
+    await _next(tester);
+    expect(_label(tester), '4 из 5');
+    expectShown([45]);
+    await _next(tester);
+    expectShown([88]);
+    await tester.tap(find.byKey(const ValueKey('tajweed-back')));
+    await _settle(tester);
+    expect(_label(tester), '4 из 5');
+    expectShown([45]);
+    for (var step = 0; step < 3; step++) {
+      await tester.tap(find.byKey(const ValueKey('tajweed-back')));
+      await _settle(tester);
+    }
+    expect(_label(tester), '1 из 5');
+    expectShown([2, 3]);
+
+    // While the whole ayah plays, the box follows the reciter's word.
+    await tester.tap(find.byKey(const ValueKey('tajweed-play-ayah')));
+    await _settle(tester);
+    harness.engine.positions.add(const Duration(milliseconds: 2600));
+    await _settle(tester);
+    expectShown([88]);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the coloured memorization ayah opens its breakdown', (
     tester,
   ) async {
@@ -235,13 +301,56 @@ final _glyphs = <TajweedGlyph>[
     ),
 ];
 
+/// 112:4 stretched to 90 words, as long as 2:282, with rules in its middle
+/// and near its end.
+final _longAyahJson = <String, Object?>{
+  ...tajweedAyah1124Json,
+  'words': [
+    ...tajweedAyah1124Json['words']! as List<Object?>,
+    {
+      'position': 45,
+      'text': 'قَالُوا',
+      'rules': [
+        {'code': 'madda_normal', 'start': 3, 'end': 4},
+      ],
+    },
+    {
+      'position': 88,
+      'text': 'أَحَدُۢ',
+      'rules': [
+        {'code': 'qalaqah', 'start': 4, 'end': 5, 'variant': 'stop'},
+      ],
+    },
+  ],
+};
+
+final _longGlyphs = <TajweedGlyph>[
+  for (var position = 1; position <= 91; position++)
+    (
+      word: <String, Object?>{
+        'id': position,
+        'verse_key': '112:4',
+        'position_in_verse': position,
+        'char_type_name': position == 91 ? 'end' : 'word',
+        'text': 'قل',
+      },
+      fontFamily: IqroTheme.arabicFontFamily,
+      position: position == 91 ? null : position,
+    ),
+];
+
 typedef _Harness = ({AudioController audio, _Engine engine});
 
-List<Override> _overrides(AudioController audio, {bool recitation = true}) => [
+List<Override> _overrides(
+  AudioController audio, {
+  bool recitation = true,
+  List<TajweedGlyph>? glyphs,
+  Map<int, ({Duration start, Duration end})>? timings,
+}) => [
   tajweedAyahGlyphsProvider((
     page: 604,
     verseKey: '112:4',
-  )).overrideWith((ref) async => _glyphs),
+  )).overrideWith((ref) async => glyphs ?? _glyphs),
   tajweedRulesProvider.overrideWith(
     (ref) async => TajweedReference.fromJson(tajweedRulesJson),
   ),
@@ -249,7 +358,7 @@ List<Override> _overrides(AudioController audio, {bool recitation = true}) => [
     604,
   ).overrideWith((ref) async => TajweedPage.fromJson(tajweedPage604Json, 604)),
   audioRepositoryProvider.overrideWithValue(
-    _AudioRepository(recitation ? _timings : const {}),
+    _AudioRepository(recitation ? timings ?? _timings : const {}),
   ),
   audioControllerProvider.overrideWith((ref) => audio),
 ];
@@ -266,9 +375,13 @@ Future<_Harness> _pumpBreakdown(
   WidgetTester tester, {
   Locale locale = const Locale('ru'),
   bool recitation = true,
+  Size size = const Size(400, 900),
+  Map<String, Object?>? ayah,
+  List<TajweedGlyph>? glyphs,
+  Map<int, ({Duration start, Duration end})>? timings,
 }) async {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(400, 900);
+  tester.view.physicalSize = size;
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
   final engine = _Engine();
@@ -278,12 +391,12 @@ Future<_Harness> _pumpBreakdown(
     ProviderScope(
       // A new scope for each pump: a test may pump the sheet twice.
       key: UniqueKey(),
-      overrides: _overrides(audio),
+      overrides: _overrides(audio, glyphs: glyphs, timings: timings),
       child: _app(
         locale,
         TajweedBreakdownSheet(
           reference: TajweedReference.fromJson(tajweedRulesJson),
-          ayah: TajweedAyah.fromJson(tajweedAyah1124Json),
+          ayah: TajweedAyah.fromJson(ayah ?? tajweedAyah1124Json),
           recitation: recitation ? () async => 'recitation-1' : null,
         ),
       ),
