@@ -24,11 +24,15 @@ typedef MushafDigestReader = Future<String> Function(File file);
 class MushafAssetVerificationCache {
   MushafAssetVerificationCache({
     this.maxEntries = 12,
+    this.validHeader = _validWebp,
     MushafDigestReader? digestReader,
   }) : assert(maxEntries > 0),
        _digestReader = digestReader ?? _readSha256;
 
   final int maxEntries;
+
+  /// Checks a file's first 16 bytes before its checksum is read.
+  final bool Function(List<int> header) validHeader;
   final MushafDigestReader _digestReader;
   final LinkedHashMap<String, _VerifiedMushafAsset> _verified =
       LinkedHashMap<String, _VerifiedMushafAsset>();
@@ -64,7 +68,7 @@ class MushafAssetVerificationCache {
       } finally {
         await handle.close();
       }
-      if (!_validWebp(header) ||
+      if (!validHeader(header) ||
           (expectedChecksum.isNotEmpty &&
               await _digestReader(file) != expectedChecksum)) {
         _verified.remove(file.path);
@@ -145,6 +149,8 @@ class _VerifiedMushafAsset {
     changedMicroseconds,
   );
 }
+
+bool _anyHeader(List<int> _) => true;
 
 bool _validWebp(List<int> bytes) {
   return bytes.length >= 16 &&
@@ -272,6 +278,12 @@ class QuranRepository {
   final Map<String, List<QuranAyahTranslation>> _translationMemory = {};
   final Map<String, List<QuranAyahTafsir>> _tafsirMemory = {};
   static final _foundationAssetRequests = <String, Future<File>>{};
+  // Hashing a cached font on every use stalled Mushaf page turns: the 1.8 MB
+  // surah-header font is read on nearly every page of the last juz.
+  static final _foundationAssetVerifier = MushafAssetVerificationCache(
+    maxEntries: 64,
+    validHeader: _anyHeader,
+  );
 
   Future<QuranCatalog> surahs({bool forceRefresh = false}) async {
     const key = 'quran:$edition:surahs';
@@ -633,11 +645,21 @@ class QuranRepository {
     if (cached != null) {
       final value = jsonMap(cached.value);
       final file = File(value['path'] as String);
+      final checksum = value['sha256'] as String;
+      final bytes = value['bytes'] as int;
       try {
-        if (await file.length() == value['bytes'] &&
-            (await sha256.bind(file.openRead()).first).toString() ==
-                value['sha256']) {
-          await touchCachedFile(file);
+        if (await _foundationAssetVerifier.verify(
+          file,
+          checksum,
+          expectedBytes: bytes,
+        )) {
+          if (await touchCachedFile(file)) {
+            await _foundationAssetVerifier.rememberVerified(
+              file,
+              checksum,
+              expectedBytes: bytes,
+            );
+          }
           return file;
         }
       } on FileSystemException {
@@ -667,6 +689,11 @@ class QuranRepository {
     final temporary = File('${file.path}.${_uuid.v4()}.partial');
     await temporary.writeAsBytes(bytes, flush: true);
     await temporary.rename(file.path);
+    await _foundationAssetVerifier.rememberVerified(
+      file,
+      checksum,
+      expectedBytes: bytes.length,
+    );
     await _database.writeCache(key, {
       'path': file.path,
       'sha256': checksum,

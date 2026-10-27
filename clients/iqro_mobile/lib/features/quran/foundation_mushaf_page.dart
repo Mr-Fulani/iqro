@@ -14,6 +14,7 @@ import '../../core/design_system/iqro_widgets.dart';
 import 'ayah_annotations.dart';
 import 'mushaf_paper.dart';
 import 'quran_models.dart';
+import 'surah_name_art.dart';
 import 'truetype_glyph.dart';
 
 final _fontLoads = <String, Future<void>>{};
@@ -69,12 +70,11 @@ Future<FoundationPageResources> loadFoundationPageResources(
     if (header.isEmpty) return const {};
     try {
       final checksum = header['font_sha256'] as String;
-      final bytes = await (await asset(
-        Uri.parse(header['font_url'] as String),
+      final font = await verifiedSurahHeaderFont(
         checksum,
-      )).readAsBytes();
-      if (sha256.convert(bytes).toString() != checksum) return const {};
-      final font = ByteData.sublistView(bytes);
+        () => asset(Uri.parse(header['font_url'] as String), checksum),
+      );
+      if (font == null) return const {};
       return {
         for (final MapEntry(:key, :value)
             in (header['glyph_ids'] as Map).entries)

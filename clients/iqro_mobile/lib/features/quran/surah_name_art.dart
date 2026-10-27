@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -19,15 +21,45 @@ const surahHeaderFontSha256 =
 // Glyphs follow .notdef, uni0000, uni0009 and space in surah order.
 const _firstSurahGlyphId = 4;
 
+final _verifiedHeaderFonts = <String, Future<ByteData?>>{};
+
+/// The header font's bytes, or null when they no longer match [checksum].
+/// Read and hashed once per run, off the UI isolate: hashing the 1.8 MB file
+/// on every Mushaf page with a heading stalled page turns.
+Future<ByteData?> verifiedSurahHeaderFont(
+  String checksum,
+  Future<File> Function() file,
+) async {
+  final request = _verifiedHeaderFonts.putIfAbsent(checksum, () async {
+    final bytes = await (await file()).readAsBytes();
+    return await _sha256Of(bytes) == checksum
+        ? ByteData.sublistView(bytes)
+        : null;
+  });
+  try {
+    return await request;
+  } on Object {
+    _verifiedHeaderFonts.remove(checksum);
+    rethrow;
+  }
+}
+
+// Its own function, so the isolate receives only the bytes and not the
+// caller's context (a repository cannot cross isolates).
+Future<String> _sha256Of(Uint8List bytes) =>
+    Isolate.run(() => sha256.convert(bytes).toString());
+
 /// The header font, or null while it cannot be loaded or has changed.
 final surahHeaderFontProvider = FutureProvider<ByteData?>((ref) async {
+  final repository = ref.watch(quranRepositoryProvider);
   try {
-    final file = await ref
-        .watch(quranRepositoryProvider)
-        .foundationAsset(Uri.parse(surahHeaderFontUrl), surahHeaderFontSha256);
-    final bytes = await file.readAsBytes();
-    if (sha256.convert(bytes).toString() != surahHeaderFontSha256) return null;
-    return ByteData.sublistView(bytes);
+    return await verifiedSurahHeaderFont(
+      surahHeaderFontSha256,
+      () => repository.foundationAsset(
+        Uri.parse(surahHeaderFontUrl),
+        surahHeaderFontSha256,
+      ),
+    );
   } on Object {
     return null;
   }
