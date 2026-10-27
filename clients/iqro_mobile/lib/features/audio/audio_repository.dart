@@ -246,6 +246,8 @@ class AudioRepository {
     return AyahPlayback(
       track: playback.track.withPreferredQuality(_preferredQuality()),
       words: playback.words,
+      start: playback.start,
+      end: playback.end,
     );
   }
 
