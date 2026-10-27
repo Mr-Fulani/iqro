@@ -128,8 +128,14 @@ class FakeOnboardingServices implements OnboardingServices {
     return notificationResult;
   }
 
+  /// Holds the reminder setup open until completed, when set.
+  Future<void>? remindersGate;
+
   @override
-  Future<void> enablePrayerReminders() async => remindersEnabled++;
+  Future<void> enablePrayerReminders() async {
+    await remindersGate;
+    remindersEnabled++;
+  }
 
   @override
   Future<bool> needsExactReminderAccess() async => needsExact;
