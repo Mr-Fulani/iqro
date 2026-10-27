@@ -548,7 +548,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the equalizer rests when animations are disabled', (
+  testWidgets('the equalizer sways even when animations are disabled', (
     tester,
   ) async {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
@@ -562,10 +562,10 @@ void main() {
         tester.view.physicalSize.height / tester.view.devicePixelRatio / 2,
       ),
     );
-    // Static bars: the screen settles while they show.
-    await tester.pumpAndSettle();
+    // The owner's call: the bars keep moving whatever the system setting.
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.byKey(const ValueKey('player-equalizer')), findsOneWidget);
-    expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(tester.binding.hasScheduledFrame, isTrue);
     expect(tester.takeException(), isNull);
   });
 

@@ -164,18 +164,14 @@ test("a failed scene download leaves the still", async ({ page }) => {
   await expect(page.locator("canvas")).toHaveCount(0);
 });
 
-test("reduced motion keeps the still, and a picture without a scene stays a picture", async ({ page }) => {
+test("reduced motion still plays the scene, and a picture without a scene stays a picture", async ({ page }) => {
+  // The owner wants the prayer movement whatever the system setting, as in the app.
   await page.emulateMedia({ reducedMotion: "reduce" });
-  const loaded = watchThree(page);
-  await openLesson(page, "/ru/salah/fajr");
+  await openLesson(page, "/ru/salah/fajr#fajr.r2.tashahhud");
   await act(page);
-  await expect(currentStep(page).locator("figcaption")).toHaveText("Схематичная 3D-иллюстрация");
-  await expect(page.locator("canvas")).toHaveCount(0);
-  await expect(replayButton(currentStep(page))).toHaveCount(0);
-  await page.waitForLoadState("networkidle");
-  expect(loaded.three).toBe(false);
+  const canvas = currentStep(page).locator("[data-testid='salah-3d'] canvas");
+  await expect(canvas).toHaveAttribute("data-running", "true", SCENE_TIMEOUT);
 
-  await page.emulateMedia({ reducedMotion: "no-preference" });
   await openLesson(page, "/ru/salah/wudu#wudu.face");
   await act(page);
   await expect(currentStep(page)).toHaveAttribute("data-step", "wudu.face");
