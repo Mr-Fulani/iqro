@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import 'analytics_consent.dart';
+import 'home_widgets_settings.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -72,6 +73,10 @@ class SettingsScreen extends ConsumerWidget {
                     .setTheme(value.first),
               ),
             ),
+            const SizedBox(height: 22),
+            IqroSectionHeader(title: context.l10n.homeWidgets),
+            const SizedBox(height: 10),
+            const HomeWidgetsSettingsCard(),
             const SizedBox(height: 22),
             IqroSectionHeader(title: context.l10n.moreTools),
             const SizedBox(height: 10),

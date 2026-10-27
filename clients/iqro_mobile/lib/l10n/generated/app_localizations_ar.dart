@@ -899,6 +899,15 @@ class AppLocalizationsAr extends AppLocalizations {
       'الصلاة القادمة والأوقات الخمسة على الشاشة الرئيسية، حتى بدون إنترنت';
 
   @override
+  String get homeWidgets => 'أدوات الشاشة الرئيسية';
+
+  @override
+  String get planWidget => 'أداة خطة القراءة';
+
+  @override
+  String get planWidgetHint => 'الهدف اليومي والنخلة والقراءة بعد الصلاة';
+
+  @override
   String get addPrayerWidget => 'إضافة الويدجت';
 
   @override
@@ -1214,6 +1223,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get feedbackSignInRequired => 'سجّل الدخول لإرسال طلب';
+
+  @override
+  String get ayahTimingsMissing => 'دون توقيت الآيات';
 
   @override
   String get feedbackDescription =>

@@ -906,6 +906,16 @@ class AppLocalizationsTr extends AppLocalizations {
       'Sıradaki namaz ve beş vakit ana ekranınızda, internet olmadan da görünür';
 
   @override
+  String get homeWidgets => 'Ana ekran widget\'ları';
+
+  @override
+  String get planWidget => 'Okuma planı widget\'ı';
+
+  @override
+  String get planWidgetHint =>
+      'Günlük hedef, hurma ağacı ve namaz sonrası okuma';
+
+  @override
   String get addPrayerWidget => 'Widget ekle';
 
   @override
@@ -1222,6 +1232,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get feedbackSignInRequired => 'Talep göndermek için giriş yapın';
+
+  @override
+  String get ayahTimingsMissing => 'ayet zamanlaması yok';
 
   @override
   String get feedbackDescription =>

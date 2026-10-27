@@ -5,9 +5,12 @@ import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import androidx.glance.GlanceId
+import androidx.compose.ui.unit.DpSize
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalSize
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import androidx.glance.currentState
 import androidx.glance.layout.fillMaxSize
@@ -23,6 +26,8 @@ class ReadingPlanHomeWidgetReceiver : HomeWidgetGlanceWidgetReceiver<ReadingPlan
 
 class ReadingPlanHomeWidget : GlanceAppWidget() {
     override val stateDefinition = HomeWidgetGlanceStateDefinition()
+    // The card is fitted to the cell it is given (HomeWidgetCard).
+    override val sizeMode = SizeMode.Exact
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val state = currentState<HomeWidgetGlanceState>()
@@ -30,7 +35,7 @@ class ReadingPlanHomeWidget : GlanceAppWidget() {
                 JSONObject(state.preferences.getString("home_widget.ReadingPlan.snapshot", "{}") ?: "{}")
             } catch (_: Exception) { JSONObject() }
             AndroidRemoteViews(
-                remoteViews = ReadingPlanWidgetViews.create(context, snapshot),
+                remoteViews = ReadingPlanWidgetViews.create(context, snapshot, LocalSize.current),
                 modifier = GlanceModifier.fillMaxSize(),
             )
         }
@@ -45,8 +50,9 @@ internal object ReadingPlanWidgetViews {
         R.drawable.reading_plan_palm_bg_2, R.drawable.reading_plan_palm_bg_3,
         R.drawable.reading_plan_palm_bg_4, R.drawable.reading_plan_palm_bg_5)
 
-    fun create(context: Context, data: JSONObject): RemoteViews {
+    fun create(context: Context, data: JSONObject, size: DpSize): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.reading_plan_widget)
+        HomeWidgetCard.fit(context, views, R.id.plan_widget_frame, size)
         views.setInt(R.id.plan_widget_root, "setLayoutDirection",
             if (data.optString("locale") == "ar") View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR)
         views.setOnClickPendingIntent(R.id.plan_widget_root, HomeWidgetLaunchIntent.getActivity(

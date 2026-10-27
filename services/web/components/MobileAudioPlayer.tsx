@@ -141,7 +141,10 @@ function Summary({ engine, mobile }: MobilePlayerPartProps) {
       <PlayerArtwork url={mobile.artworkUrl} name={request?.artist} size={210} selected />
       <div className="mobile-player-copy" inert={mobile.controlsHidden || undefined}>
       <p className="eyebrow mobile-player-eyebrow">
-        {t("player.surahAyah", { surah: request?.track.surah_number ?? "—", ayah: activeAyah?.ayah_number ?? "—" })}
+        {/* Some recordings have no ayah timings yet; a dash that never changes read as a frozen counter. */}
+        {request && request.segments.length === 0
+          ? t("player.surahUntimed", { surah: request.track.surah_number ?? "—" })
+          : t("player.surahAyah", { surah: request?.track.surah_number ?? "—", ayah: activeAyah?.ayah_number ?? "—" })}
       </p>
       <h2 className="mobile-player-title">{title}</h2>
       {reciter && reciter.options.length > 0 ? (

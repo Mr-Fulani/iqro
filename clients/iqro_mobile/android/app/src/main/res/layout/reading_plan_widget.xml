@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/plan_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/prayer_widget_background" android:padding="14dp">
+<!-- The frame centres the card in a widget cell taller or wider than the
+     design (tablets, big launcher grids); see HomeWidgetCard.kt. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/plan_widget_frame" android:layout_width="match_parent" android:layout_height="match_parent">
+<FrameLayout android:id="@+id/plan_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/prayer_widget_background" android:padding="14dp">
  <LinearLayout android:id="@+id/plan_content" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:baselineAligned="false">
   <FrameLayout android:layout_width="0dp" android:layout_weight="27" android:layout_height="match_parent">
   <ImageView android:id="@+id/plan_palm_bg" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/reading_plan_palm_bg_0" android:scaleType="fitXY" />
@@ -39,4 +43,5 @@
   </LinearLayout>
  </LinearLayout>
  <TextView android:id="@+id/plan_empty" android:layout_width="match_parent" android:layout_height="match_parent" android:textColor="#FFFFFF" android:textSize="16sp" android:gravity="center_vertical|start" android:maxLines="3" android:includeFontPadding="false" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="10sp" android:autoSizeMaxTextSize="16sp" android:autoSizeStepGranularity="1sp" android:visibility="gone"/>
+</FrameLayout>
 </FrameLayout>
