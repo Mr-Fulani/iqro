@@ -264,41 +264,40 @@ class _MemoryRemote implements MemorizationRemoteGateway {
 
 String _today() => DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-Map<String, Object?> _dashboard({
-  String localDate = '2026-09-02',
-}) => <String, Object?>{
-  'timezone_name': 'Europe/Istanbul',
-  'plan': <String, Object?>{
-    'id': 'plan-1',
-    'edition_code': 'madani-hafs',
-    'content_version': '2026.1',
-    'start_ayah': <String, Object?>{
-      'id': 'ayah-2',
-      'surah_number': 2,
-      'ayah_number': 2,
-      'text_uthmani': 'text',
-    },
-    'end_ayah': <String, Object?>{
-      'id': 'ayah-4',
-      'surah_number': 2,
-      'ayah_number': 4,
-      'text_uthmani': 'text',
-    },
-    'recitation_id': null,
-    'reciter': null,
-    'daily_repetitions': 5,
-    'pause_seconds': 2,
-    'timezone_name': 'Europe/Istanbul',
-    'revision': 7,
-  },
-  'today': <String, Object?>{
-    'local_date': localDate,
-    'completed_repetitions': 0,
-    'target_repetitions': 5,
-    'remaining_repetitions': 5,
-    'is_completed': false,
-    'last_assessment': null,
-    'sessions': const <Object?>[],
-  },
-  'recent_days': const <Object?>[],
-};
+Map<String, Object?> _dashboard({String localDate = '2026-09-02'}) =>
+    <String, Object?>{
+      'timezone_name': 'Europe/Istanbul',
+      'plan': <String, Object?>{
+        'id': 'plan-1',
+        'edition_code': 'madani-hafs',
+        'content_version': '2026.1',
+        'start_ayah': <String, Object?>{
+          'id': 'ayah-2',
+          'surah_number': 2,
+          'ayah_number': 2,
+          'text_uthmani': 'text',
+        },
+        'end_ayah': <String, Object?>{
+          'id': 'ayah-4',
+          'surah_number': 2,
+          'ayah_number': 4,
+          'text_uthmani': 'text',
+        },
+        'recitation_id': null,
+        'reciter': null,
+        'daily_repetitions': 5,
+        'pause_seconds': 2,
+        'timezone_name': 'Europe/Istanbul',
+        'revision': 7,
+      },
+      'today': <String, Object?>{
+        'local_date': localDate,
+        'completed_repetitions': 0,
+        'target_repetitions': 5,
+        'remaining_repetitions': 5,
+        'is_completed': false,
+        'last_assessment': null,
+        'sessions': const <Object?>[],
+      },
+      'recent_days': const <Object?>[],
+    };
