@@ -1134,5 +1134,13 @@
   "memorizationListRemove": "Remove {range} from the queue",
   "@memorizationListRemove": {"placeholders":{"range":{"type":"String"}}},
   "memorizationListItemRange": "{surah}, {range}",
-  "@memorizationListItemRange": {"placeholders":{"surah":{"type":"String"},"range":{"type":"String"}}}
+  "@memorizationListItemRange": {"placeholders":{"surah":{"type":"String"},"range":{"type":"String"}}},
+  "appUpdateTitle": "A new version of IQRO is available",
+  "appUpdateText": "The update downloads in the background, and you can keep using the app.",
+  "appUpdateRequiredText": "This is an important update: please install it so the app keeps working correctly.",
+  "appUpdateLater": "Later",
+  "appUpdateInstall": "Update",
+  "appUpdateReadyTitle": "Update downloaded",
+  "appUpdateReadyText": "Restart to update. The app will close for a few seconds.",
+  "appUpdateRestart": "Restart"
 }

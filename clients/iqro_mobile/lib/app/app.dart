@@ -8,6 +8,7 @@ import '../core/background/background_maintenance_service.dart';
 import '../core/background/background_work.dart';
 import '../core/theme/iqro_theme.dart';
 import '../core/widgets/home_widget_routes.dart';
+import '../features/app_update/app_update_controller.dart';
 import '../features/plan/plan_repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'account_scoped_maintenance.dart';
@@ -64,6 +65,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
       if (route != null) _router.go(route);
       _requestBackgroundWork();
       _requestMaintenance();
+      _checkForAppUpdate();
       _scheduleCacheMaintenance();
     });
   }
@@ -195,10 +197,29 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
     );
   }
 
+  // Google Play is asked at most once a day; outside Play nothing happens.
+  void _checkForAppUpdate() {
+    unawaited(
+      ref.read(appUpdateProvider.notifier).checkIfDue().catchError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'IQRO app update check',
+          ),
+        );
+      }),
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _requestMaintenance();
+      _checkForAppUpdate();
       unawaited(ref.read(planProvider.notifier).reload());
     }
   }

@@ -191,6 +191,13 @@ class PreferencesStore {
   Future<void> writeAnalyticsConsent(String value) =>
       _preferences.setString('iqro_analytics_consent_v1', value);
 
+  /// Google Play update checks on this device (`app_update_controller.dart`):
+  /// the last check, «Позже» and an accepted download, as JSON.
+  String? get appUpdateRecord => _preferences.getString('iqro_app_update_v1');
+
+  Future<void> writeAppUpdateRecord(String value) =>
+      _preferences.setString('iqro_app_update_v1', value);
+
   AppPreferences _read({
     required String? recitationOwnerId,
     required bool accountScoped,

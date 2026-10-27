@@ -8,6 +8,7 @@ import '../core/design_system/iqro_icon.dart';
 import '../core/design_system/iqro_lazy_indexed_stack.dart';
 import '../core/design_system/iqro_widgets.dart';
 import '../features/announcements/announcement_controller.dart';
+import '../features/app_update/app_update_card.dart';
 import '../features/audio/audio_screen.dart';
 import '../features/audio/mini_player.dart';
 import '../features/home/home_screen.dart';
@@ -99,7 +100,11 @@ class _AppShellState extends ConsumerState<AppShell> {
             bottom: 72,
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: <Widget>[AnalyticsConsentCard(), IqroMiniPlayer()],
+              children: <Widget>[
+                AppUpdateCard(),
+                AnalyticsConsentCard(),
+                IqroMiniPlayer(),
+              ],
             ),
           ),
         ],
