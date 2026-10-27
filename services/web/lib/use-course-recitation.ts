@@ -3,24 +3,14 @@
 import { useEffect, useState } from "react";
 
 import { api } from "./api";
-import { latestRecitationsByVariant } from "./reciter-catalog";
-import { learningRecitation } from "./reciter-preference";
+import { latestRecitationsByVariant, tajweedCourseRecitation } from "./reciter-catalog";
 
 let courseRecitation: Promise<string | null> | null = null;
 
-/**
- * The reciter of the tajweed course clips: the Mushaf's choice, else the
- * catalog's teaching reciter, else Mishary al-Afasy, else the first one.
- */
+/** The reciter of the tajweed course clips: al-Husary's Muallim, see `tajweedCourseRecitation`. */
 function loadCourseRecitation(): Promise<string | null> {
   courseRecitation ??= api.getAllRecitations({ quran_edition: "madani-hafs" })
-    .then((catalog) => {
-      const available = latestRecitationsByVariant(catalog, "ayah_playback");
-      const fallback = available
-        .filter((item) => item.code.startsWith("qf-7-"))
-        .sort((left, right) => right.coverage.surah_count - left.coverage.surah_count)[0];
-      return (learningRecitation(available, "mushaf") || fallback || available[0])?.id ?? null;
-    })
+    .then((catalog) => tajweedCourseRecitation(latestRecitationsByVariant(catalog, "ayah_playback"))?.id ?? null)
     .catch(() => {
       courseRecitation = null;
       return null;

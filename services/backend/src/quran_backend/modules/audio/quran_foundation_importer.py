@@ -411,7 +411,11 @@ def prepare_ayah_timeline(
 
 
 def _word_timings(value: object) -> tuple[tuple[int, int, int], ...]:
-    """Keep QF word timings only when every row is a well-formed triple."""
+    """Keep QF word timings only when every row is a well-formed triple.
+
+    Some QF recitations (al-Husary's Muallim) send whole numbers as floats,
+    `[1, 0.0, 520.0]`; those count as integers, fractions do not.
+    """
     if not isinstance(value, list):
         return ()
     words: list[tuple[int, int, int]] = []
@@ -419,16 +423,22 @@ def _word_timings(value: object) -> tuple[tuple[int, int, int], ...]:
         if (
             not isinstance(row, list)
             or len(row) != 3
-            or not all(isinstance(item, int) and not isinstance(item, bool) for item in row)
+            or not all(_is_whole_number(item) for item in row)
         ):
             return ()
-        position, start_ms, end_ms = row
+        position, start_ms, end_ms = (int(item) for item in row)
         if position < 1 or start_ms < 0 or end_ms <= start_ms:
             return ()
         words.append((position, start_ms, end_ms))
     if len({position for position, _, _ in words}) != len(words):
         return ()
     return tuple(sorted(words))
+
+
+def _is_whole_number(value: object) -> bool:
+    if isinstance(value, bool):
+        return False
+    return isinstance(value, int) or (isinstance(value, float) and value.is_integer())
 
 
 def _reciter_by_id(rows: list[dict[str, Any]], reciter_id: int) -> dict[str, Any]:

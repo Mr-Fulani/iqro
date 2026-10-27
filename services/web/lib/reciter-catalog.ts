@@ -113,6 +113,18 @@ export function teachingRecitation(recitations: Recitation[]): Recitation | unde
   return recitations.find((item) => item.teaching_default === true);
 }
 
+/**
+ * The fixed voice of the tajweed course: al-Husary's Muallim (Quran.Foundation
+ * recitation 12), whatever is picked in the players. Without it in the catalog
+ * the teaching reciter, then Mishary al-Afasy, then the first one.
+ */
+export function tajweedCourseRecitation(available: Recitation[]): Recitation | undefined {
+  const byPrefix = (prefix: string) => available
+    .filter((item) => item.code.startsWith(prefix))
+    .sort((left, right) => right.coverage.surah_count - left.coverage.surah_count)[0];
+  return byPrefix("qf-12-") ?? teachingRecitation(available) ?? byPrefix("qf-7-") ?? available[0];
+}
+
 function publishedTimestamp(recitation: Recitation): number {
   const timestamp = Date.parse(recitation.published_at);
   return Number.isFinite(timestamp) ? timestamp : 0;

@@ -1,5 +1,6 @@
-// The catalog's teaching reciter plays in the Mushaf reader and the tajweed
-// course until the visitor picks one; the audio player keeps its own default.
+// The catalog's teaching reciter plays in the Mushaf reader until the visitor
+// picks one; the audio player keeps its own default. The tajweed course always
+// plays al-Husary's Muallim.
 import { readFile } from "node:fs/promises";
 
 import { expect, test, type Page } from "@playwright/test";
@@ -62,8 +63,19 @@ test("the audio player keeps its own default reciter", async ({ page }) => {
   await expect(page.locator("#audio-reciter-select")).not.toHaveValue(alternateRecitation.reciter.id);
 });
 
-test("the tajweed course plays its examples with the teaching reciter", async ({ page }) => {
+test("the tajweed course plays its examples with al-Husary's Muallim, whatever the Mushaf plays", async ({ page }) => {
   await routeTeachingCatalog(page);
+  const muallim = { ...alternateRecitation, id: "00000000-0000-7000-8000-000000001012", code: "qf-12-muallim-01a15bc65dc9", style: "muallim" };
+  await page.route((url) => url.pathname === "/api/v1/recitations", (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    const catalog = recitationsMatching(query).map((item) =>
+      item.id === alternateRecitation.id ? { ...item, teaching_default: true } : item,
+    );
+    return route.fulfill({ json: paginated([...catalog, muallim]) });
+  });
+  // The Mushaf plays another reciter: the course does not follow it.
+  const picked = JSON.stringify({ personKey: reciter.slug, reciterId: reciter.id, recitationId: recitation.id, style: recitation.style });
+  await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [MUSHAF_PREFERENCE_KEY, picked]);
   const timingRequests: string[] = [];
   await page.route(/\/api\/v1\/recitations\/[^/]+\/ayahs\/\d+\/\d+$/, (route) => {
     timingRequests.push(new URL(route.request().url()).pathname);
@@ -90,5 +102,5 @@ test("the tajweed course plays its examples with the teaching reciter", async ({
   await step.getByRole("button", { name: "Послушать фрагмент" }).click();
 
   await expect.poll(() => timingRequests.length).toBeGreaterThan(0);
-  expect(timingRequests[0]).toContain(`/api/v1/recitations/${alternateRecitation.id}/ayahs/`);
+  expect(timingRequests[0]).toContain(`/api/v1/recitations/${muallim.id}/ayahs/`);
 });
