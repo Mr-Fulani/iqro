@@ -10,14 +10,17 @@ import '../../core/design_system/iqro_widgets.dart';
 /// tablet (1280 dp) keeps its end edge free for the mini player's button.
 const homeTabletContentWidth = 1100.0;
 
-/// Content widths where Home leaves the phone's single column (600) and
-/// puts the feature cards in one row (840): Material's medium and expanded
-/// window classes.
+/// Content width where Home leaves the phone's single column (Material's
+/// medium window class).
 const homeMediumWidth = 600.0;
-const homeExpandedWidth = 840.0;
+
+// The site's desktop home: sections 24 apart, cards in a row 16 apart.
+const _sectionGap = 24.0;
 
 /// Home's cards laid out for the width: one column on a phone; on a tablet
-/// the cards share rows of equal height, so no card stands beside a gap.
+/// the order and grid of the site's desktop home (`HomePage.tsx`): reading
+/// first like its hero, the daily goal, paired cards of equal height, and the
+/// prayer times last, across the full width.
 class HomeDashboardLayout extends StatelessWidget {
   const HomeDashboardLayout({
     required this.prayer,
@@ -32,6 +35,8 @@ class HomeDashboardLayout extends StatelessWidget {
   final Widget prayer;
   final Widget reading;
   final Widget plan;
+
+  /// Shown in pairs on a tablet; the first pair stands above the utilities.
   final List<Widget> features;
   final List<Widget> utilities;
   final Widget? guest;
@@ -54,42 +59,46 @@ class HomeDashboardLayout extends StatelessWidget {
           IqroActionGrid(children: features),
           const SizedBox(height: 16),
           _utilityList(),
-        ];
-      } else {
-        final expanded = width >= homeExpandedWidth;
-        children = <Widget>[
-          _CardRow(children: <Widget>[prayer, reading]),
-          const SizedBox(height: 12),
-          plan,
-          const SizedBox(height: 16),
-          if (expanded)
-            _CardRow(children: features)
-          else
-            for (var start = 0; start < features.length; start += 2) ...[
-              if (start > 0) const SizedBox(height: 12),
-              _CardRow(children: features.skip(start).take(2).toList()),
-            ],
-          const SizedBox(height: 16),
-          if (expanded)
-            _CardRow(
-              children: <Widget>[
-                for (final utility in utilities)
-                  IqroCard(padding: _utilityPadding, child: utility),
-              ],
-            )
-          else
-            _utilityList(),
-        ];
-      }
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          ...children,
           if (guest case final guest?) ...<Widget>[
             const SizedBox(height: 14),
             guest,
           ],
-        ],
+        ];
+      } else {
+        final pairs = <Widget>[
+          for (var start = 0; start < features.length; start += 2)
+            _CardRow(children: features.skip(start).take(2).toList()),
+        ];
+        children = <Widget>[
+          reading,
+          const SizedBox(height: _sectionGap),
+          plan,
+          if (pairs.isNotEmpty) ...[
+            const SizedBox(height: _sectionGap),
+            pairs.first,
+          ],
+          const SizedBox(height: _sectionGap),
+          _CardRow(
+            children: <Widget>[
+              for (final utility in utilities)
+                IqroCard(padding: _utilityPadding, child: utility),
+            ],
+          ),
+          if (guest case final guest?) ...[
+            const SizedBox(height: _sectionGap),
+            guest,
+          ],
+          for (final pair in pairs.skip(1)) ...[
+            const SizedBox(height: _sectionGap),
+            pair,
+          ],
+          const SizedBox(height: _sectionGap),
+          prayer,
+        ];
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
       );
     },
   );
@@ -136,7 +145,7 @@ class _RenderCardRow extends RenderBox
         RenderBoxContainerDefaultsMixin<RenderBox, _CardRowParentData> {
   _RenderCardRow(this._textDirection);
 
-  static const _gap = 12.0;
+  static const _gap = 16.0;
 
   TextDirection _textDirection;
   set textDirection(TextDirection value) {
@@ -173,11 +182,7 @@ class _RenderCardRow extends RenderBox
       // A minimum, not a tight height: under tight constraints a card would
       // relayout alone when its data arrives and overflow the old height.
       child.layout(
-        BoxConstraints(
-          minWidth: cell,
-          maxWidth: cell,
-          minHeight: height,
-        ),
+        BoxConstraints(minWidth: cell, maxWidth: cell, minHeight: height),
         parentUsesSize: true,
       );
       (child.parentData! as _CardRowParentData).offset = Offset(

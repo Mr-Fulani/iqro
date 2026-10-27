@@ -18,6 +18,7 @@ Future<void> _pumpDashboard(
   double height = 1400,
   String locale = 'ru',
   String surahName = 'Аль-Мульк',
+  String memorization = 'Memorization subtitle',
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -67,7 +68,9 @@ Future<void> _pumpDashboard(
                 HomeFeatureCard(
                   icon: Icons.star_outline,
                   title: title,
-                  subtitle: '$title subtitle',
+                  subtitle: title == 'Memorization'
+                      ? memorization
+                      : '$title subtitle',
                   onTap: () {},
                 ),
             ],
@@ -113,74 +116,73 @@ void main() {
     expect(_card(tester, 'Saved'), _card(tester, 'Downloads'));
   });
 
-  testWidgets('a 700 dp tablet pairs cards in rows of equal height', (
-    tester,
-  ) async {
-    await _pumpDashboard(tester, width: 700);
+  for (final width in [700.0, 1000.0]) {
+    testWidgets('a ${width.round()} dp tablet follows the site home', (
+      tester,
+    ) async {
+      await _pumpDashboard(tester, width: width);
 
-    expect(tester.takeException(), isNull);
-    final prayer = tester.getRect(find.byKey(const ValueKey('home-prayer')));
-    final reading = tester.getRect(find.byKey(const ValueKey('home-reading')));
-    expect(prayer.top, reading.top);
-    expect(prayer.height, reading.height);
-    expect(prayer.width, reading.width);
-    expect(reading.right, 700 - 16);
-    final plan = tester.getRect(find.byKey(const ValueKey('home-plan')));
-    expect(plan.width, 700 - 32);
-    final first = _card(tester, 'After prayer');
-    final second = _card(tester, 'Memorization');
-    expect(first.top, second.top);
-    expect(first.height, second.height);
-    expect(_card(tester, 'Audio').top, greaterThan(first.bottom));
-    expect(_card(tester, 'Saved'), _card(tester, 'Downloads'));
-  });
+      expect(tester.takeException(), isNull);
+      final full = width - 32;
+      final reading = tester.getRect(
+        find.byKey(const ValueKey('home-reading')),
+      );
+      final plan = tester.getRect(find.byKey(const ValueKey('home-plan')));
+      final prayer = tester.getRect(find.byKey(const ValueKey('home-prayer')));
+      // Reading first like the site's hero, the daily goal next, the prayer
+      // times last; each across the full width.
+      expect(reading.width, full);
+      expect(plan.width, full);
+      expect(prayer.width, full);
+      expect(plan.top, greaterThan(reading.bottom));
+      // Cards in pairs of equal height, 16 apart.
+      final afterPrayer = _card(tester, 'After prayer');
+      final memorization = _card(tester, 'Memorization');
+      expect(afterPrayer.top, greaterThan(plan.bottom));
+      expect(memorization.top, afterPrayer.top);
+      expect(memorization.height, afterPrayer.height);
+      expect(memorization.left - afterPrayer.right, 16);
+      final utilities = [for (final title in _utilities) _card(tester, title)];
+      for (final card in utilities) {
+        expect(card.top, utilities.first.top);
+      }
+      expect(utilities.first.top, greaterThan(afterPrayer.bottom));
+      final audio = _card(tester, 'Audio');
+      expect(audio.top, greaterThan(utilities.first.bottom));
+      expect(_card(tester, 'Dua').top, audio.top);
+      expect(prayer.top, greaterThan(audio.bottom));
+      // The whole day, as the site's prayer schedule.
+      expect(
+        find.byKey(const ValueKey('home-prayer-time-dhuhr')),
+        findsOneWidget,
+      );
+    });
+  }
 
   testWidgets('a row grows when the data of a card arrives later', (
     tester,
   ) async {
-    await _pumpDashboard(tester, width: 700, surahName: 'Загрузка…');
-    // The same cards rebuilt with a longer title, as when the data loads.
+    await _pumpDashboard(tester, width: 700, memorization: 'Загрузка…');
+    // The same cards rebuilt with a longer subtitle, as when the data loads.
     await _pumpDashboard(
       tester,
       width: 700,
-      surahName: 'Очень длинное название суры в три строки на планшете',
+      memorization: 'Аль-Мульк 1–30 · 3/10, Аль-Мульк 1–30 · 3/10, ещё строка',
     );
 
     expect(tester.takeException(), isNull);
-    final prayer = tester.getRect(find.byKey(const ValueKey('home-prayer')));
-    final reading = tester.getRect(find.byKey(const ValueKey('home-reading')));
-    expect(prayer.height, reading.height);
-  });
-
-  testWidgets('a 1000 dp tablet puts the features and utilities in one row', (
-    tester,
-  ) async {
-    await _pumpDashboard(tester, width: 1000);
-
-    expect(tester.takeException(), isNull);
-    final features = [for (final title in _features) _card(tester, title)];
-    for (final card in features) {
-      expect(card.top, features.first.top);
-      expect(card.height, features.first.height);
-    }
-    expect(features.first.left, 16);
-    expect(features.last.right, 1000 - 16);
-    final utilities = [for (final title in _utilities) _card(tester, title)];
-    for (final card in utilities) {
-      expect(card.top, utilities.first.top);
-    }
-    expect(utilities.first, isNot(utilities.last));
+    expect(
+      _card(tester, 'After prayer').height,
+      _card(tester, 'Memorization').height,
+    );
   });
 
   testWidgets('right-to-left rows start at the right edge', (tester) async {
     await _pumpDashboard(tester, width: 1000, locale: 'ar');
 
     expect(tester.takeException(), isNull);
-    final prayer = tester.getRect(find.byKey(const ValueKey('home-prayer')));
-    final reading = tester.getRect(find.byKey(const ValueKey('home-reading')));
-    expect(prayer.right, 1000 - 16);
-    expect(reading.left, 16);
     expect(_card(tester, 'After prayer').right, 1000 - 16);
+    expect(_card(tester, 'Memorization').left, 16);
   });
 
   testWidgets('a landscape tablet uses its width up to the limit', (
