@@ -991,5 +991,13 @@
   "memorizationListRemove": "{range} sıradan çıkar",
   "@memorizationListRemove": {"placeholders":{"range":{"type":"String"}}},
   "memorizationListItemRange": "{surah}, {range}",
-  "@memorizationListItemRange": {"placeholders":{"surah":{"type":"String"},"range":{"type":"String"}}}
+  "@memorizationListItemRange": {"placeholders":{"surah":{"type":"String"},"range":{"type":"String"}}},
+  "appUpdateTitle": "IQRO'nun yeni sürümü hazır",
+  "appUpdateText": "Güncelleme arka planda indirilir, uygulamayı kullanmaya devam edebilirsiniz.",
+  "appUpdateRequiredText": "Bu önemli bir güncelleme: uygulamanın doğru çalışması için lütfen yükleyin.",
+  "appUpdateLater": "Daha sonra",
+  "appUpdateInstall": "Güncelle",
+  "appUpdateReadyTitle": "Güncelleme indirildi",
+  "appUpdateReadyText": "Güncellemek için yeniden başlatın. Uygulama birkaç saniyeliğine kapanacak.",
+  "appUpdateRestart": "Yeniden başlat"
 }

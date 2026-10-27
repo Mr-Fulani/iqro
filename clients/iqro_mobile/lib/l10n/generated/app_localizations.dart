@@ -5825,6 +5825,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{surah}, {range}'**
   String memorizationListItemRange(String surah, String range);
+
+  /// No description provided for @appUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version of IQRO is available'**
+  String get appUpdateTitle;
+
+  /// No description provided for @appUpdateText.
+  ///
+  /// In en, this message translates to:
+  /// **'The update downloads in the background, and you can keep using the app.'**
+  String get appUpdateText;
+
+  /// No description provided for @appUpdateRequiredText.
+  ///
+  /// In en, this message translates to:
+  /// **'This is an important update: please install it so the app keeps working correctly.'**
+  String get appUpdateRequiredText;
+
+  /// No description provided for @appUpdateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get appUpdateLater;
+
+  /// No description provided for @appUpdateInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get appUpdateInstall;
+
+  /// No description provided for @appUpdateReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update downloaded'**
+  String get appUpdateReadyTitle;
+
+  /// No description provided for @appUpdateReadyText.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart to update. The app will close for a few seconds.'**
+  String get appUpdateReadyText;
+
+  /// No description provided for @appUpdateRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get appUpdateRestart;
 }
 
 class _AppLocalizationsDelegate

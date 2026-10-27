@@ -3325,4 +3325,31 @@ class AppLocalizationsRu extends AppLocalizations {
   String memorizationListItemRange(String surah, String range) {
     return '$surah, $range';
   }
+
+  @override
+  String get appUpdateTitle => 'Доступна новая версия IQRO';
+
+  @override
+  String get appUpdateText =>
+      'Обновление загрузится в фоне, а приложением можно пользоваться как обычно.';
+
+  @override
+  String get appUpdateRequiredText =>
+      'Это важное обновление: установите его, чтобы приложение работало правильно.';
+
+  @override
+  String get appUpdateLater => 'Позже';
+
+  @override
+  String get appUpdateInstall => 'Обновить';
+
+  @override
+  String get appUpdateReadyTitle => 'Обновление загружено';
+
+  @override
+  String get appUpdateReadyText =>
+      'Перезапустите, чтобы обновить. Приложение закроется на несколько секунд.';
+
+  @override
+  String get appUpdateRestart => 'Перезапустить';
 }

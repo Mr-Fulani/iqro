@@ -14,7 +14,12 @@ void main() {
 
     expect(
       appShell,
-      contains('children: <Widget>[AnalyticsConsentCard(), IqroMiniPlayer()]'),
+      matches(
+        RegExp(
+          r'children: <Widget>\[\s*AppUpdateCard\(\),\s*'
+          r'AnalyticsConsentCard\(\),\s*IqroMiniPlayer\(\),\s*\]',
+        ),
+      ),
     );
     expect(appShell, contains('const PositionedDirectional('));
     expect(
