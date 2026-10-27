@@ -1215,18 +1215,14 @@ final tajweedPracticeClockProvider = Provider<DateTime Function()>(
   (ref) => DateTime.now,
 );
 
-/// Resolves the reciter whose timings play the course examples: the one
-/// chosen for the Mushaf, as in the tajweed cards, otherwise the default.
+/// Resolves the reciter whose timings play the course examples: always
+/// al-Husary's Muallim, see [tajweedCourseRecitation].
 final tajweedCourseRecitationProvider = Provider<Future<String?> Function()>(
   (ref) => () async {
     final recitations = await ref
         .read(audioRepositoryProvider)
         .recitationsForRole(AudioRecitationRole.ayahPlayback);
-    return preferredRecitation(
-      recitations,
-      preferredId: ref.read(appPreferencesProvider).mushafRecitationId,
-      role: AudioRecitationRole.ayahPlayback,
-    )?.id;
+    return tajweedCourseRecitation(recitations)?.id;
   },
 );
 final salahDisplayProvider = StateProvider<SalahDisplay>(

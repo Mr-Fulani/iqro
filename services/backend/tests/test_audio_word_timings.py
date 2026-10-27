@@ -78,7 +78,15 @@ def test_import_keeps_quran_foundation_word_timings(quran_dataset: dict[str, Any
 
 @pytest.mark.parametrize(
     "words_2",
-    [[[1, 5_000]], [[0, 5_000, 6_000]], [[1, 6_000, 5_000]], [[1, 5_000, 6_000]] * 2, "x"],
+    [
+        [[1, 5_000]],
+        [[0, 5_000, 6_000]],
+        [[1, 6_000, 5_000]],
+        [[1, 5_000, 6_000]] * 2,
+        [[1, 5_000.5, 6_000]],
+        [[True, 5_000, 6_000]],
+        "x",
+    ],
 )
 def test_malformed_word_timings_are_dropped_without_failing_the_ayah(
     quran_dataset: dict[str, Any],
@@ -87,6 +95,16 @@ def test_malformed_word_timings_are_dropped_without_failing_the_ayah(
     recitation = _import(WordTimingClient(words_2=words_2), quran_dataset)
 
     assert _words(recitation) == [WORDS_1, []]
+
+
+def test_whole_number_floats_count_as_word_timings(quran_dataset: dict[str, Any]) -> None:
+    # QF sends al-Husary's Muallim timings as floats: [1, 5000.0, 6000.0].
+    floats = [[float(item) for item in word] for word in WORDS_2]
+    recitation = _import(WordTimingClient(words_2=floats), quran_dataset)
+
+    words = _words(recitation)
+    assert words == [WORDS_1, WORDS_2]
+    assert all(type(item) is int for word in words[1] for item in word)
 
 
 def test_word_timings_do_not_change_the_published_timing_checksum(
