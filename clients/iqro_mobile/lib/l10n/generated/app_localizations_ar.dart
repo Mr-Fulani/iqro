@@ -1225,6 +1225,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get feedbackSignInRequired => 'سجّل الدخول لإرسال طلب';
 
   @override
+  String get ayahTimingsMissing => 'دون توقيت الآيات';
+
+  @override
   String get feedbackDescription =>
       'أبلغ هيئة التحرير الدينية عن أي خطأ في النص أو التوقيت أو حساب الصلاة.';
 

@@ -1240,6 +1240,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get feedbackSignInRequired => 'Sign in to send a request';
 
   @override
+  String get ayahTimingsMissing => 'no ayah timings';
+
+  @override
   String get feedbackDescription =>
       'Report inaccuracies in text, timings, or prayer calculations to the religious editorial team.';
 

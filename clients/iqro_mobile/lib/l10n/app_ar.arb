@@ -388,6 +388,7 @@
   "feedbackTitle": "الملاحظات والتدقيق الديني",
   "feedbackAccountHint": "أبلغ عن مشكلة في النص أو الصوت أو أوقات الصلاة أو التطبيق.",
   "feedbackSignInRequired": "سجّل الدخول لإرسال طلب",
+  "ayahTimingsMissing": "دون توقيت الآيات",
   "feedbackDescription": "أبلغ هيئة التحرير الدينية عن أي خطأ في النص أو التوقيت أو حساب الصلاة.",
   "feedbackCreate": "إنشاء طلب",
   "feedbackCategory": "فئة الطلب",

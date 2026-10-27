@@ -1245,6 +1245,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get feedbackSignInRequired => 'Войдите, чтобы отправить обращение';
 
   @override
+  String get ayahTimingsMissing => 'без разметки аятов';
+
+  @override
   String get feedbackDescription =>
       'Сообщите религиозной редакции о неточности в тексте, таймкодах или расчётах молитв.';
 

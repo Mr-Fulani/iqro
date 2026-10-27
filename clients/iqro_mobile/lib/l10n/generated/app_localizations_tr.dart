@@ -1234,6 +1234,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get feedbackSignInRequired => 'Talep göndermek için giriş yapın';
 
   @override
+  String get ayahTimingsMissing => 'ayet zamanlaması yok';
+
+  @override
   String get feedbackDescription =>
       'Metin, zaman kodu veya namaz hesaplamalarındaki hataları dini editör ekibine bildirin.';
 

@@ -141,6 +141,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a recording without ayah timings says so instead of a dash', (
+    tester,
+  ) async {
+    final harness = await _pumpPlayer(tester);
+    expect(find.text('СУРА 2 · АЯТ 7'), findsOneWidget);
+
+    await harness.controller.loadPlayback(
+      playback: SurahPlayback(
+        track: _track(_currentRecitation),
+        segments: const <AudioSegment>[],
+      ),
+      reciter: _currentReciter,
+      surahName: 'Аль-Бакара',
+      autoplay: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('СУРА 2 · БЕЗ РАЗМЕТКИ АЯТОВ'), findsOneWidget);
+    expect(find.textContaining('АЯТ —'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the Mushaf picker never offers a listening-only recording', (
     tester,
   ) async {

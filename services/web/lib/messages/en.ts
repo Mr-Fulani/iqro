@@ -804,6 +804,7 @@ const en: Messages = {
   "player.forward10": "Forward 10 seconds",
   "player.seek": "Playback position",
   "player.surahAyah": "Surah {surah} · ayah {ayah}",
+  "player.surahUntimed": "Surah {surah} · no ayah timings",
   "player.range": "Range",
   "player.rangeValue": "Ayahs {start}–{end}",
   "player.status.nextSurah": "Next surah…",

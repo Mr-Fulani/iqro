@@ -2358,6 +2358,12 @@ abstract class AppLocalizations {
   /// **'Sign in to send a request'**
   String get feedbackSignInRequired;
 
+  /// No description provided for @ayahTimingsMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'no ayah timings'**
+  String get ayahTimingsMissing;
+
   /// No description provided for @feedbackDescription.
   ///
   /// In en, this message translates to:
