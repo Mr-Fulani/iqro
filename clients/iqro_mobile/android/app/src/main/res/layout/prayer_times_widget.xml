@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The frame centres the card in a widget cell taller or wider than the
+     design (tablets, big launcher grids); see HomeWidgetCard.kt. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/prayer_widget_frame" android:layout_width="match_parent" android:layout_height="match_parent">
+<FrameLayout
     android:id="@+id/prayer_widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@drawable/prayer_widget_background" android:padding="14dp">
     <LinearLayout android:id="@+id/prayer_content" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:baselineAligned="false">
@@ -41,4 +45,5 @@
         </LinearLayout>
     </LinearLayout>
     <TextView android:id="@+id/prayer_empty" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical|start" android:textColor="#FFFFFF" android:textSize="16sp" android:visibility="gone" />
+</FrameLayout>
 </FrameLayout>
