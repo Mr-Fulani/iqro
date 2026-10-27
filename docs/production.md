@@ -86,6 +86,33 @@ make production-up
 make production-ps
 ```
 
+`production-build` и `production-up` собирают только образы приложения (backend, web, gateway).
+PostgreSQL и Redis сохраняют свой образ и при обычном релизе не пересоздаются; Compose собирает
+их, только если образа ещё нет. Иначе любой выход новых пакетов Alpine давал бы новый образ базы,
+и каждый релиз перезапускал бы PostgreSQL.
+
+### Обновление PostgreSQL и Redis
+
+Образы базы и Redis обновляются осознанно, отдельным шагом в тихое время и после бэкапа:
+
+```bash
+make production-backup-offsite PRODUCTION_COMPOSE_OVERLAY="-f compose.production.tls.yaml"
+make production-data-update PRODUCTION_COMPOSE_OVERLAY="-f compose.production.tls.yaml"
+```
+
+PostgreSQL останавливается сигналом `SIGINT` (fast shutdown): он закрывает соединения пула,
+делает checkpoint и выключается за секунды, без восстановления по журналу при запуске. С сигналом
+`SIGTERM` (smart shutdown) база ждала бы отключения всех клиентов, пока Docker не убьёт её через
+`stop_grace_period`.
+
+Разово, при первой выкладке этой настройки: работающий контейнер создан ещё со старым сигналом,
+и Compose пересоздаст его из-за изменённой конфигурации. Чтобы и эта остановка была чистой,
+перед `make production-up` остановите базу быстрым завершением вручную:
+
+```bash
+docker stop --signal SIGINT --time 60 quran-production-postgres-1
+```
+
 Observability overlay включается отдельно и не увеличивает стартовый S0 footprint без явного
 решения оператора:
 
