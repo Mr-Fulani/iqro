@@ -245,8 +245,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               _Artwork(url: portraitUrl),
               const SizedBox(height: 28),
               IqroEyebrow(
-                '${context.l10n.surah} ${state.track?.surah ?? '—'} · '
-                '${context.l10n.ayah} ${currentAyah ?? '—'}',
+                // Some recordings have no ayah timings yet; a dash that never
+                // changes read as a frozen counter.
+                state.active && state.segments.isEmpty
+                    ? '${context.l10n.surah} ${state.track?.surah} · '
+                          '${context.l10n.ayahTimingsMissing}'
+                    : '${context.l10n.surah} ${state.track?.surah ?? '—'} · '
+                          '${context.l10n.ayah} ${currentAyah ?? '—'}',
                 light: true,
               ),
               const SizedBox(height: 8),

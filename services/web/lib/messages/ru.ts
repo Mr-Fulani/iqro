@@ -807,6 +807,7 @@ const ru = {
   "player.forward10": "Вперёд на 10 секунд",
   "player.seek": "Позиция воспроизведения",
   "player.surahAyah": "Сура {surah} · аят {ayah}",
+  "player.surahUntimed": "Сура {surah} · без разметки аятов",
   "player.range": "Диапазон",
   "player.rangeValue": "Аяты {start}–{end}",
   "player.status.nextSurah": "Следующая сура…",

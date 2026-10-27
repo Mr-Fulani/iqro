@@ -1234,6 +1234,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get feedbackSignInRequired => 'Talep göndermek için giriş yapın';
 
   @override
+  String get ayahTimingsMissing => 'ayet zamanlaması yok';
+
+  @override
   String get feedbackDescription =>
       'Metin, zaman kodu veya namaz hesaplamalarındaki hataları dini editör ekibine bildirin.';
 
@@ -3262,4 +3265,31 @@ class AppLocalizationsTr extends AppLocalizations {
   String memorizationListItemRange(String surah, String range) {
     return '$surah, $range';
   }
+
+  @override
+  String get appUpdateTitle => 'IQRO\'nun yeni sürümü hazır';
+
+  @override
+  String get appUpdateText =>
+      'Güncelleme arka planda indirilir, uygulamayı kullanmaya devam edebilirsiniz.';
+
+  @override
+  String get appUpdateRequiredText =>
+      'Bu önemli bir güncelleme: uygulamanın doğru çalışması için lütfen yükleyin.';
+
+  @override
+  String get appUpdateLater => 'Daha sonra';
+
+  @override
+  String get appUpdateInstall => 'Güncelle';
+
+  @override
+  String get appUpdateReadyTitle => 'Güncelleme indirildi';
+
+  @override
+  String get appUpdateReadyText =>
+      'Güncellemek için yeniden başlatın. Uygulama birkaç saniyeliğine kapanacak.';
+
+  @override
+  String get appUpdateRestart => 'Yeniden başlat';
 }

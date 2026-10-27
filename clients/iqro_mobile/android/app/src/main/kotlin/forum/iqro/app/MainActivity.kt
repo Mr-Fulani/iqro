@@ -22,6 +22,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : AudioServiceActivity() {
     private var lastPagePulse = 0L
     private var qiblaCompass: QiblaCompassStreamHandler? = null
+    private var appUpdates: AppUpdateHandler? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         moveSalahStepToQuery(intent)
@@ -62,11 +63,26 @@ class MainActivity : AudioServiceActivity() {
         qiblaCompass = compass
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/qibla_compass")
             .setStreamHandler(compass)
+        val updates = AppUpdateHandler(this)
+        appUpdates = updates
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/app_update")
+            .setMethodCallHandler(updates)
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/app_update_state")
+            .setStreamHandler(updates)
+    }
+
+    @Deprecated("Play in-app updates still answer through onActivityResult")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (appUpdates?.onActivityResult(requestCode, resultCode) == true) return
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         qiblaCompass?.onCancel(null)
         qiblaCompass = null
+        appUpdates?.onCancel(null)
+        appUpdates = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 

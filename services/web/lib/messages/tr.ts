@@ -804,6 +804,7 @@ const tr: Messages = {
   "player.forward10": "10 saniye ileri",
   "player.seek": "Oynatma konumu",
   "player.surahAyah": "Sure {surah} · ayet {ayah}",
+  "player.surahUntimed": "Sure {surah} · ayet zamanlaması yok",
   "player.range": "Aralık",
   "player.rangeValue": "Ayetler {start}–{end}",
   "player.status.nextSurah": "Sonraki sure…",

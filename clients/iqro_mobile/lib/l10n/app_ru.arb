@@ -388,6 +388,7 @@
   "feedbackTitle": "Обратная связь и религиозный аудит",
   "feedbackAccountHint": "Сообщите о неточности в тексте, аудио, времени намаза или приложении.",
   "feedbackSignInRequired": "Войдите, чтобы отправить обращение",
+  "ayahTimingsMissing": "без разметки аятов",
   "feedbackDescription": "Сообщите религиозной редакции о неточности в тексте, таймкодах или расчётах молитв.",
   "feedbackCreate": "Создать обращение",
   "feedbackCategory": "Категория обращения",
@@ -998,5 +999,13 @@
   "memorizationListRemove": "Убрать {range} из очереди",
   "@memorizationListRemove": {"placeholders":{"range":{"type":"String"}}},
   "memorizationListItemRange": "{surah}, {range}",
-  "@memorizationListItemRange": {"placeholders":{"surah":{"type":"String"},"range":{"type":"String"}}}
+  "@memorizationListItemRange": {"placeholders":{"surah":{"type":"String"},"range":{"type":"String"}}},
+  "appUpdateTitle": "Доступна новая версия IQRO",
+  "appUpdateText": "Обновление загрузится в фоне, а приложением можно пользоваться как обычно.",
+  "appUpdateRequiredText": "Это важное обновление: установите его, чтобы приложение работало правильно.",
+  "appUpdateLater": "Позже",
+  "appUpdateInstall": "Обновить",
+  "appUpdateReadyTitle": "Обновление загружено",
+  "appUpdateReadyText": "Перезапустите, чтобы обновить. Приложение закроется на несколько секунд.",
+  "appUpdateRestart": "Перезапустить"
 }

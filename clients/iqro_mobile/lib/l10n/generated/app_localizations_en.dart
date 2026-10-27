@@ -1240,6 +1240,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get feedbackSignInRequired => 'Sign in to send a request';
 
   @override
+  String get ayahTimingsMissing => 'no ayah timings';
+
+  @override
   String get feedbackDescription =>
       'Report inaccuracies in text, timings, or prayer calculations to the religious editorial team.';
 
@@ -3308,4 +3311,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String memorizationListItemRange(String surah, String range) {
     return '$surah, $range';
   }
+
+  @override
+  String get appUpdateTitle => 'A new version of IQRO is available';
+
+  @override
+  String get appUpdateText =>
+      'The update downloads in the background, and you can keep using the app.';
+
+  @override
+  String get appUpdateRequiredText =>
+      'This is an important update: please install it so the app keeps working correctly.';
+
+  @override
+  String get appUpdateLater => 'Later';
+
+  @override
+  String get appUpdateInstall => 'Update';
+
+  @override
+  String get appUpdateReadyTitle => 'Update downloaded';
+
+  @override
+  String get appUpdateReadyText =>
+      'Restart to update. The app will close for a few seconds.';
+
+  @override
+  String get appUpdateRestart => 'Restart';
 }

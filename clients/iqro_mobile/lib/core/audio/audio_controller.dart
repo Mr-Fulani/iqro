@@ -551,7 +551,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
             state.hasActiveRange && logicalPosition >= state.rangeEndPosition;
         final activeSegment = beforeRange || completedRange
             ? null
-            : _segmentAt(state.segments, logicalPosition);
+            : _ayahSegmentAt(state.segments, logicalPosition);
         final completedRangeAyah = completedRange ? state.rangeEndAyah : null;
         state = state.copyWith(
           position: logicalPosition,
@@ -617,6 +617,25 @@ class AudioController extends StateNotifier<IqroAudioState> {
       (_) => _publishListeningMedia(),
       fireImmediately: true,
     );
+  }
+
+  /// The ayah being recited at [position]; in a pause between two ayahs the
+  /// one just recited, so the ayah number does not blink to a dash (some
+  /// recordings pause up to three seconds between ayahs).
+  AudioSegment? _ayahSegmentAt(List<AudioSegment> segments, Duration position) {
+    final segment = _segmentAt(segments, position);
+    if (segment != null ||
+        segments.isEmpty ||
+        position < segments.first.start ||
+        position >= segments.last.end) {
+      return segment;
+    }
+    AudioSegment? previous;
+    for (final candidate in segments) {
+      if (candidate.end > position) break;
+      previous = candidate;
+    }
+    return previous;
   }
 
   AudioSegment? _segmentAt(List<AudioSegment> segments, Duration position) {
@@ -1006,8 +1025,9 @@ class AudioController extends StateNotifier<IqroAudioState> {
           playing: false,
           buffering: false,
           position: logicalPosition,
-          activeAyah: _segmentAt(state.segments, logicalPosition)?.ayah,
-          clearActiveAyah: _segmentAt(state.segments, logicalPosition) == null,
+          activeAyah: _ayahSegmentAt(state.segments, logicalPosition)?.ayah,
+          clearActiveAyah:
+              _ayahSegmentAt(state.segments, logicalPosition) == null,
           clearError: true,
         );
         restored = true;
