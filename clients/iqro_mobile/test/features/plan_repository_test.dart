@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
+import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_screen.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
@@ -531,6 +533,120 @@ void main() {
       expect(database.states['daily_plan']?['achieved'], 0);
     },
   );
+
+  test('the plan asks the server in one round trip', () async {
+    final remote = _FakePlanRemote()..readGate = Completer<void>();
+    final repository = PlanRepository(
+      _FakeLocalDatabase(),
+      remote: remote,
+      timezoneLoader: () async => 'UTC',
+    );
+
+    final loading = repository.load();
+    await pumpEventQueue();
+    // today, planner, prayer day and manual records all wait together.
+    expect(remote.reads, 4);
+    remote.readGate!.complete();
+    expect((await loading).target, 6);
+    expect(remote.reads, 4);
+  });
+
+  test('the saved plan shows at once while the server answers', () async {
+    final database = _FakeLocalDatabase();
+    final scope = await database.captureAccount();
+    final remote = _FakePlanRemote(achieved: 2);
+    final repository = PlanRepository(
+      database,
+      remote: remote,
+      timezoneLoader: () async => 'UTC',
+    );
+    await repository.load();
+    remote
+      ..achieved = 5
+      ..readGate = Completer<void>();
+
+    final controller = PlanController(
+      repository,
+      database: database,
+      accountScope: scope,
+      preferredTarget: 6,
+      preferredMetric: ReadingGoalMetric.pages,
+    );
+    addTearDown(controller.dispose);
+    await pumpEventQueue();
+    expect(controller.state.value?.achieved, 2);
+    expect(controller.state.value?.fromCache, isFalse);
+
+    remote.readGate!.complete();
+    await pumpEventQueue();
+    expect(controller.state.value?.achieved, 5);
+  });
+
+  test('a plan saved yesterday keeps the goal but not its reading', () async {
+    final database = _FakeLocalDatabase();
+    final remote = _FakePlanRemote(target: 10, achieved: 7);
+    final repository = PlanRepository(
+      database,
+      remote: remote,
+      timezoneLoader: () async => 'UTC',
+    );
+    await repository.load();
+    final saved = database.cached!;
+    database.cached = CachedValue(
+      value: saved.value,
+      updatedAt: saved.updatedAt.subtract(const Duration(days: 1)),
+      expiresAt: saved.expiresAt,
+    );
+
+    final cached = await repository.cached();
+
+    expect(cached?.target, 10);
+    expect(cached?.achieved, 0);
+  });
+
+  test('preference changes and new reading keep the plan on screen', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final database = _FakeLocalDatabase();
+    final scope = await database.captureAccount();
+    final remote = _FakePlanRemote(achieved: 1);
+    final repository = PlanRepository(
+      database,
+      remote: remote,
+      timezoneLoader: () async => 'UTC',
+    );
+    final updates = StreamController<int>.broadcast();
+    addTearDown(updates.close);
+    final preferences = AppPreferencesController(
+      PreferencesStore(await SharedPreferences.getInstance()),
+      repository,
+    );
+    final container = ProviderContainer(
+      overrides: <Override>[
+        localDatabaseProvider.overrideWithValue(database),
+        planRepositoryProvider.overrideWithValue(repository),
+        planUpdatesProvider.overrideWith((ref) => updates.stream),
+        activeAccountScopeKeyProvider.overrideWithValue(accountScopeKey(scope)),
+        appPreferencesProvider.overrideWith((ref) => preferences),
+      ],
+    );
+    addTearDown(container.dispose);
+    final states = <AsyncValue<DailyPlan>>[];
+    container.listen(planProvider, (_, next) => states.add(next));
+    await pumpEventQueue();
+    final controller = container.read(planProvider.notifier);
+    expect(container.read(planProvider).value?.achieved, 1);
+
+    await preferences.setTheme(ThemeMode.dark);
+    await pumpEventQueue();
+    expect(container.read(planProvider.notifier), same(controller));
+
+    remote.achieved = 3;
+    updates.add(1);
+    await pumpEventQueue();
+    expect(container.read(planProvider.notifier), same(controller));
+    expect(container.read(planProvider).value?.achieved, 3);
+    expect(states.where((state) => !state.hasValue), isEmpty);
+  });
 }
 
 class _FakeLocalDatabase implements LocalDatabase {
@@ -615,6 +731,8 @@ class _FakePlanRemote implements PlanRemoteGateway {
   String? prayerTimezone;
   String prayerDate = '2026-08-29';
   Completer<void>? writeGate;
+  Completer<void>? readGate;
+  int reads = 0;
   int checkInCreates = 0;
   String? requestedTimezone;
   Map<String, Object?>? savedGoal;
@@ -625,8 +743,10 @@ class _FakePlanRemote implements PlanRemoteGateway {
   Map<String, Object?>? prayerCheckIn;
   final List<Map<String, Object?>> automaticPayloads = <Map<String, Object?>>[];
 
-  void _check(String timezoneName) {
+  Future<void> _check(String timezoneName) async {
     requestedTimezone = timezoneName;
+    reads++;
+    await readGate?.future;
     if (offline) throw StateError('offline');
   }
 
@@ -635,7 +755,7 @@ class _FakePlanRemote implements PlanRemoteGateway {
     String timezoneName, {
     AccountScopeSnapshot? accountScope,
   }) async {
-    _check(timezoneName);
+    await _check(timezoneName);
     return <String, Object?>{
       'local_date': '2026-08-29',
       'timezone_name': timezoneName,
@@ -660,7 +780,7 @@ class _FakePlanRemote implements PlanRemoteGateway {
     String timezoneName, {
     AccountScopeSnapshot? accountScope,
   }) async {
-    _check(timezoneName);
+    await _check(timezoneName);
     return <String, Object?>{
       'local_date': '2026-08-29',
       'timezone_name': timezoneName,
@@ -688,6 +808,8 @@ class _FakePlanRemote implements PlanRemoteGateway {
     int limit = 100,
     AccountScopeSnapshot? accountScope,
   }) async {
+    reads++;
+    await readGate?.future;
     if (offline) throw StateError('offline');
     return const <String, Object?>{'results': <Object?>[]};
   }
@@ -697,7 +819,7 @@ class _FakePlanRemote implements PlanRemoteGateway {
     String timezoneName, {
     AccountScopeSnapshot? accountScope,
   }) async {
-    _check(timezoneName);
+    await _check(timezoneName);
     return <String, Object?>{
       'local_date': prayerDate,
       'timezone_name': prayerTimezone ?? timezoneName,
