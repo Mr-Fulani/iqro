@@ -198,6 +198,19 @@ class GatewayConfigTests(unittest.TestCase):
             self.assertIn(f"wss://{host}", connect)
         self.assertIn("frame-ancestors 'none'", policy)
 
+    def test_gateway_allows_google_sign_in_like_next_csp(self) -> None:
+        next_config = NEXT_CONFIG.read_text(encoding="utf-8")
+        source = re.search(r'const googleIdentitySource = "([^"]+)"', next_config)
+        self.assertIsNotNone(source)
+        gsi = source.group(1)
+        policy = SECURITY_HEADERS.read_text(encoding="utf-8")
+        self.assertIn(f"{gsi}client", _directive_sources(policy, "script-src"))
+        self.assertIn(f"{gsi}style", _directive_sources(policy, "style-src"))
+        self.assertIn(gsi, _directive_sources(policy, "frame-src"))
+        # The GIS popup fallback needs its opener; both layers send the same COOP.
+        self.assertIn('Cross-Origin-Opener-Policy "same-origin-allow-popups"', policy)
+        self.assertIn('value: "same-origin-allow-popups"', next_config)
+
     def test_text_responses_are_compressed(self) -> None:
         self.assertIn("gzip on;", self.config)
         self.assertIn("gzip_proxied any;", self.config)

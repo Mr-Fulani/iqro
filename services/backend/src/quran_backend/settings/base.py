@@ -86,6 +86,10 @@ QURAN_REFRESH_TOKEN_HASH_KEY = os.getenv("QURAN_REFRESH_TOKEN_HASH_KEY", SECRET_
 QURAN_EMAIL_CODE_HASH_KEY = os.getenv("QURAN_EMAIL_CODE_HASH_KEY", SECRET_KEY)
 QURAN_EMAIL_CODE_TTL_SECONDS = os.getenv("QURAN_EMAIL_CODE_TTL_SECONDS", "600")
 QURAN_EMAIL_CODE_ATTEMPTS = os.getenv("QURAN_EMAIL_CODE_ATTEMPTS", "5")
+# Google sign-in stays off until the OAuth clients exist. The web client ID is
+# also the server client ID that the Android app requests ID tokens for.
+QURAN_GOOGLE_WEB_CLIENT_ID = os.getenv("QURAN_GOOGLE_WEB_CLIENT_ID", "").strip()
+QURAN_GOOGLE_ANDROID_CLIENT_IDS = env_list("QURAN_GOOGLE_ANDROID_CLIENT_IDS")
 QURAN_EMAIL_CHALLENGE_RETENTION_HOURS = os.getenv(
     "QURAN_EMAIL_CHALLENGE_RETENTION_HOURS",
     "24",
@@ -579,6 +583,14 @@ REST_FRAMEWORK: dict[str, Any] = {
         ),
         "email_verify_ip_burst": os.getenv(
             "QURAN_EMAIL_VERIFY_IP_BURST_RATE",
+            "300/hour",
+        ),
+        "google_sign_in_identity": os.getenv(
+            "QURAN_GOOGLE_SIGN_IN_IDENTITY_RATE",
+            "20/hour",
+        ),
+        "google_sign_in_ip_burst": os.getenv(
+            "QURAN_GOOGLE_SIGN_IN_IP_BURST_RATE",
             "300/hour",
         ),
         "feedback_write": os.getenv("QURAN_FEEDBACK_WRITE_RATE", "20/hour"),

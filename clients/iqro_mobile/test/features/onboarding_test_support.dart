@@ -192,6 +192,7 @@ Future<OnboardingHarness> pumpOnboarding(
   Size? size,
   double pixelRatio = 1,
   Key? boundary,
+  List<Override> overrides = const <Override>[],
 }) async {
   if (size != null) {
     tester.view.physicalSize = size;
@@ -247,6 +248,7 @@ Future<OnboardingHarness> pumpOnboarding(
                 : AnalyticsController.disabled(),
           ),
           onboardingServicesProvider.overrideWithValue(fake),
+          ...overrides,
         ],
         child: Consumer(
           builder: (context, ref, _) => MaterialApp.router(

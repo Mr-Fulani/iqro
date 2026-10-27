@@ -1173,10 +1173,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sendCode => 'إرسال الرمز';
 
   @override
+  String get googleContinue => 'المتابعة باستخدام Google';
+
+  @override
+  String get googleOrEmail => 'أو برمز يُرسل إلى بريدك';
+
+  @override
+  String googleSignedInAs(String email) {
+    return 'سجّلت الدخول باسم $email';
+  }
+
+  @override
   String get verify => 'تحقق';
 
   @override
   String get signOut => 'تسجيل الخروج';
+
+  @override
+  String get accountSwitch => 'تبديل الحساب';
+
+  @override
+  String get accountSwitchHint =>
+      'سجّل الخروج واختر حساب Google آخر أو بريدًا آخر';
 
   @override
   String get devices => 'الأجهزة';
@@ -2273,6 +2291,18 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get apiErrorEmailDelivery => 'تعذر إرسال الرمز. حاول لاحقًا.';
+
+  @override
+  String get apiErrorGoogleFailed =>
+      'تعذّر تسجيل الدخول عبر Google. حاول مرة أخرى أو ادخل برمز البريد الإلكتروني.';
+
+  @override
+  String get apiErrorGoogleEmailUnverified =>
+      'البريد الإلكتروني لحساب Google هذا غير موثّق. ادخل برمز البريد الإلكتروني.';
+
+  @override
+  String get apiErrorGoogleUnavailable =>
+      'تسجيل الدخول عبر Google غير متاح الآن. ادخل برمز البريد الإلكتروني.';
 
   @override
   String get apiErrorRateLimited => 'محاولات كثيرة جدًا. حاول لاحقًا.';

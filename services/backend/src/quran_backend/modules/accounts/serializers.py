@@ -130,6 +130,24 @@ class EmailChallengeVerifyResponseSerializer(GuestBootstrapResponseSerializer):
     replayed = serializers.BooleanField()
 
 
+class GoogleSignInRequestSerializer(serializers.Serializer[dict[str, str]]):
+    id_token = serializers.CharField(
+        min_length=20,
+        max_length=4096,
+        trim_whitespace=False,
+        write_only=True,
+        help_text="OpenID Connect ID token from Google Identity Services or Credential Manager.",
+    )
+
+
+class GoogleSignInConfigSerializer(serializers.Serializer[dict[str, object]]):
+    enabled = serializers.BooleanField()
+    client_id = serializers.CharField(
+        allow_null=True,
+        help_text="Web OAuth client ID; Android uses it as the server client ID.",
+    )
+
+
 class CurrentSessionResponseSerializer(serializers.Serializer[dict[str, object]]):
     user = UserSummarySerializer()
     device = DeviceSummarySerializer()

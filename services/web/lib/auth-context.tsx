@@ -17,6 +17,7 @@ import { useI18n } from "./i18n-context";
 import { rememberPostAuthReturnPath } from "./auth-navigation";
 import { clearReadingActivityQueue } from "./reading-activity-queue";
 import { trackEvent } from "./analytics";
+import { disableGoogleAutoSelect } from "./google-identity";
 
 type AuthContextType = {
   session: GuestBootstrapResponse | null;
@@ -29,6 +30,7 @@ type AuthContextType = {
     code: string,
     idempotencyKey: string,
   ) => Promise<EmailVerificationResponse | null>;
+  signInWithGoogle: (idToken: string) => Promise<EmailVerificationResponse | null>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<boolean>;
   requestAccountDeletion: (challengeId: string) => Promise<boolean>;
@@ -174,8 +176,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const signInWithGoogle = useCallback(
+    async (idToken: string): Promise<EmailVerificationResponse | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        let currentSession = api.getSession();
+        if (!currentSession || currentSession.user.status === "guest") {
+          // As with the email code: the Google account is bound to this
+          // installation's guest session, freshly taken from its cookies.
+          currentSession = await api.bootstrapGuest(locale);
+          setSession(currentSession);
+        }
+        const guestUserId = currentSession.user.status === "guest" ? currentSession.user.id : null;
+        if (guestUserId && api.getPendingSyncCount() > 0) {
+          await api.syncNow();
+        }
+        const result = await api.signInWithGoogle(idToken);
+        if (result.merged_guest && guestUserId && guestUserId !== result.user.id) {
+          clearSyncState(guestUserId);
+        }
+        setSession(result);
+        trackEvent("login", { method: "google" });
+        return result;
+      } catch (err) {
+        setError(api.normalizeError(err));
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [locale],
+  );
+
   const logout = useCallback(async (): Promise<void> => {
     const userId = api.getSession()?.user.id;
+    // The next sign-in shows the account chooser instead of reusing this one.
+    disableGoogleAutoSelect();
     setIsLoading(true);
     setError(null);
     try {
@@ -195,6 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logoutAll = useCallback(async (): Promise<boolean> => {
     const userId = api.getSession()?.user.id;
+    disableGoogleAutoSelect();
     setIsLoading(true);
     setError(null);
     try {
@@ -260,6 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginGuest,
         startEmailChallenge,
         verifyEmailChallenge,
+        signInWithGoogle,
         logout,
         logoutAll,
         requestAccountDeletion,

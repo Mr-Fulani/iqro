@@ -16,6 +16,7 @@ import '../core/audio/listening_media_controls.dart';
 import '../core/auth/account_scope.dart';
 import '../core/auth/auth_repository.dart';
 import '../core/auth/auth_session.dart';
+import '../core/auth/google_sign_in_gateway.dart';
 import '../core/background/background_maintenance_service.dart';
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
@@ -415,6 +416,35 @@ class SessionController extends StateNotifier<AsyncValue<AuthSession?>> {
     }
   }
 
+  /// Signs in with a Google ID token. Like [verify], the current account stays
+  /// visible until the server answers.
+  Future<void> signInWithGoogle(String idToken) async {
+    try {
+      final session = await _auth.signInWithGoogle(
+        idToken: idToken,
+        locale: _locale(),
+      );
+      await _cancelManagedBestEffort();
+      if (mounted) state = AsyncValue.data(session);
+    } on Object catch (error, stack) {
+      final current = _auth.current;
+      if (mounted && current != null) state = AsyncValue.data(current);
+      Error.throwWithStackTrace(error, stack);
+    }
+  }
+
+  /// Signs out, then opens Google's account sheet for the next account.
+  /// Closing the sheet leaves the app signed out; returns whether a Google
+  /// account signed in.
+  Future<bool> switchAccount(GoogleSignInGateway google) async {
+    await google.signOut();
+    await signOut();
+    final idToken = await google.chooseAccount();
+    if (idToken == null) return false;
+    await signInWithGoogle(idToken);
+    return true;
+  }
+
   /// Confirms ownership of the current account's email before a lifecycle
   /// action. The account stays the same, so managed notifications are kept.
   Future<void> reauthenticate(EmailChallenge challenge, String code) async {
@@ -487,6 +517,16 @@ class SessionController extends StateNotifier<AsyncValue<AuthSession?>> {
     super.dispose();
   }
 }
+
+final googleSignInGatewayProvider = Provider<GoogleSignInGateway>(
+  (ref) => PluginGoogleSignInGateway(
+    ref.watch(authRepositoryProvider).googleServerClientId,
+  ),
+);
+
+final googleSignInAvailableProvider = FutureProvider<bool>(
+  (ref) => ref.watch(googleSignInGatewayProvider).isAvailable(),
+);
 
 final sessionProvider =
     StateNotifierProvider<SessionController, AsyncValue<AuthSession?>>((ref) {
@@ -1215,18 +1255,14 @@ final tajweedPracticeClockProvider = Provider<DateTime Function()>(
   (ref) => DateTime.now,
 );
 
-/// Resolves the reciter whose timings play the course examples: the one
-/// chosen for the Mushaf, as in the tajweed cards, otherwise the default.
+/// Resolves the reciter whose timings play the course examples: always
+/// al-Husary's Muallim, see [tajweedCourseRecitation].
 final tajweedCourseRecitationProvider = Provider<Future<String?> Function()>(
   (ref) => () async {
     final recitations = await ref
         .read(audioRepositoryProvider)
         .recitationsForRole(AudioRecitationRole.ayahPlayback);
-    return preferredRecitation(
-      recitations,
-      preferredId: ref.read(appPreferencesProvider).mushafRecitationId,
-      role: AudioRecitationRole.ayahPlayback,
-    )?.id;
+    return tajweedCourseRecitation(recitations)?.id;
   },
 );
 final salahDisplayProvider = StateProvider<SalahDisplay>(
