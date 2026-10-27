@@ -18,10 +18,12 @@ import 'package:home_widget_generator/home_widget_generator.dart';
     },
   ),
   android: HomeWidgetAndroidConfiguration(
-    minWidth: 280,
-    minHeight: 140,
-    minResizeWidth: 280,
-    minResizeHeight: 140,
+    // 4×2 cells on launchers before Android 12 (70 × cells − 30 dp); newer
+    // ones read targetCellWidth/Height. 140 dp made the widget 3 rows tall.
+    minWidth: 250,
+    minHeight: 110,
+    minResizeWidth: 250,
+    minResizeHeight: 110,
     targetCellWidth: 4,
     targetCellHeight: 2,
     resizeMode: HWAndroidResizeMode.horizontalAndVertical,
