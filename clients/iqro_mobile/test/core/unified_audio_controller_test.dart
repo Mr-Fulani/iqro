@@ -875,6 +875,33 @@ void main() {
     },
   );
 
+  test('a pause between two ayahs keeps the ayah just recited', () async {
+    final engine = _FakeAudioEngine();
+    final controller = AudioController(engine: engine);
+    addTearDown(controller.dispose);
+
+    await controller.loadPlayback(
+      playback: _pausedPlayback,
+      reciter: _reciter,
+      surahName: 'Audio Al-Fatiha',
+      autoplay: false,
+    );
+    engine.emitPosition(const Duration(seconds: 5));
+    expect(controller.state.activeAyah, 1);
+    // The reciter pauses between 10 s and 12 s.
+    engine.emitPosition(const Duration(seconds: 11));
+    expect(controller.state.activeAyah, 1);
+    engine.emitPosition(const Duration(seconds: 12));
+    expect(controller.state.activeAyah, 2);
+    // A seek into the pause shows the ayah before it.
+    engine.emitPosition(const Duration(seconds: 3));
+    engine.emitPosition(const Duration(seconds: 11, milliseconds: 500));
+    expect(controller.state.activeAyah, 1);
+    // After the last ayah there is nothing being recited.
+    engine.emitPosition(const Duration(seconds: 25));
+    expect(controller.state.activeAyah, isNull);
+  });
+
   test(
     'leaving memorization restores the paused regular audio track',
     () async {
@@ -1728,6 +1755,26 @@ const _rangedPlayback = SurahPlayback(
       ayah: 3,
       start: Duration(seconds: 20),
       end: Duration(seconds: 30),
+    ),
+  ],
+);
+
+const _pausedPlayback = SurahPlayback(
+  track: _playbackTrack,
+  segments: <AudioSegment>[
+    AudioSegment(
+      ayahId: 'ayah-1',
+      surah: 1,
+      ayah: 1,
+      start: Duration.zero,
+      end: Duration(seconds: 10),
+    ),
+    AudioSegment(
+      ayahId: 'ayah-2',
+      surah: 1,
+      ayah: 2,
+      start: Duration(seconds: 12),
+      end: Duration(seconds: 20),
     ),
   ],
 );

@@ -385,6 +385,7 @@
   "feedbackTitle": "Geri bildirim ve dini denetim",
   "feedbackAccountHint": "Metin, ses, namaz vakitleri veya uygulama hakkında bildirim gönderin.",
   "feedbackSignInRequired": "Talep göndermek için giriş yapın",
+  "ayahTimingsMissing": "ayet zamanlaması yok",
   "feedbackDescription": "Metin, zaman kodu veya namaz hesaplamalarındaki hataları dini editör ekibine bildirin.",
   "feedbackCreate": "Talep oluştur",
   "feedbackCategory": "Talep kategorisi",

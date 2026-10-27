@@ -804,6 +804,7 @@ const ar: Messages = {
   "player.forward10": "تقديم 10 ثوانٍ",
   "player.seek": "موضع التشغيل",
   "player.surahAyah": "السورة {surah} · الآية {ayah}",
+  "player.surahUntimed": "السورة {surah} · دون توقيت الآيات",
   "player.range": "النطاق",
   "player.rangeValue": "الآيات {start}–{end}",
   "player.status.nextSurah": "السورة التالية…",

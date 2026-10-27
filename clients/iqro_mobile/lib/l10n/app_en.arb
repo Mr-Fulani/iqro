@@ -395,6 +395,7 @@
   "feedbackTitle": "Feedback and religious audit",
   "feedbackAccountHint": "Report an issue with text, audio, prayer times or the app.",
   "feedbackSignInRequired": "Sign in to send a request",
+  "ayahTimingsMissing": "no ayah timings",
   "feedbackDescription": "Report inaccuracies in text, timings, or prayer calculations to the religious editorial team.",
   "feedbackCreate": "Create request",
   "feedbackCategory": "Request category",
