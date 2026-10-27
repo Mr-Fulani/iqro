@@ -73,9 +73,9 @@ class _HomeWidgetsSettingsCardState
         ),
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.networkError)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.networkError)));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
