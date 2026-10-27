@@ -54,6 +54,42 @@ void main() {
     expect(digestReads, 1);
   });
 
+  test('fonts are verified once with a custom header check', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'iqro-mushaf-verifier-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    // A TrueType file does not start like a WebP image.
+    final bytes = List<int>.generate(64, (index) => index);
+    final file = File('${directory.path}/page-604.ttf');
+    await file.writeAsBytes(bytes, flush: true);
+    final checksum = sha256.convert(bytes).toString();
+    var digestReads = 0;
+    final verifier = MushafAssetVerificationCache(
+      validHeader: (_) => true,
+      digestReader: (file) async {
+        digestReads += 1;
+        return (await sha256.bind(file.openRead()).first).toString();
+      },
+    );
+
+    for (var turn = 0; turn < 3; turn++) {
+      expect(
+        await verifier.verify(file, checksum, expectedBytes: bytes.length),
+        isTrue,
+      );
+    }
+    expect(digestReads, 1);
+    expect(
+      await MushafAssetVerificationCache().verify(
+        file,
+        checksum,
+        expectedBytes: bytes.length,
+      ),
+      isFalse,
+    );
+  });
+
   test('a changed Mushaf asset invalidates its verification stamp', () async {
     final directory = await Directory.systemTemp.createTemp(
       'iqro-mushaf-verifier-',
