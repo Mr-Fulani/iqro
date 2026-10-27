@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +19,31 @@ import 'reciter_catalog.dart';
 import 'reciter_portraits.dart';
 import 'premium_reciter_portrait.dart';
 
-const _cardPortraitSize = 88.0;
+/// Widest the Audio tab grows on a tablet, padding included.
+const audioTabletContentWidth = 1100.0;
+
+// Space a reciter card keeps around its portrait, and below it for the names.
+const _cardSidePadding = 6.0;
+const _cardNamesExtent = 92.0;
+
+/// Reciter grid for a content [width]: about 110 dp cards on a phone and
+/// 160 dp on a tablet, each portrait as wide as its card.
+({int columns, double portrait, double extent}) reciterGridLayout(
+  double width, {
+  required int count,
+}) {
+  final target = width < iqroTabletShortestSide ? 110.0 : 160.0;
+  var columns = math.max(2, ((width + 10) / (target + 10)).round());
+  // Three on a phone, but not with a lone card in the last row.
+  if (columns == 3 && count % 3 == 1) columns = 2;
+  final card = (width - 10 * (columns - 1)) / columns;
+  final portrait = (card - _cardSidePadding * 2).floorToDouble();
+  return (
+    columns: columns,
+    portrait: portrait,
+    extent: portrait + _cardNamesExtent,
+  );
+}
 
 /// Loads the reciters and decodes their card portraits while another tab is
 /// open, so the Audio tab shows faces at once instead of a spinner, then a
@@ -30,7 +55,22 @@ Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
     if (!context.mounted) return;
     final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    for (final person in groupRecitersByPerson(reciters)) {
+    final people = groupRecitersByPerson(reciters);
+    // The tab's width (the page padding is 16 on each side) gives the size
+    // its cards decode at; a guess here would decode every face twice.
+    final screen = MediaQuery.sizeOf(context);
+    final padding = MediaQuery.paddingOf(context);
+    final available = screen.width - padding.left - padding.right;
+    final portraitSize = reciterGridLayout(
+      iqroPageWidth(
+            context,
+            available,
+            tabletContentWidth: audioTabletContentWidth,
+          ) -
+          32,
+      count: people.length,
+    ).portrait;
+    for (final person in people) {
       final url = resolveReciterPortraitUrl(
         person.portraitSource,
         apiBaseUrl: apiBaseUrl,
@@ -40,7 +80,7 @@ Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
         precacheImage(
           reciterPortraitImage(
             url,
-            size: _cardPortraitSize,
+            size: portraitSize,
             devicePixelRatio: pixelRatio,
           ),
           context,
@@ -129,6 +169,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         ],
       ),
       body: IqroPage(
+        tabletContentWidth: audioTabletContentWidth,
         padding: iqroRootTabPadding(
           playerActive: player.track != null || player.standalone != null,
           playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
@@ -330,26 +371,20 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
-            final preferredColumns = switch (constraints.maxWidth) {
-              < 340 => 2,
-              < 620 => 3,
-              < 900 => 4,
-              _ => 6,
-            };
-            final columns =
-                preferredColumns == 3 && visiblePeople.length % 3 == 1
-                ? 2
-                : preferredColumns;
+            final grid = reciterGridLayout(
+              constraints.maxWidth,
+              count: visiblePeople.length,
+            );
             return GridView.builder(
               shrinkWrap: true,
               padding: EdgeInsets.zero,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: visiblePeople.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
+                crossAxisCount: grid.columns,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                mainAxisExtent: 180,
+                mainAxisExtent: grid.extent,
               ),
               itemBuilder: (context, index) {
                 final person = visiblePeople[index];
@@ -362,6 +397,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                 final active = person.key == selectedPerson.key;
                 return _ReciterCard(
                   reciter: person.primary,
+                  portraitSize: grid.portrait,
                   locale: locale,
                   active: active,
                   loading: _loadingTrack && _loadingPersonKey == person.key,
@@ -831,6 +867,7 @@ class _RecitationStyleFilter extends StatelessWidget {
 class _ReciterCard extends StatelessWidget {
   const _ReciterCard({
     required this.reciter,
+    required this.portraitSize,
     required this.locale,
     required this.active,
     required this.loading,
@@ -839,6 +876,7 @@ class _ReciterCard extends StatelessWidget {
   });
 
   final Reciter reciter;
+  final double portraitSize;
   final String locale;
   final bool active;
   final bool loading;
@@ -857,10 +895,16 @@ class _ReciterCard extends StatelessWidget {
         onTap: onTap,
         color: active ? colorScheme.primaryContainer : null,
         borderColor: active ? colorScheme.primary : context.iqroColors.line,
-        padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+        padding: const EdgeInsets.fromLTRB(
+          _cardSidePadding,
+          10,
+          _cardSidePadding,
+          8,
+        ),
         child: Column(
           children: <Widget>[
             _ReciterPortrait(
+              size: portraitSize,
               portraitUrl: portraitUrl,
               active: active,
               loading: loading,
@@ -897,11 +941,13 @@ class _ReciterCard extends StatelessWidget {
 
 class _ReciterPortrait extends StatelessWidget {
   const _ReciterPortrait({
+    required this.size,
     required this.portraitUrl,
     required this.active,
     required this.loading,
   });
 
+  final double size;
   final String? portraitUrl;
   final bool active;
   final bool loading;
@@ -910,15 +956,15 @@ class _ReciterPortrait extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
-      width: _cardPortraitSize,
-      height: _cardPortraitSize,
+      width: size,
+      height: size,
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned.fill(
             child: PremiumReciterPortrait(
               url: portraitUrl,
-              size: _cardPortraitSize,
+              size: size,
               selected: active,
             ),
           ),

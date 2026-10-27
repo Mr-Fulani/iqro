@@ -912,6 +912,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'The next prayer and all five times on your home screen, even offline';
 
   @override
+  String get homeWidgets => 'Home screen widgets';
+
+  @override
+  String get planWidget => 'Reading plan widget';
+
+  @override
+  String get planWidgetHint => 'Daily goal, the palm and reading after prayers';
+
+  @override
   String get addPrayerWidget => 'Add widget';
 
   @override

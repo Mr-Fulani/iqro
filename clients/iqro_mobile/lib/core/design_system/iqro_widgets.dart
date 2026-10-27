@@ -21,11 +21,35 @@ EdgeInsetsDirectional iqroRootTabPadding({
 /// Widest a page's content grows in landscape, padding included.
 const iqroLandscapeContentWidth = 640.0;
 
+/// Shortest screen side of a tablet (Material's medium window class).
+const iqroTabletShortestSide = 600.0;
+
+/// Width an [IqroPage] gives its content, padding included, out of
+/// [available] (the page's own width).
+double iqroPageWidth(
+  BuildContext context,
+  double available, {
+  double? tabletContentWidth,
+}) {
+  final screen = MediaQuery.sizeOf(context);
+  final double? limit;
+  if (tabletContentWidth != null &&
+      screen.shortestSide >= iqroTabletShortestSide) {
+    limit = tabletContentWidth;
+  } else if (screen.width > screen.height) {
+    limit = iqroLandscapeContentWidth;
+  } else {
+    limit = null;
+  }
+  return limit == null || available <= limit ? available : limit;
+}
+
 class IqroPage extends StatelessWidget {
   const IqroPage({
     required this.child,
     this.padding = const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 24),
     this.scrollable = true,
+    this.tabletContentWidth,
     super.key,
   });
 
@@ -33,10 +57,12 @@ class IqroPage extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final bool scrollable;
 
+  /// On a tablet, in either orientation, the content grows to this width
+  /// instead of the phone's landscape column.
+  final double? tabletContentWidth;
+
   @override
   Widget build(BuildContext context) {
-    final landscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
     return SafeArea(
       bottom: false,
       child: LayoutBuilder(
@@ -44,12 +70,14 @@ class IqroPage extends StatelessWidget {
           // A phone in landscape is wide but short: full-width cards ran
           // under the mini player's floating button at the end edge. The
           // centered column keeps that edge free and lines readable.
-          final gutter = landscape
-              ? ((constraints.maxWidth - iqroLandscapeContentWidth) / 2).clamp(
-                  0.0,
-                  double.infinity,
-                )
-              : 0.0;
+          final gutter =
+              (constraints.maxWidth -
+                  iqroPageWidth(
+                    context,
+                    constraints.maxWidth,
+                    tabletContentWidth: tabletContentWidth,
+                  )) /
+              2;
           final content = Padding(
             padding: EdgeInsets.symmetric(horizontal: gutter),
             child: Padding(padding: padding, child: child),

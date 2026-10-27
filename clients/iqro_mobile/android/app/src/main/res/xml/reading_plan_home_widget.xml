@@ -1,3 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- minWidth/minHeight give 4×2 cells on launchers before Android 12
+     (70 × cells − 30 dp); newer ones read targetCellWidth/Height. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
- android:initialLayout="@layout/glance_default_loading_layout" android:minWidth="280dp" android:minHeight="140dp" android:minResizeWidth="280dp" android:minResizeHeight="140dp" android:targetCellWidth="4" android:targetCellHeight="2" android:updatePeriodMillis="21600000" android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen" android:description="@string/home_widget_reading_plan_description" />
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="250dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="21600000"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/home_widget_reading_plan_description"
+    android:previewImage="@drawable/reading_plan_widget_preview" />

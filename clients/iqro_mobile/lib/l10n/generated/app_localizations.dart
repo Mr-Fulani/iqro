@@ -1752,6 +1752,24 @@ abstract class AppLocalizations {
   /// **'The next prayer and all five times on your home screen, even offline'**
   String get prayerWidgetHint;
 
+  /// No description provided for @homeWidgets.
+  ///
+  /// In en, this message translates to:
+  /// **'Home screen widgets'**
+  String get homeWidgets;
+
+  /// No description provided for @planWidget.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading plan widget'**
+  String get planWidget;
+
+  /// No description provided for @planWidgetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily goal, the palm and reading after prayers'**
+  String get planWidgetHint;
+
   /// No description provided for @addPrayerWidget.
   ///
   /// In en, this message translates to:

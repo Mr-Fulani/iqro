@@ -9,7 +9,11 @@ import '../../core/design_system/iqro_widgets.dart';
 import 'prayer_places.dart';
 import 'qibla_compass.dart';
 
-enum _CompassState { waiting, live, unavailable }
+enum _CompassState { waiting, live, silent, unavailable }
+
+/// A device that lists compass sensors but sends nothing in this time (some
+/// tablets) is told it has no compass rather than shown a still dial.
+const qiblaCompassSilenceTimeout = Duration(seconds: 3);
 
 /// Qibla sheet with a live compass. Until the first heading arrives, or when
 /// the device has no compass, the dial stays a static bearing from north.
@@ -44,6 +48,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet>
   final _smoother = HeadingSmoother();
   late final Ticker _ticker = createTicker(_tick);
   StreamSubscription<Object?>? _subscription;
+  Timer? _silence;
   CompassReading? _reading;
   var _state = _CompassState.waiting;
   var _aligned = false;
@@ -60,6 +65,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _subscription?.cancel();
+    _silence?.cancel();
     _ticker.dispose();
     super.dispose();
   }
@@ -72,6 +78,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet>
     } else {
       _subscription?.cancel();
       _subscription = null;
+      _silence?.cancel();
       _ticker.stop();
     }
   }
@@ -83,15 +90,26 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet>
       onError: (Object _) {
         _subscription?.cancel();
         _subscription = null;
+        _silence?.cancel();
         _ticker.stop();
         if (mounted) setState(() => _state = _CompassState.unavailable);
       },
     );
+    // Keeps listening: a late first sample still brings the dial to life.
+    if (_state != _CompassState.live) {
+      _silence?.cancel();
+      _silence = Timer(qiblaCompassSilenceTimeout, () {
+        if (mounted && _state == _CompassState.waiting) {
+          setState(() => _state = _CompassState.silent);
+        }
+      });
+    }
   }
 
   void _onEvent(Object? event) {
     final reading = compassReadingFromEvent(event, declination: _declination);
     if (reading == null || !mounted) return;
+    _silence?.cancel();
     _reading = reading;
     _state = _CompassState.live;
     if (!_ticker.isActive) {
@@ -137,17 +155,24 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet>
       hint = l10n.qiblaCalibrationHint;
     } else if (heading != null) {
       hint = l10n.qiblaLiveHint;
-    } else if (_state == _CompassState.unavailable) {
-      hint = '${l10n.qiblaCompassUnavailable} ${l10n.qiblaNorthHint}';
     } else {
       hint = l10n.qiblaNorthHint;
     }
+    final noCompass =
+        _state == _CompassState.unavailable || _state == _CompassState.silent;
     final Widget status;
     if (calibrate) {
       status = _Status(
         key: const ValueKey('qibla-calibrate'),
         icon: Icons.all_inclusive,
         text: l10n.qiblaCalibrationNeeded,
+        color: colors.error,
+      );
+    } else if (noCompass) {
+      status = _Status(
+        key: const ValueKey('qibla-no-compass'),
+        icon: Icons.explore_off_outlined,
+        text: l10n.qiblaCompassUnavailable,
         color: colors.error,
       );
     } else if (_aligned) {

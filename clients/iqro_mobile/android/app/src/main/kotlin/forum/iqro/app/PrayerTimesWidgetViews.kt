@@ -4,11 +4,13 @@ import android.content.Context
 import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
+import androidx.compose.ui.unit.DpSize
 
 /** Uses the host's Chronometer so countdown ticks don't wake the Flutter app. */
 internal object PrayerTimesWidgetViews {
-    fun create(context: Context, data: PrayerTimesData): RemoteViews {
+    fun create(context: Context, data: PrayerTimesData, size: DpSize): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.prayer_times_widget)
+        HomeWidgetCard.fit(context, views, R.id.prayer_widget_frame, size)
         val rtl = data.locale == "ar"
         views.setInt(R.id.prayer_widget_root, "setLayoutDirection",
             if (rtl) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR)

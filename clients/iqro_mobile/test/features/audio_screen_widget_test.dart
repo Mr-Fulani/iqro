@@ -45,6 +45,8 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.ensureVisible(find.text('Тестовый чтец'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Тестовый чтец'));
     await tester.pumpAndSettle();
 
@@ -139,6 +141,8 @@ void main() {
     expect(find.text('Тестовый чтец'), findsNothing);
     expect(find.text('Чтец муджаввада'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Чтец муджаввада'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Чтец муджаввада'));
     await tester.pumpAndSettle();
 

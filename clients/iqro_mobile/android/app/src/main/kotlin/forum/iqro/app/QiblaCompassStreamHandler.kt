@@ -37,9 +37,14 @@ class QiblaCompassStreamHandler(
         }
         sink = events
         fused = orientation.type == Sensor.TYPE_ROTATION_VECTOR
-        sensors.registerListener(this, orientation, SAMPLING_PERIOD_US)
-        // Also the source of the calibration status in the fused mode.
-        sensors.registerListener(this, magnetometer, SAMPLING_PERIOD_US)
+        // Also the source of the calibration status in the fused mode. Some
+        // tablets list sensors they cannot open; say so instead of a still dial.
+        if (!sensors.registerListener(this, orientation, SAMPLING_PERIOD_US) ||
+            !sensors.registerListener(this, magnetometer, SAMPLING_PERIOD_US)
+        ) {
+            onCancel(null)
+            events.error("unavailable", "Compass sensor did not start", null)
+        }
     }
 
     override fun onCancel(arguments: Any?) {

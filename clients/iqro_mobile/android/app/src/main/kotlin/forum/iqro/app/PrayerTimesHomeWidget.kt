@@ -33,6 +33,9 @@ import es.antonborri.home_widget.actionStartActivity
 class PrayerTimesHomeWidget : GlanceAppWidget() {
   override val stateDefinition = HomeWidgetGlanceStateDefinition()
 
+  // The card is fitted to the cell it is given (HomeWidgetCard).
+  override val sizeMode = androidx.glance.appwidget.SizeMode.Exact
+
   override suspend fun provideGlance(context: Context, id: GlanceId) {
     PrayerTimesWidgetSchedule.armRefresh(context, id)
     provideContent {
@@ -43,7 +46,8 @@ class PrayerTimesHomeWidget : GlanceAppWidget() {
           Uri.parse("iqro://open/prayer?homeWidget"))
       )) {
         androidx.glance.appwidget.AndroidRemoteViews(
-          remoteViews = PrayerTimesWidgetViews.create(context, data),
+          remoteViews = PrayerTimesWidgetViews.create(
+            context, data, androidx.glance.LocalSize.current),
           modifier = GlanceModifier.fillMaxSize()
         )
       }

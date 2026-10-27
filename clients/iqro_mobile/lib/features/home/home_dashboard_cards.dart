@@ -119,7 +119,7 @@ class HomePrayerCard extends StatelessWidget {
               children: [summary, const SizedBox(height: 12), time],
             );
           }
-          return IntrinsicHeight(
+          final row = IntrinsicHeight(
             child: Row(
               children: [
                 Expanded(flex: 5, child: summary),
@@ -134,8 +134,92 @@ class HomePrayerCard extends StatelessWidget {
               ],
             ),
           );
+          final times = schedule?.times;
+          // Across a tablet the card also lists the day, as the site's home.
+          if (loading ||
+              times == null ||
+              times.isEmpty ||
+              constraints.maxWidth < _dayTimesMinWidth) {
+            return row;
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              row,
+              const SizedBox(height: 16),
+              _PrayerDayTimes(times: times, next: next?.code),
+            ],
+          );
         },
       ),
+    );
+  }
+}
+
+const _dayTimesMinWidth = 560.0;
+
+class _PrayerDayTimes extends StatelessWidget {
+  const _PrayerDayTimes({required this.times, required this.next});
+
+  final Map<String, DateTime> times;
+  final String? next;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final gold = context.iqroColors.gold;
+    final names = <String, String>{
+      'fajr': context.l10n.fajr,
+      'sunrise': context.l10n.sunrise,
+      'dhuhr': context.l10n.dhuhr,
+      'asr': context.l10n.asr,
+      'maghrib': context.l10n.maghrib,
+      'isha': context.l10n.isha,
+    };
+    return Row(
+      children: [
+        for (final entry in names.entries)
+          if (times[entry.key] case final time?)
+            Expanded(
+              child: Container(
+                key: ValueKey('home-prayer-time-${entry.key}'),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: entry.key == next
+                        ? gold
+                        : Colors.white.withValues(alpha: .12),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      entry.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodySmall?.copyWith(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      DateFormat.Hm().format(time),
+                      textDirection: TextDirection.ltr,
+                      style: text.titleMedium?.copyWith(
+                        color: entry.key == next ? gold : Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+      ],
     );
   }
 }
