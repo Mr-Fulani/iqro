@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/auth/account_scope.dart';
@@ -702,6 +703,19 @@ class MemorizationRepository {
     final scope = accountScope ?? await _database.captureAccount();
     _database.ensureCurrent(scope);
     return _loadFor(scope);
+  }
+
+  /// The dashboard saved by the last [load] while it is still today's, shown
+  /// at once while the next one waits for the server. A copy from an earlier
+  /// day is never shown: its repetitions are not today's.
+  Future<MemorizationDashboard?> cachedToday({
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final cached = await _cached(scope);
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return cached?.today.localDate == today ? cached : null;
   }
 
   Future<MemorizationDashboard> _loadFor(AccountScopeSnapshot scope) async {

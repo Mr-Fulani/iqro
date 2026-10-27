@@ -1636,7 +1636,7 @@ class MemorizationController
   }) : _database = database,
        _accountScope = accountScope,
        super(const AsyncValue.loading()) {
-    if (accountScope != null) unawaited(reload());
+    if (accountScope != null) unawaited(_start(accountScope));
   }
   final MemorizationRepository _repository;
   final LocalDatabase _database;
@@ -1646,6 +1646,21 @@ class MemorizationController
     (scope) => _repository.load(accountScope: scope),
     propagateError: false,
   );
+
+  // Today's saved dashboard shows while the server is asked; on a phone the
+  // Home card otherwise said "Loading" for a round trip on every start.
+  Future<void> _start(AccountScopeSnapshot scope) async {
+    final load = reload();
+    try {
+      final cached = await _repository.cachedToday(accountScope: scope);
+      if (cached != null && mounted && !state.hasValue && !state.hasError) {
+        state = AsyncValue.data(cached);
+      }
+    } on Object {
+      // The server's answer, or its own cache fallback, decides.
+    }
+    await load;
+  }
 
   Future<void> savePlan(
     MemorizationPlanDraft draft, {
