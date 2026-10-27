@@ -147,6 +147,36 @@ void main() {
     expect(await cachedFor('untimed'), const Duration(hours: 12));
     expect(await cachedFor('timed'), const Duration(days: 7));
   });
+
+  test('one ayah keeps its bounds without word timings', () async {
+    // al-Husary's Muallim before the word backfill: the tajweed course
+    // still plays the whole ayah.
+    final (repository, _) = await createRepository(
+      catalogs: const {},
+      documents: {
+        '/recitations/muallim/ayahs/89/2': <String, Object?>{
+          'track': _playback('muallim', segments: [])['track'],
+          'segment': <String, Object?>{
+            'surah_number': 89,
+            'ayah_number': 2,
+            'start_ms': 3810,
+            'end_ms': 8900,
+            'words': <Object?>[],
+          },
+        },
+      },
+    );
+
+    final playback = await repository.ayahPlayback(
+      recitationId: 'muallim',
+      surah: 89,
+      ayah: 2,
+    );
+
+    expect(playback.start, const Duration(milliseconds: 3810));
+    expect(playback.end, const Duration(milliseconds: 8900));
+    expect(playback.words, isEmpty);
+  });
 }
 
 Map<String, Object?> _playback(

@@ -751,7 +751,6 @@ class _StepVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final three = state.three;
     final scene = state.scene;
     return ListenableBuilder(
@@ -760,7 +759,8 @@ class _StepVisual extends StatelessWidget {
         final runs =
             scene != null &&
             state.current.value == state.index &&
-            !reduceMotion &&
+            // The movement plays even when the system turns animations off:
+            // the owner's call, as on the site.
             !three.failed;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

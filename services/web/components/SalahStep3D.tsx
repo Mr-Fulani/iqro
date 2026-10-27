@@ -57,7 +57,8 @@ export type Salah3D = {
 
 /**
  * The schematic 3D scene in place of the pose stills: it starts once the visitor acts on the
- * page, needs WebGL and no reduced motion, and any failure leaves the stills for the visit.
+ * page and needs WebGL (it plays with reduced motion too, as in the app); any failure leaves
+ * the stills for the visit.
  * Each step plays its pose once; play after the end plays it again.
  */
 export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolean, stepIndex: number): Salah3D {
@@ -77,11 +78,7 @@ export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolea
   }
 
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setCapable("WebGLRenderingContext" in window && !reduced.matches);
-    update();
-    reduced.addEventListener("change", update);
-    return () => reduced.removeEventListener("change", update);
+    setCapable("WebGLRenderingContext" in window);
   }, []);
 
   const wanted = capable && lessonHasScenes && !failed;

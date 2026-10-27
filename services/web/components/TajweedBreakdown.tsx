@@ -52,6 +52,7 @@ export default function TajweedBreakdown({ reference, ayah, words, recitationId,
   const reading = readingMs === null || !audio ? null : timedPosition(audio.words, readingMs);
   const lit = new Set(step?.parts.map((part) => part.word.position) ?? []);
   const litColor = step ? reference.rules.find((item) => item.code === step.code)?.color : undefined;
+  const ayahLine = useRef<HTMLParagraphElement | null>(null);
   const { stop: stopFragment } = fragmentPlayer;
   const { attach, playing: ayahPlaying, error: ayahError, play: playAyah, stop: stopAyah, setRate: setAyahRate } = ayahPlayer;
 
@@ -60,6 +61,19 @@ export default function TajweedBreakdown({ reference, ayah, words, recitationId,
     stopFragment();
     stopAyah();
   }, [index, rule, stopAyah, stopFragment]);
+
+  // A long ayah wraps in a box of a few lines; each step scrolls its words to
+  // the middle of the box, and the reading word while the ayah plays.
+  useEffect(() => {
+    const line = ayahLine.current;
+    if (!line) return;
+    const recited = line.querySelectorAll<HTMLElement>(".is-reading");
+    const marked = [...(recited.length > 0 ? recited : line.querySelectorAll<HTMLElement>(".is-step"))];
+    if (marked.length === 0) return;
+    const top = Math.min(...marked.map((word) => word.offsetTop));
+    const bottom = Math.max(...marked.map((word) => word.offsetTop + word.offsetHeight));
+    line.scrollTo({ top: (top + bottom - line.clientHeight) / 2 });
+  }, [index, rule, reading]);
 
   const counter = step
     ? t("tajweed.stepOf", { current: formatNumber(index + 1), total: formatNumber(steps.length) })
@@ -82,7 +96,7 @@ export default function TajweedBreakdown({ reference, ayah, words, recitationId,
       dialogRef={dialog}
     >
       {words.length > 0 && (
-        <p className="tajweed-breakdown-ayah" dir="rtl" lang="ar" aria-hidden="true" translate="no">
+        <p ref={ayahLine} className="tajweed-breakdown-ayah" dir="rtl" lang="ar" aria-hidden="true" translate="no">
           {words.map((word) => (
             <span
               key={word.key}
