@@ -203,6 +203,9 @@ class _MemoryRemote implements MemorizationRemoteGateway {
     String timezoneName, {
     AccountScopeSnapshot? accountScope,
   }) async {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 Map<String, Object?> _dashboard() => <String, Object?>{

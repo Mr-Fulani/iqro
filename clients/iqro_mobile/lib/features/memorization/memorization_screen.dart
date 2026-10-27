@@ -15,6 +15,7 @@ import '../audio/recitation_style_label.dart';
 import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../quran/quran_models.dart';
+import 'memorization_list_card.dart';
 import 'memorization_repository.dart';
 import 'memorization_tajweed_text.dart';
 
@@ -107,6 +108,33 @@ class _MemorizationScreenBodyState
     return IqroPage(
       child: Column(
         children: <Widget>[
+          if (dashboard.items.isNotEmpty && !_editing) ...<Widget>[
+            MemorizationListCard(
+              dashboard: dashboard,
+              busy: _saving,
+              onStart: (item) => _changeList(
+                () => widget.controller.updateItem(
+                  item,
+                  MemorizationItemStatus.active,
+                  baseRevision: dashboard.revision,
+                ),
+              ),
+              onMemorized: (item) => _changeList(
+                () => widget.controller.updateItem(
+                  item,
+                  MemorizationItemStatus.memorized,
+                  baseRevision: dashboard.revision,
+                ),
+              ),
+              onRemove: (item) => _changeList(
+                () => widget.controller.removeItem(
+                  item,
+                  baseRevision: dashboard.revision,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           if (showEditor)
             _PlanEditor(
               selectedSurah: _selectedSurah,
@@ -232,6 +260,22 @@ class _MemorizationScreenBodyState
     } on Object {
       if (mounted && _isCurrent(request)) {
         _showError(context.l10n.networkError);
+      }
+    } finally {
+      if (_isCurrent(request)) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _changeList(Future<void> Function() change) async {
+    if (_saving || !_isCurrent()) return;
+    final request = ++_requestGeneration;
+    setState(() => _saving = true);
+    try {
+      await change();
+    } on Object {
+      if (mounted && _isCurrent(request)) {
+        _showError(context.l10n.networkError);
+        unawaited(widget.controller.reload());
       }
     } finally {
       if (_isCurrent(request)) setState(() => _saving = false);

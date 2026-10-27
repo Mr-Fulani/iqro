@@ -3777,3 +3777,158 @@ test("the desktop reader keeps its tajweed chips in landscape", async ({ page })
   await expect(layout).not.toHaveClass(/is-reader-immersive/);
   await expect(page.getByTestId("tajweed-legend")).toBeVisible();
 });
+
+function memorizationItem(id: string, status: string, surahNumber: number, start: number, end: number) {
+  const ayah = (number: number) => ({
+    id: `00000000-0000-7000-8000-${String(surahNumber * 1000 + number).padStart(12, "0")}`,
+    surah_number: surahNumber,
+    ayah_number: number,
+    text_uthmani: "text",
+  });
+  return {
+    id,
+    status,
+    position: 0,
+    source: "mushaf",
+    start_ayah: ayah(start),
+    end_ayah: ayah(end),
+    ayah_count: end - start + 1,
+    memorized_at: null,
+    created_at: "2026-10-27T10:00:00Z",
+  };
+}
+
+async function installMemorizeMocks(page: Page, preview: Record<string, unknown>, result: string) {
+  await page.route("**/api/web-auth/refresh", (route) =>
+    route.fulfill({ json: annotationSession("00000000-0000-7000-8000-000000000781") }));
+  const added: Record<string, unknown>[] = [];
+  await page.route("**/api/v1/me/memorization-items**", async (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: preview });
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    added.push(body);
+    return route.fulfill({
+      status: 201,
+      json: {
+        result,
+        item: memorizationItem("00000000-0000-7000-8000-000000000782", "queued", 6, 2, 2),
+        next: null,
+        plan: null,
+        revision: 8,
+        items: [],
+        memorized_ayah_count: 0,
+      },
+    });
+  });
+  return added;
+}
+
+async function openMemorize(page: Page, { phone = false } = {}) {
+  await page.goto("/ru/quran?surah=6");
+  if (phone) {
+    // A development server hydrates the reader before it turns immersive; production opens it directly.
+    const enterReader = page.locator(".reader-launch").filter({ visible: true });
+    if (await enterReader.count()) await enterReader.click();
+  }
+  await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').filter({ visible: true }).first().click();
+  await (phone
+    ? page.getByTestId("mushaf-memorize-ayah-reader").filter({ visible: true })
+    : page.locator(".mushaf-ayah-actions").getByTestId("mushaf-memorize-ayah")).click();
+  return page.getByTestId("memorize-ayah-dialog");
+}
+
+const activeOneToOne = memorizationItem("00000000-0000-7000-8000-000000000783", "active", 6, 1, 1);
+
+test("Learn from the Mushaf queues the ayah by default and keeps the reader open", async ({ page }) => {
+  const added = await installMemorizeMocks(page, {
+    state: "choose",
+    revision: 7,
+    item: memorizationItem("00000000-0000-7000-8000-000000000784", "active", 2, 1, 5),
+    extend_to: null,
+  }, "queued");
+
+  const dialog = await openMemorize(page);
+  await expect(dialog.getByRole("heading", { name: "Выучить 6:2" })).toBeVisible();
+  await expect(dialog.getByText("Сейчас вы учите 2:1–5.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Добавить в очередь" })).toHaveClass(/btn-primary/);
+  await dialog.getByRole("button", { name: "Добавить в очередь" }).click();
+
+  await expect(dialog.getByText("Добавлено в очередь заучивания.")).toBeVisible();
+  await expect(page).toHaveURL(/\/ru\/quran/);
+  expect(added).toEqual([expect.objectContaining({
+    start_surah: 6,
+    start_ayah: 2,
+    end_surah: 6,
+    end_ayah: 2,
+    mode: "queue",
+    source: "mushaf",
+    base_revision: 7,
+  })]);
+});
+
+test("Learn with an empty list starts the ayah and opens memorization", async ({ page }) => {
+  const added = await installMemorizeMocks(page, {
+    state: "empty", revision: 0, item: null, extend_to: null,
+  }, "started");
+
+  await openMemorize(page);
+
+  await expect(page).toHaveURL(/\/ru\/memorization$/);
+  expect(added).toEqual([expect.objectContaining({ mode: "now", base_revision: 0, start_ayah: 2, end_ayah: 2 })]);
+});
+
+test("Learn on an ayah already in the list points to it instead of adding", async ({ page }) => {
+  const added = await installMemorizeMocks(page, {
+    state: "duplicate",
+    revision: 4,
+    item: memorizationItem("00000000-0000-7000-8000-000000000785", "queued", 6, 1, 3),
+    extend_to: null,
+  }, "duplicate");
+
+  const dialog = await openMemorize(page);
+  await expect(dialog.getByText("Уже в списке: 6:1–3.")).toBeVisible();
+  await expect(dialog.getByRole("link", { name: "Открыть" })).toHaveAttribute("href", "/ru/memorization");
+  await expect(dialog.getByRole("button", { name: "Добавить в очередь" })).toHaveCount(0);
+  expect(added).toEqual([]);
+});
+
+test("Learn right after the current range offers to extend it", async ({ page }) => {
+  const added = await installMemorizeMocks(page, {
+    state: "extendable",
+    revision: 5,
+    item: activeOneToOne,
+    extend_to: { surah_number: 6, start_ayah_number: 1, end_ayah_number: 2 },
+  }, "extended");
+
+  const dialog = await openMemorize(page);
+  await expect(dialog.getByRole("button", { name: "Отдельно в очередь" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Расширить до 6:1–2" }).click();
+
+  await expect(page).toHaveURL(/\/ru\/memorization$/);
+  expect(added[0]).toMatchObject({ mode: "extend", base_revision: 5 });
+});
+
+test.describe("Learn on a phone", () => {
+  test.use({ viewport: devices["Pixel 7"].viewport, userAgent: devices["Pixel 7"].userAgent,
+    deviceScaleFactor: devices["Pixel 7"].deviceScaleFactor, isMobile: true, hasTouch: true });
+
+  test("the choice opens as a bottom panel", async ({ page }, testInfo) => {
+    await installMemorizeMocks(page, {
+      state: "choose",
+      revision: 7,
+      item: memorizationItem("00000000-0000-7000-8000-000000000786", "active", 2, 1, 5),
+      extend_to: null,
+    }, "queued");
+
+    const dialog = await openMemorize(page, { phone: true });
+    await expect(dialog.getByRole("button", { name: "Учить сейчас" })).toBeVisible();
+    const box = (await dialog.boundingBox())!;
+    expect(Math.round(box.y + box.height)).toBe(page.viewportSize()!.height);
+    expect(Math.round(box.width)).toBe(page.viewportSize()!.width);
+    await page.screenshot({ path: testInfo.outputPath("web-memorize-sheet-phone-ru.png") });
+
+    await dialog.getByRole("button", { name: "Закрыть" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId("mushaf-memorize-ayah-reader").filter({ visible: true })).toHaveText("Выучить · 6:2");
+    await page.screenshot({ path: testInfo.outputPath("web-memorize-reader-phone-ru.png") });
+  });
+});

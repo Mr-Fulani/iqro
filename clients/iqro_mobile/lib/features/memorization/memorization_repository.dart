@@ -297,12 +297,135 @@ class MemorizationRecentDay {
   };
 }
 
+enum MemorizationItemStatus {
+  active('active'),
+  queued('queued'),
+  memorized('memorized');
+
+  const MemorizationItemStatus(this.wireValue);
+  final String wireValue;
+
+  static MemorizationItemStatus tryParse(Object? value) =>
+      values.where((item) => item.wireValue == value?.toString()).firstOrNull ??
+      queued;
+}
+
+/// One range of the memorization list; the active one is the plan's range.
+class MemorizationItem {
+  const MemorizationItem({
+    required this.id,
+    required this.status,
+    required this.position,
+    required this.startAyah,
+    required this.endAyah,
+  });
+
+  factory MemorizationItem.fromJson(Map<String, Object?> json) =>
+      MemorizationItem(
+        id: json['id']?.toString() ?? '',
+        status: MemorizationItemStatus.tryParse(json['status']),
+        position: (json['position'] as num?)?.toInt() ?? 0,
+        startAyah: MemorizationAyah.fromJson(jsonMap(json['start_ayah'])),
+        endAyah: MemorizationAyah.fromJson(jsonMap(json['end_ayah'])),
+      );
+
+  final String id;
+  final MemorizationItemStatus status;
+  final int position;
+  final MemorizationAyah startAyah;
+  final MemorizationAyah endAyah;
+
+  int get surah => startAyah.surah;
+  int get ayahCount => endAyah.ayah - startAyah.ayah + 1;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'status': status.wireValue,
+    'position': position,
+    'start_ayah': startAyah.toJson(),
+    'end_ayah': endAyah.toJson(),
+  };
+}
+
+/// A Mushaf selection; it may run into the next surah.
+class MemorizationSelection {
+  const MemorizationSelection({
+    required this.startSurah,
+    required this.startAyah,
+    required this.endSurah,
+    required this.endAyah,
+  });
+
+  final int startSurah;
+  final int startAyah;
+  final int endSurah;
+  final int endAyah;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'start_surah': startSurah,
+    'start_ayah': startAyah,
+    'end_surah': endSurah,
+    'end_ayah': endAyah,
+  };
+}
+
+enum MemorizationAddMode {
+  queue('queue'),
+  now('now'),
+  extend('extend');
+
+  const MemorizationAddMode(this.wireValue);
+  final String wireValue;
+}
+
+enum MemorizationPreviewState { empty, duplicate, extendable, choose }
+
+/// Which choice the Mushaf menu offers for a selection, decided by the server.
+class MemorizationSelectionPreview {
+  const MemorizationSelectionPreview({
+    required this.state,
+    required this.revision,
+    this.item,
+    this.extendSurah,
+    this.extendStartAyah,
+    this.extendEndAyah,
+  });
+
+  factory MemorizationSelectionPreview.fromJson(Map<String, Object?> json) {
+    final extend = json['extend_to'] is Map ? jsonMap(json['extend_to']) : null;
+    return MemorizationSelectionPreview(
+      state:
+          MemorizationPreviewState.values
+              .where((item) => item.name == json['state']?.toString())
+              .firstOrNull ??
+          MemorizationPreviewState.choose,
+      revision: (json['revision'] as num?)?.toInt() ?? 0,
+      item: json['item'] is Map
+          ? MemorizationItem.fromJson(jsonMap(json['item']))
+          : null,
+      extendSurah: (extend?['surah_number'] as num?)?.toInt(),
+      extendStartAyah: (extend?['start_ayah_number'] as num?)?.toInt(),
+      extendEndAyah: (extend?['end_ayah_number'] as num?)?.toInt(),
+    );
+  }
+
+  final MemorizationPreviewState state;
+  final int revision;
+  final MemorizationItem? item;
+  final int? extendSurah;
+  final int? extendStartAyah;
+  final int? extendEndAyah;
+}
+
 class MemorizationDashboard {
   const MemorizationDashboard({
     required this.timezoneName,
     required this.plan,
     required this.today,
     required this.recentDays,
+    this.revision = 0,
+    this.items = const <MemorizationItem>[],
+    this.memorizedAyahCount = 0,
     this.fromCache = false,
   });
 
@@ -318,6 +441,9 @@ class MemorizationDashboard {
     recentDays: jsonResults(json['recent_days'])
         .map((item) => MemorizationRecentDay.fromJson(jsonMap(item)))
         .toList(growable: false),
+    revision: (json['revision'] as num?)?.toInt() ?? 0,
+    items: _items(json['items']),
+    memorizedAyahCount: (json['memorized_ayah_count'] as num?)?.toInt() ?? 0,
     fromCache: fromCache,
   );
 
@@ -333,7 +459,39 @@ class MemorizationDashboard {
   final MemorizationPlan? plan;
   final MemorizationToday today;
   final List<MemorizationRecentDay> recentDays;
+  final int revision;
+  final List<MemorizationItem> items;
+  final int memorizedAyahCount;
   final bool fromCache;
+
+  MemorizationItem? get activeItem => items
+      .where((item) => item.status == MemorizationItemStatus.active)
+      .firstOrNull;
+
+  List<MemorizationItem> get queuedItems => items
+      .where((item) => item.status == MemorizationItemStatus.queued)
+      .toList(growable: false);
+
+  /// A list mutation response carries the new plan and the whole list.
+  MemorizationDashboard withList(Map<String, Object?> json) {
+    final next = MemorizationDashboard(
+      timezoneName: timezoneName,
+      plan: plan,
+      today: today,
+      recentDays: recentDays,
+      revision: (json['revision'] as num?)?.toInt() ?? revision,
+      items: _items(json['items']),
+      memorizedAyahCount:
+          (json['memorized_ayah_count'] as num?)?.toInt() ?? memorizedAyahCount,
+    );
+    return json['plan'] is Map
+        ? next.withPlan(MemorizationPlan.fromJson(jsonMap(json['plan'])))
+        : next;
+  }
+
+  static List<MemorizationItem> _items(Object? value) => jsonResults(value)
+      .map((item) => MemorizationItem.fromJson(jsonMap(item)))
+      .toList(growable: false);
 
   MemorizationDashboard withPlan(MemorizationPlan value) =>
       MemorizationDashboard(
@@ -352,6 +510,9 @@ class MemorizationDashboard {
           sessions: today.sessions,
         ),
         recentDays: recentDays,
+        revision: value.revision,
+        items: items,
+        memorizedAyahCount: memorizedAyahCount,
       );
 
   MemorizationDashboard withToday(MemorizationToday value) =>
@@ -360,6 +521,9 @@ class MemorizationDashboard {
         plan: plan,
         today: value,
         recentDays: recentDays,
+        revision: revision,
+        items: items,
+        memorizedAyahCount: memorizedAyahCount,
       );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -369,6 +533,9 @@ class MemorizationDashboard {
     'recent_days': recentDays
         .map((item) => item.toJson())
         .toList(growable: false),
+    'revision': revision,
+    'items': items.map((item) => item.toJson()).toList(growable: false),
+    'memorized_ayah_count': memorizedAyahCount,
   };
 }
 
@@ -403,6 +570,24 @@ abstract interface class MemorizationRemoteGateway {
   });
   Future<void> resetToday(
     String timezoneName, {
+    AccountScopeSnapshot? accountScope,
+  });
+  Future<Object?> previewSelection(
+    Map<String, Object?> query, {
+    AccountScopeSnapshot? accountScope,
+  });
+  Future<Object?> addSelection(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  });
+  Future<Object?> updateItem(
+    String itemId,
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  });
+  Future<Object?> removeItem(
+    String itemId,
+    int baseRevision, {
     AccountScopeSnapshot? accountScope,
   });
 }
@@ -448,6 +633,48 @@ class ApiMemorizationRemoteGateway implements MemorizationRemoteGateway {
       accountScope: accountScope,
     );
   }
+
+  @override
+  Future<Object?> previewSelection(
+    Map<String, Object?> query, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.get(
+    '/me/memorization-items/preview',
+    query: query,
+    accountScope: accountScope,
+  );
+
+  @override
+  Future<Object?> addSelection(
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.post(
+    '/me/memorization-items',
+    data: payload,
+    accountScope: accountScope,
+  );
+
+  @override
+  Future<Object?> updateItem(
+    String itemId,
+    Map<String, Object?> payload, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.patch(
+    '/me/memorization-items/${Uri.encodeComponent(itemId)}',
+    data: payload,
+    accountScope: accountScope,
+  );
+
+  @override
+  Future<Object?> removeItem(
+    String itemId,
+    int baseRevision, {
+    AccountScopeSnapshot? accountScope,
+  }) => _api.delete(
+    '/me/memorization-items/${Uri.encodeComponent(itemId)}'
+    '?base_revision=$baseRevision',
+    accountScope: accountScope,
+  );
 }
 
 class MemorizationRepository {
@@ -572,6 +799,93 @@ class MemorizationRepository {
     await _remote.resetToday(current.timezoneName, accountScope: scope);
     _database.ensureCurrent(scope);
     final optimistic = current.withToday(current.today.reset());
+    await _store(optimistic, scope);
+    return _refreshOr(optimistic, scope);
+  }
+
+  Future<MemorizationSelectionPreview> preview(
+    MemorizationSelection selection, {
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final payload = await _remote.previewSelection(
+      selection.toJson(),
+      accountScope: scope,
+    );
+    _database.ensureCurrent(scope);
+    return MemorizationSelectionPreview.fromJson(jsonMap(payload));
+  }
+
+  /// Adds a Mushaf selection; the result says what the server did with it.
+  Future<({String result, MemorizationDashboard dashboard})> addSelection(
+    MemorizationSelection selection, {
+    required MemorizationAddMode mode,
+    required int baseRevision,
+    String? recitationId,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final timezoneName = await _safeTimezone();
+    _database.ensureCurrent(scope);
+    final payload = jsonMap(
+      await _remote.addSelection(<String, Object?>{
+        ...selection.toJson(),
+        'mode': mode.wireValue,
+        'source': 'mushaf',
+        'recitation_id': recitationId,
+        'timezone_name': timezoneName,
+        'base_revision': baseRevision,
+        'client_updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, accountScope: scope),
+    );
+    return (
+      result: payload['result']?.toString() ?? '',
+      dashboard: await _applyList(payload, scope, timezoneName),
+    );
+  }
+
+  Future<MemorizationDashboard> updateItem(
+    String itemId,
+    MemorizationItemStatus status, {
+    required int baseRevision,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final payload = jsonMap(
+      await _remote.updateItem(itemId, <String, Object?>{
+        'status': status.wireValue,
+        'base_revision': baseRevision,
+        'client_updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, accountScope: scope),
+    );
+    return _applyList(payload, scope, await _safeTimezone());
+  }
+
+  Future<MemorizationDashboard> removeItem(
+    String itemId, {
+    required int baseRevision,
+    AccountScopeSnapshot? accountScope,
+  }) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    _database.ensureCurrent(scope);
+    final payload = jsonMap(
+      await _remote.removeItem(itemId, baseRevision, accountScope: scope),
+    );
+    return _applyList(payload, scope, await _safeTimezone());
+  }
+
+  Future<MemorizationDashboard> _applyList(
+    Map<String, Object?> payload,
+    AccountScopeSnapshot scope,
+    String timezoneName,
+  ) async {
+    _database.ensureCurrent(scope);
+    final current =
+        await _cached(scope) ?? MemorizationDashboard.empty(timezoneName);
+    final optimistic = current.withList(payload);
     await _store(optimistic, scope);
     return _refreshOr(optimistic, scope);
   }

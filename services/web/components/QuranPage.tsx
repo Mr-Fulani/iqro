@@ -78,6 +78,7 @@ import { isTajweedMushaf, tajweedWordIndex, type TajweedSelection } from "../lib
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
 const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
+const MemorizeAyahDialog = dynamic(() => import("./MemorizeAyahDialog"), { ssr: false });
 const TajweedCard = dynamic(() => import("./TajweedCard"), { ssr: false });
 const TajweedBreakdown = dynamic(() => import("./TajweedBreakdown"), { ssr: false });
 // The share dialog is loaded again after a failed load, as React.lazy keeps it.
@@ -585,6 +586,7 @@ function QuranContent() {
   const [bookmarkAnimationKey, setBookmarkAnimationKey] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<AyahAnnotation[]>([]);
   const [annotationAyahKey, setAnnotationAyahKey] = useState<string | null>(null);
+  const [memorizeAyahKey, setMemorizeAyahKey] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<AyahShareTarget | null>(null);
   const [annotationsReady, setAnnotationsReady] = useState(false);
 
@@ -1578,6 +1580,14 @@ function QuranContent() {
     if (result === "failed") setFeedbackMessage({ text: t("contentShare.shareError"), type: "err" });
   };
 
+  const openMemorizeAyah = async (ayahKey: string) => {
+    if (!isLoggedIn && !(await loginGuest())) {
+      setFeedbackMessage({ text: t("reading.sessionUnavailable"), type: "err" });
+      return;
+    }
+    setMemorizeAyahKey(ayahKey);
+  };
+
   const handleToggleBookmark = async (ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
     if (!bookmarkStateReady || bookmarkBusyKeys.has(ayahKey)) return;
@@ -2378,6 +2388,20 @@ function QuranContent() {
                 <p role="status" className="qf-mushaf-page-loading">{t("quran.mushafUnavailable")}</p>
               )}
               {isImmersiveReader && tajweedLegend}
+              {/* The full-screen reader hides the ayah menu; Learn stays under the sheet. */}
+              {isImmersiveReader && selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah) && (
+                <div className="mushaf-reader-learn">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    type="button"
+                    onClick={() => void openMemorizeAyah(selectedMushafAyah)}
+                    aria-haspopup="dialog"
+                    data-testid="mushaf-memorize-ayah-reader"
+                  >
+                    {t("memorization.list.learn")} · {selectedMushafAyah}
+                  </button>
+                </div>
+              )}
             </MushafGestureSurface>
             {/* Next lies to the left as in a printed Mushaf, in every interface language. */}
             {(["next", "previous"] as const).map((direction) => {
@@ -2428,6 +2452,15 @@ function QuranContent() {
                   : undefined}
               >
                 <span aria-hidden="true">✎ </span>{t("annotation.action")}
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                type="button"
+                onClick={() => void openMemorizeAyah(selectedMushafAyah)}
+                aria-haspopup="dialog"
+                data-testid="mushaf-memorize-ayah"
+              >
+                {t("memorization.list.learn")}
               </button>
               <button
                 className="btn btn-secondary btn-sm"
@@ -2531,6 +2564,17 @@ function QuranContent() {
           onClose={() => setAnnotationAyahKey(null)}
         />
       )}
+      {memorizeAyahKey && (() => {
+        const [surahNumber, ayahNumber] = memorizeAyahKey.split(":").map(Number);
+        return (
+          <MemorizeAyahDialog
+            key={memorizeAyahKey}
+            surah={surahNumber}
+            ayah={ayahNumber}
+            onClose={() => setMemorizeAyahKey(null)}
+          />
+        );
+      })()}
       {tajweedSelection && tajweed && tajweedPage && (
         <TajweedCard
           reference={tajweed.reference}

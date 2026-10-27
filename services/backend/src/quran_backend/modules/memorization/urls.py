@@ -4,6 +4,9 @@ from django.urls import path
 
 from quran_backend.modules.memorization.api import (
     MemorizationDashboardView,
+    MemorizationItemDetailView,
+    MemorizationItemListView,
+    MemorizationSelectionPreviewView,
     MemorizationSessionCreateView,
 )
 
@@ -15,5 +18,16 @@ urlpatterns = [
         "me/memorization-sessions",
         MemorizationSessionCreateView.as_view(),
         name="session-create",
+    ),
+    path("me/memorization-items", MemorizationItemListView.as_view(), name="item-list"),
+    path(
+        "me/memorization-items/preview",
+        MemorizationSelectionPreviewView.as_view(),
+        name="item-preview",
+    ),
+    path(
+        "me/memorization-items/<uuid:item_id>",
+        MemorizationItemDetailView.as_view(),
+        name="item-detail",
     ),
 ]

@@ -348,6 +348,24 @@ body:has(.quran-reader-boot) .app-footer {
   display: none;
 }
 
+.mushaf-reader-learn {
+  display: none;
+}
+
+.is-reader-immersive[data-reader-orientation="portrait"] .mushaf-reader-learn {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  width: var(--reader-sheet-width, 100%);
+  max-width: 100%;
+  margin-bottom: 8px;
+  padding-inline: max(12px, var(--reader-inline-inset));
+}
+
+.quran-page-layout:has(.reader-actions.is-folded) .mushaf-reader-learn {
+  display: none;
+}
+
 .is-reader-immersive .mushaf-tajweed-breakdown {
   display: flex;
   flex: none;

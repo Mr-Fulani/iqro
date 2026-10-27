@@ -206,14 +206,54 @@ function planSnapshot() {
   };
 }
 
-async function installMocks(page: Page, options: { recitations?: object[] } = {}) {
+type ListItem = {
+  id: string;
+  status: "active" | "queued" | "memorized";
+  position: number;
+  start: number;
+  end: number;
+};
+
+function itemSnapshot(item: ListItem) {
+  const ayah = (number: number) => ({
+    id: ayahs[number - 1].id,
+    surah_number: 1,
+    ayah_number: number,
+    text_uthmani: ayahs[number - 1].text_uthmani,
+  });
+  return {
+    id: item.id,
+    status: item.status,
+    position: item.position,
+    source: "mushaf",
+    start_ayah: ayah(item.start),
+    end_ayah: ayah(item.end),
+    ayah_count: item.end - item.start + 1,
+    memorized_at: item.status === "memorized" ? "2026-08-28T10:10:00Z" : null,
+    created_at: "2026-08-28T10:00:00Z",
+  };
+}
+
+async function installMocks(
+  page: Page,
+  options: { recitations?: object[]; withPlan?: boolean; items?: ListItem[] } = {},
+) {
   const recitations = options.recitations ?? [recitation];
+  const items = options.items ?? [];
   const testFont = await readFile(
     new URL("../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2", import.meta.url),
   );
-  let plan: ReturnType<typeof planSnapshot> | null = null;
+  let plan: ReturnType<typeof planSnapshot> | null = options.withPlan ? planSnapshot() : null;
   let completed = 0;
   const writes: Array<Record<string, unknown>> = [];
+
+  const listSnapshot = () => ({
+    revision: plan?.revision ?? 0,
+    items: items.map(itemSnapshot),
+    memorized_ayah_count: items
+      .filter((item) => item.status === "memorized")
+      .reduce((sum, item) => sum + item.end - item.start + 1, 0),
+  });
 
   await page.route("https://audio.example.test/**", (route) =>
     route.fulfill({ status: 200, contentType: "audio/mpeg", body: "" }),
@@ -243,8 +283,20 @@ async function installMocks(page: Page, options: { recitations?: object[] } = {}
           recent_days: completed
             ? [{ local_date: "2026-08-28", completed_repetitions: completed, session_count: 1, last_assessment: "memorized" }]
             : [],
+          ...listSnapshot(),
         },
       });
+    }
+    const itemPath = /^\/api\/v1\/me\/memorization-items\/([^/]+)$/.exec(url.pathname);
+    if (itemPath && request.method() === "PATCH") {
+      const payload = request.postDataJSON() as Record<string, unknown>;
+      writes.push({ item_id: itemPath[1], ...payload });
+      for (const item of items) {
+        if (item.status === "active" && payload.status === "active") item.status = "queued";
+        if (item.id === itemPath[1]) item.status = payload.status as ListItem["status"];
+      }
+      if (plan) plan = { ...plan, revision: plan.revision + 1 };
+      return route.fulfill({ json: { result: payload.status, item: null, next: null, plan, ...listSnapshot() } });
     }
     if (url.pathname === "/api/v1/me/memorization" && request.method() === "PUT") {
       const payload = request.postDataJSON() as Record<string, unknown>;
@@ -552,4 +604,39 @@ test("coloured memorization text explains a tapped tajweed word", async ({ page 
   await page.getByRole("tab", { name: "Проверить себя" }).click();
   await expect(page.getByTestId("tajweed-legend")).toHaveCount(0);
   await expect(page.getByTestId("tajweed-breakdown-open")).toHaveCount(0);
+});
+
+test.describe("memorization list on a phone", () => {
+  test.use({ viewport: { width: 393, height: 851 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2.75 });
+
+  test("marking the current range memorized offers the next one in the queue", async ({ page }, testInfo) => {
+    const writes = await installMocks(page, {
+      withPlan: true,
+      items: [
+        { id: "00000000-0000-7000-8000-000000000931", status: "active", position: 0, start: 1, end: 1 },
+        { id: "00000000-0000-7000-8000-000000000932", status: "queued", position: 0, start: 2, end: 2 },
+      ],
+    });
+
+    await page.goto("/ru/memorization");
+    const list = page.getByTestId("memorization-list");
+    await expect(list.getByTestId("memorization-list-current")).toHaveText("Аль-Фатиха, 1");
+    await expect(list.getByText("Очередь · 1")).toBeVisible();
+    await expect(list.getByText("Выучено аятов: 0")).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("web-memorization-list-phone-ru.png") });
+
+    await list.getByRole("button", { name: "Выучено", exact: true }).click();
+    await expect(list.getByText("Следующий: Аль-Фатиха, 2 — начать?")).toBeVisible();
+    await expect(list.getByText("Выучено аятов: 1")).toBeVisible();
+    expect(writes.at(-1)).toMatchObject({
+      item_id: "00000000-0000-7000-8000-000000000931",
+      status: "memorized",
+      base_revision: 1,
+    });
+    await page.screenshot({ path: testInfo.outputPath("web-memorization-list-next-phone-ru.png") });
+
+    await list.getByRole("button", { name: "Начать", exact: true }).click();
+    await expect(list.getByTestId("memorization-list-current")).toHaveText("Аль-Фатиха, 2");
+    expect(writes.at(-1)).toMatchObject({ status: "active", base_revision: 2 });
+  });
 });

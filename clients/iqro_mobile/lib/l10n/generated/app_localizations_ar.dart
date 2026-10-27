@@ -3189,4 +3189,86 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboardingReplayHint => 'الميزات واللغة والأذونات';
+
+  @override
+  String get memorizationListLearn => 'احفظ';
+
+  @override
+  String memorizationListLearnTitle(String range) {
+    return 'حفظ $range';
+  }
+
+  @override
+  String get memorizationListAddedToQueue => 'أُضيفت إلى قائمة انتظار الحفظ.';
+
+  @override
+  String get memorizationListOpen => 'فتح';
+
+  @override
+  String memorizationListAlreadyIn(String range) {
+    return 'موجودة في قائمتك: $range.';
+  }
+
+  @override
+  String get memorizationListAlreadyInShort => 'موجودة في قائمتك.';
+
+  @override
+  String get memorizationListContinuesCurrent =>
+      'هذه الآية تلي مقطعك الحالي مباشرة.';
+
+  @override
+  String memorizationListExtendTo(String range) {
+    return 'وسّع إلى $range';
+  }
+
+  @override
+  String get memorizationListQueueSeparately => 'أضف إلى الانتظار منفصلة';
+
+  @override
+  String memorizationListCurrentIs(String range) {
+    return 'تحفظ الآن $range.';
+  }
+
+  @override
+  String get memorizationListAddToQueue => 'أضف إلى الانتظار';
+
+  @override
+  String get memorizationListLearnNow => 'احفظ الآن';
+
+  @override
+  String get memorizationListCurrent => 'أحفظ الآن';
+
+  @override
+  String get memorizationListNoCurrent => 'تم حفظ المقطع الحالي';
+
+  @override
+  String memorizationListMemorizedCount(int count) {
+    return 'الآيات المحفوظة: $count';
+  }
+
+  @override
+  String get memorizationListMarkMemorized => 'تم الحفظ';
+
+  @override
+  String memorizationListNextPrompt(String range) {
+    return 'التالي: $range — نبدأ؟';
+  }
+
+  @override
+  String get memorizationListBegin => 'ابدأ';
+
+  @override
+  String memorizationListQueue(int count) {
+    return 'الانتظار · $count';
+  }
+
+  @override
+  String memorizationListRemove(String range) {
+    return 'أزل $range من الانتظار';
+  }
+
+  @override
+  String memorizationListItemRange(String surah, String range) {
+    return '$surah، $range';
+  }
 }

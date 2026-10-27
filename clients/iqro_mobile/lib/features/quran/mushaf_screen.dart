@@ -18,6 +18,7 @@ import '../audio/audio_models.dart';
 import '../audio/recitation_style_label.dart';
 import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
+import '../memorization/memorize_ayah_sheet.dart';
 import '../plan/plan_repository.dart';
 import '../tajweed/tajweed_breakdown.dart';
 import '../tajweed/tajweed_models.dart';
@@ -1336,6 +1337,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       if (!_isCurrentAccount(scope) || !mounted) return;
       final tajweed = _tajweedAyah(reference, page);
       var breakdown = false;
+      var memorize = false;
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -1345,8 +1347,16 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           reference: reference,
           page: page,
           onTajweedBreakdown: tajweed == null ? null : () => breakdown = true,
+          onMemorize: () => memorize = true,
         ),
       );
+      if (memorize && mounted) {
+        await showMemorizeAyahSheet(
+          context,
+          surah: reference.surah,
+          ayah: reference.ayah,
+        );
+      }
       if (breakdown && tajweed != null && mounted) {
         await showTajweedBreakdown(
           context,
