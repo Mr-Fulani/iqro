@@ -21,6 +21,11 @@ from quran_backend.modules.accounts.email_auth import (
     verify_email_challenge,
 )
 from quran_backend.modules.accounts.exceptions import AccessTokenInvalid, AuthRateLimitExceeded
+from quran_backend.modules.accounts.google_auth import (
+    google_sign_in_enabled,
+    google_web_client_id,
+    sign_in_with_google,
+)
 from quran_backend.modules.accounts.lifecycle import (
     cancel_account_deletion,
     list_user_devices,
@@ -39,6 +44,8 @@ from quran_backend.modules.accounts.serializers import (
     EmailChallengeStartResponseSerializer,
     EmailChallengeVerifyRequestSerializer,
     EmailChallengeVerifyResponseSerializer,
+    GoogleSignInConfigSerializer,
+    GoogleSignInRequestSerializer,
     GuestBootstrapRequestSerializer,
     GuestBootstrapResponseSerializer,
     RefreshTokenRequestSerializer,
@@ -61,6 +68,7 @@ from quran_backend.modules.accounts.throttling import (
     DeviceRecoveryThrottle,
     EmailStartThrottle,
     EmailVerifyThrottle,
+    GoogleSignInThrottle,
     GuestBootstrapThrottle,
     RefreshTokenThrottle,
 )
@@ -193,6 +201,50 @@ class EmailChallengeVerifyView(PrivateNoStoreResponseMixin, APIView):
         serializer = EmailChallengeVerifyRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = verify_email_challenge(**serializer.validated_data)
+        return Response(_email_verification_response(result), status=status.HTTP_200_OK)
+
+
+@extend_schema(tags=["authentication"])
+class GoogleSignInConfigView(APIView):
+    authentication_classes = ()
+    permission_classes = (AllowAny,)
+
+    @extend_schema(responses={status.HTTP_200_OK: GoogleSignInConfigSerializer})
+    def get(self, _request: Request) -> Response:
+        enabled = google_sign_in_enabled()
+        response = Response(
+            {"enabled": enabled, "client_id": google_web_client_id() if enabled else None},
+            status=status.HTTP_200_OK,
+        )
+        response["Cache-Control"] = "public, max-age=300"
+        return response
+
+
+@extend_schema(tags=["authentication"])
+class GoogleSignInView(PrivateNoStoreResponseMixin, APIView):
+    """Sign the calling installation in with a verified Google account."""
+
+    authentication_classes = (SignedLifecycleTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    throttle_classes = (GoogleSignInThrottle,)
+
+    def throttled(self, request: Request, wait: float | None) -> NoReturn:  # noqa: ARG002
+        raise AuthRateLimitExceeded(wait)
+
+    @extend_schema(
+        request=GoogleSignInRequestSerializer,
+        responses={status.HTTP_200_OK: EmailChallengeVerifyResponseSerializer},
+    )
+    def post(self, request: Request) -> Response:
+        if not isinstance(request.auth, AccessAuthContext) or not isinstance(request.user, User):
+            raise AccessTokenInvalid
+        serializer = GoogleSignInRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = sign_in_with_google(
+            user=request.user,
+            device=request.auth.device,
+            id_token=serializer.validated_data["id_token"],
+        )
         return Response(_email_verification_response(result), status=status.HTTP_200_OK)
 
 

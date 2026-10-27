@@ -91,3 +91,26 @@ class AccountReauthenticationRequired(APIException):
     status_code = status.HTTP_403_FORBIDDEN
     default_detail = "A recent email verification is required."
     default_code = "account_reauthentication_required"
+
+
+class GoogleSignInDisabled(NotFound):
+    default_detail = "Google sign-in is not configured."
+    default_code = "google_sign_in_disabled"
+
+
+class GoogleSignInUnavailable(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "Google sign-in is temporarily unavailable. Retry later."
+    default_code = "google_sign_in_unavailable"
+
+
+class GoogleTokenInvalid(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "Google sign-in could not be completed."
+    default_code = "google_token_invalid"
+
+
+class GoogleEmailUnverified(APIException):
+    status_code = status.HTTP_403_FORBIDDEN
+    default_detail = "The Google account email is not verified."
+    default_code = "google_email_unverified"

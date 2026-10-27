@@ -191,8 +191,53 @@ def _complete_email_challenge(
     idempotency_key: uuid.UUID,
     now: datetime,
 ) -> EmailVerificationResult:
-    requester = User.objects.select_for_update().get(id=challenge.requester_id)
-    device = Device.objects.select_for_update().get(id=challenge.device_id)
+    target, device, merged_guest = link_verified_identity(
+        requester_id=challenge.requester_id,
+        device_id=challenge.device_id,
+        provider=IdentityProvider.EMAIL,
+        provider_subject=challenge.email,
+        email=challenge.email,
+        idempotency_key=idempotency_key,
+    )
+    credentials = replace_device_credentials(user=target, device=device)
+    challenge.consumed_at = now
+    challenge.verification_key = idempotency_key
+    challenge.result_user = target
+    challenge.save(
+        update_fields=[
+            "consumed_at",
+            "verification_key",
+            "result_user",
+            "updated_at",
+        ]
+    )
+    return EmailVerificationResult(
+        user=target,
+        device=device,
+        credentials=credentials,
+        merged_guest=merged_guest,
+        replayed=False,
+    )
+
+
+def link_verified_identity(  # noqa: PLR0913
+    *,
+    requester_id: uuid.UUID,
+    device_id: uuid.UUID,
+    provider: IdentityProvider,
+    provider_subject: str,
+    email: str,
+    idempotency_key: uuid.UUID,
+) -> tuple[User, Device, bool]:
+    """Resolve a verified sign-in to its account and move the installation there.
+
+    Must run inside a transaction. A new identity joins the account that already
+    owns the verified email, so one person never ends up with two accounts.
+    Returns the target account, its device and whether a guest was merged.
+    """
+
+    requester = User.objects.select_for_update().get(id=requester_id)
+    device = Device.objects.select_for_update().get(id=device_id)
     if requester.id != device.user_id or requester.status not in (
         UserStatus.GUEST,
         UserStatus.ACTIVE,
@@ -203,15 +248,13 @@ def _complete_email_challenge(
     identity = (
         AuthIdentity.objects.select_for_update()
         .select_related("user")
-        .filter(provider=IdentityProvider.EMAIL, provider_subject=challenge.email)
+        .filter(provider=provider, provider_subject=provider_subject)
         .first()
     )
     if identity is None and requester.status == UserStatus.PENDING_DELETION:
         raise AccountLinkUnavailable
     if identity is None:
-        legacy_owner = (
-            User.objects.select_for_update().filter(email__iexact=challenge.email).first()
-        )
+        legacy_owner = User.objects.select_for_update().filter(email__iexact=email).first()
         if legacy_owner is not None and (
             legacy_owner.status != UserStatus.ACTIVE or not legacy_owner.is_active
         ):
@@ -219,14 +262,14 @@ def _complete_email_challenge(
         identity_user = legacy_owner or requester
         identity = AuthIdentity.objects.create(
             user=identity_user,
-            provider=IdentityProvider.EMAIL,
-            provider_subject=challenge.email,
-            email_at_provider=challenge.email,
+            provider=provider,
+            provider_subject=provider_subject,
+            email_at_provider=email,
             email_verified=True,
             last_used_at=timezone.now(),
         )
     else:
-        identity.email_at_provider = challenge.email
+        identity.email_at_provider = email
         identity.email_verified = True
         identity.last_used_at = timezone.now()
         identity.save(
@@ -237,7 +280,7 @@ def _complete_email_challenge(
     merged_guest = False
     if target.id == requester.id:
         if requester.status == UserStatus.GUEST:
-            requester.email = challenge.email
+            requester.email = email
             requester.status = UserStatus.ACTIVE
             requester.save(update_fields=["email", "status", "updated_at"])
             target = requester
@@ -265,25 +308,7 @@ def _complete_email_challenge(
         or device.user_id != target.id
     ):
         raise AccountLinkUnavailable
-    credentials = replace_device_credentials(user=target, device=device)
-    challenge.consumed_at = now
-    challenge.verification_key = idempotency_key
-    challenge.result_user = target
-    challenge.save(
-        update_fields=[
-            "consumed_at",
-            "verification_key",
-            "result_user",
-            "updated_at",
-        ]
-    )
-    return EmailVerificationResult(
-        user=target,
-        device=device,
-        credentials=credentials,
-        merged_guest=merged_guest,
-        replayed=False,
-    )
+    return target, device, merged_guest
 
 
 def _replay_consumed_challenge(
