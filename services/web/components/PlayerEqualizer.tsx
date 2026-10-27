@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
-import { useReducedMotion } from "../lib/use-reduced-motion";
 import styles from "./PlayerEqualizer.module.css";
 
 // Ported from _EqualizerPainter in clients/iqro_mobile/lib/features/audio/player_screen.dart.
@@ -30,16 +29,16 @@ function swayFrames(bar: number): Keyframe[] {
  * Sound bars in the expanded player, as in the app: they fade in and sway while
  * the recitation plays and fade out on pause or while buffering, the sway
  * stopping once they are gone. Transform-only animations run off the main
- * thread; with reduced motion the bars stand still.
+ * thread. They sway with reduced motion too: the owner wants them, like the
+ * chosen video background, whatever the system setting.
  */
 export function PlayerEqualizer({ playing }: { playing: boolean }) {
   const rootRef = useRef<HTMLSpanElement>(null);
   const animationsRef = useRef<Animation[]>([]);
-  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || reduceMotion) return;
+    if (!root) return;
     const animations = Array.from(root.children, (bar, index) =>
       bar.animate(swayFrames(index), { duration: LOOP_MS, iterations: Infinity }),
     );
@@ -48,7 +47,7 @@ export function PlayerEqualizer({ playing }: { playing: boolean }) {
       for (const animation of animations) animation.cancel();
       animationsRef.current = [];
     };
-  }, [reduceMotion]);
+  }, []);
 
   useEffect(() => {
     const animations = animationsRef.current;
@@ -60,7 +59,7 @@ export function PlayerEqualizer({ playing }: { playing: boolean }) {
       for (const animation of animations) animation.pause();
     }, FADE_MS);
     return () => window.clearTimeout(timer);
-  }, [playing, reduceMotion]);
+  }, [playing]);
 
   return (
     <span

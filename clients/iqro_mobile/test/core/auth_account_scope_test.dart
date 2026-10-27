@@ -1192,6 +1192,38 @@ void main() {
       await subscription.cancel();
     },
   );
+
+  test('the first requests of a fresh install share one guest', () async {
+    final storage = _MemorySecureStorage(<String, String>{});
+    final guestResponse = Completer<ResponseBody>();
+    var guestRequests = 0;
+    final adapter = _ScriptedAdapter((request) {
+      switch (request.path) {
+        case '/auth/guest':
+          guestRequests++;
+          return guestResponse.future;
+        default:
+          throw StateError('Unexpected request ${request.path}');
+      }
+    });
+    final repository = _repository(storage, adapter);
+
+    // Every early API call asks for a token before any session exists.
+    final sessions = Future.wait(<Future<AuthSession>>[
+      for (var i = 0; i < 3; i++) repository.ensureSession(locale: 'ru'),
+    ]);
+    await pumpEventQueue();
+    guestResponse.complete(
+      _jsonResponse(_apiSession('guest-a', status: 'guest')),
+    );
+
+    expect(
+      (await sessions).map((session) => session.accessToken),
+      everyElement('access-guest-a'),
+    );
+    // A second bootstrap would revoke the session the app keeps.
+    expect(guestRequests, 1);
+  });
 }
 
 const _config = AppConfig(

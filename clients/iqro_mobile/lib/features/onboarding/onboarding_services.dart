@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../prayer/prayer_places.dart';
 import '../prayer/prayer_repository.dart';
+import '../reminders/reminder_controller.dart';
 import '../reminders/reminder_models.dart';
 
 const onboardingPrayerEvents = <String>[
@@ -187,21 +188,41 @@ class AppOnboardingServices implements OnboardingServices {
   }
 
   @override
-  Future<ReminderPermission> requestNotifications() async {
-    await _ref
-        .read(reminderProvider.notifier)
-        .requestPermission(exactAlarms: false);
-    return _ref.read(reminderProvider).permission;
-  }
+  Future<ReminderPermission> requestNotifications() => _ref
+      .read(reminderProvider.notifier)
+      .requestPermission(exactAlarms: false);
 
   @override
   Future<void> enablePrayerReminders() async {
-    final reminders = _ref.read(reminderProvider.notifier);
+    final reminders = await _accountReminders();
     // Existing rules first: toggling before they load would duplicate them.
     await reminders.reload();
     for (final event in onboardingPrayerEvents) {
       await reminders.togglePrayer(event, true);
     }
+  }
+
+  /// Reminder rules are account data, and a fresh install has no guest
+  /// account until something needs one: create it (this needs the network)
+  /// and wait for the reminder controller bound to it.
+  Future<ReminderController> _accountReminders() async {
+    await _ref.read(localDatabaseProvider).captureAccount();
+    if (_ref.read(activeAccountScopeKeyProvider) == null) {
+      final bound = Completer<void>();
+      final subscription = _ref.listen<AccountScopeKey?>(
+        activeAccountScopeKeyProvider,
+        (_, key) {
+          if (key != null && !bound.isCompleted) bound.complete();
+        },
+        fireImmediately: true,
+      );
+      try {
+        await bound.future.timeout(const Duration(seconds: 10));
+      } finally {
+        subscription.close();
+      }
+    }
+    return _ref.read(reminderProvider.notifier);
   }
 
   @override

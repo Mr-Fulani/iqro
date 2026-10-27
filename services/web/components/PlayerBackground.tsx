@@ -8,7 +8,6 @@ import {
   playerBackgroundTitle,
 } from "../lib/player-backgrounds";
 import type { PlayerBackground } from "../lib/player-backgrounds";
-import { useReducedMotion } from "../lib/use-reduced-motion";
 
 // Loaded only once the expanded player shows a video background.
 const loadVideo = () => lazy(() => import("./PlayerBackgroundVideo"));
@@ -47,7 +46,6 @@ class PosterOnFailure extends Component<{ children: ReactNode }, { failed: boole
 
 /** The chosen image behind the expanded player, under a dark scrim for legible text. */
 export function PlayerBackdrop({ background }: { background: PlayerBackground }) {
-  const reduceMotion = useReducedMotion();
   if (!background.image) return null;
   return (
     <div className="global-audio-player-backdrop" aria-hidden="true">
@@ -62,7 +60,8 @@ export function PlayerBackdrop({ background }: { background: PlayerBackground })
         decoding="async"
         onLoad={markLoaded}
       />
-      {background.videoSrc && !reduceMotion && !savesData() && (
+      {/* A video the listener picked plays even with reduced motion. */}
+      {background.videoSrc && !savesData() && (
         <PosterOnFailure key={background.videoSrc}>
           <Suspense fallback={null}>
             <PlayerBackgroundVideo src={background.videoSrc} />

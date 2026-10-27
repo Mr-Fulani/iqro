@@ -215,22 +215,20 @@ void main() {
       expect(fake.configs.length, built);
     });
 
-    testWidgets('reduced motion and pictures without a scene stay still', (
+    testWidgets('reduced motion still plays, pictures without a scene stay', (
       tester,
     ) async {
       final fake = _Fake3D();
+      // The owner's call: the movement plays whatever the system setting.
       await _pump(
         tester,
         location: '/salah/lesson/fajr',
         view3d: fake.build,
         disableAnimations: true,
       );
-      expect(
-        find.byKey(const ValueKey('salah-image-position-takbir')),
-        findsOneWidget,
-      );
-      expect(caption, findsOneWidget);
-      expect(view, findsNothing);
+      expect(view, findsOneWidget);
+      expect(fake.last.running, isTrue);
+      final built = fake.configs.length;
 
       await _pump(
         tester,
@@ -242,7 +240,7 @@ void main() {
         findsOneWidget,
       );
       expect(caption, findsNothing);
-      expect(fake.configs, isEmpty);
+      expect(fake.configs.length, built);
     });
 
     testWidgets('the Arabic lesson labels the scene in Arabic', (tester) async {
