@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any, NoReturn, cast
 
 from django.utils.decorators import method_decorator
@@ -15,12 +16,24 @@ from rest_framework.views import APIView
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.accounts.services import AccessAuthContext
 from quran_backend.modules.core.privacy import PrivateNoStoreResponseMixin
+from quran_backend.modules.memorization.items import (
+    add_memorization_selection,
+    delete_memorization_item,
+    preview_memorization_selection,
+    update_memorization_item,
+)
 from quran_backend.modules.memorization.serializers import (
     MemorizationDashboardOutputSerializer,
+    MemorizationItemAddSerializer,
+    MemorizationItemDeleteQuerySerializer,
+    MemorizationItemMutationOutputSerializer,
+    MemorizationItemUpdateSerializer,
     MemorizationPlanOutputSerializer,
     MemorizationPlanWriteSerializer,
     MemorizationQuerySerializer,
     MemorizationResetQuerySerializer,
+    MemorizationSelectionPreviewOutputSerializer,
+    MemorizationSelectionSerializer,
     MemorizationSessionCreateSerializer,
     MemorizationSessionOutputSerializer,
 )
@@ -58,6 +71,7 @@ class MemorizationMutationRateLimitMixin:
     def get_throttles(self) -> list[BaseThrottle]:
         if getattr(getattr(self, "request", None), "method", None) in {
             "DELETE",
+            "PATCH",
             "POST",
             "PUT",
         }:
@@ -155,3 +169,100 @@ class MemorizationSessionCreateView(
             fallback_timezone_name=query.validated_data.get("timezone_name"),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _selection_bounds(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "edition_code": data.pop("edition_code"),
+        "start": (data.pop("start_surah"), data.pop("start_ayah")),
+        "end": (data.pop("end_surah"), data.pop("end_ayah")),
+    }
+
+
+@extend_schema(tags=["memorization"])
+class MemorizationItemListView(
+    MemorizationMutationRateLimitMixin,
+    PrivateNoStoreResponseMixin,
+    APIView,
+):
+    @extend_schema(
+        operation_id="memorization_item_add",
+        request=MemorizationItemAddSerializer,
+        responses={
+            status.HTTP_200_OK: MemorizationItemMutationOutputSerializer,
+            status.HTTP_201_CREATED: MemorizationItemMutationOutputSerializer,
+        },
+    )
+    def post(self, request: Request) -> Response:
+        serializer = MemorizationItemAddSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = _bind_authenticated_device(request, dict(serializer.validated_data))
+        result = add_memorization_selection(
+            user=_authenticated_user(request),
+            **_selection_bounds(data),
+            **data,
+        )
+        return Response(
+            result,
+            status=status.HTTP_200_OK
+            if result["result"] == "duplicate"
+            else status.HTTP_201_CREATED,
+        )
+
+
+@extend_schema(tags=["memorization"])
+class MemorizationSelectionPreviewView(PrivateNoStoreResponseMixin, APIView):
+    @extend_schema(
+        operation_id="memorization_selection_preview",
+        parameters=[MemorizationSelectionSerializer],
+        responses=MemorizationSelectionPreviewOutputSerializer,
+    )
+    def get(self, request: Request) -> Response:
+        query = MemorizationSelectionSerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        return Response(
+            preview_memorization_selection(
+                _authenticated_user(request),
+                **_selection_bounds(dict(query.validated_data)),
+            )
+        )
+
+
+@extend_schema(tags=["memorization"])
+class MemorizationItemDetailView(
+    MemorizationMutationRateLimitMixin,
+    PrivateNoStoreResponseMixin,
+    APIView,
+):
+    @extend_schema(
+        operation_id="memorization_item_update",
+        request=MemorizationItemUpdateSerializer,
+        responses=MemorizationItemMutationOutputSerializer,
+    )
+    def patch(self, request: Request, item_id: uuid.UUID) -> Response:
+        serializer = MemorizationItemUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = _bind_authenticated_device(request, dict(serializer.validated_data))
+        return Response(
+            update_memorization_item(
+                user=_authenticated_user(request),
+                item_id=item_id,
+                **data,
+            )
+        )
+
+    @extend_schema(
+        operation_id="memorization_item_delete",
+        parameters=[MemorizationItemDeleteQuerySerializer],
+        responses=MemorizationItemMutationOutputSerializer,
+    )
+    def delete(self, request: Request, item_id: uuid.UUID) -> Response:
+        query = MemorizationItemDeleteQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        return Response(
+            delete_memorization_item(
+                user=_authenticated_user(request),
+                item_id=item_id,
+                base_revision=query.validated_data["base_revision"],
+            )
+        )

@@ -3243,4 +3243,86 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get onboardingReplayHint => 'Возможности, язык и разрешения';
+
+  @override
+  String get memorizationListLearn => 'Выучить';
+
+  @override
+  String memorizationListLearnTitle(String range) {
+    return 'Выучить $range';
+  }
+
+  @override
+  String get memorizationListAddedToQueue => 'Добавлено в очередь заучивания.';
+
+  @override
+  String get memorizationListOpen => 'Открыть';
+
+  @override
+  String memorizationListAlreadyIn(String range) {
+    return 'Уже в списке: $range.';
+  }
+
+  @override
+  String get memorizationListAlreadyInShort => 'Уже в списке.';
+
+  @override
+  String get memorizationListContinuesCurrent =>
+      'Этот аят идёт сразу за текущим отрывком.';
+
+  @override
+  String memorizationListExtendTo(String range) {
+    return 'Расширить до $range';
+  }
+
+  @override
+  String get memorizationListQueueSeparately => 'Отдельно в очередь';
+
+  @override
+  String memorizationListCurrentIs(String range) {
+    return 'Сейчас вы учите $range.';
+  }
+
+  @override
+  String get memorizationListAddToQueue => 'Добавить в очередь';
+
+  @override
+  String get memorizationListLearnNow => 'Учить сейчас';
+
+  @override
+  String get memorizationListCurrent => 'Сейчас учу';
+
+  @override
+  String get memorizationListNoCurrent => 'Текущий отрывок выучен';
+
+  @override
+  String memorizationListMemorizedCount(int count) {
+    return 'Выучено аятов: $count';
+  }
+
+  @override
+  String get memorizationListMarkMemorized => 'Выучено';
+
+  @override
+  String memorizationListNextPrompt(String range) {
+    return 'Следующий: $range — начать?';
+  }
+
+  @override
+  String get memorizationListBegin => 'Начать';
+
+  @override
+  String memorizationListQueue(int count) {
+    return 'Очередь · $count';
+  }
+
+  @override
+  String memorizationListRemove(String range) {
+    return 'Убрать $range из очереди';
+  }
+
+  @override
+  String memorizationListItemRange(String surah, String range) {
+    return '$surah, $range';
+  }
 }

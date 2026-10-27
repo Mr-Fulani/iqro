@@ -22,7 +22,12 @@ from quran_backend.modules.announcements.models import AnnouncementReceipt
 from quran_backend.modules.audio.models import AudioPlaybackPosition
 from quran_backend.modules.dua.models import DuaFavorite
 from quran_backend.modules.feedback.models import FeedbackAudit, FeedbackMessage, FeedbackTicket
-from quran_backend.modules.memorization.models import MemorizationPlan, MemorizationSession
+from quran_backend.modules.memorization.models import (
+    MemorizationItem,
+    MemorizationItemStatus,
+    MemorizationPlan,
+    MemorizationSession,
+)
 from quran_backend.modules.prayer_times.models import PrayerProfile
 from quran_backend.modules.reading.change_log import append_sync_change
 from quran_backend.modules.reading.habit_services import recalculate_reading_streak
@@ -244,6 +249,7 @@ def _merge_memorization_state(*, source: User, target: User, counts: dict[str, i
     if source_plan is None:
         counts["memorization_plans"] = 0
         counts["memorization_sessions"] = 0
+        counts["memorization_items"] = 0
         return
     source_sessions = list(
         MemorizationSession.objects.select_for_update().filter(user=source).order_by("id")
@@ -255,9 +261,13 @@ def _merge_memorization_state(*, source: User, target: User, counts: dict[str, i
         MemorizationSession.objects.filter(user=source).update(user=target)
         counts["memorization_plans"] = 1
         counts["memorization_sessions"] = len(source_sessions)
+        counts["memorization_items"] = MemorizationItem.objects.filter(user=source).update(
+            user=target
+        )
         return
 
-    if _memorization_plan_rank(source_plan) > _memorization_plan_rank(target_plan):
+    source_wins = _memorization_plan_rank(source_plan) > _memorization_plan_rank(target_plan)
+    if source_wins:
         for field in (
             "start_ayah",
             "end_ayah",
@@ -272,9 +282,58 @@ def _merge_memorization_state(*, source: User, target: User, counts: dict[str, i
         target_plan.revision = max(target_plan.revision, source_plan.revision) + 1
         target_plan.save()
     MemorizationSession.objects.filter(user=source).update(user=target, plan=target_plan)
+    counts["memorization_items"] = _merge_memorization_items(
+        source=source,
+        target=target,
+        source_wins=source_wins,
+    )
     source_plan.delete()
     counts["memorization_plans"] = 1
     counts["memorization_sessions"] = len(source_sessions)
+
+
+def _merge_memorization_items(*, source: User, target: User, source_wins: bool) -> int:
+    """Move the guest's list; the winning plan's active item stays the current one."""
+    active = MemorizationItemStatus.ACTIVE
+    source_items = list(
+        MemorizationItem.objects.select_for_update().filter(user=source).order_by("position", "id")
+    )
+    target_items = list(MemorizationItem.objects.select_for_update().filter(user=target))
+    if source_wins:
+        winner = next((item for item in source_items if item.status == active), None)
+        if winner is not None:
+            for item in [
+                item
+                for item in target_items
+                if (item.start_ayah_id, item.end_ayah_id)
+                == (winner.start_ayah_id, winner.end_ayah_id)
+            ]:
+                item.delete()
+                target_items.remove(item)
+    loser_items = target_items if source_wins else source_items
+    demoted = next((item for item in loser_items if item.status == active), None)
+    next_position = 1 + max(
+        (item.position for item in target_items if item.status == MemorizationItemStatus.QUEUED),
+        default=-1,
+    )
+    if demoted is not None:
+        demoted.status = MemorizationItemStatus.QUEUED
+        demoted.position = next_position
+        next_position += 1
+        demoted.save(update_fields=["status", "position", "updated_at"])
+    known_ranges = {(item.start_ayah_id, item.end_ayah_id) for item in target_items}
+    moved = 0
+    for item in source_items:
+        if (item.start_ayah_id, item.end_ayah_id) in known_ranges:
+            item.delete()
+            continue
+        item.user = target
+        if item.status == MemorizationItemStatus.QUEUED and item is not demoted:
+            item.position = next_position
+            next_position += 1
+        item.save(update_fields=["user", "position", "updated_at"])
+        moved += 1
+    return moved
 
 
 def _merge_dua_favorites(*, source: User, target: User, counts: dict[str, int]) -> None:

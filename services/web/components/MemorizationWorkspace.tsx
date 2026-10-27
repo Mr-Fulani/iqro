@@ -16,6 +16,7 @@ import { useI18n } from "../lib/i18n-context";
 import { latestRecitationsByVariant, recitationStyleLabel } from "../lib/reciter-catalog";
 import { learningRecitation, rememberReciterPreference } from "../lib/reciter-preference";
 import { MemorizationAudioLoop } from "./MemorizationAudioLoop";
+import { MemorizationListCard } from "./MemorizationListCard";
 import { MemorizationTajweedAyahs } from "./MemorizationTajweedAyahs";
 
 type PracticeMode = "read" | "listen" | "test";
@@ -316,6 +317,10 @@ export function MemorizationWorkspace() {
           )}
         </div>
       </section>
+
+      {dashboard && dashboard.items.length > 0 && !editingPlan && (
+        <MemorizationListCard list={dashboard} surahs={surahs} onChanged={loadDashboard} />
+      )}
 
       {(editingPlan || !plan) && (
         <section className="surface" data-testid="memorization-plan-form">

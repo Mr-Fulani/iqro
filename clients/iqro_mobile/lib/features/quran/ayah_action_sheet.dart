@@ -30,6 +30,7 @@ class AyahActionSheet extends ConsumerStatefulWidget {
     required this.reference,
     required this.page,
     this.onTajweedBreakdown,
+    this.onMemorize,
     super.key,
   });
 
@@ -38,6 +39,9 @@ class AyahActionSheet extends ConsumerStatefulWidget {
 
   /// Opens the ayah's tajweed breakdown; null where the page has no tajweed.
   final VoidCallback? onTajweedBreakdown;
+
+  /// Adds the ayah to the memorization list; null outside the Mushaf.
+  final VoidCallback? onMemorize;
 
   @override
   ConsumerState<AyahActionSheet> createState() => _AyahActionSheetState();
@@ -271,6 +275,18 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
               onTap: () {
                 Navigator.pop(context);
                 open();
+              },
+            ),
+            const Divider(height: 1),
+          ],
+          if (widget.onMemorize case final memorize?) ...<Widget>[
+            _ActionTile(
+              key: const ValueKey('ayah-memorize'),
+              icon: Icons.psychology_outlined,
+              title: context.l10n.memorizationListLearn,
+              onTap: () {
+                Navigator.pop(context);
+                memorize();
               },
             ),
             const Divider(height: 1),

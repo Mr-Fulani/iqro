@@ -3216,4 +3216,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingReplayHint => 'Features, language and permissions';
+
+  @override
+  String get memorizationListLearn => 'Learn';
+
+  @override
+  String memorizationListLearnTitle(String range) {
+    return 'Learn $range';
+  }
+
+  @override
+  String get memorizationListAddedToQueue =>
+      'Added to your memorization queue.';
+
+  @override
+  String get memorizationListOpen => 'Open';
+
+  @override
+  String memorizationListAlreadyIn(String range) {
+    return 'Already in your list: $range.';
+  }
+
+  @override
+  String get memorizationListAlreadyInShort => 'Already in your list.';
+
+  @override
+  String get memorizationListContinuesCurrent =>
+      'This ayah comes right after your current range.';
+
+  @override
+  String memorizationListExtendTo(String range) {
+    return 'Extend to $range';
+  }
+
+  @override
+  String get memorizationListQueueSeparately => 'Queue separately';
+
+  @override
+  String memorizationListCurrentIs(String range) {
+    return 'You are learning $range now.';
+  }
+
+  @override
+  String get memorizationListAddToQueue => 'Add to queue';
+
+  @override
+  String get memorizationListLearnNow => 'Learn now';
+
+  @override
+  String get memorizationListCurrent => 'Learning now';
+
+  @override
+  String get memorizationListNoCurrent => 'Current range memorized';
+
+  @override
+  String memorizationListMemorizedCount(int count) {
+    return 'Ayahs memorized: $count';
+  }
+
+  @override
+  String get memorizationListMarkMemorized => 'Memorized';
+
+  @override
+  String memorizationListNextPrompt(String range) {
+    return 'Next: $range — start?';
+  }
+
+  @override
+  String get memorizationListBegin => 'Start';
+
+  @override
+  String memorizationListQueue(int count) {
+    return 'Queue · $count';
+  }
+
+  @override
+  String memorizationListRemove(String range) {
+    return 'Remove $range from the queue';
+  }
+
+  @override
+  String memorizationListItemRange(String surah, String range) {
+    return '$surah, $range';
+  }
 }

@@ -5699,6 +5699,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Features, language and permissions'**
   String get onboardingReplayHint;
+
+  /// No description provided for @memorizationListLearn.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn'**
+  String get memorizationListLearn;
+
+  /// No description provided for @memorizationListLearnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn {range}'**
+  String memorizationListLearnTitle(String range);
+
+  /// No description provided for @memorizationListAddedToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to your memorization queue.'**
+  String get memorizationListAddedToQueue;
+
+  /// No description provided for @memorizationListOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get memorizationListOpen;
+
+  /// No description provided for @memorizationListAlreadyIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in your list: {range}.'**
+  String memorizationListAlreadyIn(String range);
+
+  /// No description provided for @memorizationListAlreadyInShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in your list.'**
+  String get memorizationListAlreadyInShort;
+
+  /// No description provided for @memorizationListContinuesCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'This ayah comes right after your current range.'**
+  String get memorizationListContinuesCurrent;
+
+  /// No description provided for @memorizationListExtendTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Extend to {range}'**
+  String memorizationListExtendTo(String range);
+
+  /// No description provided for @memorizationListQueueSeparately.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue separately'**
+  String get memorizationListQueueSeparately;
+
+  /// No description provided for @memorizationListCurrentIs.
+  ///
+  /// In en, this message translates to:
+  /// **'You are learning {range} now.'**
+  String memorizationListCurrentIs(String range);
+
+  /// No description provided for @memorizationListAddToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to queue'**
+  String get memorizationListAddToQueue;
+
+  /// No description provided for @memorizationListLearnNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn now'**
+  String get memorizationListLearnNow;
+
+  /// No description provided for @memorizationListCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning now'**
+  String get memorizationListCurrent;
+
+  /// No description provided for @memorizationListNoCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current range memorized'**
+  String get memorizationListNoCurrent;
+
+  /// No description provided for @memorizationListMemorizedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Ayahs memorized: {count}'**
+  String memorizationListMemorizedCount(int count);
+
+  /// No description provided for @memorizationListMarkMemorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Memorized'**
+  String get memorizationListMarkMemorized;
+
+  /// No description provided for @memorizationListNextPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {range} — start?'**
+  String memorizationListNextPrompt(String range);
+
+  /// No description provided for @memorizationListBegin.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get memorizationListBegin;
+
+  /// No description provided for @memorizationListQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue · {count}'**
+  String memorizationListQueue(int count);
+
+  /// No description provided for @memorizationListRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {range} from the queue'**
+  String memorizationListRemove(String range);
+
+  /// No description provided for @memorizationListItemRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{surah}, {range}'**
+  String memorizationListItemRange(String surah, String range);
 }
 
 class _AppLocalizationsDelegate

@@ -18,6 +18,8 @@ from quran_backend.modules.audio.models import (
 )
 from quran_backend.modules.audio.selectors import public_recitation_base, verified_audio_segments
 from quran_backend.modules.memorization.models import (
+    MemorizationItem,
+    MemorizationItemStatus,
     MemorizationPlan,
     MemorizationSession,
 )
@@ -93,6 +95,7 @@ def get_memorization_dashboard(
     return {
         "timezone_name": timezone_name,
         "plan": plan_snapshot(plan) if plan is not None else None,
+        **list_snapshot(user, plan=plan),
         "today": {
             "local_date": local_date.isoformat(),
             "completed_repetitions": completed,
@@ -198,6 +201,7 @@ def set_memorization_plan(  # noqa: PLR0913
         )
         _full_clean(plan)
         plan.save(force_insert=True)
+        _sync_active_item(plan)
         return plan, True
     if current.revision != base_revision:
         raise MemorizationPlanRevisionConflictError
@@ -232,7 +236,29 @@ def set_memorization_plan(  # noqa: PLR0913
     current.revision += 1
     _full_clean(current)
     current.save()
+    _sync_active_item(current)
     return current, False
+
+
+def _sync_active_item(plan: MemorizationPlan) -> None:
+    """A range saved through the plan form becomes the list's active item."""
+    active = (
+        MemorizationItem.objects.select_for_update()
+        .filter(user_id=plan.user_id, status=MemorizationItemStatus.ACTIVE)
+        .first()
+    )
+    if active is None:
+        MemorizationItem.objects.create(
+            user_id=plan.user_id,
+            start_ayah=plan.start_ayah,
+            end_ayah=plan.end_ayah,
+            status=MemorizationItemStatus.ACTIVE,
+        )
+        return
+    if (active.start_ayah_id, active.end_ayah_id) != (plan.start_ayah_id, plan.end_ayah_id):
+        active.start_ayah = plan.start_ayah
+        active.end_ayah = plan.end_ayah
+        active.save(update_fields=["start_ayah", "end_ayah", "updated_at"])
 
 
 @transaction.atomic
@@ -345,6 +371,51 @@ def plan_snapshot(plan: MemorizationPlan) -> dict[str, Any]:
     }
 
 
+def item_snapshot(item: MemorizationItem) -> dict[str, Any]:
+    return {
+        "id": str(item.id),
+        "status": item.status,
+        "position": item.position,
+        "source": item.source,
+        "start_ayah": _ayah_snapshot(item.start_ayah),
+        "end_ayah": _ayah_snapshot(item.end_ayah),
+        "ayah_count": item.end_ayah.number - item.start_ayah.number + 1,
+        "memorized_at": item.memorized_at,
+        "created_at": item.created_at,
+    }
+
+
+def list_snapshot(user: User, *, plan: MemorizationPlan | None) -> dict[str, Any]:
+    """The whole list: active first, then the queue, then the newest memorized."""
+    items = list(
+        MemorizationItem.objects.filter(user=user).select_related(
+            "start_ayah__surah", "end_ayah__surah"
+        )
+    )
+    order = {
+        MemorizationItemStatus.ACTIVE: 0,
+        MemorizationItemStatus.QUEUED: 1,
+        MemorizationItemStatus.MEMORIZED: 2,
+    }
+    items.sort(
+        key=lambda item: (
+            order[MemorizationItemStatus(item.status)],
+            item.position,
+            -(item.memorized_at.timestamp() if item.memorized_at else 0),
+            item.created_at,
+        )
+    )
+    return {
+        "revision": plan.revision if plan is not None else 0,
+        "items": [item_snapshot(item) for item in items],
+        "memorized_ayah_count": sum(
+            item.end_ayah.number - item.start_ayah.number + 1
+            for item in items
+            if item.status == MemorizationItemStatus.MEMORIZED
+        ),
+    }
+
+
 def session_snapshot(session: MemorizationSession) -> dict[str, Any]:
     return {
         "id": str(session.id),
@@ -426,7 +497,7 @@ def _device_for_user(user: User, device_id: uuid.UUID | None) -> Device | None:
         raise ValidationError({"device_id": "The device must belong to this user."}) from exc
 
 
-def _full_clean(instance: MemorizationPlan | MemorizationSession) -> None:
+def _full_clean(instance: MemorizationPlan | MemorizationSession | MemorizationItem) -> None:
     try:
         instance.full_clean()
     except DjangoValidationError as exc:

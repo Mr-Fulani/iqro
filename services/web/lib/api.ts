@@ -1034,7 +1034,49 @@ export type MemorizationSession = {
   created_at: string;
 };
 
-export type MemorizationDashboard = {
+export type MemorizationItemStatus = "active" | "queued" | "memorized";
+
+export type MemorizationItem = {
+  id: string;
+  status: MemorizationItemStatus;
+  position: number;
+  source: "mushaf" | "manual";
+  start_ayah: MemorizationAyah;
+  end_ayah: MemorizationAyah;
+  ayah_count: number;
+  memorized_at: string | null;
+  created_at: string;
+};
+
+export type MemorizationList = {
+  revision: number;
+  items: MemorizationItem[];
+  memorized_ayah_count: number;
+};
+
+/** A Mushaf selection; it may cross into the next surah. */
+export type MemorizationSelection = {
+  start_surah: number;
+  start_ayah: number;
+  end_surah: number;
+  end_ayah: number;
+};
+
+export type MemorizationSelectionPreview = {
+  state: "empty" | "duplicate" | "extendable" | "choose";
+  revision: number;
+  item: MemorizationItem | null;
+  extend_to: { surah_number: number; start_ayah_number: number; end_ayah_number: number } | null;
+};
+
+export type MemorizationItemMutation = MemorizationList & {
+  result: "started" | "queued" | "merged" | "now" | "extended" | "duplicate" | "memorized" | "removed";
+  item: MemorizationItem | null;
+  next: MemorizationItem | null;
+  plan: MemorizationPlan | null;
+};
+
+export type MemorizationDashboard = MemorizationList & {
   timezone_name: string;
   plan: MemorizationPlan | null;
   today: {
@@ -2244,6 +2286,58 @@ export class ApiClient {
         client_updated_at: new Date().toISOString(),
       }),
     });
+  }
+
+  public async previewMemorizationSelection(
+    selection: MemorizationSelection,
+  ): Promise<MemorizationSelectionPreview> {
+    const params = new URLSearchParams(
+      Object.entries(selection).map(([key, value]) => [key, String(value)]),
+    );
+    return this.request<MemorizationSelectionPreview>(
+      `/api/v1/me/memorization-items/preview?${params.toString()}`,
+      { cache: "no-store" },
+    );
+  }
+
+  public async addMemorizationSelection(data: MemorizationSelection & {
+    mode: "queue" | "now" | "extend";
+    timezone_name: string;
+    base_revision: number;
+    recitation_id?: string | null;
+  }): Promise<MemorizationItemMutation> {
+    return this.request<MemorizationItemMutation>("/api/v1/me/memorization-items", {
+      method: "POST",
+      body: JSON.stringify({
+        ...data,
+        source: "mushaf",
+        client_updated_at: new Date().toISOString(),
+      }),
+    });
+  }
+
+  public async updateMemorizationItem(
+    itemId: string,
+    data: { status: "active" | "memorized"; base_revision: number },
+  ): Promise<MemorizationItemMutation> {
+    return this.request<MemorizationItemMutation>(
+      `/api/v1/me/memorization-items/${encodeURIComponent(itemId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ ...data, client_updated_at: new Date().toISOString() }),
+      },
+    );
+  }
+
+  public async removeMemorizationItem(
+    itemId: string,
+    baseRevision: number,
+  ): Promise<MemorizationItemMutation> {
+    const params = new URLSearchParams({ base_revision: String(baseRevision) });
+    return this.request<MemorizationItemMutation>(
+      `/api/v1/me/memorization-items/${encodeURIComponent(itemId)}?${params.toString()}`,
+      { method: "DELETE" },
+    );
   }
 
   public async resetTodayMemorizationProgress(timezoneName: string): Promise<void> {

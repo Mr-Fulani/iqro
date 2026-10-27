@@ -1635,6 +1635,61 @@ class MemorizationController
   Future<void> reset() =>
       _replace((scope) => _repository.reset(accountScope: scope));
 
+  /// Adds a Mushaf selection to the list and returns the server's result.
+  Future<String> addSelection(
+    MemorizationSelection selection, {
+    required MemorizationAddMode mode,
+    required int baseRevision,
+    String? recitationId,
+  }) async {
+    var result = '';
+    await _mutateList((scope) async {
+      final added = await _repository.addSelection(
+        selection,
+        mode: mode,
+        baseRevision: baseRevision,
+        recitationId: recitationId,
+        accountScope: scope,
+      );
+      result = added.result;
+      return added.dashboard;
+    });
+    return result;
+  }
+
+  Future<void> updateItem(
+    MemorizationItem item,
+    MemorizationItemStatus status, {
+    required int baseRevision,
+  }) => _mutateList(
+    (scope) => _repository.updateItem(
+      item.id,
+      status,
+      baseRevision: baseRevision,
+      accountScope: scope,
+    ),
+  );
+
+  Future<void> removeItem(MemorizationItem item, {required int baseRevision}) =>
+      _mutateList(
+        (scope) => _repository.removeItem(
+          item.id,
+          baseRevision: baseRevision,
+          accountScope: scope,
+        ),
+      );
+
+  /// A failed list change keeps the dashboard on screen; the caller reports it.
+  Future<void> _mutateList(
+    Future<MemorizationDashboard> Function(AccountScopeSnapshot scope) change,
+  ) async {
+    final scope = _accountScope;
+    if (scope == null) throw const AccountScopeChanged();
+    final next = await change(scope);
+    _database.ensureCurrent(scope);
+    if (mounted) state = AsyncValue.data(next);
+  }
+
   Future<void> _replace(
     Future<MemorizationDashboard> Function(AccountScopeSnapshot scope) load, {
     bool propagateError = true,

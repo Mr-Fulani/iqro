@@ -15,6 +15,17 @@ class MemorizationAssessment(models.TextChoices):
     MEMORIZED = "memorized", "Memorized"
 
 
+class MemorizationItemStatus(models.TextChoices):
+    ACTIVE = "active", "Active"
+    QUEUED = "queued", "Queued"
+    MEMORIZED = "memorized", "Memorized"
+
+
+class MemorizationItemSource(models.TextChoices):
+    MUSHAF = "mushaf", "Mushaf"
+    MANUAL = "manual", "Manual"
+
+
 class MemorizationPlan(BaseModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -86,6 +97,59 @@ class MemorizationPlan(BaseModel):
         device = self.device if self.device_id else None
         if device is not None and device.user_id != self.user_id:
             raise ValidationError({"device": "Device must belong to the same user."})
+
+
+class MemorizationItem(BaseModel):
+    """One range of the user's memorization list; the active one is the plan's range."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="memorization_items",
+    )
+    start_ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        related_name="memorization_items_started",
+    )
+    end_ayah = models.ForeignKey(
+        "quran.Ayah",
+        on_delete=models.PROTECT,
+        related_name="memorization_items_ended",
+    )
+    status = models.CharField(max_length=16, choices=MemorizationItemStatus)
+    position = models.PositiveIntegerField(default=0)
+    source = models.CharField(
+        max_length=16,
+        choices=MemorizationItemSource,
+        default=MemorizationItemSource.MANUAL,
+    )
+    memorized_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "memorization_item"
+        ordering = ["position", "created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(status="active"),
+                name="memorization_item_one_active",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["user", "status", "position"],
+                name="memorization_item_list_idx",
+            )
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        if self.start_ayah_id and self.end_ayah_id:
+            if self.start_ayah.surah_id != self.end_ayah.surah_id:
+                raise ValidationError({"end_ayah": "The range must stay within one surah."})
+            if self.start_ayah.number > self.end_ayah.number:
+                raise ValidationError({"end_ayah": "The range end must follow its start."})
 
 
 class MemorizationSession(BaseModel):

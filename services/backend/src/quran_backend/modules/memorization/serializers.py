@@ -6,7 +6,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from rest_framework import serializers
 
 from quran_backend.modules.core.serializers import StrictFieldsSerializer, UUIDv7Field
-from quran_backend.modules.memorization.models import MemorizationAssessment
+from quran_backend.modules.memorization.items import AddMode
+from quran_backend.modules.memorization.models import (
+    MemorizationAssessment,
+    MemorizationItemSource,
+    MemorizationItemStatus,
+)
 
 
 class MemorizationQuerySerializer(StrictFieldsSerializer):
@@ -37,6 +42,45 @@ class MemorizationPlanWriteSerializer(StrictFieldsSerializer):
 
     def validate_timezone_name(self, value: str) -> str:
         return _validate_timezone_name(value)
+
+
+class MemorizationSelectionSerializer(StrictFieldsSerializer):
+    edition_code = serializers.CharField(max_length=64, default="madani-hafs", required=False)
+    start_surah = serializers.IntegerField(min_value=1, max_value=114)
+    start_ayah = serializers.IntegerField(min_value=1, max_value=286)
+    end_surah = serializers.IntegerField(min_value=1, max_value=114)
+    end_ayah = serializers.IntegerField(min_value=1, max_value=286)
+
+
+class MemorizationItemAddSerializer(MemorizationSelectionSerializer):
+    mode = serializers.ChoiceField(choices=AddMode.CHOICES, default=AddMode.QUEUE, required=False)
+    # The wire name shadows Field.source, which DRF still resolves per field.
+    source = serializers.ChoiceField(  # type: ignore[assignment]
+        choices=MemorizationItemSource.choices,
+        default=MemorizationItemSource.MUSHAF,
+        required=False,
+    )
+    recitation_id = serializers.UUIDField(required=False, allow_null=True)
+    timezone_name = serializers.CharField(max_length=64)
+    base_revision = serializers.IntegerField(min_value=0)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+
+    def validate_timezone_name(self, value: str) -> str:
+        return _validate_timezone_name(value)
+
+
+class MemorizationItemUpdateSerializer(StrictFieldsSerializer):
+    status = serializers.ChoiceField(
+        choices=[MemorizationItemStatus.ACTIVE, MemorizationItemStatus.MEMORIZED]
+    )
+    base_revision = serializers.IntegerField(min_value=0)
+    client_updated_at = serializers.DateTimeField()
+    device_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class MemorizationItemDeleteQuerySerializer(StrictFieldsSerializer):
+    base_revision = serializers.IntegerField(min_value=0)
 
 
 class MemorizationSessionCreateSerializer(StrictFieldsSerializer):
@@ -123,9 +167,58 @@ class MemorizationRecentDayOutputSerializer(serializers.Serializer[Any]):
     last_assessment = serializers.ChoiceField(choices=MemorizationAssessment.choices)
 
 
+class MemorizationItemOutputSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=MemorizationItemStatus.choices)
+    position = serializers.IntegerField()
+    source = serializers.ChoiceField(choices=MemorizationItemSource.choices)  # type: ignore[assignment]
+    start_ayah = MemorizationAyahOutputSerializer()
+    end_ayah = MemorizationAyahOutputSerializer()
+    ayah_count = serializers.IntegerField()
+    memorized_at = serializers.DateTimeField(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
+class MemorizationSpanOutputSerializer(serializers.Serializer[Any]):
+    surah_number = serializers.IntegerField()
+    start_ayah_number = serializers.IntegerField()
+    end_ayah_number = serializers.IntegerField()
+
+
+class MemorizationSelectionPreviewOutputSerializer(serializers.Serializer[Any]):
+    state = serializers.ChoiceField(choices=["empty", "duplicate", "extendable", "choose"])
+    revision = serializers.IntegerField()
+    item = MemorizationItemOutputSerializer(allow_null=True)
+    extend_to = MemorizationSpanOutputSerializer(allow_null=True)
+
+
+class MemorizationItemMutationOutputSerializer(serializers.Serializer[Any]):
+    result = serializers.ChoiceField(
+        choices=[
+            "started",
+            "queued",
+            "merged",
+            "now",
+            "extended",
+            "duplicate",
+            "memorized",
+            "removed",
+        ]
+    )
+    item = MemorizationItemOutputSerializer(allow_null=True)
+    next = MemorizationItemOutputSerializer(allow_null=True)
+    plan = MemorizationPlanOutputSerializer(allow_null=True)
+    revision = serializers.IntegerField()
+    items = MemorizationItemOutputSerializer(many=True)
+    memorized_ayah_count = serializers.IntegerField()
+
+
 class MemorizationDashboardOutputSerializer(serializers.Serializer[Any]):
     timezone_name = serializers.CharField()
     plan = MemorizationPlanOutputSerializer(allow_null=True)
+    revision = serializers.IntegerField()
+    items = MemorizationItemOutputSerializer(many=True)
+    memorized_ayah_count = serializers.IntegerField()
     today = MemorizationTodayOutputSerializer()
     recent_days = MemorizationRecentDayOutputSerializer(many=True)
 
