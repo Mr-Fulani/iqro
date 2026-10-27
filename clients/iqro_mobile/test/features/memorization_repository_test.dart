@@ -1,4 +1,9 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
+import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/features/memorization/memorization_repository.dart';
@@ -26,6 +31,53 @@ void main() {
       expect(offline.plan?.endAyah.ayah, 4);
     },
   );
+
+  test('only a dashboard saved today is shown before the server', () async {
+    final database = _MemoryDatabase();
+    final remote = _MemoryRemote();
+    final repository = MemorizationRepository(
+      database: database,
+      remote: remote,
+      timezoneLoader: () async => 'Europe/Istanbul',
+    );
+    expect(await repository.cachedToday(), isNull);
+
+    await repository.load();
+    expect(await repository.cachedToday(), isNull);
+
+    remote.dashboardPayload = _dashboard(localDate: _today());
+    await repository.load();
+    final cached = await repository.cachedToday();
+    expect(cached?.fromCache, isTrue);
+    expect(cached?.plan?.dailyRepetitions, 5);
+  });
+
+  test('controller shows today\'s saved dashboard while loading', () async {
+    final database = _MemoryDatabase();
+    final remote = _MemoryRemote()
+      ..dashboardPayload = _dashboard(localDate: _today());
+    final repository = MemorizationRepository(
+      database: database,
+      remote: remote,
+      timezoneLoader: () async => 'Europe/Istanbul',
+    );
+    await repository.load();
+    final response = Completer<void>();
+    remote.dashboardGate = response.future;
+
+    final controller = MemorizationController(
+      repository,
+      database: database,
+      accountScope: _MemoryDatabase.scope,
+    );
+    await pumpEventQueue();
+    expect(controller.state.valueOrNull?.fromCache, isTrue);
+
+    response.complete();
+    await pumpEventQueue();
+    expect(controller.state.valueOrNull?.fromCache, isFalse);
+    controller.dispose();
+  });
 
   test('plan edit sends canonical ayah ids and optimistic revision', () async {
     final remote = _MemoryRemote();
@@ -143,6 +195,7 @@ class _MemoryDatabase implements LocalDatabase {
 class _MemoryRemote implements MemorizationRemoteGateway {
   var dashboardPayload = _dashboard();
   bool failDashboard = false;
+  Future<void>? dashboardGate;
   String? timezoneName;
   Map<String, Object?>? savedPlan;
   Map<String, Object?>? savedSession;
@@ -153,6 +206,7 @@ class _MemoryRemote implements MemorizationRemoteGateway {
     AccountScopeSnapshot? accountScope,
   }) async {
     this.timezoneName = timezoneName;
+    await dashboardGate;
     if (failDashboard) throw StateError('offline');
     return dashboardPayload;
   }
@@ -208,39 +262,42 @@ class _MemoryRemote implements MemorizationRemoteGateway {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-Map<String, Object?> _dashboard() => <String, Object?>{
-  'timezone_name': 'Europe/Istanbul',
-  'plan': <String, Object?>{
-    'id': 'plan-1',
-    'edition_code': 'madani-hafs',
-    'content_version': '2026.1',
-    'start_ayah': <String, Object?>{
-      'id': 'ayah-2',
-      'surah_number': 2,
-      'ayah_number': 2,
-      'text_uthmani': 'text',
-    },
-    'end_ayah': <String, Object?>{
-      'id': 'ayah-4',
-      'surah_number': 2,
-      'ayah_number': 4,
-      'text_uthmani': 'text',
-    },
-    'recitation_id': null,
-    'reciter': null,
-    'daily_repetitions': 5,
-    'pause_seconds': 2,
-    'timezone_name': 'Europe/Istanbul',
-    'revision': 7,
-  },
-  'today': <String, Object?>{
-    'local_date': '2026-09-02',
-    'completed_repetitions': 0,
-    'target_repetitions': 5,
-    'remaining_repetitions': 5,
-    'is_completed': false,
-    'last_assessment': null,
-    'sessions': const <Object?>[],
-  },
-  'recent_days': const <Object?>[],
-};
+String _today() => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+Map<String, Object?> _dashboard({String localDate = '2026-09-02'}) =>
+    <String, Object?>{
+      'timezone_name': 'Europe/Istanbul',
+      'plan': <String, Object?>{
+        'id': 'plan-1',
+        'edition_code': 'madani-hafs',
+        'content_version': '2026.1',
+        'start_ayah': <String, Object?>{
+          'id': 'ayah-2',
+          'surah_number': 2,
+          'ayah_number': 2,
+          'text_uthmani': 'text',
+        },
+        'end_ayah': <String, Object?>{
+          'id': 'ayah-4',
+          'surah_number': 2,
+          'ayah_number': 4,
+          'text_uthmani': 'text',
+        },
+        'recitation_id': null,
+        'reciter': null,
+        'daily_repetitions': 5,
+        'pause_seconds': 2,
+        'timezone_name': 'Europe/Istanbul',
+        'revision': 7,
+      },
+      'today': <String, Object?>{
+        'local_date': localDate,
+        'completed_repetitions': 0,
+        'target_repetitions': 5,
+        'remaining_repetitions': 5,
+        'is_completed': false,
+        'last_assessment': null,
+        'sessions': const <Object?>[],
+      },
+      'recent_days': const <Object?>[],
+    };

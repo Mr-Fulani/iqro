@@ -52,11 +52,27 @@ class DevicePrayerLocationGateway implements PrayerLocationGateway {
   Future<PrayerLocationPermission> requestPermission() async =>
       _mapPermission(await Geolocator.requestPermission());
 
+  // Prayer times change by about a minute per 20 km: a district-level fix
+  // is enough. A position the phone found in the last half hour is used at
+  // once; otherwise the network fix arrives sooner than a medium one.
   @override
   Future<PrayerDevicePosition> currentPosition() async {
+    try {
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null &&
+          DateTime.now().difference(last.timestamp) <
+              const Duration(minutes: 30)) {
+        return PrayerDevicePosition(
+          latitude: last.latitude,
+          longitude: last.longitude,
+        );
+      }
+    } on Object {
+      // No cached position: ask for a fresh one.
+    }
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.medium,
+        accuracy: LocationAccuracy.low,
         timeLimit: Duration(seconds: 20),
       ),
     );

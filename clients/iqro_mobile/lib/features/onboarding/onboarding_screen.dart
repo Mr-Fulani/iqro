@@ -436,7 +436,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         FilledButton(
           key: key,
           onPressed: _busy ? null : onPressed,
-          child: Text(label, textAlign: TextAlign.center),
+          // A greyed-out button alone read as a frozen app while reminders
+          // were being set up.
+          child: _busy
+              ? SizedBox.square(
+                  dimension: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    semanticsLabel: label,
+                  ),
+                )
+              : Text(label, textAlign: TextAlign.center),
         );
     Widget secondary(String label, VoidCallback? onPressed, {Key? key}) =>
         TextButton(
