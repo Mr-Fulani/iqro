@@ -215,6 +215,41 @@ void main() {
       expect(fake.configs.length, built);
     });
 
+    testWidgets('a pose the owner replaced shows the new picture, not the '
+        'scene', (tester) async {
+      // A replaced picture comes from the course document: a new address and
+      // no `scene`, so the step shows it with no app release.
+      final fixture = salahFixture();
+      final media = fixture['media']! as Map<String, Object?>;
+      final replaced = Map<String, Object?>.of(
+        media['position-takbir']! as Map<String, Object?>,
+      )..remove('scene');
+      const url =
+          'https://media.iqro.forum/salah/hanbali-umdah/2026-10-28/position-takbir-0123456789ab.webp';
+      replaced['url'] = url;
+      media['position-takbir'] = replaced;
+      final fake = _Fake3D();
+
+      final harness = await _pump(
+        tester,
+        location: '/salah/lesson/fajr',
+        view3d: fake.build,
+        fixture: fixture,
+      );
+
+      expect(view, findsNothing);
+      expect(caption, findsNothing);
+      expect(
+        find.byKey(const ValueKey('salah-image-position-takbir')),
+        findsOneWidget,
+      );
+      expect(harness.images, contains(url));
+      // The next pose is still a still of the scene.
+      await _tapNext(tester);
+      expect(view, findsOneWidget);
+      expect(fake.last.step, 'qiyam');
+    });
+
     testWidgets('reduced motion still plays, pictures without a scene stay', (
       tester,
     ) async {
@@ -935,6 +970,7 @@ Future<_Harness> _pump(
   bool disableAnimations = false,
   FakeVideoFactory? videos,
   CourseProgressStore? positions,
+  Map<String, Object?>? fixture,
 }) async {
   SharedPreferences.setMockInitialValues(preferences);
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -943,7 +979,7 @@ Future<_Harness> _pump(
   ))!;
   addTearDown(() => tester.runAsync(sqlDatabase.close));
   final database = LocalDatabase.forTesting(sqlDatabase);
-  final document = SalahCourseDocument.fromJson(salahFixture());
+  final document = SalahCourseDocument.fromJson(fixture ?? salahFixture());
   final store = _MemoryProgressStore(progress);
   final images = <String>[];
   final engine = _SilentAudioEngine();

@@ -25,6 +25,7 @@ from django.utils.html import format_html, format_html_join
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.content_revalidation import enqueue_salah_content_change
 from quran_backend.modules.core.object_storage import ObjectStorageError
+from quran_backend.modules.salah.editor import image_usage
 from quran_backend.modules.salah.editor_admin import editor_editable, readonly_reason
 from quran_backend.modules.salah.editor_structure_admin import SalahStructureAdminMixin
 from quran_backend.modules.salah.importer import (
@@ -33,6 +34,7 @@ from quran_backend.modules.salah.importer import (
     sign_salah_version,
 )
 from quran_backend.modules.salah.media_upload import (
+    IMAGE_FORMATS_HELP,
     IMAGE_SIDE,
     MAX_SOURCE_MIB,
     SalahMediaUploadError,
@@ -185,6 +187,8 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
                     "alt": alt.get("ru", "") if isinstance(alt, dict) else "",
                     "url": public_audio_url(current.object_key) if current else "",
                     "kib": round(current.bytes / 1024) if current else None,
+                    "scene": bool(asset.get("scene")),
+                    "steps": image_usage(version.snapshot, str(asset["key"])),
                 }
             )
         return TemplateResponse(
@@ -199,6 +203,8 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
                 "editable": editable,
                 "image_side": IMAGE_SIDE,
                 "max_source_mib": MAX_SOURCE_MIB,
+                "formats": IMAGE_FORMATS_HELP,
+                "editor_url": reverse("admin:salah_salahcourseversion_editor", args=[version.pk]),
             },
         )
 
@@ -209,7 +215,9 @@ class SalahCourseVersionAdmin(SalahStructureAdminMixin, admin.ModelAdmin):  # ty
             self.message_user(request, f"{key}: файл не выбран.", messages.ERROR)
             return
         try:
-            asset = upload_salah_image(version, key, uploaded)
+            asset = upload_salah_image(
+                version, key, uploaded, keep_scene=request.POST.get("keep_scene") == "on"
+            )
         except (SalahMediaUploadError, SalahFormulaError) as error:
             self.message_user(request, f"{key}: {error}", messages.ERROR)
         except ImproperlyConfigured, ObjectStorageError, OSError:

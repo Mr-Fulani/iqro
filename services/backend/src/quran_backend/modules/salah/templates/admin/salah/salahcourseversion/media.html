@@ -15,22 +15,31 @@
 <div id="content-main">
   {% if editable %}
     <p class="help">
-      PNG, JPEG или WebP до {{ max_source_mib }} МБ. Сервер обрежет картинку по центру до
+      {{ formats }} до {{ max_source_mib }} МБ. Сервер обрежет картинку по центру до
       квадрата, уменьшит до {{ image_side }}×{{ image_side }} и сожмёт в WebP. Новый файл
-      заменяет прежний, документы курса пересобираются сразу.
+      заменяет прежний во всех шагах с этой картинкой, документы курса пересобираются сразу.
+      На сайте и в приложении замена появится после подписи и публикации черновика.
+    </p>
+    <p class="help">
+      «3D» — поверх этой картинки на сайте и в приложении играет 3D-анимация позы. Новая
+      картинка выключает анимацию, чтобы ученик видел именно её; отметьте «оставить
+      3D-анимацию», если загружаете новый кадр самой сцены. Картинку одного шага удобнее
+      менять в <a href="{{ editor_url }}">редакторе курса</a>: шаг → «Свойства шага» → «Картинка».
     </p>
   {% else %}
     <p class="help">Версия подписана, опубликована или отозвана: иллюстрации только для просмотра.</p>
   {% endif %}
   <table>
     <thead>
-      <tr><th>Ключ</th><th>Что изображено</th><th>Сейчас</th>{% if editable %}<th>Загрузить</th>{% endif %}</tr>
+      <tr><th>Ключ</th><th>Что изображено</th><th>Шагов</th><th>3D</th><th>Сейчас</th>{% if editable %}<th>Загрузить</th>{% endif %}</tr>
     </thead>
     <tbody>
       {% for row in rows %}
         <tr>
           <td><code>{{ row.key }}</code></td>
           <td style="max-width:360px">{{ row.alt }}</td>
+          <td>{{ row.steps }}</td>
+          <td>{% if row.scene %}3D{% else %}—{% endif %}</td>
           <td>
             {% if row.url %}
               <a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">
@@ -45,7 +54,8 @@
               <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="key" value="{{ row.key }}">
-                <input type="file" name="file" accept="image/png,image/jpeg,image/webp" required>
+                <input type="file" name="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" required>
+                {% if row.scene %}<label><input type="checkbox" name="keep_scene" value="on"> оставить 3D-анимацию</label>{% endif %}
                 <input type="submit" class="button" value="Загрузить">
               </form>
             </td>

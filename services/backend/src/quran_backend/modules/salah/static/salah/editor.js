@@ -243,7 +243,9 @@
       changed();
     });
     form.addEventListener("change", (event) => {
-      if (event.target.matches('input[type="file"]')) showChosenFile(event.target);
+      if (event.target.matches("#id-prop-image")) showChosenImage(event.target);
+      else if (event.target.matches('input[type="file"]')) showChosenFile(event.target);
+      if (event.target.matches("#id-prop-media")) showPicture(event.target.value);
       changed();
     });
     form.addEventListener("submit", (event) => {
@@ -303,6 +305,70 @@
       if (!window.confirm(button.dataset.confirm)) event.preventDefault();
     });
   });
+
+  // The step picture: the one chosen in «Картинка», and a new file before it is saved.
+  const imageBlock = root.querySelector("[data-image-block]");
+  const picturesData = document.getElementById("se-pictures-data");
+  const pictures = picturesData ? JSON.parse(picturesData.textContent) : {};
+  let chosenImageUrl = "";
+
+  function showPicture(key) {
+    if (!imageBlock) return;
+    const picture = pictures[key] || null;
+    const now = imageBlock.querySelector("[data-image-now] img");
+    now.hidden = !(picture && picture.url);
+    now.src = picture && picture.url ? picture.url : "";
+    const caption = imageBlock.querySelector("[data-image-caption]");
+    if (!picture) caption.textContent = "Нет картинки";
+    else {
+      const size = picture.url ? `${picture.kib} КБ` : "Файл ещё не загружен";
+      caption.textContent = `${size} · шагов с этой картинкой: ${picture.steps}` +
+        (picture.scene ? " · поверх играет 3D-анимация позы" : "");
+    }
+    const scope = imageBlock.querySelector("[data-image-scope]");
+    if (scope) {
+      scope.hidden = !picture || picture.steps < 2;
+      scope.querySelector("[data-image-steps]").textContent = picture ? picture.steps : "";
+    }
+    const scene = imageBlock.querySelector("[data-image-scene]");
+    if (scene) scene.hidden = !(picture && picture.scene);
+    if (preview && preview.kind === "step" && !chosenImageUrl) {
+      preview.image = picture && picture.url ? { url: picture.url, alt: preview.image ? preview.image.alt : {} } : null;
+    }
+  }
+
+  // A chosen picture shows in the block and in the step preview before it is saved.
+  function showChosenImage(input) {
+    const box = imageBlock.querySelector("[data-image-preview]");
+    box.replaceChildren();
+    if (chosenImageUrl) URL.revokeObjectURL(chosenImageUrl);
+    chosenImageUrl = "";
+    const file = input.files && input.files[0];
+    box.hidden = !file;
+    if (!file) {
+      showPicture(form.querySelector("#id-prop-media").value);
+      return;
+    }
+    const note = document.createElement("span");
+    note.className = "se-small";
+    if (!/\.(png|jpe?g|webp|svg)$/i.test(file.name)) {
+      note.textContent = "Нужен файл PNG, JPEG, WebP или SVG — этот сервер не примет.";
+      note.classList.add("se-error");
+      box.append(note);
+      return;
+    }
+    chosenImageUrl = URL.createObjectURL(file);
+    const image = document.createElement("img");
+    image.src = chosenImageUrl;
+    image.alt = "";
+    image.width = 120;
+    image.height = 120;
+    note.textContent = `Выбрано: ${file.name}, ${Math.max(1, Math.round(file.size / 1024))} КБ — сохранится кнопкой «Сохранить». На сайте и в приложении она будет обрезана до квадрата.`;
+    box.append(image, note);
+    if (preview && preview.kind === "step") {
+      preview.image = { url: chosenImageUrl, alt: preview.image ? preview.image.alt : {} };
+    }
+  }
 
   // A chosen recording can be heard before it is saved.
   function showChosenFile(input) {

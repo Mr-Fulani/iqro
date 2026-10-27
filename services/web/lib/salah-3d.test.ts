@@ -73,6 +73,23 @@ test("the document keeps a well-formed scene and drops a malformed one", () => {
   assert.equal(media["wudu-face"]!.scene, undefined);
 });
 
+test("a pose the owner replaced shows its new picture from the document, not the scene", () => {
+  // The same case as clients/iqro_mobile/test/features/salah_lesson_screen_test.dart: the admin
+  // stores a new picture under a new address and drops `scene`, so no client release is needed.
+  const example = JSON.parse(
+    readFileSync(new URL("../../../docs/salah/course-document.example.json", import.meta.url), "utf8"),
+  ) as { media: Record<string, Record<string, unknown>>; lessons: { steps: SalahStep[] }[] };
+  const url = "https://media.iqro.forum/salah/hanbali-umdah/2026-10-28/position-takbir-0123456789ab.webp";
+  const replaced: Record<string, unknown> = { ...example.media["position-takbir"]!, url };
+  delete replaced.scene;
+  example.media["position-takbir"] = replaced;
+  const document = parseSalahCourseDocument(example);
+  assert.equal(document.media["position-takbir"]!.url, url);
+  assert.equal(document.media["position-takbir"]!.scene, undefined);
+  const steps = [step("takbir", "position-takbir"), step("ruku", "position-ruku")];
+  assert.deepEqual(salahStepScenes(steps, document.media), [null, { pose: "ruku", view: "full" }]);
+});
+
 test("this build knows every pose of the scene and every pose the course asks for", () => {
   assert.deepEqual([...SALAH_SCENE_POSES].sort(), STEPS.map((item) => item.id).sort());
   const snapshot = JSON.parse(

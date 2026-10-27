@@ -785,6 +785,50 @@ def step_images(snapshot: Mapping[str, Any]) -> list[tuple[str, str]]:
     ]
 
 
+def _course_steps(snapshot: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
+    """Every step as stored: a lesson's own and each prayer template's."""
+    for lesson in snapshot.get("lessons", []):
+        yield from lesson.get("steps", [])
+    for template in snapshot.get("templates", []):
+        yield from template.get("steps", [])
+
+
+def image_usage(snapshot: Mapping[str, Any], key: str) -> int:
+    """How many stored steps show the picture; a prayer template's step counts once."""
+    return sum(1 for step in _course_steps(snapshot) if step.get("media") == key)
+
+
+def image_scene(snapshot: Mapping[str, Any], key: str) -> bool:
+    """The picture is a still of the 3D scene, which plays over it."""
+    return any(
+        asset.get("key") == key and asset.get("scene") for asset in snapshot.get("media", [])
+    )
+
+
+def new_image_key(node: EditorNode) -> str:
+    """A fresh key for a picture of this step alone."""
+    base = re.sub(r"[^a-z0-9]+", "-", node.id.split(":", 1)[-1].lower()).strip("-")
+    suffix = secrets.token_hex(3)
+    return f"image-step-{base}"[: 96 - len(suffix) - 1] + f"-{suffix}"
+
+
+def image_variants(
+    snapshot: dict[str, Any], node: EditorNode, old_key: str | None, languages: Sequence[str]
+) -> list[dict[str, Any]]:
+    """Variants that take this step's own new picture too: the same words, the same old one."""
+    return [
+        variant
+        for variant in step_variants(snapshot, node)
+        if _same_words(variant, node.data, languages) and variant.get("media") == old_key
+    ]
+
+
+def add_image_media(snapshot: dict[str, Any], key: str, alt: Mapping[str, str]) -> None:
+    snapshot.setdefault("media", []).append(
+        {"key": key, "file": f"media/{key}.webp", "alt": dict(alt)}
+    )
+
+
 def _parse_properties(
     data: Mapping[str, Any], snapshot: Mapping[str, Any], errors: dict[str, str]
 ) -> dict[str, Any]:
