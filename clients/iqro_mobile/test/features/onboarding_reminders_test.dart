@@ -85,6 +85,32 @@ void main() {
       for (final event in onboardingPrayerEvents) 'guest-a:$event',
     ]);
   });
+
+  test('prayer reminders turn on together with one plan', () async {
+    final accountScope = AccountScope()..activate('guest-a');
+    final database = LocalDatabase.forTesting(sql, accountScope: accountScope);
+    final notifications = _Notifications(database)..requests = 1;
+    final reminders = _Reminders(database);
+    final controller = ReminderController(
+      repository: reminders,
+      notifications: notifications,
+      prayerRepository: _UnusedPrayerRepository(),
+      database: database,
+      accountScope: accountScope.current,
+      locale: () => 'ru',
+    );
+    addTearDown(controller.dispose);
+    await controller.reload();
+    notifications.plannedRuleCounts.clear();
+
+    await controller.enablePrayers(onboardingPrayerEvents);
+    await pumpEventQueue();
+
+    expect(controller.state.rules, hasLength(onboardingPrayerEvents.length));
+    // One plan for all five: a plan per reminder rescheduled 32 days of
+    // notifications five times over on Android.
+    expect(notifications.plannedRuleCounts, [onboardingPrayerEvents.length]);
+  });
 }
 
 const _config = AppConfig(
@@ -168,6 +194,7 @@ class _Notifications extends NotificationGateway {
 
   var requests = 0;
   var reschedules = 0;
+  final plannedRuleCounts = <int>[];
 
   @override
   Future<ReminderPermission> permissionStatus() async =>
@@ -189,6 +216,7 @@ class _Notifications extends NotificationGateway {
     required AccountScopeSnapshot accountScope,
   }) async {
     reschedules++;
+    plannedRuleCounts.add(rules.length);
     return ReminderSchedulingResult(
       permission: await permissionStatus(),
       exact: true,

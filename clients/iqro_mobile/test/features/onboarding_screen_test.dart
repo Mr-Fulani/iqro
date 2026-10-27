@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/analytics/analytics.dart';
@@ -245,6 +247,35 @@ void main() {
     expect(services.exactRequests, 0);
     expect(find.text(_ru.onboardingDoneTitle), findsOneWidget);
     expect(find.text(_ru.onboardingRemindersOn), findsOneWidget);
+  });
+
+  testWidgets('the button shows progress while reminders are set up', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final services = FakeOnboardingServices()..remindersGate = gate.future;
+    await pumpOnboarding(
+      tester,
+      services: services,
+      stored: const <String, Object>{'locale': 'ru'},
+      initialStep: OnboardingStep.reminders,
+      analytics: false,
+    );
+
+    await tester.tap(find.byKey(const Key('onboarding-next')));
+    await tester.pump();
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('onboarding-next')),
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(services.remindersEnabled, 1);
+    expect(find.text(_ru.onboardingDoneTitle), findsOneWidget);
   });
 
   testWidgets('turning the prayer switch off only asks for notifications', (
