@@ -130,6 +130,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       ),
       body: IqroPage(
         padding: iqroRootTabPadding(
+          context,
           playerActive: ref.watch(
             audioControllerProvider.select((value) => value.active),
           ),

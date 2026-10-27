@@ -8,14 +8,18 @@ extension LocalizationContext on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
 }
 
-EdgeInsetsDirectional iqroRootTabPadding({
+/// Bottom padding of a tab inside the app shell. There the shell's tab bar,
+/// system inset included, is the bottom padding of [context].
+EdgeInsetsDirectional iqroRootTabPadding(
+  BuildContext context, {
   required bool playerActive,
   bool playerCollapsed = false,
 }) => EdgeInsetsDirectional.fromSTEB(
   16,
   8,
   16,
-  playerActive && !playerCollapsed ? 148 : 76,
+  MediaQuery.paddingOf(context).bottom +
+      (playerActive && !playerCollapsed ? 76 : 4),
 );
 
 /// Widest a page's content grows in landscape, padding included.

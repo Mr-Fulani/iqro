@@ -94,17 +94,22 @@ class _AppShellState extends ConsumerState<AppShell> {
                   (_) => const MoreScreen(),
                 ],
               ),
-          const PositionedDirectional(
-            start: 0,
-            end: 0,
-            bottom: 72,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                AppUpdateCard(),
-                AnalyticsConsentCard(),
-                IqroMiniPlayer(),
-              ],
+          // The tab bar is 72 dp plus the system inset under it (48 dp for
+          // three-button navigation edge-to-edge). The Scaffold measures it
+          // and hands the body that height as its bottom padding.
+          Builder(
+            builder: (context) => PositionedDirectional(
+              start: 0,
+              end: 0,
+              bottom: MediaQuery.paddingOf(context).bottom,
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  AppUpdateCard(),
+                  AnalyticsConsentCard(),
+                  IqroMiniPlayer(),
+                ],
+              ),
             ),
           ),
         ],
