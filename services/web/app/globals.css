@@ -7492,7 +7492,20 @@ svg.track-surah-name-ar {
   font-weight: 500;
 }
 
+/*
+ * The words wrap like the app's; a long ayah scrolls in two and a half lines,
+ * the cut line showing there is more, and the step's words are scrolled into
+ * the middle (TajweedBreakdown). Positioned for the words' offsetTop.
+ */
 .tajweed-breakdown-ayah {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 4px;
+  max-block-size: calc(5em + 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 12px 0 8px;
   padding: 12px;
   border-radius: var(--radius-md);
@@ -7505,6 +7518,12 @@ svg.track-surah-name-ar {
 .tajweed-breakdown-word {
   border-radius: 6px;
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tajweed-breakdown-ayah {
+    scroll-behavior: smooth;
+  }
 }
 
 .tajweed-breakdown-word.is-step {

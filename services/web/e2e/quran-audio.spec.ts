@@ -1615,6 +1615,101 @@ test("tajweed breakdown in Arabic turns steps with the left arrow", async ({ pag
   await expect(breakdown.getByRole("button", { name: "التالي" })).toBeVisible();
 });
 
+test("tajweed breakdown on a phone keeps the step of a long ayah in view", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await installTajweedMocks(page);
+  // 6:2 grows to 90 words, as long as 2:282: far wider than the phone.
+  const longAyah = 90;
+  await page.route("**/api/v1/quran/foundation/mushafs/19/pages/128", (route) => {
+    const fixture = foundationPage(19, 128);
+    const [first, last] = [fixture.words[0], fixture.words.at(-1)!];
+    const words = Array.from({ length: longAyah + 1 }, (_, index) => ({
+      ...last,
+      id: index + 3,
+      word_id: index + 3,
+      verse_id: 2,
+      line_number: 3 + Math.floor(index / 9),
+      position_in_line: (index % 9) + 1,
+      position_in_page: index + 3,
+      position_in_verse: index + 1,
+      char_type_name: index === longAyah ? "end" : "word",
+      text: "ﱃ",
+    }));
+    return route.fulfill({ json: { ...fixture, last_word_id: longAyah + 3, words: [first, fixture.words[1], ...words] } });
+  });
+  // An idgham joins words 3 and 4; then a madd in the middle and a qalqalah near the end.
+  await page.route("**/api/v1/quran/tajweed/pages/128", (route) => route.fulfill({
+    json: {
+      ...tajweedPage128,
+      ayahs: [tajweedPage128.ayahs[0], {
+        ...tajweedPage128.ayahs[1],
+        words: [
+          ...tajweedPage128.ayahs[1].words,
+          { position: 45, text: "قَالُوا", rules: [{ code: "madda_normal", start: 3, end: 4 }] },
+          { position: 88, text: "أَحَدُۢ", rules: [{ code: "qalaqah", start: 4, end: 5, variant: "stop" }] },
+        ],
+      }],
+    },
+  }));
+  await page.route(`**/api/v1/recitations/${recitation.id}/ayahs/6/2`, (route) => route.fulfill({
+    json: {
+      track: tracks[5],
+      segment: {
+        ayah_id: ayahs[1].id, surah_number: 6, ayah_number: 2, start_ms: 1_000, end_ms: 10_000,
+        words: [[3, 1_000, 1_400], [4, 1_400, 1_900], [88, 9_000, 9_500]],
+      },
+    },
+  }));
+  await page.goto("/ru/quran?surah=6");
+  const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+  await expect(view).toHaveAttribute("data-font-status", "ready");
+  await trackPausedMedia(page);
+  await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
+  // The phone reader hides the ayah menu; the breakdown opens over the chips.
+  await page.getByTestId("tajweed-breakdown-open-reader").click();
+  const breakdown = page.getByRole("dialog", { name: /^Разбор таджвида/ });
+  const counter = breakdown.getByTestId("tajweed-step-counter");
+  const ayahBox = breakdown.locator(".tajweed-breakdown-ayah");
+  const lit = breakdown.locator(".tajweed-breakdown-word.is-step");
+
+  // The ayah wraps in its box instead of running off the side of the sheet.
+  expect(await ayahBox.evaluate((box) => box.scrollWidth <= box.clientWidth)).toBe(true);
+  expect(await ayahBox.evaluate((box) => box.scrollHeight > box.clientHeight)).toBe(true);
+  const expectInBox = (word: ReturnType<typeof breakdown.locator>) => expect.poll(async () => {
+    const [box, rect] = await Promise.all([ayahBox.boundingBox(), word.boundingBox()]);
+    return Boolean(box && rect && rect.y >= box.y - 1 && rect.y + rect.height <= box.y + box.height + 1
+      && rect.x >= box.x - 1 && rect.x + rect.width <= box.x + box.width + 1);
+  }).toBe(true);
+  const expectStep = async (text: string, positions: string[]) => {
+    await expect(counter).toHaveText(text);
+    await expect(lit).toHaveCount(positions.length);
+    for (const [index, position] of positions.entries()) {
+      await expect(lit.nth(index)).toHaveAttribute("data-word-position", position);
+      await expectInBox(lit.nth(index));
+    }
+  };
+
+  await expectStep("1 из 4: Идгам без гунны", ["3", "4"]);
+  const next = breakdown.getByRole("button", { name: "Далее" });
+  await next.click();
+  await expectStep("2 из 4: Мадд табии", ["4"]);
+  await next.click();
+  await expectStep("3 из 4: Мадд табии", ["45"]);
+  await next.click();
+  await expectStep("4 из 4: Калькаля", ["88"]);
+  await breakdown.getByRole("button", { name: "Назад" }).click();
+  await expectStep("3 из 4: Мадд табии", ["45"]);
+  await breakdown.getByRole("button", { name: "Назад" }).click();
+  await expectStep("2 из 4: Мадд табии", ["4"]);
+
+  // While the whole ayah plays, the box follows the reciter's word.
+  await breakdown.getByRole("button", { name: "Прослушать весь аят" }).click();
+  await breakdown.getByTestId("tajweed-ayah-audio").evaluate((audio: HTMLAudioElement) => { audio.currentTime = 9.2; });
+  const reading = breakdown.locator(".tajweed-breakdown-word.is-reading");
+  await expect(reading).toHaveAttribute("data-word-position", "88");
+  await expectInBox(reading);
+});
+
 test("tajweed chips sit under the sheet in the phone reader and go with its controls", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installTajweedMocks(page);
