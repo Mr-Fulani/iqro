@@ -67,6 +67,7 @@ class AuthRepository {
   AuthSession? _session;
   Future<AuthSession>? _refreshFlight;
   _AuthTransitionStamp? _refreshStamp;
+  Future<AuthSession>? _renewalFlight;
   Future<AuthSession?>? _startupRecoveryFlight;
   Future<AuthSession?>? _verificationRecoveryFlight;
   bool _startupResolved = false;
@@ -195,6 +196,23 @@ class AuthRepository {
       cached = await _retryPendingVerificationGate();
     }
     if (cached?.accessIsFresh ?? false) return cached!;
+    // A fresh install sends its first requests all at once. Each guest
+    // bootstrap of an installation revokes the sessions before it, so separate
+    // bootstraps would leave the app holding a revoked token: share one.
+    final active = _renewalFlight;
+    if (active != null) return active;
+    late final Future<AuthSession> flight;
+    flight = _renewSession(cached, locale: locale).whenComplete(() {
+      if (identical(_renewalFlight, flight)) _renewalFlight = null;
+    });
+    _renewalFlight = flight;
+    return flight;
+  }
+
+  Future<AuthSession> _renewSession(
+    AuthSession? cached, {
+    required String locale,
+  }) async {
     if (cached?.canRefresh ?? false) {
       try {
         return await refresh();
