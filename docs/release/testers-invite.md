@@ -12,53 +12,43 @@
 Тестировщику нужно:
 
 1. Телефон на Android и аккаунт Google (Gmail).
-2. Прислать свой Gmail — тот, под которым он входит в Play Маркет на этом телефоне.
-3. Открыть ссылку «Стать тестировщиком» и установить IQRO из Play Маркета.
+2. Вступить в Google-группу тестировщиков тем же аккаунтом, что в Play Маркете на этом телефоне.
+3. Открыть ссылку на тест, нажать «Стать тестировщиком» и установить IQRO из Play Маркета.
 4. Не удалять приложение и не выходить из теста 14 дней.
 5. По возможности пользоваться и писать отзывы.
 
 ## Способ записи
 
-| Способ | Что делает человек | Что делает владелец | Минусы |
-|---|---|---|---|
-| **Gmail в личку Telegram @Mr_Fulani** (рекомендую) | Пишет одно сообщение там, где он уже есть; потом получает ссылку | Вносит адрес в список тестировщиков и отправляет ссылку (≈5 минут на 20 человек) | Ручная работа, если людей станет больше 50 |
-| Gmail в комментариях к посту | То же, но публично | То же | Адрес видят все — риск спама; лучше не просить |
-| Google-группа тестировщиков | Открывает groups.google.com, вступает в группу, затем открывает ссылку на тест | Один раз создаёт группу и подключает её к тесту | Сайт групп неудобен на телефоне; люди часто вступают не с тем аккаунтом, что в Play Маркете |
-| Google-форма | Заполняет форму | Переносит адреса из таблицы в список | Лишний шаг для людей, а работа владельца та же, что с личкой |
+**Основной способ — Google-группа тестировщиков** `iqro-testers@googlegroups.com`
+(создана 27.10.2026 под fulani.dev@gmail.com, вступить может каждый, список участников видят только
+владельцы, писать в группу могут только владельцы). Группа подключена к закрытому тесту «Alpha» в Play
+Console, поэтому вступивший сразу получает доступ к тесту — вносить адреса вручную не нужно.
 
-**Рекомендация — личка в Telegram.** Аудитория уже в Telegram, не нужно открывать новые сайты,
-адреса не видны другим, а на 15–20 человек ручная работа небольшая. Посты ниже написаны под этот
-способ. Если откликнется много людей, можно перейти на Google-группу — вариант шагов для неё есть в
-конце.
+- Ссылка на группу: https://groups.google.com/g/iqro-testers
+- Ссылка на тест (Android и сайт): https://play.google.com/apps/testing/forum.iqro.app
 
-### Что делать владельцу, когда пришёл Gmail
+Главная ошибка тестировщиков — вступить в группу не тем Google-аккаунтом, что в Play Маркете на
+телефоне. Тогда тест пишет «недоступно»: нужно вступить нужным аккаунтом.
 
-1. Play Console → IQRO → «Тестирование» → «Закрытое тестирование» → трек → вкладка «Тестировщики»
-   → список адресов → добавить Gmail → «Сохранить».
-2. Отправить человеку ответ из шаблона ниже. Ссылку на тест Play Console показывает на той же
-   вкладке («Как тестировщики могут присоединиться»). Обычно это
-   `https://play.google.com/apps/testing/forum.iqro.app` — сверьте перед отправкой.
+**Запасной способ — Gmail в личку Telegram @Mr_Fulani.** Если у человека не получилось с группой,
+владелец (или Claude по его просьбе) добавляет адрес в список «IQRO — закрытый тест»: Play Console →
+IQRO → «Тестирование» → «Закрытое тестирование» → Alpha → «Количество тестировщиков» → список →
+добавить Gmail → «Сохранить изменения».
 
-Шаблоны ответа тестировщику:
+Шаблоны ответа тестировщику, если он написал в личку:
 
-> **ru:** Готово, вы в списке тестировщиков. Откройте на телефоне ссылку [ССЫЛКА НА ТЕСТ], нажмите
-> «Стать тестировщиком», затем установите IQRO из Play Маркета. Если пишет, что приложение
-> недоступно, подождите 10–15 минут и откройте ссылку снова. Пожалуйста, не удаляйте приложение
+> **ru:** Вступите в группу https://groups.google.com/g/iqro-testers тем же Google-аккаунтом, что в Play Маркете, затем откройте на
+> телефоне https://play.google.com/apps/testing/forum.iqro.app, нажмите «Стать тестировщиком» и установите IQRO. Пожалуйста, не удаляйте приложение
 > 14 дней. Джазакумуллаху хайран!
 
-> **en:** Done, you're on the testers list. Open [TEST LINK] on your phone, tap "Become a tester",
-> then install IQRO from the Play Store. If it says the app isn't available, wait 10–15 minutes and
-> open the link again. Please keep the app installed for 14 days. JazakumAllahu khayran!
+> **en:** Join https://groups.google.com/g/iqro-testers with the same Google account as in the Play Store, then open https://play.google.com/apps/testing/forum.iqro.app on your phone,
+> tap "Become a tester" and install IQRO. Please keep the app for 14 days. JazakumAllahu khayran!
 
-> **tr:** Tamam, test listesine eklendiniz. Telefonunuzda [TEST BAĞLANTISI] bağlantısını açın,
-> teste katılma düğmesine basın ve IQRO'yu Play Store'dan yükleyin. Uygulama kullanılamıyor
-> yazarsa 10–15 dakika bekleyip bağlantıyı tekrar açın. Lütfen uygulamayı 14 gün silmeyin. Allah
-> razı olsun!
+> **tr:** Play Store'daki Google hesabınızla https://groups.google.com/g/iqro-testers grubuna katılın, sonra telefonunuzda https://play.google.com/apps/testing/forum.iqro.app bağlantısını
+> açın, teste katılın ve IQRO'yu yükleyin. Lütfen uygulamayı 14 gün silmeyin. Allah razı olsun!
 
-> **ar:** تمّت إضافتكم إلى قائمة المختبِرين. افتحوا هذا الرابط على الهاتف: [رابط الاختبار]
-> واضغطوا زر الانضمام إلى الاختبار، ثم ثبّتوا IQRO من متجر Google Play. إن ظهر أن التطبيق غير
-> متاح، فانتظروا 10–15 دقيقة وافتحوا الرابط مرة أخرى. نرجو ألا تحذفوا التطبيق لمدة 14 يومًا.
-> جزاكم الله خيرًا!
+> **ar:** انضمّوا إلى https://groups.google.com/g/iqro-testers بحساب Google نفسه الذي في متجر Google Play، ثم افتحوا https://play.google.com/apps/testing/forum.iqro.app على الهاتف،
+> وانضمّوا إلى الاختبار وثبّتوا IQRO. نرجو ألا تحذفوا التطبيق لمدة 14 يومًا. جزاكم الله خيرًا!
 
 ## Картинка к посту
 
@@ -95,10 +85,13 @@
 Любой, у кого телефон на Android и аккаунт Google (Gmail).
 
 📝 Как записаться
-1. Напишите мне в личку @Mr_Fulani свой Gmail — тот, с которым вы входите в Play Маркет на телефоне. В комментариях адрес лучше не оставлять.
-2. Я добавлю вас в список и пришлю ссылку.
-3. Откройте ссылку на телефоне, нажмите «Стать тестировщиком» и установите IQRO из Play Маркета.
-4. 14 дней не удаляйте приложение и не выходите из теста.
+1. Вступите в группу тестировщиков — с тем же Google-аккаунтом, что в Play Маркете на вашем телефоне:
+https://groups.google.com/g/iqro-testers
+2. Откройте на телефоне ссылку теста, нажмите «Стать тестировщиком» и установите IQRO из Play Маркета:
+https://play.google.com/apps/testing/forum.iqro.app
+3. 14 дней не удаляйте приложение и не выходите из теста.
+
+Если пишет, что приложение недоступно, подождите немного и откройте ссылку снова. Если не получается — напишите мне @Mr_Fulani.
 
 Будем рады, если в эти дни вы будете открывать IQRO — прочитать страницу, послушать суру — и писать, что неудобно или не работает. Каждый отзыв помогает.
 
@@ -113,7 +106,7 @@
 Google выпустит приложение для всех только после 14 дней закрытого теста.
 
 Нужно: телефон на Android и Gmail.
-Как: пришлите свой Gmail в личные сообщения (Telegram: @Mr_Fulani) → получите ссылку → установите IQRO и не удаляйте 14 дней.
+Как: вступите в группу https://groups.google.com/g/iqro-testers (тем же аккаунтом, что в Play Маркете) → откройте https://play.google.com/apps/testing/forum.iqro.app → установите IQRO и не удаляйте 14 дней.
 
 Бесплатно, без рекламы. Джазакумуллаху хайран!
 ```
@@ -141,10 +134,13 @@ Free, no ads, your data is not sold.
 Anyone with an Android phone and a Google account (Gmail).
 
 📝 How to join
-1. Send me your Gmail on Telegram: @Mr_Fulani — the one you use for the Play Store on your phone. Please don't post it in the comments.
-2. I'll add you to the list and send you a link.
-3. Open the link on your phone, tap "Become a tester" and install IQRO from the Play Store.
-4. Keep the app installed and stay in the test for 14 days.
+1. Join the testers group with the same Google account you use for the Play Store on your phone:
+https://groups.google.com/g/iqro-testers
+2. Open the test link on your phone, tap "Become a tester" and install IQRO from the Play Store:
+https://play.google.com/apps/testing/forum.iqro.app
+3. Keep the app installed and stay in the test for 14 days.
+
+If it says the app isn't available, wait a little and open the link again. If something doesn't work, message me: @Mr_Fulani.
 
 It would help a lot if you open IQRO during these days — read a page, listen to a surah — and tell us what is inconvenient or doesn't work. Every piece of feedback helps.
 
@@ -159,7 +155,7 @@ Assalamu alaykum! We are looking for 15–20 testers for the IQRO Android app: Q
 Google will release the app to everyone only after a 14-day closed test.
 
 You need: an Android phone and a Gmail account.
-How: send your Gmail in a direct message (Telegram: @Mr_Fulani) → get a link → install IQRO and keep it for 14 days.
+How: join https://groups.google.com/g/iqro-testers (with your Play Store account) → open https://play.google.com/apps/testing/forum.iqro.app → install IQRO and keep it for 14 days.
 
 Free, no ads. JazakumAllahu khayran!
 ```
@@ -187,10 +183,13 @@ Esselâmü aleyküm ve rahmetullahi ve berakâtüh!
 Android telefonu ve Google hesabı (Gmail) olan herkes.
 
 📝 Nasıl katılırım
-1. Telefonunuzda Play Store'a girdiğiniz Gmail adresini Telegram'dan bana yazın: @Mr_Fulani. Lütfen adresinizi yorumlara yazmayın.
-2. Sizi listeye ekleyip bir bağlantı göndereceğim.
-3. Bağlantıyı telefonunuzda açın, teste katılma düğmesine basın ve IQRO'yu Play Store'dan yükleyin.
-4. 14 gün boyunca uygulamayı silmeyin ve testten çıkmayın.
+1. Telefonunuzda Play Store'da kullandığınız Google hesabıyla test grubuna katılın:
+https://groups.google.com/g/iqro-testers
+2. Test bağlantısını telefonunuzda açın, teste katılma düğmesine basın ve IQRO'yu Play Store'dan yükleyin:
+https://play.google.com/apps/testing/forum.iqro.app
+3. 14 gün boyunca uygulamayı silmeyin ve testten çıkmayın.
+
+Uygulama kullanılamıyor yazarsa biraz bekleyip bağlantıyı tekrar açın. Bir sorun olursa bana yazın: @Mr_Fulani.
 
 Bu günlerde IQRO'yu açıp bir sayfa okursanız, bir sure dinlerseniz ve rahatsız eden ya da çalışmayan şeyleri yazarsanız çok seviniriz. Her geri bildirim işimize yarar.
 
@@ -205,7 +204,7 @@ Esselâmü aleyküm! IQRO Android uygulaması için 15–20 test kullanıcısı 
 Google uygulamayı herkese ancak 14 günlük kapalı testten sonra açıyor.
 
 Gerekenler: Android telefon ve Gmail.
-Nasıl: Gmail adresinizi özel mesajla gönderin (Telegram: @Mr_Fulani) → bağlantıyı alın → IQRO'yu yükleyin ve 14 gün silmeyin.
+Nasıl: https://groups.google.com/g/iqro-testers grubuna katılın (Play Store hesabınızla) → https://play.google.com/apps/testing/forum.iqro.app bağlantısını açın → IQRO'yu yükleyin ve 14 gün silmeyin.
 
 Ücretsiz, reklamsız. Allah razı olsun!
 ```
@@ -233,10 +232,13 @@ Nasıl: Gmail adresinizi özel mesajla gönderin (Telegram: @Mr_Fulani) → bağ
 كل من لديه هاتف أندرويد وحساب Google (Gmail).
 
 📝 طريقة المشاركة
-1. أرسلوا إليّ في رسالة خاصة عنوان Gmail الذي تستخدمونه في متجر Google Play على هاتفكم، ونرجو ألا تكتبوه في التعليقات. حسابي على تيليجرام: @Mr_Fulani
-2. سأضيفكم إلى القائمة وأرسل إليكم رابطًا.
-3. افتحوا الرابط على الهاتف، واضغطوا زر الانضمام إلى الاختبار، ثم ثبّتوا IQRO من متجر Google Play.
-4. لا تحذفوا التطبيق ولا تخرجوا من الاختبار لمدة 14 يومًا.
+1. انضمّوا إلى مجموعة المختبِرين بحساب Google نفسه الذي تستخدمونه في متجر Google Play على هاتفكم:
+https://groups.google.com/g/iqro-testers
+2. افتحوا رابط الاختبار على الهاتف، واضغطوا زر الانضمام إلى الاختبار، ثم ثبّتوا IQRO من متجر Google Play:
+https://play.google.com/apps/testing/forum.iqro.app
+3. لا تحذفوا التطبيق ولا تخرجوا من الاختبار لمدة 14 يومًا.
+
+إن ظهر أن التطبيق غير متاح، فانتظروا قليلًا وافتحوا الرابط مرة أخرى. وإن واجهتم مشكلة فراسلوني: @Mr_Fulani
 
 يسعدنا أن تفتحوا IQRO في هذه الأيام، فتقرؤوا صفحة أو تستمعوا إلى سورة، وتخبرونا بما لم يكن مريحًا أو لم يعمل. كل ملاحظة تفيدنا.
 
@@ -251,23 +253,8 @@ Nasıl: Gmail adresinizi özel mesajla gönderin (Telegram: @Mr_Fulani) → bağ
 لن تنشر Google التطبيق للجميع إلا بعد اختبار مغلق مدته 14 يومًا.
 
 المطلوب: هاتف أندرويد وحساب Gmail.
-الطريقة: أرسلوا عنوان Gmail في رسالة خاصة (تيليجرام: @Mr_Fulani) ← استلموا الرابط ← ثبّتوا IQRO ولا تحذفوه 14 يومًا.
+الطريقة: انضمّوا إلى https://groups.google.com/g/iqro-testers (بحساب متجر Google Play) ← افتحوا https://play.google.com/apps/testing/forum.iqro.app ← ثبّتوا IQRO ولا تحذفوه 14 يومًا.
 
 مجاني، بلا إعلانات. جزاكم الله خيرًا!
 ```
 
----
-
-## Если перейдёте на Google-группу
-
-Создайте группу на groups.google.com с доступом «Все в интернете могут вступить», добавьте её адрес
-в список тестировщиков в Play Console. В постах замените шаги 1–2 на эти:
-
-- **ru:** 1. Вступите в группу тестировщиков с тем же Google-аккаунтом, что в Play Маркете:
-  [ССЫЛКА НА ГРУППУ] 2. Откройте на телефоне ссылку [ССЫЛКА НА ТЕСТ].
-- **en:** 1. Join the testers group with the same Google account you use in the Play Store:
-  [GROUP LINK] 2. Open [TEST LINK] on your phone.
-- **tr:** 1. Play Store'da kullandığınız Google hesabıyla test grubuna katılın: [GRUP BAĞLANTISI]
-  2. Telefonunuzda [TEST BAĞLANTISI] bağlantısını açın.
-- **ar:** 1. انضمّوا إلى مجموعة المختبِرين بحساب Google نفسه الذي تستخدمونه في متجر Google Play:
-  [رابط المجموعة] 2. افتحوا [رابط الاختبار] على الهاتف.
