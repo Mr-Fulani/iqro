@@ -918,6 +918,15 @@ class AppLocalizationsRu extends AppLocalizations {
       'Ближайшая молитва и пять времён на главном экране, даже без интернета';
 
   @override
+  String get homeWidgets => 'Виджеты на рабочем столе';
+
+  @override
+  String get planWidget => 'Виджет плана чтения';
+
+  @override
+  String get planWidgetHint => 'Дневная цель, пальма и чтение после намаза';
+
+  @override
   String get addPrayerWidget => 'Добавить виджет';
 
   @override

@@ -197,9 +197,7 @@ class AppOnboardingServices implements OnboardingServices {
     final reminders = await _accountReminders();
     // Existing rules first: toggling before they load would duplicate them.
     await reminders.reload();
-    for (final event in onboardingPrayerEvents) {
-      await reminders.togglePrayer(event, true);
-    }
+    await reminders.enablePrayers(onboardingPrayerEvents);
   }
 
   /// Reminder rules are account data, and a fresh install has no guest

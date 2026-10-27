@@ -60,6 +60,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a compass that sends nothing is reported, not left still', (
+    tester,
+  ) async {
+    final compass = _FakeCompass();
+    await _pumpSheet(tester, compass);
+    expect(find.byKey(const ValueKey('qibla-no-compass')), findsNothing);
+
+    await tester.pump(qiblaCompassSilenceTimeout);
+    expect(find.byKey(const ValueKey('qibla-no-compass')), findsOneWidget);
+    expect(find.text('Компас на этом устройстве недоступен.'), findsOneWidget);
+    expect(compass.cancels, 0);
+
+    // A late first sample still brings the dial to life.
+    compass.controller.add(<String, Object?>{
+      'true': _bearing + 40,
+      'magnetic': 0.0,
+      'accuracy': 5.0,
+    });
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('qibla-no-compass')), findsNothing);
+    expect(find.text(_liveHint), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('low accuracy asks for calibration and never claims alignment', (
     tester,
   ) async {

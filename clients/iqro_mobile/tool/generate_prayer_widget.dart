@@ -60,6 +60,17 @@ Future<void> main() async {
     '${const JsonEncoder.withIndent('  ').convert(localized)}\n',
   );
 
+  // The schema has no preview; the widget picker shows this picture.
+  final provider = File(
+    'android/app/src/main/res/xml/prayer_times_home_widget.xml',
+  );
+  provider.writeAsStringSync(
+    provider.readAsStringSync().replaceFirst(
+      '\n/>',
+      '\n    android:previewImage="@drawable/prayer_times_widget_preview"\n/>',
+    ),
+  );
+
   final kotlin = File(
     'android/app/src/main/kotlin/forum/iqro/app/PrayerTimesHomeWidget.kt',
   );

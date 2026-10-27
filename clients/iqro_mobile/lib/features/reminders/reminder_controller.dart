@@ -187,16 +187,71 @@ class ReminderController extends StateNotifier<ReminderState> {
     );
   }
 
-  Future<void> _mutate(
-    Future<List<ReminderRule>> Function(AccountScopeSnapshot) operation,
+  /// Turns the prayer reminders for [events] on and returns once they are
+  /// saved; their notifications are planned in the background, once. A plan
+  /// reschedules every notification (on Android 32 days of every prayer):
+  /// one per reminder kept onboarding waiting about 19 s on a Redmi Note 7.
+  Future<void> enablePrayers(List<String> events) async {
+    await _mutate(planInBackground: true, (scope) async {
+      final current = state.rules;
+      final results = await Future.wait(<Future<ReminderRule?>>[
+        for (final event in events) _enablePrayer(current, event, scope),
+      ]);
+      final changed = <String, ReminderRule>{
+        for (final rule in results.nonNulls) rule.id: rule,
+      };
+      return <ReminderRule>[
+        for (final rule in current) changed.remove(rule.id) ?? rule,
+        ...changed.values,
+      ];
+    });
+  }
+
+  Future<ReminderRule?> _enablePrayer(
+    List<ReminderRule> rules,
+    String event,
+    AccountScopeSnapshot scope,
   ) async {
+    final existing = rules
+        .where(
+          (item) =>
+              item.type == ReminderType.prayer &&
+              item.schedule.prayerEvent == event,
+        )
+        .firstOrNull;
+    if (existing == null) {
+      return _repository.create(
+        type: ReminderType.prayer,
+        schedule: ReminderSchedule.prayer(prayerEvent: event),
+        weekdaysMask: 127,
+        signal: ReminderSignal.sound,
+        timezoneMode: ReminderTimezoneMode.deviceLocal,
+        accountScope: scope,
+      );
+    }
+    if (existing.isEnabled) return null;
+    return _repository.update(
+      existing.copyWith(isEnabled: true),
+      accountScope: scope,
+    );
+  }
+
+  Future<void> _mutate(
+    Future<List<ReminderRule>> Function(AccountScopeSnapshot) operation, {
+    bool planInBackground = false,
+  }) async {
     final scope = _requireScope();
     state = state.copyWith(saving: true, clearError: true);
     try {
       final rules = await operation(scope);
       _database.ensureCurrent(scope);
       state = state.copyWith(rules: rules, saving: false);
-      await replan();
+      if (planInBackground) {
+        // replan() keeps its own errors in the state.
+        unawaited(replan().catchError((Object _) {}));
+      } else {
+        await replan();
+      }
     } on AccountScopeChanged {
       // Never publish or re-plan work started by the previous account.
     } on Object catch (error) {
