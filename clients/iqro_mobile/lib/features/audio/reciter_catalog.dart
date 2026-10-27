@@ -79,6 +79,28 @@ Recitation? teachingRecitation(Iterable<Recitation> recitations) {
   return null;
 }
 
+/// The fixed voice of the tajweed course: al-Husary's Muallim
+/// (Quran.Foundation recitation 12), whatever is picked in the players.
+/// Without it in [recitations] the teaching reciter, then Mishary al-Afasy,
+/// then the first one. Same choice as `tajweedCourseRecitation` on the site.
+Recitation? tajweedCourseRecitation(List<Recitation> recitations) {
+  Recitation? byPrefix(String prefix) {
+    Recitation? best;
+    for (final recitation in recitations) {
+      if (!recitation.code.startsWith(prefix)) continue;
+      if (best == null || recitation.surahCount > best.surahCount) {
+        best = recitation;
+      }
+    }
+    return best;
+  }
+
+  return byPrefix('qf-12-') ??
+      teachingRecitation(recitations) ??
+      byPrefix('qf-7-') ??
+      (recitations.isEmpty ? null : recitations.first);
+}
+
 /// The recitation to play for [role]: [preferredId] when it is offered, else
 /// the catalog's teaching reciter for the Mushaf and Memorization roles, else
 /// the first murattal. Listening keeps the first murattal as its default.

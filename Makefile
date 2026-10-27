@@ -55,7 +55,7 @@ STAGING_BUDGET_COMPOSE = COMPOSE_PARALLEL_LIMIT=1 $(STAGING_COMPOSE) -f compose.
 STAGING_RUNTIME_POSTGRES_IMAGE ?= $(shell container_id="$$( $(STAGING_COMPOSE) ps -q postgres 2>/dev/null )"; if [ -n "$$container_id" ]; then docker inspect --format '{{.Config.Image}}' "$$container_id" 2>/dev/null; fi)
 STAGING_OPS_COMPOSE = POSTGRES_IMAGE=$(STAGING_RUNTIME_POSTGRES_IMAGE) $(STAGING_COMPOSE)
 
-.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run mobile-check mobile-android-production mobile-ios-config-check mobile-ios-production production-config production-build production-up production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-backup-offsite production-backup-offsite-verify production-backup-offsite-restore-check production-restore-check staging-init staging-preflight staging-email-configure staging-web-push-configure staging-media-configure staging-media-preflight staging-backup-offsite-configure staging-backup-offsite-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-backup-offsite staging-backup-offsite-verify staging-backup-offsite-restore-check staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-qf-audio-probe ops-sync-capacity ops-mixed-capacity ops-registered-capacity release-ops-check release-web-check release-check systemd-install
+.PHONY: up down restart reset-all backend-install backend-check backend-test backend-migrations backend-run backend-up web-install web-dev web-build web-run mobile-check mobile-android-production mobile-ios-config-check mobile-ios-production production-config production-build production-up production-data-update production-scale-validate production-scale-preflight production-scale production-down production-ps production-logs production-backup production-backup-verify production-backup-offsite production-backup-offsite-verify production-backup-offsite-restore-check production-restore-check staging-init staging-preflight staging-email-configure staging-web-push-configure staging-media-configure staging-media-preflight staging-backup-offsite-configure staging-backup-offsite-preflight staging-config staging-build staging-up staging-down staging-ps staging-logs staging-runtime-postgres-image staging-backup staging-backup-verify staging-backup-offsite staging-backup-offsite-verify staging-backup-offsite-restore-check staging-restore-check staging-observability-config staging-observability-up staging-observability-down staging-budget-config staging-budget-build staging-budget-up staging-budget-runtime-verify staging-budget-scale-validate staging-budget-scale-preflight staging-budget-scale staging-budget-down staging-budget-ps staging-budget-logs observability-config observability-up observability-down observability-logs ops-backup ops-backup-verify ops-restore-check ops-load-smoke ops-audio-capacity ops-qf-audio-probe ops-sync-capacity ops-mixed-capacity ops-registered-capacity release-ops-check release-web-check release-check systemd-install
 
 # Запуск с сохранением данных базы данных
 up: dev-up
@@ -129,11 +129,21 @@ mobile-ios-production: mobile-ios-deps
 production-config:
 	$(PRODUCTION_COMPOSE) config --quiet
 
+# A routine release rebuilds only the application images. PostgreSQL and Redis keep their
+# image, so they are not recreated by fresh Alpine packages; Compose still builds them
+# when the image is missing. Update them on purpose with production-data-update.
+PRODUCTION_APP_IMAGES = backend web gateway
+
 production-build:
-	$(PRODUCTION_COMPOSE) build backend web gateway postgres redis
+	$(PRODUCTION_COMPOSE) build $(PRODUCTION_APP_IMAGES)
 
 production-up:
-	$(PRODUCTION_COMPOSE) up --build --detach --wait
+	$(PRODUCTION_COMPOSE) build $(PRODUCTION_APP_IMAGES)
+	$(PRODUCTION_COMPOSE) up --detach --wait
+
+production-data-update:
+	$(PRODUCTION_COMPOSE) build postgres redis
+	$(PRODUCTION_COMPOSE) up --detach --wait postgres redis
 
 production-scale-validate:
 	python3 ops/scaling/validate.py \

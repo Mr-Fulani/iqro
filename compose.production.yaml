@@ -111,7 +111,9 @@ services:
       - log_min_duration_statement=${POSTGRES_LOG_MIN_DURATION_MS:-500}
       - -c
       - track_io_timing=on
-    # Let PostgreSQL finish a fast shutdown instead of being killed after 10 s.
+    # SIGINT is PostgreSQL's fast shutdown: it closes client connections and checkpoints.
+    # SIGTERM would wait for the pooled backend connections until Docker kills it.
+    stop_signal: SIGINT
     stop_grace_period: 60s
     environment:
       POSTGRES_DB: ${DATABASE_NAME:?Set DATABASE_NAME in the production env file}

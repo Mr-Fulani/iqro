@@ -7,15 +7,22 @@ import 'package:iqro_mobile/features/audio/audio_repository.dart';
 
 void main() {
   final murattal = _recitation('qf-6-murattal', 'murattal');
-  final teaching = _recitation('qf-12-muallim', 'muallim', teaching: true);
-  final listeningOnly = _recitation('qf-7-listen', 'murattal', timed: false);
+  final afasy = _recitation('qf-7-murattal', 'murattal');
+  final teaching = _recitation(
+    'qf-6-murattal-teaching',
+    'murattal',
+    teaching: true,
+  );
+  final muallim = _recitation('qf-12-muallim', 'muallim');
+  final listeningOnly = _recitation('qf-12-listen', 'muallim', timed: false);
 
-  Future<String?> courseRecitation({String? mushafRecitationId}) async {
+  Future<String?> courseRecitation(
+    List<Recitation> catalog, {
+    String? mushafRecitationId,
+  }) async {
     final container = ProviderContainer(
       overrides: <Override>[
-        audioRepositoryProvider.overrideWithValue(
-          _AudioRepository(<Recitation>[listeningOnly, murattal, teaching]),
-        ),
+        audioRepositoryProvider.overrideWithValue(_AudioRepository(catalog)),
         appPreferencesProvider.overrideWith(
           (ref) => _Preferences(
             const AppPreferences.defaults().copyWith(
@@ -29,20 +36,26 @@ void main() {
     return container.read(tajweedCourseRecitationProvider)();
   }
 
-  test('the tajweed course plays the teaching reciter by default', () async {
-    expect(await courseRecitation(), teaching.id);
+  test('the tajweed course always plays al-Husary\'s Muallim', () async {
+    final catalog = <Recitation>[listeningOnly, murattal, teaching, muallim];
+    expect(await courseRecitation(catalog), muallim.id);
+    // The Mushaf choice does not change the course voice.
+    expect(
+      await courseRecitation(catalog, mushafRecitationId: murattal.id),
+      muallim.id,
+    );
   });
 
-  test('the tajweed course follows the Mushaf choice', () async {
+  test('without the Muallim the course falls back to the teaching reciter, '
+      'then al-Afasy, then the first one', () async {
     expect(
-      await courseRecitation(mushafRecitationId: murattal.id),
-      murattal.id,
-    );
-    // A choice that is not timed ayah by ayah cannot play the examples.
-    expect(
-      await courseRecitation(mushafRecitationId: listeningOnly.id),
+      await courseRecitation(<Recitation>[murattal, afasy, teaching]),
       teaching.id,
     );
+    expect(await courseRecitation(<Recitation>[murattal, afasy]), afasy.id);
+    expect(await courseRecitation(<Recitation>[murattal]), murattal.id);
+    // A recording that is not timed ayah by ayah cannot play the examples.
+    expect(await courseRecitation(<Recitation>[listeningOnly]), isNull);
   });
 }
 
