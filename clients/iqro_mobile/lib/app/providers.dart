@@ -1462,12 +1462,30 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
        _preferredMetric = preferredMetric,
        super(const AsyncValue.loading()) {
     unawaited(reload());
+    unawaited(_showCached());
   }
   final PlanRepository _repository;
   final LocalDatabase _database;
   final AccountScopeSnapshot? _accountScope;
   final int? _preferredTarget;
   final ReadingGoalMetric? _preferredMetric;
+  // Only the newest load may land, so a slow older one never undoes it.
+  var _generation = 0;
+
+  /// The saved plan shows while the first load waits for the server.
+  Future<void> _showCached() async {
+    final scope = _accountScope;
+    if (scope == null) return;
+    try {
+      final cached = await _repository.cached(accountScope: scope);
+      _database.ensureCurrent(scope);
+      if (cached != null && mounted && !state.hasValue) {
+        state = AsyncValue.data(cached);
+      }
+    } on Object {
+      // The server load decides what the screen shows.
+    }
+  }
 
   bool isBoundTo(AccountScopeSnapshot scope) {
     final bound = _accountScope;
@@ -1531,10 +1549,11 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
   ) async {
     final scope = _accountScope;
     if (scope == null) return;
+    final generation = ++_generation;
     try {
       final next = await load(scope);
       _database.ensureCurrent(scope);
-      if (mounted) state = AsyncValue.data(next);
+      if (mounted && generation == _generation) state = AsyncValue.data(next);
     } on AccountScopeChanged {
       // A disposed controller must never retry an A action under account B.
     } on Object {
@@ -1547,14 +1566,17 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
   ) async {
     final scope = _accountScope;
     if (scope == null) return;
+    final generation = ++_generation;
     try {
       final next = await load(scope);
       _database.ensureCurrent(scope);
-      if (mounted) state = AsyncValue.data(next);
+      if (mounted && generation == _generation) state = AsyncValue.data(next);
     } on AccountScopeChanged {
       // A disposed controller must never retry an A action under account B.
     } on Object catch (error, stack) {
-      if (mounted && _database.accountScope.isCurrent(scope)) {
+      if (mounted &&
+          generation == _generation &&
+          _database.accountScope.isCurrent(scope)) {
         state = AsyncValue.error(error, stack);
       }
     }
@@ -1563,7 +1585,6 @@ class PlanController extends StateNotifier<AsyncValue<DailyPlan>> {
 
 final planProvider =
     StateNotifierProvider<PlanController, AsyncValue<DailyPlan>>((ref) {
-      ref.watch(planUpdatesProvider);
       final accountKey = ref.watch(activeAccountScopeKeyProvider);
       final database = ref.watch(localDatabaseProvider);
       final currentScope = database.accountScope.current;
@@ -1573,16 +1594,24 @@ final planProvider =
               accountScopeKey(currentScope) == accountKey
           ? currentScope
           : null;
-      final preferences = ref.watch(appPreferencesProvider);
-      final preferredTarget = preferences.dailyTarget;
-      final preferredMetric = readingMetricForDailyUnit(preferences.dailyUnit);
-      return PlanController(
+      // Only the daily goal matters here: a theme or reciter change must not
+      // send the plan back to a spinner.
+      final (preferredTarget, dailyUnit) = ref.watch(
+        appPreferencesProvider.select(
+          (value) => (value.dailyTarget, value.dailyUnit),
+        ),
+      );
+      final controller = PlanController(
         ref.watch(planRepositoryProvider),
         database: database,
         accountScope: boundScope,
         preferredTarget: preferredTarget,
-        preferredMetric: preferredMetric,
+        preferredMetric: readingMetricForDailyUnit(dailyUnit),
       );
+      // New reading refreshes the plan in place; the old numbers stay on
+      // screen until the new ones arrive.
+      ref.listen(planUpdatesProvider, (_, _) => unawaited(controller.reload()));
+      return controller;
     });
 
 ReadingGoalMetric readingMetricForDailyUnit(DailyUnit unit) => switch (unit) {
@@ -1607,7 +1636,7 @@ class MemorizationController
   }) : _database = database,
        _accountScope = accountScope,
        super(const AsyncValue.loading()) {
-    if (accountScope != null) unawaited(reload());
+    if (accountScope != null) unawaited(_start(accountScope));
   }
   final MemorizationRepository _repository;
   final LocalDatabase _database;
@@ -1617,6 +1646,21 @@ class MemorizationController
     (scope) => _repository.load(accountScope: scope),
     propagateError: false,
   );
+
+  // Today's saved dashboard shows while the server is asked; on a phone the
+  // Home card otherwise said "Loading" for a round trip on every start.
+  Future<void> _start(AccountScopeSnapshot scope) async {
+    final load = reload();
+    try {
+      final cached = await _repository.cachedToday(accountScope: scope);
+      if (cached != null && mounted && !state.hasValue && !state.hasError) {
+        state = AsyncValue.data(cached);
+      }
+    } on Object {
+      // The server's answer, or its own cache fallback, decides.
+    }
+    await load;
+  }
 
   Future<void> savePlan(
     MemorizationPlanDraft draft, {

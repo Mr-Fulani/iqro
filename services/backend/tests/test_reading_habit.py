@@ -22,6 +22,7 @@ from quran_backend.modules.accounts.models import (
     UserStatus,
 )
 from quran_backend.modules.reading.habit_services import (
+    record_automatic_session,
     record_manual_session,
     record_prayer_reading_check_in,
     set_prayer_reading_plan,
@@ -803,3 +804,88 @@ def test_unified_goal_distribution_and_prayer_credit(metric, target, expected) -
     )
     assert removed.status_code == 204
     assert client.get(day_url).json()["achieved_amount"] == "0.00"
+
+
+def test_plan_dashboard_reads_take_a_fixed_number_of_queries(
+    django_assert_num_queries,
+) -> None:
+    # The app opens the plan with these four reads at once; more history must
+    # not mean more queries.
+    user = User.objects.create_user(timezone="UTC")
+    client = _authenticated_client(user)
+    now = timezone.now()
+    set_reading_goal(
+        user=user,
+        metric="pages",
+        target_amount=Decimal("5"),
+        timezone_name="UTC",
+        base_revision=0,
+        client_updated_at=now,
+    )
+    set_prayer_reading_plan(
+        user=user,
+        pages_per_prayer=1,
+        timezone_name="UTC",
+        base_revision=0,
+        client_updated_at=now,
+    )
+    for offset in range(7):
+        local_date = now.date() - timedelta(days=offset)
+        record_manual_session(
+            user=user,
+            session_id=uuid.uuid7(),
+            timezone_name="UTC",
+            local_date=local_date,
+            metric="pages",
+            amount=Decimal("2"),
+            client_updated_at=now,
+        )
+        record_automatic_session(
+            user=user,
+            session_id=uuid.uuid7(),
+            timezone_name="UTC",
+            started_at=now - timedelta(days=offset, minutes=5),
+            ended_at=now - timedelta(days=offset),
+            active_seconds=300,
+            credited_pages=1,
+            credited_ayahs=0,
+            client_updated_at=now,
+        )
+        for prayer in ("fajr", "isha"):
+            record_prayer_reading_check_in(
+                user=user,
+                check_in_id=uuid.uuid7(),
+                session_id=uuid.uuid7(),
+                prayer=prayer,
+                pages=1,
+                local_date=local_date,
+                timezone_name="UTC",
+                client_updated_at=now,
+            )
+
+    with django_assert_num_queries(4):
+        today = client.get(reverse("reading:today"), {"timezone_name": "UTC"})
+    with django_assert_num_queries(7):
+        planner = client.get(
+            reverse("reading:reading-planner"),
+            {"days": 90, "timezone_name": "UTC"},
+        )
+    with django_assert_num_queries(4):
+        prayer_day = client.get(
+            reverse("reading:prayer-reading-plan"),
+            {"timezone_name": "UTC"},
+        )
+    with django_assert_num_queries(1):
+        manual = client.get(
+            reverse("reading:reading-session-list"),
+            {"limit": 100, "source": "manual"},
+        )
+
+    assert today.status_code == 200
+    assert planner.status_code == 200
+    assert sum(day["prayer_count"] for day in planner.json()["days"]) == 14
+    assert prayer_day.status_code == 200
+    assert manual.status_code == 200
+    # Seven manual readings plus the sessions behind fourteen prayer check-ins.
+    assert len(manual.json()["results"]) == 21
+    assert {item["source"] for item in manual.json()["results"]} == {"manual"}
