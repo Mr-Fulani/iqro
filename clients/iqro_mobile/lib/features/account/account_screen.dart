@@ -10,12 +10,14 @@ import '../../app/providers.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/auth/auth_session.dart';
+import '../../core/auth/google_sign_in_gateway.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/sync/sync_service.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'google_sign_in_button.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -232,6 +234,10 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
           Text(context.l10n.guestSyncHint),
           const SizedBox(height: 16),
           if (_challenge == null) ...<Widget>[
+            const GoogleSignInButton(
+              trySilentSignIn: true,
+              showEmailDivider: true,
+            ),
             TextField(
               controller: _emailController,
               enabled: !_working,
@@ -322,6 +328,13 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
             title: context.l10n.devices,
             subtitle: context.l10n.syncHint,
             onTap: () => context.push('/devices'),
+          ),
+          const Divider(height: 1),
+          IqroListTile(
+            icon: Icons.switch_account_outlined,
+            title: context.l10n.accountSwitch,
+            subtitle: context.l10n.accountSwitchHint,
+            onTap: _switchAccount,
           ),
           const Divider(height: 1),
           IqroListTile(
@@ -595,11 +608,73 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
       _working = true;
       _message = null;
     });
+    await _forgetGoogleAccount();
     try {
       await widget.controller.signOut();
     } on Object {
       // SessionController deactivates the old scope before surfacing a durable
       // logout failure. The replacement screen owns any subsequent action.
+    }
+  }
+
+  /// The Google gateway when Google sign-in is configured, otherwise null.
+  Future<GoogleSignInGateway?> _availableGoogle() async {
+    try {
+      // Offline, the first availability check must not hold up logout.
+      final available = await ref
+          .read(googleSignInAvailableProvider.future)
+          .timeout(const Duration(seconds: 2), onTimeout: () => false);
+      if (available) {
+        return ref.read(googleSignInGatewayProvider);
+      }
+    } on Object {
+      // Unknown availability: signing out works without Google.
+    }
+    return null;
+  }
+
+  /// The next Google sign-in asks which account to use. Never blocks logout.
+  Future<void> _forgetGoogleAccount() async {
+    await (await _availableGoogle())?.signOut();
+  }
+
+  /// Signs out and opens Google's account sheet right away. Without Google
+  /// sign-in it is a plain sign-out to the email form.
+  Future<void> _switchAccount() async {
+    if (_working || !_isAccountCurrent()) return;
+    ++_requestGeneration;
+    setState(() {
+      _working = true;
+      _message = null;
+    });
+    // This body is replaced as soon as the account changes, so errors go to
+    // the messenger captured now.
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    final controller = widget.controller;
+    try {
+      final google = await _availableGoogle();
+      if (google != null) {
+        await controller.switchAccount(google);
+      } else {
+        await controller.signOut();
+      }
+    } on Object catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException && error.isOffline
+                ? l10n.networkError
+                : apiErrorText(
+                    l10n,
+                    error,
+                    fallback: l10n.apiErrorGoogleFailed,
+                  ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _working = false);
     }
   }
 
@@ -682,6 +757,7 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
       _message = null;
     });
     try {
+      await _forgetGoogleAccount();
       await widget.controller.signOutEverywhere();
     } on ApiException catch (error) {
       // The server did not confirm the revocation: this device stays signed in.

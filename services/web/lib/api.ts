@@ -150,6 +150,11 @@ export type EmailVerificationResponse = GuestBootstrapResponse & {
   replayed: boolean;
 };
 
+export type GoogleSignInConfig = {
+  enabled: boolean;
+  client_id: string | null;
+};
+
 // ---------------------------------------------------------------------------
 // Share & Referral Types
 // ---------------------------------------------------------------------------
@@ -1331,6 +1336,10 @@ const API_ERROR_MESSAGES: Record<string, MessageKey> = {
   email_challenge_invalid: "error.emailInvalid",
   email_challenge_expired: "error.emailExpired",
   email_delivery_failed: "error.emailDelivery",
+  google_token_invalid: "error.googleFailed",
+  google_email_unverified: "error.googleEmailUnverified",
+  google_sign_in_disabled: "error.googleUnavailable",
+  google_sign_in_unavailable: "error.googleUnavailable",
   auth_rate_limited: "error.rateLimited",
   installation_identity_missing: "error.installationMissing",
   account_link_unavailable: "error.linkUnavailable",
@@ -1701,6 +1710,19 @@ export class ApiClient {
     const session = await this.webAuthRequest<EmailVerificationResponse>("/email/verify", {
       method: "POST",
       body: JSON.stringify(input),
+    });
+    this.setSession(session);
+    return session;
+  }
+
+  public async getGoogleSignInConfig(): Promise<GoogleSignInConfig> {
+    return this.request<GoogleSignInConfig>("/api/v1/auth/google/config");
+  }
+
+  public async signInWithGoogle(idToken: string): Promise<EmailVerificationResponse> {
+    const session = await this.webAuthRequest<EmailVerificationResponse>("/google", {
+      method: "POST",
+      body: JSON.stringify({ id_token: idToken }),
     });
     this.setSession(session);
     return session;

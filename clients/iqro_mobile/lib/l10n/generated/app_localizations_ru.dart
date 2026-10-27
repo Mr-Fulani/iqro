@@ -1193,10 +1193,28 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sendCode => 'Отправить код';
 
   @override
+  String get googleContinue => 'Продолжить с Google';
+
+  @override
+  String get googleOrEmail => 'или по коду на почту';
+
+  @override
+  String googleSignedInAs(String email) {
+    return 'Вы вошли как $email';
+  }
+
+  @override
   String get verify => 'Подтвердить';
 
   @override
   String get signOut => 'Выйти';
+
+  @override
+  String get accountSwitch => 'Сменить аккаунт';
+
+  @override
+  String get accountSwitchHint =>
+      'Выйти и выбрать другой аккаунт Google или почту';
 
   @override
   String get devices => 'Устройства';
@@ -2313,6 +2331,18 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get apiErrorEmailDelivery =>
       'Не удалось отправить код. Попробуйте ещё раз позже.';
+
+  @override
+  String get apiErrorGoogleFailed =>
+      'Не удалось войти через Google. Попробуйте ещё раз или войдите по коду из письма.';
+
+  @override
+  String get apiErrorGoogleEmailUnverified =>
+      'Почта этого Google-аккаунта не подтверждена. Войдите по коду из письма.';
+
+  @override
+  String get apiErrorGoogleUnavailable =>
+      'Вход через Google сейчас недоступен. Войдите по коду из письма.';
 
   @override
   String get apiErrorRateLimited => 'Слишком много попыток. Повторите позже.';

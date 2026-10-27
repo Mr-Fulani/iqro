@@ -1902,7 +1902,9 @@ class _PlayerBackdrop extends StatelessWidget {
                   key: ValueKey<String>(background.id),
                   fit: StackFit.expand,
                   children: <Widget>[
-                    if (background.hasVideo && !reduceMotion)
+                    // A chosen video plays even when the system turns
+                    // animations off: the owner's call, as on the site.
+                    if (background.hasVideo)
                       _PlayerBackgroundVideo(
                         asset: background.videoAssetPath,
                         url: background.videoUrl,
@@ -1937,8 +1939,9 @@ class _PlayerBackdrop extends StatelessWidget {
 }
 
 /// Sound bars like the audio quality icon, swaying over the bare background
-/// while the recitation plays. Calm static bars when motion is reduced; the
-/// ticker runs only while they are on screen.
+/// while the recitation plays, also when the system turns animations off
+/// (the owner's call, as on the site). The ticker runs only while they are on
+/// screen.
 class _PlayerEqualizer extends StatefulWidget {
   const _PlayerEqualizer({required this.visible});
 
@@ -1971,10 +1974,9 @@ class _PlayerEqualizerState extends State<_PlayerEqualizer>
 
   // Runs while visible and through the fade-out; stops once faded.
   void _syncWave() {
-    final animate = _shown && !MediaQuery.disableAnimationsOf(context);
-    if (animate && !_wave.isAnimating) {
+    if (_shown && !_wave.isAnimating) {
       _wave.repeat();
-    } else if (!animate && _wave.isAnimating) {
+    } else if (!_shown && _wave.isAnimating) {
       _wave.stop();
     }
   }
@@ -2011,7 +2013,7 @@ class _PlayerEqualizerState extends State<_PlayerEqualizer>
                     child: CustomPaint(
                       key: const ValueKey('player-equalizer'),
                       size: const Size(208, 84),
-                      painter: _EqualizerPainter(reduceMotion ? null : _wave),
+                      painter: _EqualizerPainter(_wave),
                     ),
                   ),
                 ),
@@ -2024,8 +2026,7 @@ class _PlayerEqualizerState extends State<_PlayerEqualizer>
 class _EqualizerPainter extends CustomPainter {
   _EqualizerPainter(this.wave) : super(repaint: wave);
 
-  /// Null paints the bars at rest.
-  final Animation<double>? wave;
+  final Animation<double> wave;
 
   // Taller in the middle, like Icons.graphic_eq_rounded.
   static const _envelope = <double>[.44, .64, .84, .7, 1, .7, .84, .64, .44];
@@ -2036,7 +2037,7 @@ class _EqualizerPainter extends CustomPainter {
     final slot = size.width / count;
     final barWidth = slot * .46;
     final minHeight = barWidth;
-    final t = (wave?.value ?? 0) * 2 * math.pi;
+    final t = wave.value * 2 * math.pi;
     final shadow = Paint()
       ..color = const Color(0x59000000)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
@@ -2044,12 +2045,11 @@ class _EqualizerPainter extends CustomPainter {
     final centreY = size.height / 2;
     for (var i = 0; i < count; i++) {
       // Whole cycles per loop keep the repeat seamless.
-      final level = wave == null
-          ? .62
-          : .64 +
-                .22 * math.sin(t * 3 + i * 1.7) +
-                .1 * math.sin(t * 5 - i * 2.3) +
-                .04 * math.sin(t * 8 + i * .9);
+      final level =
+          .64 +
+          .22 * math.sin(t * 3 + i * 1.7) +
+          .1 * math.sin(t * 5 - i * 2.3) +
+          .04 * math.sin(t * 8 + i * .9);
       final height = math.max(
         minHeight,
         size.height * _envelope[i] * level.clamp(.28, 1),

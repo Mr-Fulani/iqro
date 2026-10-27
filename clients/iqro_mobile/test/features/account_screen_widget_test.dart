@@ -5,6 +5,7 @@ import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/auth/auth_repository.dart';
 import 'package:iqro_mobile/core/auth/auth_session.dart';
+import 'package:iqro_mobile/core/auth/google_sign_in_gateway.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/notifications/notification_gateway.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
@@ -20,6 +21,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(sqfliteFfiInit);
+  _googleTests();
 
   testWidgets('guest can request a code without an active account scope', (
     tester,
@@ -438,6 +440,99 @@ const _config = AppConfig(
   environment: 'production',
 );
 
+void _googleTests() {
+  testWidgets('guest signs in with the Google account in one tap', (
+    tester,
+  ) async {
+    final google = _FakeGoogleGateway(chosenToken: 'google-id-token');
+    final (controller, l10n) = await _pumpAccount(
+      tester,
+      _session('guest'),
+      google: google,
+    );
+    await tester.pump();
+
+    expect(find.text(l10n.googleContinue), findsOneWidget);
+    expect(find.text(l10n.googleOrEmail), findsOneWidget);
+    // The email code stays as the fallback.
+    expect(find.text(l10n.sendCode), findsOneWidget);
+    expect(google.calls, <String>['silent']);
+
+    await _tapVisible(tester, find.text(l10n.googleContinue));
+
+    expect(google.calls, <String>['silent', 'choose']);
+    expect(controller.googleTokens, <String>['google-id-token']);
+  });
+
+  testWidgets('closing the Google sheet keeps the guest signed out', (
+    tester,
+  ) async {
+    final google = _FakeGoogleGateway(chosenToken: null);
+    final (controller, l10n) = await _pumpAccount(
+      tester,
+      _session('guest'),
+      google: google,
+    );
+    await tester.pump();
+
+    await _tapVisible(tester, find.text(l10n.googleContinue));
+
+    expect(controller.googleTokens, isEmpty);
+    expect(find.text(l10n.googleContinue), findsOneWidget);
+  });
+
+  testWidgets('without Google sign-in only the email code is offered', (
+    tester,
+  ) async {
+    final (_, l10n) = await _pumpAccount(
+      tester,
+      _session('guest'),
+      google: _FakeGoogleGateway(available: false),
+    );
+    await tester.pump();
+
+    expect(find.text(l10n.googleContinue), findsNothing);
+    expect(find.text(l10n.googleOrEmail), findsNothing);
+    expect(find.text(l10n.sendCode), findsOneWidget);
+  });
+
+  testWidgets('switch account signs out and reopens the Google sheet', (
+    tester,
+  ) async {
+    final google = _FakeGoogleGateway(chosenToken: 'second-account');
+    final (controller, l10n) = await _pumpAccount(
+      tester,
+      _session('active'),
+      google: google,
+    );
+    await tester.pump();
+
+    await _tapVisible(tester, find.text(l10n.accountSwitch));
+
+    expect(google.calls, <String>['signOut', 'choose']);
+    expect(controller.signOutCalls, 1);
+    expect(controller.googleTokens, <String>['second-account']);
+  });
+
+  testWidgets('sign out also forgets the chosen Google account', (
+    tester,
+  ) async {
+    final google = _FakeGoogleGateway();
+    final (controller, l10n) = await _pumpAccount(
+      tester,
+      _session('active'),
+      google: google,
+    );
+    await tester.pump();
+
+    await _tapVisible(tester, find.text(l10n.signOut));
+    await _tapVisible(tester, find.widgetWithText(FilledButton, l10n.signOut));
+
+    expect(google.calls, <String>['signOut']);
+    expect(controller.signOutCalls, 1);
+  });
+}
+
 class _TestSessionController extends SessionController {
   _TestSessionController(
     AuthRepository auth,
@@ -518,6 +613,42 @@ class _TestSessionController extends SessionController {
   Future<void> signOut() async {
     signOutCalls += 1;
   }
+
+  final googleTokens = <String>[];
+
+  @override
+  Future<void> signInWithGoogle(String idToken) async {
+    googleTokens.add(idToken);
+    state = AsyncValue<AuthSession?>.data(_session('active'));
+  }
+}
+
+class _FakeGoogleGateway implements GoogleSignInGateway {
+  _FakeGoogleGateway({this.available = true, this.chosenToken = 'id-token'});
+
+  final bool available;
+  final String? chosenToken;
+  final calls = <String>[];
+
+  @override
+  Future<bool> isAvailable() async => available;
+
+  @override
+  Future<String?> chooseAccount() async {
+    calls.add('choose');
+    return chosenToken;
+  }
+
+  @override
+  Future<String?> signInSilently() async {
+    calls.add('silent');
+    return null;
+  }
+
+  @override
+  Future<void> signOut() async {
+    calls.add('signOut');
+  }
 }
 
 class _NoopSyncRemote implements SyncRemote {
@@ -551,6 +682,7 @@ Future<(_TestSessionController, AppLocalizations)> _pumpAccount(
   WidgetTester tester,
   AuthSession session, {
   Locale locale = const Locale('ru'),
+  GoogleSignInGateway? google,
 }) async {
   final database = await tester.runAsync(
     () => databaseFactoryFfi.openDatabase(inMemoryDatabasePath),
@@ -578,6 +710,8 @@ Future<(_TestSessionController, AppLocalizations)> _pumpAccount(
             store: _NoopSyncStore(),
           ),
         ),
+        if (google != null)
+          googleSignInGatewayProvider.overrideWithValue(google),
       ],
       child: _TestApp(locale: locale),
     ),

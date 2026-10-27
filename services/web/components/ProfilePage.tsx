@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   api,
@@ -61,6 +62,7 @@ export default function ProfilePage() {
     isLoading: authLoading,
   } = useAuth();
   const { formatNumber, locale, t } = useI18n();
+  const router = useRouter();
   const userStatus = session?.user.status;
 
   const [reading, setReading] = useState<ReadingPosition | null>(null);
@@ -266,6 +268,13 @@ export default function ProfilePage() {
     } finally {
       setLoadingSync(false);
     }
+  };
+
+  // Signs out and opens the sign-in page, where Google offers the account
+  // chooser again (auto-select is off after logout) next to the email code.
+  const switchAccount = async () => {
+    await logout();
+    router.push(localizedPath(locale, "/login"));
   };
 
   const handleLogoutAll = async () => {
@@ -543,6 +552,12 @@ export default function ProfilePage() {
               </Link>
             ) : (
               <>
+                <button
+                  className="btn btn-outline-primary btn-sm"
+                  onClick={() => void switchAccount()}
+                >
+                  {t("auth.switchAccount")}
+                </button>
                 <button
                   className="btn btn-secondary btn-sm"
                   onClick={() => void logout()}
