@@ -72,9 +72,10 @@ jobs:
       QURAN_TEST_DATABASE: postgresql
     steps:
       - uses: actions/checkout@v4
-      - name: Install recovery encryption tool and ffmpeg
-        # ffmpeg: the media tests (course videos and dubs, covers, salah audio) run instead of skipping.
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends age ffmpeg
+      - name: Install recovery encryption tool, ffmpeg and rsvg-convert
+        # ffmpeg: the media tests (course videos and dubs, covers, salah audio) run instead of skipping;
+        # rsvg-convert: the salah SVG picture tests.
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends age ffmpeg librsvg2-bin
       - name: Operations tooling
         run: |
           sh -n ops/postgres/backup.sh

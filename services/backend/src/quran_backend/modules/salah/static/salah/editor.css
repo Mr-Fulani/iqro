@@ -972,6 +972,60 @@
 }
 
 /* Step properties and formula texts ---------------------------------------- */
+.se-image-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 16px;
+}
+
+.se-image-now {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  max-width: 200px;
+}
+
+.se-image-now img,
+.se-image .se-file-preview img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border: 1px solid var(--hairline-color);
+  border-radius: 8px;
+}
+
+.se-image-change {
+  display: grid;
+  flex: 1 1 280px;
+  gap: 6px;
+}
+
+.se-image-scope {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.se-image-scope label,
+.se-image-scene {
+  font-weight: 400;
+}
+
+.se-image .se-file-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.se-image-scope[hidden],
+.se-image .se-file-preview[hidden] {
+  display: none;
+}
+
 .se-props-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

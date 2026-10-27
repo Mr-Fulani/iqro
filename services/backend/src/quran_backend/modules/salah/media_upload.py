@@ -1,9 +1,10 @@
 """Course illustrations and recordings uploaded by the owner in the admin.
 
-Any PNG, JPEG or WebP is cropped to the centre square, scaled to 720x720 and
-re-encoded as WebP by ffmpeg, then stored like imported media. A recording is
-an m4a or mp3 stored as it is, once ffprobe has read it as one. Only drafts
-change: a published version is immutable.
+Any PNG, JPEG, WebP or SVG (drawn by rsvg-convert first) is cropped to the
+centre square, scaled to 720x720 and re-encoded as WebP by ffmpeg, then stored
+like imported media. A recording is an m4a or mp3 stored as it is, once
+ffprobe has read it as one. Only drafts change: a published version is
+immutable.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 
 from django.core.files.uploadedfile import UploadedFile
 
@@ -33,6 +35,7 @@ from quran_backend.modules.salah.models import (
     SalahMediaAsset,
     SalahPublicationStatus,
 )
+from quran_backend.modules.salah.snapshot import snapshot_checksum
 
 IMAGE_SIDE = 720
 TARGET_IMAGE_BYTES = 60 * 1024
@@ -43,6 +46,9 @@ FFMPEG_TIMEOUT_SECONDS = 60
 MAX_AUDIO_SECONDS = 180
 # What ffprobe calls the container of each accepted file type.
 AUDIO_FORMATS = {".mp3": {"mp3"}, ".m4a": {"mp4", "m4a", "mov"}}
+# An SVG is drawn this large before the crop, so a wide drawing still fills the square.
+SVG_RENDER_SIDE = IMAGE_SIDE * 2
+IMAGE_FORMATS_HELP = "PNG, JPEG, WebP или SVG"
 
 
 class SalahMediaUploadError(ValueError):
@@ -58,14 +64,20 @@ def image_keys(version: SalahCourseVersion) -> list[dict[str, object]]:
     ]
 
 
-def upload_salah_image(
+def upload_salah_image(  # noqa: PLR0913 - the file and how it replaces the old one
     version: SalahCourseVersion,
     key: str,
     uploaded: UploadedFile,
     *,
+    keep_scene: bool = False,
     uploader: ObjectUploader | None = None,
     ffmpeg: str | None = None,
 ) -> SalahMediaAsset:
+    """Replaces the picture of `key` everywhere it is shown.
+
+    The owner's own picture is no longer a still of the 3D scene: unless
+    `keep_scene`, the scene stops playing over it, so the learner sees it.
+    """
     if version.status != SalahPublicationStatus.DRAFT or version.is_signed:
         raise SalahMediaUploadError(
             "Иллюстрации меняются только в черновике до подписи. "
@@ -73,14 +85,82 @@ def upload_salah_image(
         )
     if key not in {asset["key"] for asset in image_keys(version)}:
         raise SalahMediaUploadError(f"Иллюстрации «{key}» нет в снимке курса.")
+    with checked_image(uploaded, ffmpeg=ffmpeg) as image:
+        asset = store_media(version, key, image, uploader or player_background_uploader())
+    if not keep_scene and drop_scene(version.snapshot, key):
+        version.checksum_sha256 = snapshot_checksum(version.snapshot)
+        version.save(update_fields=["snapshot", "checksum_sha256", "updated_at"])
+    compile_version(version)
+    return asset
+
+
+def drop_scene(snapshot: dict[str, Any], key: str) -> bool:
+    """The picture stops being a still of the 3D scene; True when it was one."""
+    for asset in snapshot.get("media", []):
+        if asset.get("key") == key and "scene" in asset:
+            del asset["scene"]
+            return True
+    return False
+
+
+@contextmanager
+def checked_image(
+    uploaded: UploadedFile, *, ffmpeg: str | None = None, rsvg: str | None = None
+) -> Iterator[Path]:
+    """An uploaded picture as a 720x720 WebP in a temporary file.
+
+    The file's own bytes decide what it is, not its name or the browser's type.
+    """
     with TemporaryDirectory(prefix="iqro-salah-image-") as directory:
         folder = Path(directory)
         source = folder / "source"
         _save_upload(uploaded, source, max_mib=MAX_SOURCE_MIB)
-        image = _encode_webp(source, folder, ffmpeg or shutil.which("ffmpeg") or "ffmpeg")
-        asset = store_media(version, key, image, uploader or player_background_uploader())
-    compile_version(version)
-    return asset
+        with source.open("rb") as file:
+            kind = image_kind(file.read(4096))
+        if kind is None:
+            raise SalahMediaUploadError(
+                f"Файл не похож на картинку. Загрузите {IMAGE_FORMATS_HELP}."
+            )
+        if kind == "svg":
+            source = _draw_svg(source, folder, rsvg or shutil.which("rsvg-convert"))
+        yield _encode_webp(source, folder, ffmpeg or shutil.which("ffmpeg") or "ffmpeg")
+
+
+def image_kind(head: bytes) -> str | None:
+    """png, jpeg, webp or svg by the first bytes of a file, otherwise None."""
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if head.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "webp"
+    text = head.decode("utf-8", errors="ignore").lstrip("\ufeff \t\r\n").lower()
+    if text.startswith(("<svg", "<?xml", "<!--", "<!doctype svg")) and "<svg" in text:
+        return "svg"
+    return None
+
+
+def _draw_svg(source: Path, folder: Path, rsvg: str | None) -> Path:
+    if rsvg is None:
+        raise SalahMediaUploadError(
+            "SVG на этом сервере не обрабатывается. Сохраните картинку как PNG и загрузите её."
+        )
+    drawn = folder / "drawn.png"
+    side = str(SVG_RENDER_SIDE)
+    try:
+        # rsvg-convert reads no network resources; it gets only the uploaded file.
+        subprocess.run(  # noqa: S603 - fixed program, no shell, paths we created
+            [rsvg, "--keep-aspect-ratio", "-w", side, "-h", side, "-f", "png",
+             "-o", str(drawn), str(source)],
+            check=True,
+            capture_output=True,
+            timeout=FFMPEG_TIMEOUT_SECONDS,
+        )  # fmt: skip
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        raise SalahMediaUploadError(
+            "SVG не удалось нарисовать. Проверьте файл или сохраните картинку как PNG."
+        ) from exc
+    return drawn
 
 
 def _save_upload(uploaded: UploadedFile, path: Path, *, max_mib: float) -> None:
@@ -192,7 +272,7 @@ def _encode_webp(source: Path, folder: Path, ffmpeg: str) -> Path:
             )  # fmt: skip
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             raise SalahMediaUploadError(
-                "Файл не удалось обработать. Загрузите изображение PNG, JPEG или WebP."
+                f"Файл не удалось обработать. Загрузите изображение {IMAGE_FORMATS_HELP}."
             ) from exc
         if image.stat().st_size <= TARGET_IMAGE_BYTES:
             break

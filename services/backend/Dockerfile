@@ -25,8 +25,8 @@ RUN DJANGO_SETTINGS_MODULE=quran_backend.settings.test \
 
 FROM builder AS test
 
-# Player background videos are re-encoded in the admin.
-RUN apk add --no-cache ffmpeg
+# Player background videos are re-encoded in the admin; course SVG pictures are drawn first.
+RUN apk add --no-cache ffmpeg rsvg-convert
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --all-groups
 COPY tests ./tests
@@ -46,6 +46,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
 RUN apk add --no-cache \
         ca-certificates \
         ffmpeg \
+        rsvg-convert \
         'libcrypto3>=3.5.8-r0' \
         'libssl3>=3.5.8-r0' \
         gdbm \

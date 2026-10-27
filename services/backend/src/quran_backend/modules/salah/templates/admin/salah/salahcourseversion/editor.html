@@ -265,6 +265,39 @@
                 {% if properties.errors.repeat %}<span class="se-error">{{ properties.errors.repeat }}</span>{% endif %}
               </p>
             </div>
+            <div class="se-prop se-image{% if properties.errors.image %} has-error{% endif %}" data-image-block>
+              <span class="se-field-label">Картинка шага</span>
+              <div class="se-image-row">
+                <figure class="se-image-now" data-image-now>
+                  <img src="{{ properties.picture.url }}" alt="" width="120" height="120"{% if not properties.picture.url %} hidden{% endif %}>
+                  <figcaption class="se-small" data-image-caption>
+                    {% if properties.picture %}
+                      {% if properties.picture.url %}{{ properties.picture.kib }} КБ{% else %}Файл ещё не загружен{% endif %} · шагов с этой картинкой: {{ properties.picture.steps }}{% if properties.picture.scene %} · поверх играет 3D-анимация позы{% endif %}
+                    {% else %}
+                      Нет картинки
+                    {% endif %}
+                  </figcaption>
+                </figure>
+                {% if editable %}
+                  <div class="se-image-change">
+                    <label class="se-file">
+                      <span>{% if properties.picture %}Заменить картинку{% else %}Загрузить картинку{% endif %}</span>
+                      <input type="file" name="prop-image" id="id-prop-image" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"{% if properties.errors.image %} aria-invalid="true" aria-describedby="err-prop-image"{% endif %}>
+                    </label>
+                    <fieldset class="se-image-scope" data-image-scope{% if not properties.picture or properties.picture.steps < 2 %} hidden{% endif %}>
+                      <legend class="se-small">Где заменить</legend>
+                      <label><input type="radio" name="prop-image-scope" value="all"{% if properties.image_scope != "step" %} checked{% endif %}> Во всех шагах с этой картинкой (<span data-image-steps>{{ properties.picture.steps }}</span>)</label>
+                      <label><input type="radio" name="prop-image-scope" value="step"{% if properties.image_scope == "step" %} checked{% endif %}> Только в этом шаге — станет его отдельной картинкой</label>
+                    </fieldset>
+                    <label class="se-image-scene" data-image-scene{% if not properties.picture.scene %} hidden{% endif %}><input type="checkbox" name="prop-image-scene" value="on"> Оставить 3D-анимацию поверх новой картинки</label>
+                    <div class="se-file-preview" data-image-preview hidden></div>
+                    {% if properties.errors.image %}<p class="se-error" id="err-prop-image">{{ properties.errors.image }}</p>{% endif %}
+                    <p class="help">{{ properties.image_formats }} до {{ properties.max_source_mib }} МБ. Сервер обрежет картинку по центру до квадрата {{ properties.image_side }}×{{ properties.image_side }} и сожмёт в WebP. Новая картинка выключает 3D-анимацию этой позы, иначе ученик её не увидит. На сайте и в приложении замена появится после подписи и публикации.</p>
+                  </div>
+                {% endif %}
+              </div>
+              {{ properties.pictures|json_script:"se-pictures-data" }}
+            </div>
             <div class="se-prop">
               <span class="se-field-label">Формулы шага</span>
               <p class="help">По порядку, как их увидит ученик. Чтобы убрать формулу, выберите «— убрать —»; последняя строка добавляет новую.</p>

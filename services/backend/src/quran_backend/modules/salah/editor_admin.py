@@ -1,4 +1,5 @@
-"""The course editor in the admin: texts by language, «?» and «!» notes, recordings.
+"""The course editor in the admin: texts by language, «?» and «!» notes, recordings,
+step pictures.
 
 A mixin of SalahCourseVersionAdmin. One page shows one place of the course
 (`editor.py`): the course tree on the side, the place's form and, for a step,
@@ -17,6 +18,7 @@ import logging
 import re
 from collections.abc import Callable
 from contextlib import ExitStack
+from pathlib import Path
 from typing import Any
 
 from django.conf import settings
@@ -58,10 +60,15 @@ from quran_backend.modules.salah.lesson_media_admin import (
     review_videos,
 )
 from quran_backend.modules.salah.media_upload import (
+    IMAGE_FORMATS_HELP,
+    IMAGE_SIDE,
     MAX_AUDIO_SECONDS,
+    MAX_SOURCE_MIB,
     CheckedAudio,
     SalahMediaUploadError,
     checked_audio,
+    checked_image,
+    drop_scene,
 )
 from quran_backend.modules.salah.models import (
     SALAH_LANGUAGES,
@@ -682,8 +689,24 @@ class SalahEditorAdminMixin:
             }
         document = version.documents.filter(language=editor.SOURCE_LANGUAGE).first()
         compiled = (document.payload if document else {}).get("formulas", {})
+        stored = {asset.key: asset for asset in version.media.all()}
+        pictures = {
+            key: {
+                "url": public_audio_url(stored[key].object_key) if key in stored else "",
+                "kib": round(stored[key].bytes / 1024) if key in stored else None,
+                "steps": editor.image_usage(snapshot, key),
+                "scene": editor.image_scene(snapshot, key),
+            }
+            for key, _label in editor.step_images(snapshot)
+        }
         return {
             **current,
+            "picture": pictures.get(current["media"]),
+            "pictures": pictures,
+            "image_scope": (posted.get("prop-image-scope") if posted is not None else "") or "all",
+            "image_formats": IMAGE_FORMATS_HELP,
+            "image_side": IMAGE_SIDE,
+            "max_source_mib": MAX_SOURCE_MIB,
             "kinds": list(editor.STEP_KIND_LABELS.items()),
             "rulings": list(editor.RULING_LABELS.items()),
             "images": editor.step_images(snapshot),
@@ -789,6 +812,7 @@ class SalahEditorAdminMixin:
                 and self._audio_field(name, owners, languages)
             ):
                 uploads[name] = uploaded
+        image_upload = request.FILES.get("prop-image") if edit.properties is not None else None
         deletes = {
             name.removeprefix("audio_delete__")
             for name in request.POST
@@ -796,19 +820,12 @@ class SalahEditorAdminMixin:
             and self._audio_field(name.replace("audio_delete__", "audio__", 1), owners, languages)
         }
         with ExitStack() as stack:
-            checked: dict[str, CheckedAudio] = {}
-            for name, uploaded in uploads.items():
-                try:
-                    checked[name.removeprefix("audio__")] = stack.enter_context(
-                        checked_audio(uploaded)
-                    )
-                except SalahMediaUploadError as error:
-                    errors[name] = f"{uploaded.name}: {error}"
+            checked, image = self._checked_files(stack, uploads, image_upload, errors)
             if errors:
                 messages.error(
                     request,
                     "Ничего не сохранено: исправьте отмеченные поля. Введённый текст остался "
-                    "в форме, файлы записей выберите заново.",
+                    "в форме, файлы записей и картинок выберите заново.",
                 )
                 return self._refuse(request, version, node_id, languages, errors, status=400)
             try:
@@ -819,16 +836,17 @@ class SalahEditorAdminMixin:
                     edit=edit,
                     checked=checked,
                     deletes=deletes,
+                    image=image,
                     languages=languages,
                 )
             except _SaveRefusedError as refusal:
                 messages.error(request, str(refusal))
                 return self._refuse(request, version, node_id, languages, errors, status=409)
             except ImproperlyConfigured, ObjectStorageError, OSError:
-                logger.exception("Salah editor: storing a recording failed")
+                logger.exception("Salah editor: storing a recording or a picture failed")
                 messages.error(
                     request,
-                    "Не удалось сохранить запись в хранилище, поэтому ничего не сохранено. "
+                    "Не удалось сохранить файл в хранилище, поэтому ничего не сохранено. "
                     "Повторите через минуту: введённый текст остался в форме.",
                 )
                 return self._refuse(request, version, node_id, languages, errors, status=503)
@@ -854,6 +872,28 @@ class SalahEditorAdminMixin:
             position = ids.index(node_id) if node_id in ids else -1
             target = ids[position + 1] if 0 <= position < len(ids) - 1 else node_id
         return HttpResponseRedirect(self._editor_url(saved, target))
+
+    @staticmethod
+    def _checked_files(
+        stack: ExitStack,
+        uploads: dict[str, UploadedFile],
+        image_upload: UploadedFile | None,
+        errors: dict[str, str],
+    ) -> tuple[dict[str, CheckedAudio], Path | None]:
+        """The form's recordings and picture, checked; each refusal goes to its field."""
+        checked: dict[str, CheckedAudio] = {}
+        for name, uploaded in uploads.items():
+            try:
+                checked[name.removeprefix("audio__")] = stack.enter_context(checked_audio(uploaded))
+            except SalahMediaUploadError as error:
+                errors[name] = f"{uploaded.name}: {error}"
+        image = None
+        if image_upload is not None:
+            try:
+                image = stack.enter_context(checked_image(image_upload))
+            except SalahMediaUploadError as error:
+                errors["prop-image"] = f"{image_upload.name}: {error}"
+        return checked, image
 
     @staticmethod
     def _audio_field(name: str, owners: set[str], languages: list[str]) -> bool:
@@ -897,6 +937,7 @@ class SalahEditorAdminMixin:
         edit: editor.NodeEdit,
         checked: dict[str, CheckedAudio],
         deletes: set[str],
+        image: Path | None,
         languages: list[str],
     ) -> tuple[SalahCourseVersion, int]:
         locked = SalahCourseVersion.objects.select_for_update().get(pk=version.pk)
@@ -915,6 +956,16 @@ class SalahEditorAdminMixin:
             )
         sync = request.POST.get("sync_variants") == "on"
         synced = editor.apply_node_edit(snapshot, node, edit, languages, sync_variants=sync)
+        if image is not None:
+            synced += self._write_image(
+                locked,
+                snapshot,
+                node,
+                image,
+                only_step=request.POST.get("prop-image-scope") == "step",
+                keep_scene=request.POST.get("prop-image-scene") == "on",
+                languages=languages if sync else [],
+            )
         problems = integrity_problems(snapshot)
         if problems:
             raise _SaveRefusedError(
@@ -931,6 +982,40 @@ class SalahEditorAdminMixin:
             update_fields.append("source_title")
         locked.save(update_fields=update_fields)
         return locked, synced
+
+    @staticmethod
+    def _write_image(  # noqa: PLR0913 - the picture of one form
+        version: SalahCourseVersion,
+        snapshot: dict[str, Any],
+        node: editor.EditorNode,
+        image: Path,
+        *,
+        only_step: bool,
+        keep_scene: bool,
+        languages: list[str],
+    ) -> int:
+        """Replaces the step's picture everywhere, or gives this step a picture of its own.
+
+        The owner's picture is no longer a still of the 3D scene: unless kept,
+        the scene stops playing over it. Returns how many other variants took
+        the new picture of their own (only with `languages`, the sync).
+        """
+        uploader = player_background_uploader()
+        old_key = node.data.get("media")
+        if old_key and not only_step:
+            store_media(version, old_key, image, uploader)
+            if not keep_scene:
+                drop_scene(snapshot, old_key)
+            return 0
+        sources = {asset.get("key"): asset for asset in snapshot.get("media", [])}
+        alt = (sources.get(old_key) or {}).get("alt") or editor.node_texts(node, "title")
+        new_key = editor.new_image_key(node)
+        store_media(version, new_key, image, uploader)
+        editor.add_image_media(snapshot, new_key, alt)
+        variants = editor.image_variants(snapshot, node, old_key, languages) if languages else []
+        for each in [node.data, *variants]:
+            each["media"] = new_key
+        return len(variants)
 
     @staticmethod
     def _write_audio(  # noqa: PLR0913 - the recordings of one form
