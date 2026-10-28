@@ -120,7 +120,7 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
       mandatoryPriority = 0,
       super(const AppUpdateState.none());
 
-  static const checkInterval = Duration(days: 1);
+  static const checkInterval = Duration(minutes: 30);
   static const snoozeDuration = Duration(days: 3);
 
   final AppUpdateGateway? _gateway;
@@ -137,8 +137,8 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
   Future<void> _save(AppUpdateRecord record) =>
       _store?.writeAppUpdateRecord(record.encode()) ?? Future<void>.value();
 
-  /// On launch and on every return to the app. Play is asked at most once a
-  /// day, except while an accepted update downloads, so «Перезапустить»
+  /// On launch and on every return to the app. Play is asked at most once
+  /// every [checkInterval], except while an accepted update downloads, so «Перезапустить»
   /// appears as soon as it is ready.
   Future<void> checkIfDue() async {
     final gateway = _gateway;

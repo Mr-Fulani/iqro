@@ -77,18 +77,18 @@ void main() {
   );
 
   group('AppUpdateController', () {
-    test('asks Play at most once a day, across launches', () async {
+    test('asks Play at most once every 30 minutes, across launches', () async {
       final store = await _store();
       final gateway = _FakeGateway(_info(available: false));
       final first = controller(gateway, store);
       await first.checkIfDue();
-      now = now.add(const Duration(hours: 23));
+      now = now.add(const Duration(minutes: 29));
       await first.checkIfDue();
       // A new launch reads the same record.
       await controller(gateway, store).checkIfDue();
       expect(gateway.checks, 1);
 
-      now = now.add(const Duration(hours: 1));
+      now = now.add(const Duration(minutes: 1));
       await controller(gateway, store).checkIfDue();
       expect(gateway.checks, 2);
     });
@@ -117,7 +117,7 @@ void main() {
       final updates = controller(gateway, store);
       await updates.checkIfDue();
       expect(updates.state.stage, AppUpdateStage.none);
-      // Still once a day, not on every return to the app.
+      // Still throttled, not asked on every return to the app.
       await updates.checkIfDue();
       expect(gateway.checks, 1);
     });
