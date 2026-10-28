@@ -26,6 +26,7 @@ class MoreScreen extends ConsumerWidget {
       ),
       body: IqroPage(
         padding: iqroRootTabPadding(
+          context,
           playerActive: playerActive,
           playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
         ),

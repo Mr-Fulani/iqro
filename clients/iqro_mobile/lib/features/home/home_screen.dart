@@ -231,6 +231,7 @@ class HomeScreen extends ConsumerWidget {
         body: IqroPage(
           tabletContentWidth: homeTabletContentWidth,
           padding: iqroRootTabPadding(
+            context,
             playerActive: player.track != null,
             playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
           ),

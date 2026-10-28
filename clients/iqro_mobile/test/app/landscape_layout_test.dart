@@ -12,6 +12,7 @@ import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/audio/mini_player.dart';
 import 'package:iqro_mobile/features/calendar/calendar_catalog.dart';
 import 'package:iqro_mobile/features/calendar/hijri_calendar_service.dart';
 import 'package:iqro_mobile/features/home/home_screen.dart';
@@ -98,6 +99,72 @@ void main() {
     }
   }
 
+  // A Galaxy A55 (1080x2340 px at 420 dpi) with three-button navigation
+  // edge-to-edge keeps a 48 dp inset under the tab bar; the player ran
+  // under the bar by exactly that much.
+  for (final (device, size, ratio) in [
+    ('phone', const Size(1080, 2340), 2.625),
+    ('phone landscape', const Size(2340, 1080), 2.625),
+    ('tablet', const Size(1600, 2560), 2.0),
+    ('tablet landscape', const Size(2560, 1600), 2.0),
+  ]) {
+    for (final buttons in [false, true]) {
+      testWidgets('$device buttons=$buttons player sits above the tab bar', (
+        tester,
+      ) async {
+        for (final scale in [1.0, 1.3, 1.6, 2.0]) {
+          for (final collapsed in [true, false]) {
+            final reason = 'scale=$scale collapsed=$collapsed';
+            await _pumpShell(
+              tester,
+              tab: 0,
+              scale: scale,
+              size: size,
+              pixelRatio: ratio,
+              padding: _systemBars(size, ratio, buttons: buttons),
+              collapsed: collapsed,
+            );
+            expect(tester.takeException(), isNull, reason: reason);
+            final screen = size / ratio;
+            final bar = tester.getRect(find.byType(NavigationBar));
+            expect(bar.bottom, screen.height, reason: reason);
+            final player = tester.getRect(find.byType(IqroMiniPlayer));
+            expect(player.top, greaterThan(0), reason: reason);
+            expect(player.bottom, moreOrLessEquals(bar.top), reason: reason);
+            final visible = tester.getRect(
+              collapsed
+                  ? find.byKey(const ValueKey('mini-player-expand'))
+                  : find.descendant(
+                      of: find.byType(IqroMiniPlayer),
+                      matching: find.byType(ListTile),
+                    ),
+            );
+            expect(visible.bottom, lessThanOrEqualTo(bar.top), reason: reason);
+            // The page scrolls its last card clear of the bar too.
+            final page = find
+                .byWidgetPredicate(
+                  (widget) =>
+                      widget is SingleChildScrollView &&
+                      widget.scrollDirection == Axis.vertical,
+                )
+                .first;
+            await tester.drag(page, const Offset(0, -20000));
+            await tester.pumpAndSettle();
+            final texts = find.descendant(
+              of: page,
+              matching: find.byType(Text),
+            );
+            final contentEnd = [
+              for (var index = 0; index < texts.evaluate().length; index++)
+                tester.getRect(texts.at(index)).bottom,
+            ].reduce((a, b) => a > b ? a : b);
+            expect(contentEnd, lessThanOrEqualTo(bar.top), reason: reason);
+          }
+        }
+      });
+    }
+  }
+
   testWidgets('portrait keeps the cards above the surah list', (tester) async {
     await _pumpShell(tester, tab: 1, size: const Size(1080, 2340));
     expect(
@@ -130,18 +197,36 @@ void _expectClearOfPlayer(WidgetTester tester, Finder target) {
   }
 }
 
+/// System bars in physical pixels: the status bar on top and the navigation
+/// inset, 48 dp for buttons and 16 dp for the gesture handle. A phone moves
+/// the buttons to the side in landscape; a tablet keeps them at the bottom.
+FakeViewPadding _systemBars(Size size, double ratio, {required bool buttons}) {
+  final landscape = size.width > size.height;
+  final tablet = size.shortestSide / ratio >= 600;
+  final inset = (buttons ? 48 : 16) * ratio;
+  final status = 24 * ratio;
+  return landscape && !tablet && buttons
+      ? FakeViewPadding(top: status, right: inset)
+      : FakeViewPadding(top: status, bottom: inset);
+}
+
 Future<void> _pumpShell(
   WidgetTester tester, {
   required int tab,
   bool dark = false,
   double scale = 1,
   Size size = _landscape,
+  double pixelRatio = _pixelRatio,
+  FakeViewPadding? padding,
+  bool collapsed = true,
 }) async {
   tester.view.physicalSize = size;
-  tester.view.devicePixelRatio = _pixelRatio;
-  tester.view.padding = size.width > size.height
-      ? const FakeViewPadding(left: 79, top: 66)
-      : const FakeViewPadding(top: 66);
+  tester.view.devicePixelRatio = pixelRatio;
+  tester.view.padding =
+      padding ??
+      (size.width > size.height
+          ? const FakeViewPadding(left: 79, top: 66)
+          : const FakeViewPadding(top: 66));
   addTearDown(tester.view.reset);
   final router = GoRouter(
     initialLocation: '/app?tab=$tab',
@@ -180,6 +265,7 @@ Future<void> _pumpShell(
         activeAccountScopeKeyProvider.overrideWithValue(account),
         appPreferencesProvider.overrideWith((ref) => _Preferences()),
         audioControllerProvider.overrideWith((ref) => _IdleAudio()),
+        miniPlayerCollapsedProvider.overrideWith((ref) => collapsed),
         recitersProvider.overrideWith((ref) async => []),
         planProvider.overrideWith((ref) => _Plan()),
         memorizationProvider.overrideWith((ref) => _Memorization()),

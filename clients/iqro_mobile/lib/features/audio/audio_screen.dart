@@ -171,6 +171,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
       body: IqroPage(
         tabletContentWidth: audioTabletContentWidth,
         padding: iqroRootTabPadding(
+          context,
           playerActive: player.track != null || player.standalone != null,
           playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
         ),

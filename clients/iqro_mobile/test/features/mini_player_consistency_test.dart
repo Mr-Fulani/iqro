@@ -21,7 +21,9 @@ void main() {
         ),
       ),
     );
-    expect(appShell, contains('const PositionedDirectional('));
+    expect(appShell, contains('PositionedDirectional('));
+    // Sits on the measured tab bar, not a fixed height under it.
+    expect(appShell, contains('bottom: MediaQuery.paddingOf(context).bottom'));
     expect(
       appShell,
       isNot(contains('if (playerActive) const IqroMiniPlayer()')),

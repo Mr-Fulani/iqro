@@ -84,6 +84,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
               .firstOrNull;
           return IqroPage(
             padding: iqroRootTabPadding(
+              context,
               playerActive: playerActive,
               playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
             ),
@@ -1323,6 +1324,7 @@ class _AfterPrayerScreenState extends ConsumerState<AfterPrayerScreen> {
         ),
         data: (value) => IqroPage(
           padding: iqroRootTabPadding(
+            context,
             playerActive: ref.watch(
               audioControllerProvider.select((state) => state.active),
             ),

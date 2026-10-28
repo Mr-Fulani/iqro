@@ -282,6 +282,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       body: IqroPage(
         scrollable: false,
         padding: iqroRootTabPadding(
+          context,
           playerActive: playerActive,
           playerCollapsed: ref.watch(miniPlayerCollapsedProvider),
         ),
