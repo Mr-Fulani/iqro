@@ -694,6 +694,8 @@ const en: Messages = {
   "audio.title": "Reciters and recitations",
   "audio.description": "Choose recognized reciters and recitation styles, and listen by surah and ayah.",
   "audio.reciter": "Reciter (Qari)",
+  "audio.searchReciters": "Find a reciter",
+  "audio.noRecitersFound": "No reciter found",
   "audio.editionStyle": "Edition and recitation style",
   "audio.tracksShort": "Tracks: {count}",
   "audio.codeCountry": "Code: {code} · Country: {country}",

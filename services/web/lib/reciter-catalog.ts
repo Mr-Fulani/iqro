@@ -24,6 +24,29 @@ export function reciterPersonKey(reciter: Pick<Reciter, "slug"> | string): strin
   return CANONICAL_RECITER_SLUGS[slug] || slug;
 }
 
+function normalizedName(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f\u064b-\u0652\u0640]/g, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/[-‘’'ʼ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** The catalog's search: any word order, in any of the reciter's four names. */
+export function reciterMatchesQuery(
+  reciter: Pick<Reciter, "name_ar" | "name_en" | "name_ru" | "name_tr">,
+  query: string,
+): boolean {
+  const words = normalizedName(query).split(" ").filter(Boolean);
+  const names = normalizedName(
+    [reciter.name_ar, reciter.name_en, reciter.name_ru, reciter.name_tr ?? ""].join(" "),
+  );
+  return words.every((word) => names.includes(word));
+}
+
 export function groupRecitersByPerson(reciters: Reciter[]): Reciter[] {
   const people = new Map<string, Reciter>();
   for (const reciter of reciters) {

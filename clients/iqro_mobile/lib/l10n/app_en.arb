@@ -199,6 +199,14 @@
   "recitersUpdated": "Reciter catalog updated",
   "recitersRefreshFailed": "Could not refresh the catalog. Saved data is shown.",
   "noAudio": "No playable audio is available",
+  "searchReciters": "Find a reciter",
+  "reciterNotFound": "No reciter found",
+  "showAllReciters": "Show all: {count}",
+  "@showAllReciters": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "nowPlaying": "Now playing",
   "play": "Play",
   "pause": "Pause",

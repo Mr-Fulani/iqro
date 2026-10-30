@@ -643,6 +643,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String get noAudio => 'Oynatılabilir ses yok';
 
   @override
+  String get searchReciters => 'Kâri ara';
+
+  @override
+  String get reciterNotFound => 'Kâri bulunamadı';
+
+  @override
+  String showAllReciters(int count) {
+    return 'Tümünü göster: $count';
+  }
+
+  @override
   String get nowPlaying => 'Şimdi çalıyor';
 
   @override

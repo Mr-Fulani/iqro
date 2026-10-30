@@ -3,6 +3,26 @@ import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/reciter_catalog.dart';
 
 void main() {
+  test('the search reads every name in any word order', () {
+    final person = groupRecitersByPerson(<Reciter>[
+      Reciter.fromJson(<String, dynamic>{
+        'id': '7',
+        'slug': 'nasser-alqatami',
+        'name_ar': 'ناصر القطامي',
+        'name_en': 'Nasser Alqatami',
+        'name_ru': 'Насер Аль Катами',
+        'name_tr': '',
+      }),
+    ]).single;
+
+    expect(reciterMatchesQuery(person, 'катами'), isTrue);
+    expect(reciterMatchesQuery(person, 'Катами насер'), isTrue);
+    expect(reciterMatchesQuery(person, 'QATAMI'), isTrue);
+    expect(reciterMatchesQuery(person, 'القطامي'), isTrue);
+    expect(reciterMatchesQuery(person, '  '), isTrue);
+    expect(reciterMatchesQuery(person, 'афаси'), isFalse);
+  });
+
   test('recitation variants are grouped under one reciter person', () {
     final people = groupRecitersByPerson(<Reciter>[
       _reciter('1', 'qf-1-abdulbaset-abdulsamad-mujawwad'),

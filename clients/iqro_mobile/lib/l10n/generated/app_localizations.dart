@@ -1254,6 +1254,24 @@ abstract class AppLocalizations {
   /// **'No playable audio is available'**
   String get noAudio;
 
+  /// No description provided for @searchReciters.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a reciter'**
+  String get searchReciters;
+
+  /// No description provided for @reciterNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No reciter found'**
+  String get reciterNotFound;
+
+  /// No description provided for @showAllReciters.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all: {count}'**
+  String showAllReciters(int count);
+
   /// No description provided for @nowPlaying.
   ///
   /// In en, this message translates to:

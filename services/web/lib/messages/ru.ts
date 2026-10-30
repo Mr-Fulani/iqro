@@ -697,6 +697,8 @@ const ru = {
   "audio.title": "Каталог чтецов и декламаций",
   "audio.description": "Выбирайте признанных чтецов и стили чтения, слушайте с разбивкой по сурам и аятам.",
   "audio.reciter": "Чтец (Кари)",
+  "audio.searchReciters": "Найти чтеца",
+  "audio.noRecitersFound": "Такого чтеца нет",
   "audio.editionStyle": "Издание и стиль чтения",
   "audio.tracksShort": "Треков: {count}",
   "audio.codeCountry": "Код: {code} · Страна: {country}",
