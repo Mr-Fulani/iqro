@@ -12,5 +12,6 @@
 </nav>
 {% endwith %}{% endif %}
 {% if media_block %}{{ media_block }}{% endif %}
+{% if media_hint %}<p class="help">{{ media_hint }}</p>{% endif %}
 {{ block.super }}
 {% endblock %}

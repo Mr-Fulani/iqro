@@ -16,6 +16,7 @@ from typing import Any
 
 from django.http import HttpRequest
 from django.template.loader import render_to_string
+from django.utils.html import format_html
 from django.utils.safestring import SafeString
 
 from quran_backend.modules.audio.serializers import public_audio_url
@@ -45,6 +46,19 @@ LANGUAGE_NAMES = {"ru": "русского", "en": "английского", "ar"
 KIND_LABELS = {VIDEO: "Видео", SLIDES: "Слайды", BANNER: "Баннер"}
 MEDIA_INSTRUCTION_URL = "https://github.com/Mr-Fulani/iqro/blob/main/docs/courses/video.md"
 MAX_FILES = MAX_SLIDES
+OPEN_LESSON_HINT = "Видео, слайды и баннер добавляются в уроке: выберите его в списке слева."
+MAKE_DRAFT_HINT = (
+    "Видео, слайды и баннер добавляются только в черновике. Создайте его из этой версии, "
+    "откройте урок и выберите, что добавить. Ученики увидят медиа после подписи и публикации."
+)
+NO_DRAFT_HINT = (
+    "Видео, слайды и баннер добавляются только в черновике, а его создаёт сотрудник "
+    "с правом на добавление версий курса."
+)
+NEW_LESSON_HINT = (
+    "Видео, слайды и баннер можно добавить после сохранения темы: "
+    "нажмите «Сохранить и продолжить редактирование»."
+)
 
 Change = Callable[[list[dict[str, Any]]], list[dict[str, Any]]]
 
@@ -61,6 +75,28 @@ class MediaPage:
     video_html: str
     # The first part of the keys in R2: "courses", "tajweed".
     prefix: str
+    # Why the buttons are missing and where to get them: see `media_hint`.
+    hint: str = ""
+    draft_url: str = ""
+
+
+def media_hint(*, on_lesson: bool, editable: bool, draft_url: str) -> str:
+    """The way to the buttons from a place of a version's editor that has none."""
+    if editable:
+        return "" if on_lesson else OPEN_LESSON_HINT
+    return MAKE_DRAFT_HINT if draft_url else NO_DRAFT_HINT
+
+
+def render_media_hint(hint: str, draft_url: str, request: HttpRequest) -> str:
+    """The block in place of «Медиа» on a part of a course that is not a lesson."""
+    return format_html(
+        '<section class="cp cmedia" role="note"><h2>Медиа</h2>{}</section>',
+        render_to_string(
+            "admin/lesson_media/hint.html",
+            {"hint": hint, "draft_url": draft_url},
+            request=request,
+        ),
+    )
 
 
 def render_media(page: MediaPage, request: HttpRequest) -> str:
@@ -75,6 +111,8 @@ def media_context(page: MediaPage) -> dict[str, Any]:
         "action_url": page.action_url,
         "can_edit": page.can_edit,
         "can_add_video": not any(block["type"] == VIDEO for block in blocks),
+        "hint": page.hint,
+        "draft_url": page.draft_url,
         "instruction_url": MEDIA_INSTRUCTION_URL,
         "accept": IMAGE_ACCEPT,
         "max_slides": MAX_SLIDES,
