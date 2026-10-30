@@ -163,3 +163,24 @@ Recitation? recitationForPersonStyle(
     role: role,
   );
 }
+
+String _normalizedName(String value) => value
+    .toLowerCase()
+    .replaceAll(RegExp('[\u064b-\u0652\u0640]'), '')
+    .replaceAll(RegExp('[أإآ]'), 'ا')
+    .replaceAll(RegExp("[-‘’'ʼ]"), ' ')
+    .trim();
+
+/// The catalog's search: any word order, in any of the reciter's four names.
+bool reciterMatchesQuery(ReciterPerson person, String query) {
+  final words = _normalizedName(
+    query,
+  ).split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+  final names = person.sources
+      .expand(
+        (item) => <String>[item.nameAr, item.nameEn, item.nameRu, item.nameTr],
+      )
+      .map(_normalizedName)
+      .join(' ');
+  return words.every(names.contains);
+}

@@ -648,6 +648,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noAudio => 'No playable audio is available';
 
   @override
+  String get searchReciters => 'Find a reciter';
+
+  @override
+  String get reciterNotFound => 'No reciter found';
+
+  @override
+  String showAllReciters(int count) {
+    return 'Show all: $count';
+  }
+
+  @override
   String get nowPlaying => 'Now playing';
 
   @override

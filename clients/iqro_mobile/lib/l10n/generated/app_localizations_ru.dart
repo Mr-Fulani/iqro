@@ -653,6 +653,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get noAudio => 'Нет доступной аудиозаписи';
 
   @override
+  String get searchReciters => 'Найти чтеца';
+
+  @override
+  String get reciterNotFound => 'Такого чтеца нет';
+
+  @override
+  String showAllReciters(int count) {
+    return 'Показать всех: $count';
+  }
+
+  @override
   String get nowPlaying => 'Сейчас играет';
 
   @override

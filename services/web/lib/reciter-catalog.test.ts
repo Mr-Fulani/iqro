@@ -5,6 +5,7 @@ import type { Recitation, Reciter } from "./api.ts";
 import {
   latestRecitationsByVariant,
   recitationHasSurah,
+  reciterMatchesQuery,
   recitationStyleLabel,
   recitationsForRole,
   supportsRecitationRole,
@@ -148,4 +149,14 @@ test("the tajweed course always plays al-Husary's Muallim when the catalog has i
   assert.equal(tajweedCourseRecitation([maher, afasy])?.id, "afasy");
   assert.equal(tajweedCourseRecitation([maher])?.id, "maher");
   assert.equal(tajweedCourseRecitation([]), undefined);
+});
+
+test("the reciter search reads every name in any word order", () => {
+  const person = { name_ar: "ناصر القطامي", name_en: "Nasser Alqatami", name_ru: "Насер Аль Катами" };
+  assert.equal(reciterMatchesQuery(person, "катами"), true);
+  assert.equal(reciterMatchesQuery(person, "катами насер"), true);
+  assert.equal(reciterMatchesQuery(person, "QATAMI"), true);
+  assert.equal(reciterMatchesQuery(person, "القطامي"), true);
+  assert.equal(reciterMatchesQuery(person, "  "), true);
+  assert.equal(reciterMatchesQuery(person, "афаси"), false);
 });

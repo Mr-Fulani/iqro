@@ -45,6 +45,9 @@ const _cardNamesExtent = 92.0;
   );
 }
 
+/// How many reciter cards the tab builds and warms before «show all».
+const collapsedReciterCount = 30;
+
 /// Loads the reciters and decodes their card portraits while another tab is
 /// open, so the Audio tab shows faces at once instead of a spinner, then a
 /// slow fade.
@@ -70,7 +73,7 @@ Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
           32,
       count: people.length,
     ).portrait;
-    for (final person in people) {
+    for (final person in people.take(collapsedReciterCount)) {
       final url = resolveReciterPortraitUrl(
         person.portraitSource,
         apiBaseUrl: apiBaseUrl,
@@ -108,6 +111,8 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   var _loadingTrack = false;
   String? _loadingPersonKey;
   var _refreshingReciters = false;
+  var _showAllReciters = false;
+  String _reciterQuery = '';
   var _playRequest = 0;
   var _refreshRequest = 0;
 
@@ -309,6 +314,14 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
               ? preferredPersonKey
               : reciterPersonKey(player.reciter!)
         : preferredPersonKey;
+    final foundPeople = visiblePeople
+        .where((person) => reciterMatchesQuery(person, _reciterQuery))
+        .toList(growable: false);
+    // A GridView inside the page builds every card at once, so hundreds of
+    // reciters open a short list first; the search still reads all of them.
+    final shownPeople = _showAllReciters || _reciterQuery.trim().isNotEmpty
+        ? foundPeople
+        : foundPeople.take(collapsedReciterCount).toList(growable: false);
     final selectedPerson = visiblePeople.firstWhere(
       (item) => item.key == _selected,
       orElse: () => visiblePeople.firstWhere(
@@ -370,17 +383,32 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 12),
+        TextField(
+          key: const ValueKey<String>('audio-reciter-search'),
+          decoration: InputDecoration(
+            hintText: context.l10n.searchReciters,
+            prefixIcon: const Icon(Icons.search_rounded),
+          ),
+          onChanged: (value) => setState(() => _reciterQuery = value),
+          textInputAction: TextInputAction.search,
+        ),
+        const SizedBox(height: 12),
+        if (foundPeople.isEmpty)
+          IqroStatusBanner(
+            icon: Icons.search_off_rounded,
+            title: context.l10n.reciterNotFound,
+          ),
         LayoutBuilder(
           builder: (context, constraints) {
             final grid = reciterGridLayout(
               constraints.maxWidth,
-              count: visiblePeople.length,
+              count: shownPeople.length,
             );
             return GridView.builder(
               shrinkWrap: true,
               padding: EdgeInsets.zero,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: visiblePeople.length,
+              itemCount: shownPeople.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: grid.columns,
                 crossAxisSpacing: 10,
@@ -388,7 +416,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                 mainAxisExtent: grid.extent,
               ),
               itemBuilder: (context, index) {
-                final person = visiblePeople[index];
+                final person = shownPeople[index];
                 final recitation = recitationForPersonStyle(
                   person,
                   recitations,
@@ -414,6 +442,13 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
             );
           },
         ),
+        if (shownPeople.length < foundPeople.length)
+          Align(
+            child: TextButton(
+              onPressed: () => setState(() => _showAllReciters = true),
+              child: Text(context.l10n.showAllReciters(foundPeople.length)),
+            ),
+          ),
       ],
     );
   }

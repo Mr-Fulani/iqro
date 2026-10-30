@@ -22,6 +22,7 @@ import {
   recitationHasSurah,
   recitationStyleLabel,
   recitationVariantLabel,
+  reciterMatchesQuery,
   reciterPersonKey,
   reciterSourcesForPerson,
 } from "../lib/reciter-catalog";
@@ -62,6 +63,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
     () => groupRecitersByPerson(initialData?.reciters ?? []),
   );
   const [selectedReciterId, setSelectedReciterId] = useState<string>(initialData?.reciterId ?? "");
+  const [reciterQuery, setReciterQuery] = useState("");
   const [selectionReady, setSelectionReady] = useState(false);
   const [recitations, setRecitations] = useState<Recitation[]>(initialData?.recitations ?? []);
   const [selectedRecitationId, setSelectedRecitationId] = useState<string>(
@@ -254,6 +256,11 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
     setTracks([]);
     setSelectedRecitationId(recitationId);
   }, [recitations, rememberCurrentTrackFor, selectedRecitationId, selectedReciterId]);
+
+  const shownReciters = useMemo(
+    () => reciters.filter((reciter) => reciterMatchesQuery(reciter, reciterQuery)),
+    [reciterQuery, reciters],
+  );
 
   const reciterControlOptions = useMemo(() => reciters.map((reciter) => ({
     value: reciter.id,
@@ -469,8 +476,20 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
         </div>
 
         {reciters.length > 0 ? (
+          <input
+            aria-label={t("audio.searchReciters")}
+            className="reciter-search"
+            data-testid="audio-reciter-search"
+            onChange={(event) => setReciterQuery(event.target.value)}
+            placeholder={t("audio.searchReciters")}
+            type="search"
+            value={reciterQuery}
+          />
+        ) : null}
+
+        {shownReciters.length > 0 ? (
           <div className="reciter-grid">
-            {reciters.map((reciter, index) => {
+            {shownReciters.map((reciter, index) => {
               const name = reciterName(reciter) || reciter.name_en;
               const isSelected = reciter.id === selectedReciterId;
               return (
@@ -507,7 +526,11 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
           </div>
         ) : (
           <div className="reciter-empty" aria-live="polite">
-            {loading ? t("home.loadingReciters") : t("home.recitersEmpty")}
+            {loading
+              ? t("home.loadingReciters")
+              : reciters.length > 0
+                ? t("audio.noRecitersFound")
+                : t("home.recitersEmpty")}
           </div>
         )}
       </section>

@@ -694,6 +694,8 @@ const tr: Messages = {
   "audio.title": "Kâri ve kıraat kataloğu",
   "audio.description": "Tanınmış kârileri ve okuyuş stillerini seçin; sure ve ayet bazında dinleyin.",
   "audio.reciter": "Kâri",
+  "audio.searchReciters": "Kâri ara",
+  "audio.noRecitersFound": "Kâri bulunamadı",
   "audio.editionStyle": "Baskı ve okuyuş stili",
   "audio.tracksShort": "Parça: {count}",
   "audio.codeCountry": "Kod: {code} · Ülke: {country}",

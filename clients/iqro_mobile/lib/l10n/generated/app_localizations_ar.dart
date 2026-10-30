@@ -638,6 +638,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noAudio => 'لا يوجد تسجيل صوتي متاح';
 
   @override
+  String get searchReciters => 'ابحث عن قارئ';
+
+  @override
+  String get reciterNotFound => 'لم يُعثر على قارئ';
+
+  @override
+  String showAllReciters(int count) {
+    return 'عرض الكل: $count';
+  }
+
+  @override
   String get nowPlaying => 'يُشغّل الآن';
 
   @override

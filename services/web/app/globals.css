@@ -2382,6 +2382,18 @@ input:focus, select:focus, textarea:focus {
     linear-gradient(145deg, #ffffff 0%, #f8fffc 100%);
 }
 
+.reciter-search {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 16px;
+  padding: 0 14px;
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
 .reciter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
