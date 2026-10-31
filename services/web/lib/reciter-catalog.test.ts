@@ -5,7 +5,7 @@ import type { Recitation, Reciter } from "./api.ts";
 import {
   latestRecitationsByVariant,
   recitationHasSurah,
-  reciterMatchesQuery,
+  reciterSearch,
   recitationStyleLabel,
   recitationsForRole,
   supportsRecitationRole,
@@ -151,12 +151,50 @@ test("the tajweed course always plays al-Husary's Muallim when the catalog has i
   assert.equal(tajweedCourseRecitation([]), undefined);
 });
 
+function nameOf(name_ar: string, name_en: string, name_ru: string, name_tr = "") {
+  return { name_ar, name_en, name_ru, name_tr };
+}
+
 test("the reciter search reads every name in any word order", () => {
-  const person = { name_ar: "ناصر القطامي", name_en: "Nasser Alqatami", name_ru: "Насер Аль Катами" };
-  assert.equal(reciterMatchesQuery(person, "катами"), true);
-  assert.equal(reciterMatchesQuery(person, "катами насер"), true);
-  assert.equal(reciterMatchesQuery(person, "QATAMI"), true);
-  assert.equal(reciterMatchesQuery(person, "القطامي"), true);
-  assert.equal(reciterMatchesQuery(person, "  "), true);
-  assert.equal(reciterMatchesQuery(person, "афаси"), false);
+  const person = nameOf("ناصر القطامي", "Nasser Alqatami", "Насер Аль Катами");
+  const search = reciterSearch([person]);
+  assert.deepEqual(search("катами"), [person]);
+  assert.deepEqual(search("катами насер"), [person]);
+  assert.deepEqual(search("QATAMI"), [person]);
+  assert.deepEqual(search("القطامي"), [person]);
+  assert.deepEqual(search("  "), [person]);
+  assert.deepEqual(search("афаси"), []);
+});
+
+test("the reciter search forgives Arabic letter forms", () => {
+  const person = nameOf("أبو بكر الشاطري", "Abu Bakr", "Абу Бакр");
+  assert.deepEqual(reciterSearch([person])("ابو بكر"), [person]);
+  assert.deepEqual(reciterSearch([nameOf("حمزة", "Hamza", "Хамза")])("حمزه").length, 1);
+});
+
+test("the reciter search finds a name spelled another way", () => {
+  const radia = nameOf("رضية عبدالرحمن", "Rodziah Abdulrahman", "Радия Абдуррахман", "Radiye Abdurrahman");
+  const rukaya = nameOf("رقية سولونق", "Rogayah Sulong", "Рукайя Сулонг", "Rukiye Sulong");
+  const sapina = nameOf("سابينة مامات", "Sapinah Mamat", "Сапина Мамат");
+  const basit = nameOf("عبد الباسط", "Abdul Baset", "Абдуль-Басит Абдус-Самад");
+  const shuraym = nameOf("سعود الشريم", "Saud ash-Shuraym", "Сауд аш-Шурайм");
+  const search = reciterSearch([radia, rukaya, sapina, basit, shuraym]);
+  for (const query of ["Родзия", "Радзия", "Rodzia", "Радиях"]) {
+    assert.deepEqual(search(query), [radia], query);
+  }
+  for (const query of ["Рогая", "Рукия", "Рукайа", "Ruqayya"]) {
+    assert.deepEqual(search(query), [rukaya], query);
+  }
+  assert.deepEqual(search("сапинах"), [sapina]);
+  assert.deepEqual(search("сабина мамат"), [sapina]);
+  assert.deepEqual(search("абдульбасит"), [basit]);
+  assert.deepEqual(search("Шурейм"), [shuraym]);
+  assert.deepEqual(search("Шурайм"), [shuraym]);
+  assert.deepEqual(search("Зульфия"), []);
+});
+
+test("a name spelled as asked hides the ones that only sound like it", () => {
+  const rashid = nameOf("راشد", "Rashid", "Рашид");
+  const rushd = nameOf("رشدي", "Roshdi", "Рошди");
+  assert.deepEqual(reciterSearch([rashid, rushd])("рашид"), [rashid]);
 });

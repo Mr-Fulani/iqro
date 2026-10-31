@@ -113,6 +113,13 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   var _refreshingReciters = false;
   var _showAllReciters = false;
   String _reciterQuery = '';
+  ({
+    List<Reciter> reciters,
+    List<Recitation> recitations,
+    String style,
+    ReciterSearch search,
+  })?
+  _lastCatalogSearch;
   var _playRequest = 0;
   var _refreshRequest = 0;
 
@@ -265,6 +272,44 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     );
   }
 
+  /// The people with a recording in [style], ready to search. The catalog
+  /// changes rarely and this tab rebuilds with every player tick, so this
+  /// reuses the last answer rather than walking the catalog each time.
+  ReciterSearch _catalogSearch(
+    List<Reciter> reciters,
+    List<Recitation> recitations,
+    String style,
+  ) {
+    final last = _lastCatalogSearch;
+    if (last != null &&
+        identical(last.reciters, reciters) &&
+        identical(last.recitations, recitations) &&
+        last.style == style) {
+      return last.search;
+    }
+    final reciterIds = <String>{
+      for (final recitation in recitations)
+        if (recitation.style == style &&
+            recitation.supports(AudioRecitationRole.listening))
+          recitation.reciter.id,
+    };
+    final search = ReciterSearch(
+      groupRecitersByPerson(reciters)
+          .where(
+            (person) =>
+                person.sources.any((source) => reciterIds.contains(source.id)),
+          )
+          .toList(growable: false),
+    );
+    _lastCatalogSearch = (
+      reciters: reciters,
+      recitations: recitations,
+      style: style,
+      search: search,
+    );
+    return search;
+  }
+
   Widget _buildReciterCatalog({
     required List<Reciter> reciters,
     required List<Recitation> recitations,
@@ -279,7 +324,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         title: context.l10n.noAudio,
       );
     }
-    final people = groupRecitersByPerson(reciters);
     final styles = orderedRecitationStyles(
       recitations.where((item) => item.supports(AudioRecitationRole.listening)),
     );
@@ -292,13 +336,8 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final selectedStyle = styles.contains(_selectedStyle)
         ? _selectedStyle
         : styles.first;
-    final visiblePeople = people
-        .where(
-          (person) =>
-              recitationForPersonStyle(person, recitations, selectedStyle) !=
-              null,
-        )
-        .toList(growable: false);
+    final search = _catalogSearch(reciters, recitations, selectedStyle);
+    final visiblePeople = search.people;
     if (visiblePeople.isEmpty) {
       return IqroStatusBanner(
         icon: Icons.volume_off_outlined,
@@ -314,9 +353,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
               ? preferredPersonKey
               : reciterPersonKey(player.reciter!)
         : preferredPersonKey;
-    final foundPeople = visiblePeople
-        .where((person) => reciterMatchesQuery(person, _reciterQuery))
-        .toList(growable: false);
+    final foundPeople = search.find(_reciterQuery);
     // A GridView inside the page builds every card at once, so hundreds of
     // reciters open a short list first; the search still reads all of them.
     final shownPeople = _showAllReciters || _reciterQuery.trim().isNotEmpty

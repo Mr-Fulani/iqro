@@ -164,23 +164,161 @@ Recitation? recitationForPersonStyle(
   );
 }
 
+const _nameLetters = <String, String>{
+  'ё': 'е',
+  'й': 'и',
+  'â': 'a',
+  'á': 'a',
+  'ç': 'c',
+  'é': 'e',
+  'ğ': 'g',
+  'ı': 'i',
+  'î': 'i',
+  'ö': 'o',
+  'ş': 's',
+  'û': 'u',
+  'ü': 'u',
+  'أ': 'ا',
+  'إ': 'ا',
+  'آ': 'ا',
+  'ؤ': 'و',
+  'ئ': 'ي',
+  'ة': 'ه',
+  'ى': 'ي',
+};
+
 String _normalizedName(String value) => value
     .toLowerCase()
-    .replaceAll(RegExp('[\u064b-\u0652\u0640]'), '')
-    .replaceAll(RegExp('[أإآ]'), 'ا')
+    .replaceAll(RegExp('[\u064b-\u0655\u0640]'), '')
+    .replaceAllMapped(
+      RegExp('[${_nameLetters.keys.join()}]'),
+      (match) => _nameLetters[match[0]]!,
+    )
     .replaceAll(RegExp("[-‘’'ʼ]"), ' ')
+    .replaceAll(RegExp(r'\s+'), ' ')
     .trim();
 
+const _cyrillicLetters = <String, String>{
+  'а': 'a',
+  'б': 'b',
+  'в': 'v',
+  'г': 'g',
+  'д': 'd',
+  'е': 'e',
+  'ж': 'j',
+  'з': 'z',
+  'и': 'i',
+  'к': 'k',
+  'л': 'l',
+  'м': 'm',
+  'н': 'n',
+  'о': 'o',
+  'п': 'p',
+  'р': 'r',
+  'с': 's',
+  'т': 't',
+  'у': 'u',
+  'ф': 'f',
+  'х': 'h',
+  'ц': 's',
+  'ч': 'ch',
+  'ш': 'sh',
+  'щ': 'sh',
+  'ъ': '',
+  'ы': 'i',
+  'ь': '',
+  'э': 'e',
+  'ю': 'u',
+  'я': 'a',
+};
+
+/// What a word sounds like, whatever alphabet or spelling it came in: its
+/// consonants, with the letters that transcribe one Arabic sound merged.
+/// Родзия, Радия and Rodziah all read "rd"; the site holds the same rules.
+String _nameSound(String word) => word
+    .replaceAllMapped(
+      RegExp('[а-я]'),
+      (match) => _cyrillicLetters[match[0]] ?? match[0]!,
+    )
+    .replaceAll(RegExp('dzh|dj'), 'j')
+    .replaceAll('dz', 'd')
+    .replaceAll('kh', 'h')
+    .replaceAll('gh', 'g')
+    .replaceAll(RegExp('sh|ch'), 'x')
+    .replaceAll('th', 's')
+    .replaceAll('dh', 'z')
+    .replaceAll(RegExp('[qc]'), 'k')
+    .replaceAll('p', 'b')
+    .replaceAll('w', 'v')
+    .replaceAll(RegExp('[aeiouy]'), '')
+    .replaceAll(RegExp(r'h$'), '')
+    .replaceAllMapped(RegExp(r'(.)\1+'), (match) => match[1]!);
+
 /// The catalog's search: any word order, in any of the reciter's four names.
-bool reciterMatchesQuery(ReciterPerson person, String query) {
-  final words = _normalizedName(
-    query,
-  ).split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
-  final names = person.sources
-      .expand(
-        (item) => <String>[item.nameAr, item.nameEn, item.nameRu, item.nameTr],
-      )
-      .map(_normalizedName)
-      .join(' ');
-  return words.every(names.contains);
+/// Only when nothing is spelled as asked does it look for names that sound the
+/// same. The names are prepared once, so typing stays quick in a long catalog.
+class ReciterSearch {
+  ReciterSearch(this.people)
+    : _entries = people.map(_ReciterSearchEntry.new).toList(growable: false);
+
+  final List<ReciterPerson> people;
+  final List<_ReciterSearchEntry> _entries;
+
+  List<ReciterPerson> find(String query) {
+    final words = _normalizedName(
+      query,
+    ).split(' ').where((word) => word.isNotEmpty).toList(growable: false);
+    if (words.isEmpty) return people;
+    final spelled = _entries
+        .where((entry) => words.every(entry.text.contains))
+        .map((entry) => entry.person)
+        .toList(growable: false);
+    if (spelled.isNotEmpty) return spelled;
+    final sounds = words.map(_nameSound).toList(growable: false);
+    if (sounds.any((sound) => sound.length < 2)) {
+      return const <ReciterPerson>[];
+    }
+    return _entries
+        .where(
+          (entry) => sounds.every(
+            (sound) => entry.sounds.any((name) => name.startsWith(sound)),
+          ),
+        )
+        .map((entry) => entry.person)
+        .toList(growable: false);
+  }
+}
+
+class _ReciterSearchEntry {
+  factory _ReciterSearchEntry(ReciterPerson person) {
+    final names = person.sources
+        .expand(
+          (item) => <String>[
+            item.nameAr,
+            item.nameEn,
+            item.nameRu,
+            item.nameTr,
+          ],
+        )
+        .map(_normalizedName)
+        .toList(growable: false);
+    // Each word with those after it, so "абдульбасит" meets "Абдуль-Басит".
+    final sounds = <String>[
+      for (final name in names)
+        ...() {
+          final words = name.split(' ').map(_nameSound).toList(growable: false);
+          return <String>[
+            for (var index = 0; index < words.length; index += 1)
+              words.skip(index).join(),
+          ];
+        }(),
+    ];
+    return _ReciterSearchEntry._(person, names.join(' '), sounds);
+  }
+
+  const _ReciterSearchEntry._(this.person, this.text, this.sounds);
+
+  final ReciterPerson person;
+  final String text;
+  final List<String> sounds;
 }

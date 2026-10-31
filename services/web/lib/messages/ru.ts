@@ -699,6 +699,7 @@ const ru = {
   "audio.reciter": "Чтец (Кари)",
   "audio.searchReciters": "Найти чтеца",
   "audio.noRecitersFound": "Такого чтеца нет",
+  "audio.showAllReciters": "Показать всех: {count}",
   "audio.editionStyle": "Издание и стиль чтения",
   "audio.tracksShort": "Треков: {count}",
   "audio.codeCountry": "Код: {code} · Страна: {country}",
