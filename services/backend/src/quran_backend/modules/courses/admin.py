@@ -66,6 +66,7 @@ from quran_backend.modules.courses.lesson_media import (
     changed_blocks,
 )
 from quran_backend.modules.courses.lesson_media_admin import (
+    NEW_LESSON_HINT,
     Change,
     MediaPage,
     render_media,
@@ -785,6 +786,15 @@ class CourseLessonAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def save_model(self, request: HttpRequest, obj: CourseLesson, form: Any, change: bool) -> None:
         obj.updated_by = cast(Any, request.user)
         super().save_model(request, obj, form, change)
+
+    def add_view(
+        self,
+        request: HttpRequest,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        context = {**(extra_context or {}), "media_hint": NEW_LESSON_HINT}
+        return super().add_view(request, form_url, context)
 
     def change_view(
         self,

@@ -36,7 +36,12 @@ from django.utils.html import format_html, format_html_join
 from django.utils.http import urlencode
 
 from quran_backend.modules.core.editorial.markup import parse_notes
-from quran_backend.modules.courses.lesson_media_admin import MediaPage, render_media
+from quran_backend.modules.courses.lesson_media_admin import (
+    MediaPage,
+    media_hint,
+    render_media,
+    render_media_hint,
+)
 from quran_backend.modules.courses.links import INLINE_HELP, LinkChecker, link_rows
 from quran_backend.modules.courses.snapshot_media import lesson_video
 from quran_backend.modules.courses.snapshot_media_admin import (
@@ -504,10 +509,15 @@ class TajweedCourseVersionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     ),
                 }
             )
+        copy_url = draft_url(request, version)
         media_block = (
             render_media(media_page(request, version, item["slug"]), request)
             if kind == "lesson"
-            else ""
+            else render_media_hint(
+                media_hint(on_lesson=False, editable=editable, draft_url=copy_url),
+                copy_url,
+                request,
+            )
         )
         missing = missing_texts(snapshot)
         tree = [{"id": "course", "label": "Курс", "indent": 0}]
@@ -799,16 +809,29 @@ class TajweedCourseDocumentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         )
 
 
+def draft_url(request: HttpRequest, version: TajweedCourseVersion) -> str:
+    """Where to copy a version that can't be edited; empty without the right to."""
+    if editor_editable(request.user, version) or not request.user.has_perm(
+        "tajweed.add_tajweedcourseversion"
+    ):
+        return ""
+    return reverse("admin:tajweed_tajweedcourseversion_new_draft", args=[version.pk])
+
+
 def media_page(request: HttpRequest, version: TajweedCourseVersion, lesson: str) -> MediaPage:
     item = find_lesson(version.snapshot, lesson)
+    editable = editor_editable(request.user, version)
+    copy_url = draft_url(request, version)
     return MediaPage(
         media=item.get("media") or [],
         has_video=lesson_video(item) is not None,
         languages=editor_languages(),
         action_url=reverse("admin:tajweed_tajweedcourseversion_media", args=[version.pk, lesson]),
-        can_edit=editor_editable(request.user, version),
+        can_edit=editable,
         video_html=render_video(lesson_video_block(request, version, lesson), request),
         prefix="courses",
+        hint=media_hint(on_lesson=True, editable=editable, draft_url=copy_url),
+        draft_url=copy_url,
     )
 
 

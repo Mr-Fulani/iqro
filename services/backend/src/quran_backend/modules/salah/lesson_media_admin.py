@@ -13,7 +13,7 @@ from typing import Any
 from django.http import HttpRequest
 from django.urls import reverse
 
-from quran_backend.modules.courses.lesson_media_admin import MediaPage
+from quran_backend.modules.courses.lesson_media_admin import MediaPage, media_hint
 from quran_backend.modules.courses.snapshot_media import lesson_video
 from quran_backend.modules.courses.snapshot_media_admin import (
     render_video,
@@ -28,10 +28,18 @@ from quran_backend.modules.salah.lesson_media import find_lesson
 from quran_backend.modules.salah.models import SALAH_LANGUAGES, SalahCourseVersion
 
 
+def draft_url(request: HttpRequest, version: SalahCourseVersion, *, editable: bool) -> str:
+    """Where to copy a version that can't be edited; empty without the right to."""
+    if editable or not request.user.has_perm("salah.add_salahcourseversion"):
+        return ""
+    return reverse("admin:salah_salahcourseversion_new_draft", args=[version.pk])
+
+
 def media_page(
     request: HttpRequest, version: SalahCourseVersion, lesson: str, *, editable: bool
 ) -> MediaPage:
     item = find_lesson(version.snapshot, lesson)
+    copy_url = draft_url(request, version, editable=editable)
     return MediaPage(
         media=item.get("media") or [],
         has_video=lesson_video(item) is not None,
@@ -42,6 +50,8 @@ def media_page(
         can_edit=editable,
         video_html=render_video(lesson_video_block(version, lesson, editable=editable), request),
         prefix="courses",
+        hint=media_hint(on_lesson=True, editable=editable, draft_url=copy_url),
+        draft_url=copy_url,
     )
 
 
