@@ -390,6 +390,10 @@ def _prepare_track(
     rows = source.surah_timings(read.read_id, surah_number)
     timestamps: list[dict[str, Any]] = []
     for row in rows:
+        # Many readings give the basmala its own row, "ayah 0". It is not an ayah
+        # of the text: ayah 1 below starts the file, so it still plays with ayah 1.
+        if row.get("ayah") in (0, "0"):
+            continue
         try:
             timestamps.append(
                 {
