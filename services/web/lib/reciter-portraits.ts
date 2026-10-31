@@ -24,6 +24,10 @@ export const RECITER_PORTRAITS: Readonly<Record<string, string>> = {
 /** The owner's figure for every reciter without a portrait, as in the app. */
 export const DEFAULT_RECITER_PORTRAIT = "/reciters/default.webp";
 
+export function reciterHasPortrait(reciter: Pick<Reciter, "portrait_url" | "slug">): boolean {
+  return Boolean(reciter.portrait_url || RECITER_PORTRAITS[reciter.slug]);
+}
+
 /** The portrait uploaded in the admin, else the curated one, else the default figure. */
 export function reciterPortraitUrl(
   reciter: Pick<Reciter, "portrait_url" | "slug">,

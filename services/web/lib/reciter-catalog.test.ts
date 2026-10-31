@@ -5,6 +5,7 @@ import type { Recitation, Reciter } from "./api.ts";
 import {
   latestRecitationsByVariant,
   recitationHasSurah,
+  recitersWithPortraitsFirst,
   reciterSearch,
   recitationStyleLabel,
   recitationsForRole,
@@ -197,4 +198,15 @@ test("a name spelled as asked hides the ones that only sound like it", () => {
   const rashid = nameOf("راشد", "Rashid", "Рашид");
   const rushd = nameOf("رشدي", "Roshdi", "Рошди");
   assert.deepEqual(reciterSearch([rashid, rushd])("рашид"), [rashid]);
+});
+
+test("reciters with a portrait open the list in their own order", () => {
+  const plain = { ...reciter, id: "plain", slug: "plain", portrait_url: null };
+  const uploaded = { ...reciter, id: "uploaded", slug: "uploaded", portrait_url: "https://cdn/a.webp" };
+  const curated = { ...reciter, id: "curated", slug: "qf-3-abdur-rahman-as-sudais", portrait_url: null };
+
+  assert.deepEqual(
+    recitersWithPortraitsFirst([plain, uploaded, curated]).map((item) => item.id),
+    ["uploaded", "curated", "plain"],
+  );
 });

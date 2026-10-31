@@ -45,6 +45,20 @@ String? resolveReciterPortraitUrl(
       : Uri.parse(apiBaseUrl).resolve(fallbackPath).toString();
 }
 
+/// People with a portrait open the list, each group in its own order.
+List<ReciterPerson> peopleWithPortraitsFirst(List<ReciterPerson> people) {
+  bool hasPortrait(ReciterPerson person) {
+    final source = person.portraitSource;
+    return source.portraitUrl?.trim().isNotEmpty == true ||
+        _fallbackPortraits.containsKey(source.slug);
+  }
+
+  return <ReciterPerson>[
+    ...people.where(hasPortrait),
+    ...people.where((person) => !hasPortrait(person)),
+  ];
+}
+
 Reciter reciterWithPersonPortrait(
   Reciter reciter, {
   required String apiBaseUrl,

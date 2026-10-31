@@ -2473,6 +2473,13 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* Five columns here: 30 cards of the short list fill the last row. */
+@media (min-width: 700px) and (max-width: 999px) {
+  .reciter-showcase .reciter-grid.is-collapsed .reciter-card:nth-child(n + 31) {
+    display: none;
+  }
+}
+
 @media (min-width: 1000px) {
   .reciter-grid {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

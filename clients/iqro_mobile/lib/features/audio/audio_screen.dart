@@ -58,7 +58,7 @@ Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
     if (!context.mounted) return;
     final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final people = groupRecitersByPerson(reciters);
+    final people = peopleWithPortraitsFirst(groupRecitersByPerson(reciters));
     // The tab's width (the page padding is 16 on each side) gives the size
     // its cards decode at; a guess here would decode every face twice.
     final screen = MediaQuery.sizeOf(context);
@@ -294,12 +294,15 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
           recitation.reciter.id,
     };
     final search = ReciterSearch(
-      groupRecitersByPerson(reciters)
-          .where(
-            (person) =>
-                person.sources.any((source) => reciterIds.contains(source.id)),
-          )
-          .toList(growable: false),
+      peopleWithPortraitsFirst(
+        groupRecitersByPerson(reciters)
+            .where(
+              (person) => person.sources.any(
+                (source) => reciterIds.contains(source.id),
+              ),
+            )
+            .toList(growable: false),
+      ),
     );
     _lastCatalogSearch = (
       reciters: reciters,

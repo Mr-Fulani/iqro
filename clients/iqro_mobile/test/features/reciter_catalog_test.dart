@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/reciter_catalog.dart';
+import 'package:iqro_mobile/features/audio/reciter_portraits.dart';
 
 void main() {
   test('the search reads every name in any word order', () {
@@ -168,6 +169,29 @@ void main() {
 
     expect(reciterPortraitSourceFor(mujawwad, catalog), same(murattal));
     expect(reciterPortraitSourceFor(murattal, catalog), same(murattal));
+  });
+
+  test('people with a portrait open the list in their own order', () {
+    ReciterPerson person(String slug, [String? portraitUrl]) =>
+        groupRecitersByPerson(<Reciter>[
+          Reciter.fromJson(<String, dynamic>{
+            'id': slug,
+            'slug': slug,
+            'name_ar': slug,
+            'name_en': slug,
+            'name_ru': slug,
+            'portrait_url': portraitUrl,
+          }),
+        ]).single;
+
+    final plain = person('plain');
+    final uploaded = person('uploaded', 'https://cdn/a.webp');
+    final curated = person('qf-3-abdur-rahman-as-sudais');
+
+    expect(
+      peopleWithPortraitsFirst(<ReciterPerson>[plain, uploaded, curated]),
+      <ReciterPerson>[uploaded, curated, plain],
+    );
   });
 }
 
