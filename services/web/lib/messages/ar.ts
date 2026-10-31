@@ -696,6 +696,7 @@ const ar: Messages = {
   "audio.reciter": "القارئ",
   "audio.searchReciters": "ابحث عن قارئ",
   "audio.noRecitersFound": "لم يُعثر على قارئ",
+  "audio.showAllReciters": "عرض الكل: {count}",
   "audio.editionStyle": "الطبعة ونمط التلاوة",
   "audio.tracksShort": "المقاطع: {count}",
   "audio.codeCountry": "الرمز: {code} · البلد: {country}",

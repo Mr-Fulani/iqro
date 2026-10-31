@@ -696,6 +696,7 @@ const tr: Messages = {
   "audio.reciter": "Kâri",
   "audio.searchReciters": "Kâri ara",
   "audio.noRecitersFound": "Kâri bulunamadı",
+  "audio.showAllReciters": "Tümünü göster: {count}",
   "audio.editionStyle": "Baskı ve okuyuş stili",
   "audio.tracksShort": "Parça: {count}",
   "audio.codeCountry": "Kod: {code} · Ülke: {country}",

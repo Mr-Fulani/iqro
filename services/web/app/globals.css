@@ -2400,6 +2400,17 @@ input:focus, select:focus, textarea:focus {
   gap: 16px;
 }
 
+.reciter-show-all {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+/* The full catalog runs to hundreds of cards: lay out only those near the screen. */
+.seo-quran-page .reciter-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+}
+
 /* Server-rendered home catalogs far below the first screen: skip their layout
    until the reader scrolls near, so their portraits and Arabic faces do not
    compete with the first paint. */

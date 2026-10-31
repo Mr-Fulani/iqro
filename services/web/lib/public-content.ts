@@ -25,7 +25,6 @@ import type { PlayerBackground } from "./player-backgrounds";
 import {
   groupRecitersByPerson,
   latestRecitationsByVariant,
-  reciterPersonKey,
   reciterSourcesForPerson,
   selectHomePopularReciters,
 } from "./reciter-catalog";
@@ -275,13 +274,12 @@ export const getPublishedRecitations = cache(
 );
 
 export const getPublishedRecitationsForPerson = cache(
-  async (reciterSlug: string): Promise<Recitation[]> => {
-    const personKey = reciterPersonKey(reciterSlug);
-    const recitations = await getPublishedRecitations();
-    return latestRecitationsByVariant(
-      recitations.filter((recitation) => reciterPersonKey(recitation.reciter) === personKey),
-      "listen",
+  async (reciter: Reciter): Promise<Recitation[]> => {
+    const sources = reciterSourcesForPerson(await getPublishedReciters(), reciter);
+    const recitations = await Promise.all(
+      (sources.length > 0 ? sources : [reciter]).map((source) => getPublishedRecitations(source.id)),
     );
+    return latestRecitationsByVariant(recitations.flat(), "listen");
   },
 );
 
@@ -318,6 +316,15 @@ export type PublishedAudioInitialData = {
   surahs: Surah[];
 };
 
+function withoutBiography(reciter: Reciter): Reciter {
+  const shown = { ...reciter };
+  delete shown.biography_ar;
+  delete shown.biography_en;
+  delete shown.biography_ru;
+  delete shown.biography_tr;
+  return shown;
+}
+
 export const getPublishedAudioInitialData = cache(
   async (): Promise<PublishedAudioInitialData> => {
     const reciters = await getPublishedReciters();
@@ -342,7 +349,8 @@ export const getPublishedAudioInitialData = cache(
         ])
       : [[], []];
     return {
-      reciters,
+      // The page shows no biographies, and they would all travel with its HTML.
+      reciters: reciters.map(withoutBiography),
       reciterId: person?.id ?? "",
       recitations,
       recitationId: recitation?.id ?? "",
