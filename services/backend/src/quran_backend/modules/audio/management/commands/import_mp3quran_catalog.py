@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandParser
 from quran_backend.modules.audio.mp3quran_catalog import (
     Mp3QuranCatalogClient,
     Mp3QuranCatalogError,
+    apply_reciter_profiles,
     import_reading,
     plan_catalog,
     read_mp3quran_readings,
@@ -34,6 +35,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Retry timings of readings left listening-only, instead of adding new ones.",
         )
+        parser.add_argument(
+            "--apply-profiles",
+            action="store_true",
+            help="Write the curated reciter names and biographies, instead of adding readings.",
+        )
         parser.add_argument("--limit", type=int, help="Add at most this many readings.")
         parser.add_argument(
             "--dry-run",
@@ -42,6 +48,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: Any, **options: Any) -> None:  # noqa: ARG002
+        if options["apply_profiles"]:
+            changed = apply_reciter_profiles()
+            self.stdout.write(self.style.SUCCESS(f"done: {len(changed)} reciters updated"))
+            return
         source = Mp3QuranCatalogClient()
         if options["recover_timings"]:
             self._recover_timings(source, dry_run=options["dry_run"])
