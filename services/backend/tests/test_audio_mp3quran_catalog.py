@@ -22,8 +22,10 @@ from quran_backend.modules.audio.mp3quran_catalog import (
     name_key,
     plan_catalog,
     read_mp3quran_readings,
+    recover_timings,
+    timing_recovery_candidates,
 )
-from quran_backend.modules.audio.mp3quran_timings import RemoteAudio
+from quran_backend.modules.audio.mp3quran_timings import Mp3QuranTimingError, RemoteAudio
 from quran_backend.modules.audio.selectors import public_recitations
 from quran_backend.modules.quran.models import Ayah, RevelationType, Surah
 
@@ -52,6 +54,8 @@ class FakeSource:
     def __init__(self, **overrides: Any) -> None:
         self.duration_ms: int = overrides.get("duration_ms", 60_000)
         self.broken: set[int] = overrides.get("broken", set())
+        self.basmala_row: bool = overrides.get("basmala_row", False)
+        self.rejected_timings: bool = overrides.get("rejected_timings", False)
 
     def reciters(self, language: str) -> list[dict[str, Any]]:
         names = {
@@ -85,8 +89,9 @@ class FakeSource:
         return [{"id": 70, "rewaya": "حفص عن عاصم", "folder_url": FOLDER}]
 
     def surah_timings(self, read_id: int, surah_number: int) -> list[dict[str, Any]]:  # noqa: ARG002
-        ayahs = 7 if surah_number == 1 else 1
-        return [
+        ayahs = 1 if self.rejected_timings else 7 if surah_number == 1 else 1
+        basmala = [{"ayah": 0, "start_time": 0, "end_time": 900}] if self.basmala_row else []
+        return basmala + [
             {
                 "ayah": ayah,
                 "start_time": 1000 + (ayah - 1) * 7000,
@@ -322,3 +327,50 @@ def test_an_unreadable_file_leaves_nothing_behind(
 
     assert not Reciter.objects.filter(name_en="Nasser Alqatami").exists()
     assert not RecitationEdition.objects.filter(source_url=FOLDER).exists()
+
+
+@pytest.mark.django_db
+def test_a_basmala_row_is_not_an_ayah(one_ayah_quran: dict[str, Any]) -> None:
+    imported = import_reading(_reading(), None, FakeSource(basmala_row=True))
+
+    assert imported.timed
+    assert not imported.recitation.listening_only
+    first = AudioTrack.objects.get(recitation_edition=imported.recitation, surah_number=1)
+    assert first.segments.order_by("start_ms").first().start_ms == 0
+
+
+@pytest.mark.django_db
+def test_recovery_opens_a_listening_reading_to_the_mushaf(
+    one_ayah_quran: dict[str, Any],
+) -> None:
+    listening = import_reading(_reading(), None, FakeSource(rejected_timings=True)).recitation
+    assert timing_recovery_candidates() == [listening]
+
+    recover_timings(listening, FakeSource())
+
+    listening.refresh_from_db()
+    assert not listening.listening_only
+    assert listening.status == RecitationPublicationStatus.PUBLISHED
+    assert listening.timing_versions.count() == 1
+    assert timing_recovery_candidates() == []
+    listed = public_recitations().get(pk=listening.pk)
+    assert int(listed.timed_ayah_count) == int(listed.expected_ayah_count)
+
+
+@pytest.mark.django_db
+def test_failed_recovery_changes_nothing(one_ayah_quran: dict[str, Any]) -> None:
+    listening = import_reading(_reading(), None, FakeSource(duration_ms=20_000)).recitation
+
+    with pytest.raises(Mp3QuranTimingError):
+        recover_timings(listening, FakeSource(duration_ms=20_000))
+
+    listening.refresh_from_db()
+    assert listening.listening_only
+    assert not listening.timing_versions.exists()
+
+
+@pytest.mark.django_db
+def test_recovery_leaves_editor_uploads_alone(quran_dataset: dict[str, Any]) -> None:
+    upload = _existing_recitation(quran_dataset, "شخص آخر تماما", "murattal")
+    assert upload.source_checksum_sha256 == ""
+    assert timing_recovery_candidates() == []

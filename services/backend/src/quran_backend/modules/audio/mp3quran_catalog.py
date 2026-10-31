@@ -430,6 +430,40 @@ def import_reading(
     return ImportedReading(recitation, timed, note)
 
 
+def timing_recovery_candidates() -> list[RecitationEdition]:
+    """Readings this import left on the Audio tab although they have all 114 surahs.
+
+    A source checksum marks them as ours: recitations an editor uploaded have
+    none and keep the provenance rules of their own.
+    """
+    return [
+        recitation
+        for recitation in RecitationEdition.objects.filter(
+            status=RecitationPublicationStatus.PUBLISHED,
+            listening_only=True,
+            source_name=SOURCE_NAME,
+        ).exclude(source_checksum_sha256="")
+        if recitation.tracks.filter(
+            scope=AudioTrackScope.SURAH, timing_version__isnull=True
+        ).count()
+        == SURAH_COUNT
+    ]
+
+
+def recover_timings(recitation: RecitationEdition, source: Mp3QuranCatalogSource) -> None:
+    """Add the timings and open the reading to the Mushaf and Memorization, or change nothing."""
+    prepared = prepare_mp3quran_timings(recitation, source)
+    try:
+        with transaction.atomic():
+            import_mp3quran_timings(prepared)
+            recitation.refresh_from_db()
+            recitation.listening_only = False
+            recitation.save()
+            transaction.on_commit(lambda: _announce(recitation))
+    except ValidationError as exc:
+        raise Mp3QuranCatalogError(" ".join(exc.messages)) from exc
+
+
 def _without_timings(recitation: RecitationEdition) -> RecitationEdition:
     recitation.listening_only = True
     recitation.save(update_fields=["listening_only", "updated_at"])
