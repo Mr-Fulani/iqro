@@ -24,6 +24,7 @@ const productionReciterSlugs = [
   "qf-174-yasser-ad-dussary",
   "qf-175-abdullah-hamad-abu-sharida",
   "qf-176-ahmed-tahoun",
+  "qf-176-ahmed-abdelhamid-tahoun",
 ];
 
 test("portrait manifest covers the full production reciter catalog", async () => {
