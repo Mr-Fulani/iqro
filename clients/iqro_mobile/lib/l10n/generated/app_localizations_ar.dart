@@ -644,6 +644,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reciterNotFound => 'لم يُعثر على قارئ';
 
   @override
+  String get fullReciterHint => 'متاح أيضًا في المصحف والحفظ';
+
+  @override
   String showAllReciters(int count) {
     return 'عرض الكل: $count';
   }

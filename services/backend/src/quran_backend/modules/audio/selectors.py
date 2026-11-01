@@ -238,6 +238,24 @@ def teaching_recitation() -> RecitationEdition | None:
     return candidates.filter(code=code).order_by("-published_at", "-version", "-id").first()
 
 
+def full_reciter_ids() -> set[uuid.UUID]:
+    """Reciters with a recording that also plays in the Mushaf and Memorization."""
+    recitations = list(
+        public_recitation_base()
+        .filter(listening_only=False)
+        .select_related(None)
+        .only("id", "reciter_id")
+    )
+    attach_recitation_summaries(recitations)
+    return {
+        item.reciter_id
+        for item in recitations
+        if 0
+        < int(getattr(item, "expected_ayah_count", 0) or 0)
+        <= int(getattr(item, "timed_ayah_count", 0) or 0)
+    }
+
+
 def public_reciters() -> QuerySet[Reciter]:
     public_recitation = public_recitation_base().filter(reciter_id=OuterRef("pk"))
     return (

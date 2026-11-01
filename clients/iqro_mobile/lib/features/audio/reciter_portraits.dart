@@ -23,6 +23,7 @@ const _fallbackPortraits = <String, String>{
   'qf-175-abdullah-hamad-abu-sharida':
       '/reciters/abdullah-hamad-abu-sharida.webp',
   'qf-176-ahmed-tahoun': '/reciters/ahmed-tahoun.webp',
+  'qf-176-ahmed-abdelhamid-tahoun': '/reciters/ahmed-tahoun.webp',
 };
 
 String? resolveReciterPortraitUrl(

@@ -201,6 +201,7 @@
   "noAudio": "No playable audio is available",
   "searchReciters": "Find a reciter",
   "reciterNotFound": "No reciter found",
+  "fullReciterHint": "Also in the Mushaf and Memorize",
   "showAllReciters": "Show all: {count}",
   "@showAllReciters": {
     "placeholders": {

@@ -649,6 +649,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reciterNotFound => 'Kâri bulunamadı';
 
   @override
+  String get fullReciterHint => 'Mushaf ve Ezber\'de de var';
+
+  @override
   String showAllReciters(int count) {
     return 'Tümünü göster: $count';
   }

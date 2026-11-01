@@ -697,6 +697,7 @@ const tr: Messages = {
   "audio.searchReciters": "Kâri ara",
   "audio.noRecitersFound": "Kâri bulunamadı",
   "audio.showAllReciters": "Tümünü göster: {count}",
+  "audio.fullReciterHint": "Mushaf ve Ezber'de de var",
   "audio.editionStyle": "Baskı ve okuyuş stili",
   "audio.tracksShort": "Parça: {count}",
   "audio.codeCountry": "Kod: {code} · Ülke: {country}",

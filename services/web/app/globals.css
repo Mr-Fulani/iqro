@@ -2532,6 +2532,42 @@ input:focus, select:focus, textarea:focus {
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
+.reciter-card.is-full {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 1px var(--accent-gold-border), var(--shadow-sm);
+}
+
+.reciter-full-badge {
+  position: absolute;
+  inset-inline-start: -2px;
+  inset-block-end: 4px;
+  z-index: 2;
+  width: 30%;
+  aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent-gold);
+  color: #fff;
+}
+
+.reciter-full-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.reciter-full-hint .reciter-full-badge {
+  position: static;
+  width: 22px;
+  flex: 0 0 22px;
+}
+
 .reciter-card:hover {
   color: var(--text-primary);
   transform: translateY(-4px);

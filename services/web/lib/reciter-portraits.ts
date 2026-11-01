@@ -19,6 +19,7 @@ export const RECITER_PORTRAITS: Readonly<Record<string, string>> = {
   "qf-174-yasser-ad-dussary": "/reciters/yasser-ad-dussary.webp",
   "qf-175-abdullah-hamad-abu-sharida": "/reciters/abdullah-hamad-abu-sharida.webp",
   "qf-176-ahmed-tahoun": "/reciters/ahmed-tahoun.webp",
+  "qf-176-ahmed-abdelhamid-tahoun": "/reciters/ahmed-tahoun.webp",
 };
 
 /** The owner's figure for every reciter without a portrait, as in the app. */

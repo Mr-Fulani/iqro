@@ -700,6 +700,7 @@ const ru = {
   "audio.searchReciters": "Найти чтеца",
   "audio.noRecitersFound": "Такого чтеца нет",
   "audio.showAllReciters": "Показать всех: {count}",
+  "audio.fullReciterHint": "Есть в Мусхафе и Заучивании",
   "audio.editionStyle": "Издание и стиль чтения",
   "audio.tracksShort": "Треков: {count}",
   "audio.codeCountry": "Код: {code} · Страна: {country}",

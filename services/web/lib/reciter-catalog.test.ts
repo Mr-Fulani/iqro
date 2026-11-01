@@ -3,6 +3,7 @@ import test from "node:test";
 
 import type { Recitation, Reciter } from "./api.ts";
 import {
+  groupRecitersByPerson,
   latestRecitationsByVariant,
   recitationHasSurah,
   recitersWithPortraitsFirst,
@@ -209,4 +210,12 @@ test("reciters with a portrait open the list in their own order", () => {
     recitersWithPortraitsFirst([plain, uploaded, curated]).map((item) => item.id),
     ["uploaded", "curated", "plain"],
   );
+});
+
+test("a person has full support through any of their cards", () => {
+  const listening = { ...reciter, id: "listening", slug: "qf-1-abdulbaset-abdulsamad-mujawwad", full_support: false };
+  const full = { ...reciter, id: "full", slug: "qf-2-abdul-baset-abdul-samad", full_support: true };
+
+  assert.equal(groupRecitersByPerson([listening, full])[0].full_support, true);
+  assert.equal(groupRecitersByPerson([full, listening])[0].full_support, true);
 });

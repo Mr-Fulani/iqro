@@ -659,6 +659,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reciterNotFound => 'Такого чтеца нет';
 
   @override
+  String get fullReciterHint => 'Есть в Мусхафе и Заучивании';
+
+  @override
   String showAllReciters(int count) {
     return 'Показать всех: $count';
   }

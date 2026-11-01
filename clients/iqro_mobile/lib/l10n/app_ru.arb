@@ -199,6 +199,7 @@
   "noAudio": "Нет доступной аудиозаписи",
   "searchReciters": "Найти чтеца",
   "reciterNotFound": "Такого чтеца нет",
+  "fullReciterHint": "Есть в Мусхафе и Заучивании",
   "showAllReciters": "Показать всех: {count}",
   "nowPlaying": "Сейчас играет",
   "play": "Воспроизвести",

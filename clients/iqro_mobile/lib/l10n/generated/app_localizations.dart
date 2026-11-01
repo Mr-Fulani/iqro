@@ -1266,6 +1266,12 @@ abstract class AppLocalizations {
   /// **'No reciter found'**
   String get reciterNotFound;
 
+  /// No description provided for @fullReciterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Also in the Mushaf and Memorize'**
+  String get fullReciterHint;
+
   /// No description provided for @showAllReciters.
   ///
   /// In en, this message translates to:

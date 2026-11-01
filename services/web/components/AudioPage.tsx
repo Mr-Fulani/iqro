@@ -18,7 +18,7 @@ import {
 } from "../lib/api";
 import type { Surah } from "../lib/api";
 import type { PublishedAudioInitialData } from "../lib/public-content";
-import { ReciterAvatar } from "./ReciterAvatar";
+import { ReciterAvatar, ReciterFullBadge } from "./ReciterAvatar";
 import { heldSurahs } from "../lib/listening-queue";
 import type { ListeningQueue } from "../lib/listening-queue";
 import { formatClock, reciterName as localizedReciterName } from "../lib/audio-content";
@@ -512,6 +512,13 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
           />
         ) : null}
 
+        {reciters.some((reciter) => reciter.full_support) ? (
+          <p className="reciter-full-hint">
+            <ReciterFullBadge />
+            {t("audio.fullReciterHint")}
+          </p>
+        ) : null}
+
         {shownReciters.length > 0 ? (
           <div className={`reciter-grid${shownReciters.length < foundReciters.length ? " is-collapsed" : ""}`}>
             {shownReciters.map((reciter, index) => {
@@ -519,7 +526,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
               const isSelected = reciter.id === selectedReciterId;
               return (
                 <button
-                  className={`reciter-card audio-reciter-card${isSelected ? " is-selected" : ""}`}
+                  className={`reciter-card audio-reciter-card${reciter.full_support ? " is-full" : ""}${isSelected ? " is-selected" : ""}`}
                   type="button"
                   key={reciter.id}
                   onClick={() => selectReciter(reciter.id)}
@@ -532,6 +539,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
                     name={name}
                     portraitUrl={reciterPortraitUrl(reciter)}
                     tone={index}
+                    full={reciter.full_support}
                   />
                   <span className="reciter-card-copy">
                     <strong>{name}</strong>

@@ -654,6 +654,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reciterNotFound => 'No reciter found';
 
   @override
+  String get fullReciterHint => 'Also in the Mushaf and Memorize';
+
+  @override
   String showAllReciters(int count) {
     return 'Show all: $count';
   }

@@ -18,14 +18,27 @@ function initials(name: string): string {
     .toLocaleUpperCase();
 }
 
+/** Marks a reciter who also plays in the Mushaf and Memorization. */
+export function ReciterFullBadge() {
+  return (
+    <span className="reciter-full-badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="62%" height="62%" fill="currentColor">
+        <path d="M12 6.5C10.2 5 7.7 4.4 4 4.5a1 1 0 0 0-1 1V18a1 1 0 0 0 1 1c3.4-.1 6 .4 7.5 1.8h1c1.5-1.4 4.1-1.9 7.5-1.8a1 1 0 0 0 1-1V5.5a1 1 0 0 0-1-1c-3.7-.1-6.2.5-8 2Z" />
+      </svg>
+    </span>
+  );
+}
+
 export function ReciterAvatar({
   name,
   portraitUrl,
   tone,
+  full = false,
 }: {
   name: string;
   portraitUrl?: string | null;
   tone: number;
+  full?: boolean;
 }) {
   const [failed, setFailed] = useState<readonly string[]>([]);
   // Portraits are decorative: request them after hydration so they do not
@@ -61,6 +74,7 @@ export function ReciterAvatar({
         />
       )}
       <span className="reciter-avatar-play">▶</span>
+      {full && <ReciterFullBadge />}
     </span>
   );
 }
