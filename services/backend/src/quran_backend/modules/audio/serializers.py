@@ -22,7 +22,7 @@ from quran_backend.modules.audio.models import (
     RecitationStyle,
     Reciter,
 )
-from quran_backend.modules.audio.selectors import teaching_recitation
+from quran_backend.modules.audio.selectors import full_reciter_ids, teaching_recitation
 from quran_backend.modules.audio.variant_resolver import (
     quran_foundation_ayah_variant_id,
     recitation_variant_id,
@@ -61,6 +61,8 @@ class ReciterSummarySerializer(serializers.ModelSerializer[Reciter]):
 
 
 class ReciterDetailSerializer(ReciterSummarySerializer):
+    full_support = serializers.SerializerMethodField()
+
     class Meta:
         model = Reciter
         fields = (
@@ -76,7 +78,17 @@ class ReciterDetailSerializer(ReciterSummarySerializer):
             "biography_ru",
             "biography_tr",
             "portrait_url",
+            "full_support",
         )
+
+    @cached_property
+    def _full_reciter_ids(self) -> set[Any]:
+        return full_reciter_ids()
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_full_support(self, obj: Reciter) -> bool:
+        """The reciter also plays in the Mushaf and Memorization, not only in the audio player."""
+        return obj.id in self._full_reciter_ids
 
 
 class PlayerBackgroundSerializer(serializers.ModelSerializer[PlayerBackground]):

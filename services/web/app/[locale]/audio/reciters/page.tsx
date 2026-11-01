@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ReciterAvatar } from "@/components/ReciterAvatar";
+import { ReciterAvatar, ReciterFullBadge } from "@/components/ReciterAvatar";
 import { reciterName, reciterPath } from "@/lib/audio-content";
 import { isLocale } from "@/lib/i18n";
 import { translate } from "@/lib/translate";
 import { getPublishedReciters } from "@/lib/public-content";
-import { groupRecitersByPerson } from "@/lib/reciter-catalog";
+import { groupRecitersByPerson, recitersWithPortraitsFirst } from "@/lib/reciter-catalog";
 import { reciterPortraitUrl } from "@/lib/reciter-portraits";
 import { localizedPath } from "@/lib/routing";
 import { createPageMetadata } from "@/lib/seo";
@@ -34,7 +34,7 @@ export default async function ReciterCatalogPage({
   await connection();
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const reciters = groupRecitersByPerson(await getPublishedReciters());
+  const reciters = recitersWithPortraitsFirst(groupRecitersByPerson(await getPublishedReciters()));
 
   return (
     <div className="seo-quran-page">
@@ -54,6 +54,10 @@ export default async function ReciterCatalogPage({
           {translate(locale, "audio.deep.openPlayer")}
         </Link>
       </header>
+      <p className="reciter-full-hint">
+        <ReciterFullBadge />
+        {translate(locale, "audio.fullReciterHint")}
+      </p>
       <section className="reciter-grid" aria-label={translate(locale, "audio.deep.reciterCatalogTitle")}>
         {reciters.map((reciter, index) => {
           const name = reciterName(reciter, locale);
@@ -61,12 +65,13 @@ export default async function ReciterCatalogPage({
             <Link
               key={reciter.id}
               href={localizedPath(locale, reciterPath(reciter.id))}
-              className="reciter-card"
+              className={`reciter-card${reciter.full_support ? " is-full" : ""}`}
             >
               <ReciterAvatar
                 name={name}
                 portraitUrl={reciterPortraitUrl(reciter)}
                 tone={index}
+                full={reciter.full_support}
               />
               <span className="reciter-card-copy">
                 <strong>{name}</strong>

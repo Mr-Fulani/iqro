@@ -1,5 +1,6 @@
 import type { Recitation, Reciter } from "./api";
 import type { MessageKey } from "./i18n";
+import { reciterHasPortrait } from "./reciter-portraits.ts";
 
 const CANONICAL_RECITER_SLUGS: Readonly<Record<string, string>> = {
   "qf-1-abdulbaset-abdulsamad-mujawwad": "qf-2-abdul-baset-abdul-samad",
@@ -118,14 +119,23 @@ export function groupRecitersByPerson(reciters: Reciter[]): Reciter[] {
     const representative = reciter.slug === personKey ? reciter : current;
     const portraitUrl =
       representative.portrait_url || current.portrait_url || reciter.portrait_url || null;
+    const fullSupport = Boolean(current.full_support || reciter.full_support);
     people.set(
       personKey,
-      portraitUrl === representative.portrait_url
+      portraitUrl === representative.portrait_url && fullSupport === representative.full_support
         ? representative
-        : { ...representative, portrait_url: portraitUrl },
+        : { ...representative, portrait_url: portraitUrl, full_support: fullSupport },
     );
   }
   return [...people.values()];
+}
+
+/** Reciters with a portrait open the list, each group in its own order. */
+export function recitersWithPortraitsFirst(reciters: Reciter[]): Reciter[] {
+  return [
+    ...reciters.filter(reciterHasPortrait),
+    ...reciters.filter((reciter) => !reciterHasPortrait(reciter)),
+  ];
 }
 
 export function selectHomePopularReciters(reciters: Reciter[]): Reciter[] {

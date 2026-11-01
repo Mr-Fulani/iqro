@@ -199,6 +199,7 @@
   "noAudio": "Oynatılabilir ses yok",
   "searchReciters": "Kâri ara",
   "reciterNotFound": "Kâri bulunamadı",
+  "fullReciterHint": "Mushaf ve Ezber'de de var",
   "showAllReciters": "Tümünü göster: {count}",
   "nowPlaying": "Şimdi çalıyor",
   "play": "Oynat",

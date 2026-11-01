@@ -199,6 +199,7 @@
   "noAudio": "لا يوجد تسجيل صوتي متاح",
   "searchReciters": "ابحث عن قارئ",
   "reciterNotFound": "لم يُعثر على قارئ",
+  "fullReciterHint": "متاح أيضًا في المصحف والحفظ",
   "showAllReciters": "عرض الكل: {count}",
   "nowPlaying": "يُشغّل الآن",
   "play": "تشغيل",

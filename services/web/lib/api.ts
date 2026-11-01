@@ -625,6 +625,8 @@ export type Reciter = {
   biography_ru?: string;
   biography_tr?: string;
   portrait_url?: string | null;
+  /** Also plays in the Mushaf and Memorization, not only in the audio player. */
+  full_support?: boolean;
 };
 
 export type Recitation = {

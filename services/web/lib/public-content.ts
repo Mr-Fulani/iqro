@@ -25,6 +25,7 @@ import type { PlayerBackground } from "./player-backgrounds";
 import {
   groupRecitersByPerson,
   latestRecitationsByVariant,
+  recitersWithPortraitsFirst,
   reciterSourcesForPerson,
   selectHomePopularReciters,
 } from "./reciter-catalog";
@@ -328,7 +329,7 @@ function withoutBiography(reciter: Reciter): Reciter {
 export const getPublishedAudioInitialData = cache(
   async (): Promise<PublishedAudioInitialData> => {
     const reciters = await getPublishedReciters();
-    const person = groupRecitersByPerson(reciters)[0];
+    const person = recitersWithPortraitsFirst(groupRecitersByPerson(reciters))[0];
     const recitations = person
       ? latestRecitationsByVariant(
           (

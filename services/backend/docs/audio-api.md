@@ -22,7 +22,7 @@ renditions всегда имеют `offline_download_allowed=false`, `immutable=
 неработающий каталог `1/114`.
 
 - `GET /api/v1/reciters`
-- `GET /api/v1/reciters/{uuid}`
+- `GET /api/v1/reciters/{uuid}` (`full_support: true`, если запись чтеца играет ещё в Мусхафе и Заучивании)
 - `GET /api/v1/recitations?reciter_id={uuid}&quran_edition=madani-hafs&style=murattal`
 - `GET /api/v1/recitations/{uuid}`
 - `GET /api/v1/recitations/{uuid}/tracks?scope=surah`
