@@ -196,14 +196,10 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
   Timer? _timeout;
   var _shown = false;
 
-  // Horizontal drags turn the figure and pinches zoom; vertical drags still
-  // scroll the step.
+  // Every touch on the scene is the scene's: a finger turns the figure in any
+  // direction and a pinch zooms. The step scrolls and pages outside of it.
   static final _gestures = <Factory<OneSequenceGestureRecognizer>>{
-    // One factory per recognizer type, or the platform view asserts.
-    Factory<HorizontalDragGestureRecognizer>(
-      HorizontalDragGestureRecognizer.new,
-    ),
-    Factory<ScaleGestureRecognizer>(ScaleGestureRecognizer.new),
+    Factory<EagerGestureRecognizer>(EagerGestureRecognizer.new),
   };
 
   Salah3DViewConfig get _config => widget.config;
