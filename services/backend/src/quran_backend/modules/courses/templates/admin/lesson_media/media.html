@@ -6,6 +6,8 @@
   </div>
   <p class="help">Видео, слайды и баннеры стоят над текстом сверху вниз, в этом порядке. Порядок меняется перетаскиванием за ⠿ или кнопками ↑ ↓.</p>
 
+  {% if m.hint %}{% include "admin/lesson_media/hint.html" with hint=m.hint draft_url=m.draft_url %}{% endif %}
+
   {% if m.blocks %}
     <ol class="cmedia-list" data-media-list>
       {% for block in m.blocks %}

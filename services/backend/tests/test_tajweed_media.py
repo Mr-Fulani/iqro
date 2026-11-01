@@ -16,6 +16,7 @@ from django.test import Client, override_settings
 from django.urls import reverse
 
 from quran_backend.modules.accounts.models import User
+from quran_backend.modules.courses.lesson_media_admin import MAKE_DRAFT_HINT, OPEN_LESSON_HINT
 from quran_backend.modules.tajweed.course import (
     TajweedCourseError,
     load_course_snapshot,
@@ -288,6 +289,31 @@ def test_signed_and_published_versions_keep_their_media(
     assert answer.status_code == 403
     assert stored == []
     assert client.post(_url("media", published, "no-such-lesson")).status_code == 404
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_AUDIO_BASE_URL=MEDIA)
+def test_the_editor_shows_the_way_to_the_media_buttons(
+    draft: TajweedCourseVersion, owner: User
+) -> None:
+    client = _client(owner)
+    course = client.get(_url("editor", draft)).content.decode()
+    assert OPEN_LESSON_HINT in course
+    assert "data-lesson-media" not in course
+    lesson = client.get(_url("editor", draft) + f"?node=lesson:{LESSON}").content.decode()
+    assert OPEN_LESSON_HINT not in lesson
+    assert MAKE_DRAFT_HINT not in lesson
+    assert "data-media-add" in lesson
+
+    published = _publish(draft, owner)
+    copy_url = _url("new_draft", published)
+    for address in (
+        _url("editor", published),
+        _url("editor", published) + f"?node=lesson:{LESSON}",
+    ):
+        page = client.get(address).content.decode()
+        assert MAKE_DRAFT_HINT in page
+        assert f'<a class="button default" href="{copy_url}">' in page
 
 
 @pytest.mark.django_db
