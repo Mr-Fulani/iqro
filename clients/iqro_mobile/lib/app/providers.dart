@@ -315,6 +315,12 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> setPlayerBackground(String id) =>
       _set(state.copyWith(playerBackgroundId: id));
 
+  Future<void> setReminderAdhan(ReminderAdhan adhan) =>
+      _set(state.copyWith(reminderAdhan: adhan));
+
+  Future<void> markReminderSoundChecked() =>
+      _set(state.copyWith(reminderSoundChecked: true));
+
   Future<void> setDailyReadingGoal({
     required DailyUnit unit,
     required int target,

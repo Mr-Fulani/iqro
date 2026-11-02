@@ -249,6 +249,72 @@ void main() {
     expect(find.text(_ru.onboardingRemindersOn), findsOneWidget);
   });
 
+  testWidgets('muted reminders warn after exact alarms and offer the switch', (
+    tester,
+  ) async {
+    final services = FakeOnboardingServices(
+      needsExact: true,
+      soundAllowed: false,
+    );
+    await pumpOnboarding(
+      tester,
+      services: services,
+      stored: const <String, Object>{'locale': 'ru'},
+      initialStep: OnboardingStep.reminders,
+      analytics: false,
+    );
+
+    await _tap(tester, 'onboarding-next');
+    expect(find.text(_ru.onboardingExactTitle), findsOneWidget);
+
+    await _tap(tester, 'onboarding-later');
+    expect(find.text(_ru.onboardingSoundBody), findsOneWidget);
+
+    await _tap(tester, 'onboarding-reminder-sound');
+    expect(services.soundSettingsOpened, 1);
+
+    services.soundAllowed = true;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text(_ru.onboardingSoundOn), findsOneWidget);
+
+    await _tap(tester, 'onboarding-next');
+    expect(find.text(_ru.onboardingDoneTitle), findsOneWidget);
+  });
+
+  testWidgets('reminders that sound skip the sound step', (tester) async {
+    await pumpOnboarding(
+      tester,
+      stored: const <String, Object>{'locale': 'ru'},
+      initialStep: OnboardingStep.reminders,
+      analytics: false,
+    );
+
+    await _tap(tester, 'onboarding-next');
+    expect(find.text(_ru.onboardingSoundTitle), findsNothing);
+    expect(find.text(_ru.onboardingDoneTitle), findsOneWidget);
+  });
+
+  testWidgets('without prayer reminders the sound step stays away', (
+    tester,
+  ) async {
+    final services = FakeOnboardingServices(soundAllowed: false);
+    await pumpOnboarding(
+      tester,
+      services: services,
+      stored: const <String, Object>{'locale': 'ru'},
+      initialStep: OnboardingStep.reminders,
+      analytics: false,
+    );
+
+    await _tap(tester, 'onboarding-five-prayers');
+    await _tap(tester, 'onboarding-next');
+    expect(find.text(_ru.onboardingSoundTitle), findsNothing);
+    expect(find.text(_ru.onboardingDoneTitle), findsOneWidget);
+  });
+
   testWidgets('the button shows progress while reminders are set up', (
     tester,
   ) async {

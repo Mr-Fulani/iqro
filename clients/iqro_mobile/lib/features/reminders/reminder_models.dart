@@ -2,6 +2,9 @@ enum ReminderType { prayer, quranReading, quranReview }
 
 enum ReminderSignal { sound, vibration, silent }
 
+/// The call a prayer reminder plays on this device; [none] is the system sound.
+enum ReminderAdhan { makkah, madinah, none }
+
 enum ReminderTimezoneMode { deviceLocal, fixed }
 
 enum ReminderPermission { unknown, denied, granted }
@@ -178,6 +181,14 @@ class ReminderRule {
   final DateTime? updatedAt;
 
   bool get active => deletedAt == null;
+
+  /// Only a sounding reminder at the prayer time itself calls the adhan.
+  ReminderAdhan adhanFor(ReminderAdhan selected) =>
+      type == ReminderType.prayer &&
+          signal == ReminderSignal.sound &&
+          schedule.prayerOffsetMinutes == 0
+      ? selected
+      : ReminderAdhan.none;
 
   String get typeValue => switch (type) {
     ReminderType.prayer => 'prayer',

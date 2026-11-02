@@ -110,6 +110,8 @@ class RemindersScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+              const _AdhanPicker(),
               const SizedBox(height: 24),
               IqroSectionHeader(title: context.l10n.quranReviewReminders),
               const SizedBox(height: 4),
@@ -194,6 +196,58 @@ class RemindersScreen extends ConsumerWidget {
         accountScope: accountScope,
         controller: controller,
       ),
+    );
+  }
+}
+
+class _AdhanPicker extends ConsumerWidget {
+  const _AdhanPicker();
+
+  Future<void> _select(WidgetRef ref, ReminderAdhan adhan) async {
+    final reminders = ref.read(reminderProvider.notifier);
+    await ref.read(appPreferencesProvider.notifier).setReminderAdhan(adhan);
+    // Notifications already planned keep the sound they were scheduled with.
+    await reminders.replan();
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(
+      appPreferencesProvider.select((value) => value.reminderAdhan),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(context.l10n.adhan, style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ReminderAdhan>(
+            segments: <ButtonSegment<ReminderAdhan>>[
+              ButtonSegment<ReminderAdhan>(
+                value: ReminderAdhan.makkah,
+                label: Text(context.l10n.adhanMakkah),
+              ),
+              ButtonSegment<ReminderAdhan>(
+                value: ReminderAdhan.madinah,
+                label: Text(context.l10n.adhanMadinah),
+              ),
+              ButtonSegment<ReminderAdhan>(
+                value: ReminderAdhan.none,
+                label: Text(context.l10n.adhanSystemSound),
+              ),
+            ],
+            selected: <ReminderAdhan>{selected},
+            showSelectedIcon: false,
+            onSelectionChanged: (value) => _select(ref, value.first),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          context.l10n.adhanHint,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
     );
   }
 }
