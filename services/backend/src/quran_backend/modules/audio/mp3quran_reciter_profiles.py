@@ -221,6 +221,8 @@ MP3QURAN_RECITER_NAMES: dict[str, tuple[str, str]] = {
     "yousef-alshoaey": ("Юсуф аш-Шувайи", "Yusuf eş-Şüveyi"),
     "youssef-edghouch": ("Юсуф ад-Дугуш", "Yusuf ed-Duğuş"),
     "zakaria-hamamah": ("Закария Хамама", "Zekeriya Hamame"),
+    # Quran.Foundation reciter: `reciter_profiles.py` has him under another code.
+    "qf-176-ahmed-abdelhamid-tahoun": ("Ахмад Абдульхамид Тахун", "Ahmed Abdülhamid Tahun"),
 }
 
 # Where MP3Quran's English spelling is simply wrong.
@@ -235,14 +237,16 @@ MP3QURAN_RECITER_ENGLISH_NAMES: dict[str, str] = {
 }
 
 # Short sourced biographies, checked against the page in `profile_source_url`.
-PROFILES_CHECKED_ON = date(2026, 10, 31)
 _BIOGRAPHIES_FILE = Path(__file__).with_name("mp3quran_reciter_biographies.json")
 
 
 def _biographies() -> dict[str, dict[str, Any]]:
     profiles: dict[str, dict[str, Any]] = json.loads(_BIOGRAPHIES_FILE.read_text("utf-8"))
     return {
-        code: {**profile, "profile_source_checked_on": PROFILES_CHECKED_ON}
+        code: {
+            **profile,
+            "profile_source_checked_on": date.fromisoformat(profile["profile_source_checked_on"]),
+        }
         for code, profile in profiles.items()
     }
 
