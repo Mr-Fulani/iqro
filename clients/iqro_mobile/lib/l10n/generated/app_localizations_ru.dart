@@ -1685,6 +1685,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get prayerReminders => 'Напоминания о намазе';
 
   @override
+  String get adhan => 'Азан';
+
+  @override
+  String get adhanMakkah => 'Мекка';
+
+  @override
+  String get adhanMadinah => 'Медина';
+
+  @override
+  String get adhanSystemSound => 'Обычный';
+
+  @override
+  String get adhanHint =>
+      'Короткий азан во время намаза. На телефоне должен быть включён звук.';
+
+  @override
   String get prayerReminderSetup =>
       'Сначала выберите метод расчёта и определите местоположение в разделе «Время намаза».';
 
@@ -3229,6 +3245,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get onboardingKeepApproximate => 'Оставить примерное время';
+
+  @override
+  String get onboardingSoundTitle => 'Звук азана';
+
+  @override
+  String get onboardingSoundBody =>
+      'Звук уведомлений выключен. Если его не включить, азана не будет.';
+
+  @override
+  String get onboardingSoundSwitch => 'Звук уведомлений';
+
+  @override
+  String get onboardingSoundOn => 'Звук включён, азан будет слышно.';
 
   @override
   String get onboardingAnalyticsCounts =>

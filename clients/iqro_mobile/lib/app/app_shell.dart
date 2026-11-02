@@ -16,6 +16,7 @@ import '../features/more/more_screen.dart';
 import '../features/plan/plan_screen.dart';
 import '../features/quran/quran_screen.dart';
 import '../features/quran/surah_name_art.dart';
+import '../features/reminders/reminder_sound_dialog.dart';
 import '../features/settings/analytics_consent.dart';
 import 'providers.dart';
 
@@ -41,6 +42,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       if (!mounted) return;
       unawaited(warmAudioCatalog(context, ref));
       unawaited(ref.read(surahHeaderFontProvider.future));
+      unawaited(checkReminderSoundOnce(context, ref));
     });
   }
 

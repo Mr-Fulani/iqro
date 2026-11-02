@@ -1660,6 +1660,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get prayerReminders => 'تذكيرات الصلاة';
 
   @override
+  String get adhan => 'الأذان';
+
+  @override
+  String get adhanMakkah => 'مكة';
+
+  @override
+  String get adhanMadinah => 'المدينة';
+
+  @override
+  String get adhanSystemSound => 'عادي';
+
+  @override
+  String get adhanHint => 'أذان قصير عند وقت الصلاة. يجب تشغيل صوت الهاتف.';
+
+  @override
   String get prayerReminderSetup =>
       'اختر أولاً طريقة الحساب وحدد الموقع في قسم مواقيت الصلاة.';
 
@@ -3176,6 +3191,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboardingKeepApproximate => 'الإبقاء على الوقت التقريبي';
+
+  @override
+  String get onboardingSoundTitle => 'صوت الأذان';
+
+  @override
+  String get onboardingSoundBody =>
+      'صوت الإشعارات مغلق. إن لم تشغّله فلن يُسمع الأذان.';
+
+  @override
+  String get onboardingSoundSwitch => 'صوت الإشعارات';
+
+  @override
+  String get onboardingSoundOn => 'الصوت مفعّل، وسيُسمع الأذان.';
 
   @override
   String get onboardingAnalyticsCounts =>

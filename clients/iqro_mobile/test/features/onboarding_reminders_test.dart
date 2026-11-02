@@ -86,6 +86,39 @@ void main() {
     ]);
   });
 
+  test('the launch check waits for the account without creating one', () async {
+    final accountScope = AccountScope();
+    final database = LocalDatabase.forTesting(sql, accountScope: accountScope);
+    final notifications = _Notifications(database)..requests = 1;
+    final reminders = _Reminders(database)..existing = [_soundingRule];
+    final session = _GuestSessionController(
+      AuthRepository(config: _config, accountScope: accountScope),
+      notifications,
+    );
+    var created = 0;
+    accountScope.configure(loader: () async => created++);
+    final container = ProviderContainer(
+      overrides: <Override>[
+        localDatabaseProvider.overrideWithValue(database),
+        sessionProvider.overrideWith((ref) => session),
+        reminderRepositoryProvider.overrideWithValue(reminders),
+        notificationGatewayProvider.overrideWithValue(notifications),
+        prayerRepositoryProvider.overrideWithValue(_UnusedPrayerRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final sounding = container
+        .read(onboardingServicesProvider)
+        .soundingPrayerReminders();
+    await pumpEventQueue();
+    accountScope.activate('guest-a');
+    session.signIn('guest-a');
+
+    expect(await sounding, isTrue);
+    expect(created, 0);
+  });
+
   test('prayer reminders turn on together with one plan', () async {
     final accountScope = AccountScope()..activate('guest-a');
     final database = LocalDatabase.forTesting(sql, accountScope: accountScope);
@@ -117,6 +150,18 @@ const _config = AppConfig(
   apiBaseUrl: 'https://iqro.forum',
   fallbackDownloadUrl: 'https://iqro.forum',
   environment: 'production',
+);
+
+final _soundingRule = ReminderRule(
+  id: '1',
+  type: ReminderType.prayer,
+  schedule: const ReminderSchedule.prayer(prayerEvent: 'fajr'),
+  weekdaysMask: 127,
+  timezoneMode: ReminderTimezoneMode.values.first,
+  signal: ReminderSignal.sound,
+  isEnabled: true,
+  revision: 0,
+  clientUpdatedAt: DateTime.utc(2026),
 );
 
 class _GuestSessionController extends SessionController {
@@ -151,16 +196,17 @@ class _Reminders extends ReminderRepository {
     : super(api: _UnusedApiClient(), database: database);
 
   final created = <String>[];
+  var existing = const <ReminderRule>[];
 
   @override
   Future<List<ReminderRule>> localRules({
     AccountScopeSnapshot? accountScope,
-  }) async => const <ReminderRule>[];
+  }) async => existing;
 
   @override
   Future<({bool offline, List<ReminderRule> rules})> refresh({
     AccountScopeSnapshot? accountScope,
-  }) async => (rules: const <ReminderRule>[], offline: true);
+  }) async => (rules: existing, offline: true);
 
   @override
   Future<ReminderRule> create({
