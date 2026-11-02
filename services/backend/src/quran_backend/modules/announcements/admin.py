@@ -235,7 +235,26 @@ def _step_field_names(order: int) -> tuple[str, str]:
     return f"step_{order}_title", f"step_{order}_text"
 
 
+def _step_fields() -> dict[str, forms.Field]:
+    fields: dict[str, forms.Field] = {}
+    for order in range(1, MAX_STEPS + 1):
+        title_name, text_name = _step_field_names(order)
+        fields[title_name] = forms.CharField(
+            label=f"Шаг {order}: заголовок", max_length=50, required=False
+        )
+        fields[text_name] = forms.CharField(
+            label=f"Шаг {order}: текст",
+            max_length=200,
+            required=False,
+            widget=forms.Textarea(attrs={"rows": 2}),
+        )
+    return fields
+
+
 class AnnouncementTranslationForm(forms.ModelForm):  # type: ignore[type-arg]
+    # Declared on the class, not in __init__: the admin lays out only base_fields.
+    locals().update(_step_fields())
+
     class Meta:
         model = AnnouncementTranslation
         fields = ("language", "title", "summary", "body", "cta_label", "image_alt", "push_title")
@@ -249,23 +268,11 @@ class AnnouncementTranslationForm(forms.ModelForm):  # type: ignore[type-arg]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        steps = list(self.instance.steps or []) if not self.instance._state.adding else []
-        for order in range(1, MAX_STEPS + 1):
-            title_name, text_name = _step_field_names(order)
-            step = steps[order - 1] if order <= len(steps) else {"title": "", "text": ""}
-            self.fields[title_name] = forms.CharField(
-                label=f"Шаг {order}: заголовок",
-                max_length=50,
-                required=False,
-                initial=step["title"],
-            )
-            self.fields[text_name] = forms.CharField(
-                label=f"Шаг {order}: текст",
-                max_length=200,
-                required=False,
-                initial=step["text"],
-                widget=forms.Textarea(attrs={"rows": 2}),
-            )
+        if not self.instance._state.adding:
+            for order, step in enumerate(self.instance.steps or [], start=1):
+                title_name, text_name = _step_field_names(order)
+                self.initial[title_name] = step["title"]
+                self.initial[text_name] = step["text"]
         # Each language is its own tab; the language itself is fixed.
         self.fields["language"].disabled = True
         language = self.initial.get("language") or self.instance.language
@@ -334,6 +341,13 @@ class AnnouncementTranslationInline(admin.StackedInline):  # type: ignore[type-a
         if obj is None:
             return len(LANGUAGES)
         return len(LANGUAGES) - int(obj.translations.count())
+
+    def get_fields(self, request: HttpRequest, obj: Any = None) -> Any:
+        fields = super().get_fields(request, obj)
+        if obj is not None and not obj.is_editable:
+            # Read-only fields would show «—»; the preview lists the steps instead.
+            return [name for name in fields if not str(name).startswith("step_")]
+        return fields
 
     def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
         if obj is not None and not obj.is_editable:
