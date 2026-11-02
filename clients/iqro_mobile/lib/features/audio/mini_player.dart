@@ -19,6 +19,9 @@ import 'reciter_portraits.dart';
 
 final miniPlayerCollapsedProvider = StateProvider<bool>((ref) => true);
 
+/// True while the fold hint slides the bar aside, as a finger swiping it would.
+final miniPlayerHintNudgeProvider = StateProvider<bool>((ref) => false);
+
 /// The bar is 66 dp tall, so a short swipe in any direction rolls it up; the
 /// site uses the same reach (services/web/lib/mini-player.ts).
 const _swipeCollapseDistance = 32.0;
@@ -30,11 +33,13 @@ bool _swipeRollsUp(double distance, double velocity) =>
     distance >= _swipeCollapseDistance ||
     (distance >= _swipeCollapseFlick && velocity >= _swipeCollapseVelocity);
 
-/// Until someone folds the bar themselves, it shows how once a day, at most
-/// [miniPlayerHintLimit] times, on Home: it rolls up and back by itself.
-const miniPlayerHintGap = Duration(days: 1);
+/// Until someone folds the bar themselves, it shows how on Home: it slides
+/// aside as if swiped, rolls up and comes back, at most every
+/// [miniPlayerHintGap] and [miniPlayerHintLimit] times in all.
+const miniPlayerHintGap = Duration(hours: 6);
 const miniPlayerHintDelay = Duration(milliseconds: 2500);
 const miniPlayerHintHold = Duration(milliseconds: 1600);
+const miniPlayerHintNudge = Duration(milliseconds: 280);
 
 bool miniPlayerHintDue({
   required int shown,
@@ -44,15 +49,54 @@ bool miniPlayerHintDue({
     shown < miniPlayerHintLimit &&
     (lastShownAt == null || now.difference(lastShownAt) >= miniPlayerHintGap);
 
-/// Folds the bar the other way and back once. Returns the timer that undoes
-/// the fold, so the caller can cancel it; a tap meanwhile wins.
-Timer showMiniPlayerHint(WidgetRef ref) {
-  final start = ref.read(miniPlayerCollapsedProvider);
-  ref.read(miniPlayerCollapsedProvider.notifier).state = !start;
-  return Timer(miniPlayerHintHold, () {
-    final collapsed = ref.read(miniPlayerCollapsedProvider.notifier);
-    if (collapsed.state == !start) collapsed.state = start;
-  });
+/// Plays the fold once and leaves the bar as it found it: a folded bar opens,
+/// waits, slides aside and folds; an open one slides aside, folds, waits and
+/// opens. Anything the person does meanwhile ends it.
+class MiniPlayerHint {
+  MiniPlayerHint.show(WidgetRef ref) : _ref = ref {
+    final folded = _collapsed.state;
+    if (folded) {
+      _collapsed.state = false;
+      _after(miniPlayerHintHold, () => _fold(then: null));
+    } else {
+      _fold(then: () => _collapsed.state = false);
+    }
+  }
+
+  final WidgetRef _ref;
+  Timer? _timer;
+  var _expected = false;
+
+  StateController<bool> get _collapsed =>
+      _ref.read(miniPlayerCollapsedProvider.notifier);
+  StateController<bool> get _nudge =>
+      _ref.read(miniPlayerHintNudgeProvider.notifier);
+
+  void _fold({required VoidCallback? then}) {
+    _nudge.state = true;
+    _after(miniPlayerHintNudge, () {
+      _nudge.state = false;
+      _collapsed.state = true;
+      if (then != null) _after(miniPlayerHintHold, then);
+    });
+  }
+
+  void _after(Duration delay, VoidCallback step) {
+    _expected = _collapsed.state;
+    _timer = Timer(delay, () {
+      if (_collapsed.state != _expected) return cancel();
+      step();
+      _expected = _collapsed.state;
+    });
+  }
+
+  void cancel() {
+    _timer?.cancel();
+    if (_nudge.state) _nudge.state = false;
+  }
+
+  /// Stops the timer only, for a disposed owner that may not read providers.
+  void stop() => _timer?.cancel();
 }
 
 class IqroMiniPlayer extends ConsumerStatefulWidget {
@@ -181,6 +225,8 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
         padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0),
         child: _CollapsiblePlayer(
           collapsed: collapsed,
+          nudged:
+              widget.allowCollapse && ref.watch(miniPlayerHintNudgeProvider),
           onCollapse: widget.allowCollapse ? () => setCollapsed(true) : null,
           onSwipe: () {
             setCollapsed(true);
@@ -502,6 +548,7 @@ class _MiniPlayerControl extends StatelessWidget {
 class _CollapsiblePlayer extends StatefulWidget {
   const _CollapsiblePlayer({
     required this.collapsed,
+    required this.nudged,
     required this.onCollapse,
     required this.onSwipe,
     required this.onExpand,
@@ -510,6 +557,9 @@ class _CollapsiblePlayer extends StatefulWidget {
   });
 
   final bool collapsed;
+
+  /// The fold hint slides the bar towards the corner it folds into.
+  final bool nudged;
 
   /// Null where the bar never collapses (the Mushaf's inline player).
   final VoidCallback? onCollapse;
@@ -567,7 +617,19 @@ class _CollapsiblePlayerState extends State<_CollapsiblePlayer> {
                   onPanStart: _startDrag,
                   onPanUpdate: _updateDrag,
                   onPanEnd: _endDrag,
-                  child: widget.child,
+                  child: AnimatedSlide(
+                    offset: widget.nudged
+                        ? Offset(
+                            Directionality.of(context) == TextDirection.rtl
+                                ? -.18
+                                : .18,
+                            0,
+                          )
+                        : Offset.zero,
+                    duration: miniPlayerHintNudge,
+                    curve: Curves.easeOutCubic,
+                    child: widget.child,
+                  ),
                 ),
               ),
         builder: (context, progress, panel) {

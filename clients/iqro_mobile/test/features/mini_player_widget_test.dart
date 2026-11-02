@@ -16,21 +16,21 @@ import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 
 void main() {
-  test('the fold hint shows once a day, three times at most', () {
+  test('the fold hint waits six hours between showings, five at most', () {
     final now = DateTime.utc(2026, 11, 2, 12);
     expect(miniPlayerHintDue(shown: 0, lastShownAt: null, now: now), isTrue);
     expect(
       miniPlayerHintDue(
         shown: 1,
-        lastShownAt: now.subtract(const Duration(hours: 23)),
+        lastShownAt: now.subtract(const Duration(hours: 5)),
         now: now,
       ),
       isFalse,
     );
     expect(
       miniPlayerHintDue(
-        shown: 2,
-        lastShownAt: now.subtract(const Duration(hours: 25)),
+        shown: 4,
+        lastShownAt: now.subtract(const Duration(hours: 7)),
         now: now,
       ),
       isTrue,
@@ -46,7 +46,7 @@ void main() {
   });
 
   testWidgets(
-    'the hint folds the bar and unfolds it, unless tapped meanwhile',
+    'the hint slides the bar aside, folds it and leaves it as found',
     (tester) async {
       late WidgetRef widgetRef;
       await tester.pumpWidget(
@@ -62,17 +62,39 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(Consumer)),
       );
-      expect(container.read(miniPlayerCollapsedProvider), isTrue);
-      showMiniPlayerHint(widgetRef);
-      expect(container.read(miniPlayerCollapsedProvider), isFalse);
+      bool folded() => container.read(miniPlayerCollapsedProvider);
+      bool nudged() => container.read(miniPlayerHintNudgeProvider);
+
+      // Folded at first: it opens, waits, slides aside and folds again.
+      expect(folded(), isTrue);
+      MiniPlayerHint.show(widgetRef);
+      expect(folded(), isFalse);
       await tester.pump(miniPlayerHintHold);
-      expect(container.read(miniPlayerCollapsedProvider), isTrue);
-      // Folded by the person while the hint holds: it is left as they set it.
+      expect(nudged(), isTrue);
+      expect(folded(), isFalse);
+      await tester.pump(miniPlayerHintNudge);
+      expect(nudged(), isFalse);
+      expect(folded(), isTrue);
+
+      // Open at first: it slides aside, folds, waits and opens again.
       container.read(miniPlayerCollapsedProvider.notifier).state = false;
-      showMiniPlayerHint(widgetRef);
-      container.read(miniPlayerCollapsedProvider.notifier).state = false;
+      MiniPlayerHint.show(widgetRef);
+      expect(nudged(), isTrue);
+      await tester.pump(miniPlayerHintNudge);
+      expect(folded(), isTrue);
+      expect(nudged(), isFalse);
       await tester.pump(miniPlayerHintHold);
-      expect(container.read(miniPlayerCollapsedProvider), isFalse);
+      expect(folded(), isFalse);
+
+      // The person folds it meanwhile: the hint stops and leaves it folded.
+      container.read(miniPlayerCollapsedProvider.notifier).state = true;
+      MiniPlayerHint.show(widgetRef);
+      expect(folded(), isFalse);
+      container.read(miniPlayerCollapsedProvider.notifier).state = true;
+      await tester.pump(miniPlayerHintHold);
+      await tester.pump(miniPlayerHintNudge);
+      expect(folded(), isTrue);
+      expect(nudged(), isFalse);
     },
   );
 

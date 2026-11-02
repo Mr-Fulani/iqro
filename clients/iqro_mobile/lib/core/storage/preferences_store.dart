@@ -29,7 +29,7 @@ const supportedAudioQualityPreferences = <String>{
 };
 
 /// The mini player shows that it folds at most this many times.
-const miniPlayerHintLimit = 3;
+const miniPlayerHintLimit = 5;
 
 class AppPreferences {
   const AppPreferences({
@@ -316,9 +316,9 @@ class PreferencesStore {
           defaultReminderAdhan,
       reminderSoundChecked:
           _preferences.getBool('reminder_sound_checked') ?? false,
-      playerHintsShown: _preferences.getInt('player_hints_shown') ?? 0,
+      playerHintsShown: _preferences.getInt('player_hint_count') ?? 0,
       playerHintShownAt: DateTime.tryParse(
-        _preferences.getString('player_hint_shown_at') ?? '',
+        _preferences.getString('player_hint_at') ?? '',
       ),
     );
   }
@@ -386,10 +386,10 @@ class PreferencesStore {
         'reminder_sound_checked',
         value.reminderSoundChecked,
       ),
-      _preferences.setInt('player_hints_shown', value.playerHintsShown),
+      _preferences.setInt('player_hint_count', value.playerHintsShown),
       if (value.playerHintShownAt case final shownAt?)
         _preferences.setString(
-          'player_hint_shown_at',
+          'player_hint_at',
           shownAt.toUtc().toIso8601String(),
         ),
     ]);
