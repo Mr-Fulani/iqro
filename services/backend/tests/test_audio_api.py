@@ -522,12 +522,14 @@ def test_anonymous_clients_can_read_audio_catalog_and_details(
     assert reciter_list.status_code == 200
     assert reciter_list.json()["results"][0]["id"] == str(reciter.id)
     assert reciter_list.json()["results"][0]["name_tr"] == "Test Okuyucu"
+    assert reciter_list.json()["results"][0]["full_support"] is True
     assert reciter_list.json()["results"][0]["portrait_url"] == (
         "https://cdn.example.test/quran-audio/audio/reciters/test-reciter.webp"
     )
     assert reciter_detail.status_code == 200
     assert reciter_detail.json()["slug"] == "test-reciter"
     assert reciter_detail.json()["name_tr"] == "Test Okuyucu"
+    assert reciter_detail.json()["full_support"] is True
     assert reciter_detail.json()["biography_tr"] == "Test biyografisi."
     assert recitation_list.status_code == 200
     assert recitation_list.json()["results"][0]["id"] == str(recitation.id)
@@ -668,6 +670,9 @@ def test_untimed_recitation_remains_listenable_but_is_not_timed(
         "memorization": False,
         "offline": True,
     }
+    reciters = api_client.get(reverse("audio:reciter-list")).json()["results"]
+    reciter = next(item for item in reciters if item["id"] == str(untimed.reciter_id))
+    assert reciter["full_support"] is False
 
 
 @pytest.mark.django_db

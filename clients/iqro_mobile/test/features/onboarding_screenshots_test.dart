@@ -177,6 +177,7 @@ void main() {
       await shot('07-prayer', OnboardingStep.prayer, located: true);
       await shot('08-reminders', OnboardingStep.reminders);
       await shot('09-exact-reminders', OnboardingStep.exactReminders);
+      await shot('09-reminder-sound', OnboardingStep.reminderSound);
       await shot('10-analytics', OnboardingStep.analytics);
       await shot('11-done', OnboardingStep.done, located: true, allowed: true);
     }, skip: _directory.isEmpty);

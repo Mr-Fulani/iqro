@@ -53,6 +53,7 @@ class FakeOnboardingServices implements OnboardingServices {
     this.notificationResult = ReminderPermission.granted,
     this.initialPermission = ReminderPermission.denied,
     this.needsExact = false,
+    this.soundAllowed = true,
   });
 
   final List<PrayerMethod>? methods;
@@ -61,10 +62,12 @@ class FakeOnboardingServices implements OnboardingServices {
   final ReminderPermission notificationResult;
   final ReminderPermission initialPermission;
   final bool needsExact;
+  bool soundAllowed;
 
   var notificationRequests = 0;
   var remindersEnabled = 0;
   var exactRequests = 0;
+  var soundSettingsOpened = 0;
   final savedProfiles = <(String, String)>[];
 
   @override
@@ -144,6 +147,25 @@ class FakeOnboardingServices implements OnboardingServices {
   Future<bool> requestExactReminders() async {
     exactRequests++;
     return true;
+  }
+
+  /// Prayer reminders with sound, for the check after an update.
+  bool soundingReminders = false;
+
+  @override
+  Future<bool> soundingPrayerReminders() async => soundingReminders;
+
+  var soundChecks = 0;
+
+  @override
+  Future<bool> reminderSoundAllowed() async {
+    soundChecks++;
+    return soundAllowed;
+  }
+
+  @override
+  Future<void> openNotificationSettings() async {
+    soundSettingsOpened++;
   }
 }
 

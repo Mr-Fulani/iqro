@@ -23,6 +23,8 @@ class AudioRepository {
   // Backend max_page_size for /reciters and /recitations.
   static const _catalogPageSize = 100;
   static const _maxCatalogPages = 50;
+  // New reciters reach the app within this; a saved catalog still opens offline.
+  static const _catalogMaxAge = Duration(hours: 1);
   final Map<String, SurahPlayback> _playbackMemory = {};
 
   void clearPlaybackCache() => _playbackMemory.clear();
@@ -39,11 +41,7 @@ class AudioRepository {
         '/reciters',
         const <String, Object?>{},
       );
-      await _database.writeCache(
-        key,
-        payload,
-        maxAge: const Duration(hours: 12),
-      );
+      await _database.writeCache(key, payload, maxAge: _catalogMaxAge);
       return parseReciters(payload);
     } on Object {
       if (!forceRefresh && cached != null) return parseReciters(cached.value);
@@ -111,11 +109,7 @@ class AudioRepository {
         'reciter_id': ?reciterId,
         'quran_edition': 'madani-hafs',
       });
-      await _database.writeCache(
-        key,
-        payload,
-        maxAge: const Duration(hours: 12),
-      );
+      await _database.writeCache(key, payload, maxAge: _catalogMaxAge);
       return _recitationMemory[key] = _parseRecitations(payload);
     } on Object {
       if (cached != null) {
