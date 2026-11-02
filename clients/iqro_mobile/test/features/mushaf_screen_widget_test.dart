@@ -339,6 +339,19 @@ void main() {
     expect(opacity('mushaf-page-header'), {1.0});
     expect(opacity('mushaf-page-footer'), {1.0});
   });
+
+  testWidgets('page labels are Arabic in a Russian interface', (tester) async {
+    await _pump(tester, pageNames: true);
+    Finder label(String key, String text) => find.descendant(
+      of: find.byKey(ValueKey(key)),
+      matching: find.text(text),
+    );
+
+    expect(label('mushaf-page-header', 'سورة المائدة'), findsWidgets);
+    expect(label('mushaf-page-header', 'الجزء ٧'), findsWidgets);
+    expect(label('mushaf-page-footer', '١٢٢'), findsOneWidget);
+    expect(label('mushaf-page-header', 'Аль-Маида'), findsNothing);
+  });
 }
 
 Future<void> _tapAyah(WidgetTester tester, double y) async {
@@ -415,6 +428,7 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   Map<int, int>? pageBuilds,
   bool savesReadingPlace = true,
   bool tajweed = false,
+  bool pageNames = false,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(360, 800);
@@ -479,9 +493,15 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
             return _page(page);
           }),
         quranCatalogProvider.overrideWith(
-          (ref) async => const QuranCatalog(surahs: <Surah>[], fromCache: true),
+          (ref) async => QuranCatalog(
+            surahs: pageNames ? const <Surah>[_maida] : const <Surah>[],
+            fromCache: true,
+          ),
         ),
-        quranJuzProvider.overrideWith((ref) async => const <QuranDivision>[]),
+        quranJuzProvider.overrideWith(
+          (ref) async =>
+              pageNames ? const <QuranDivision>[_juz7] : <QuranDivision>[],
+        ),
         audioRepositoryProvider.overrideWithValue(audio),
         audioControllerProvider.overrideWith((ref) => controller),
         recitersProvider.overrideWith((ref) async => <Reciter>[_reciter]),
@@ -505,6 +525,24 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   if (tajweed) await _settleFoundation(tester);
   return (controller: controller, audio: audio, quran: quran);
 }
+
+const _maida = Surah(
+  id: '5',
+  number: 5,
+  nameAr: 'المائدة',
+  nameEn: "Al-Ma'ida",
+  nameRu: 'Аль-Маида',
+  ayahCount: 120,
+  revelationType: 'medinan',
+);
+
+const _juz7 = QuranDivision(
+  number: 7,
+  startAyah: QuranAyahReference(id: '', surah: 5, ayah: 82),
+  endAyah: QuranAyahReference(id: '', surah: 6, ayah: 110),
+  startPage: 121,
+  endPage: 141,
+);
 
 MushafPageData _page(int number) => MushafPageData(
   number: number,

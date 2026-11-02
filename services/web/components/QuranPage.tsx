@@ -2381,6 +2381,7 @@ function QuranContent() {
                       onSelectAyah={handleSelectMushafAyah}
                       tajweedWords={tajweedWords}
                       onSelectTajweedWord={handleSelectTajweedWord}
+                      juz={divisionAtAyah(juz, mushafVerseKeys[0] ?? null) || null}
                     />
                   </MushafPageTurn>
                 ) : null

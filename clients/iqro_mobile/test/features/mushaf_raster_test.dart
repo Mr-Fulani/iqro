@@ -63,7 +63,7 @@ void main() {
       await tester.pump();
       final originalState = tester.state(find.byType(MushafRaster));
       expect(_paintedWidth(tester), 10);
-      expect(find.text('51'), findsOneWidget);
+      expect(find.text('٥١'), findsOneWidget);
       final paper = tester.widget<ColoredBox>(
         find
             .descendant(

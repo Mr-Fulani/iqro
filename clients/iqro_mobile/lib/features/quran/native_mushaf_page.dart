@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/text/arabic_digits.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../tajweed/tajweed_models.dart';
 import '../tajweed/tajweed_sheet.dart';
@@ -305,7 +306,6 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
     final juz = widget.divisions
         .where((d) => d.containsAyah(pageData.ayahReferences.firstOrNull))
         .firstOrNull;
-    final locale = Localizations.localeOf(context).languageCode;
     return ColoredBox(
       color: mushafPaperColor,
       child: Column(
@@ -314,12 +314,16 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
             _pageLabel(
               key: const ValueKey('mushaf-page-header'),
               padding: const EdgeInsetsDirectional.fromSTEB(12, 16, 12, 6),
+              // Arabic in every interface language, as in a printed Mushaf.
               child: Row(
+                textDirection: TextDirection.rtl,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Expanded(
+                  Flexible(
+                    flex: 3,
                     child: Text(
-                      surah?.nameFor(locale) ??
-                          '${context.l10n.surah} ${surahNumber ?? ''}',
+                      'سورة ${surah?.nameAr ?? (surahNumber == null ? '' : arabicIndicDigits(surahNumber))}',
+                      textDirection: TextDirection.rtl,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -328,11 +332,16 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                       ),
                     ),
                   ),
-                  Text(
-                    '${context.l10n.juz} ${juz?.number ?? '—'}',
-                    style: const TextStyle(
-                      color: mushafInkColor,
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      'الجزء ${juz == null ? '—' : arabicIndicDigits(juz.number)}',
+                      textDirection: TextDirection.rtl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: mushafInkColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -397,7 +406,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${widget.page}',
+                        arabicIndicDigits(widget.page),
                         style: const TextStyle(
                           color: mushafInkColor,
                           fontWeight: FontWeight.w600,
