@@ -20,6 +20,7 @@ import 'package:iqro_mobile/features/memorization/memorization_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/mushaf_offline_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
+import 'package:iqro_mobile/features/quran/surah_ayah_picker.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 // Redmi Note 7 turned to landscape: 2340x1080 px at 2.75, status bar on top
@@ -58,12 +59,13 @@ void main() {
         expect(tester.takeException(), isNull);
         final l10n = _l10n(tester);
         final list = find.byType(ListView);
-        final search = find.byType(SearchBar);
+        final picker = find.byType(QuranSurahAyahPicker);
         expect(list, findsOneWidget);
-        expect(search, findsOneWidget);
-        // Cards and search scroll in one column, the list fills the other.
+        expect(picker, findsOneWidget);
+        // Cards and the surah and ayah pickers scroll in one column, the list
+        // fills the other.
         expect(
-          tester.getRect(search).right,
+          tester.getRect(picker).right,
           lessThan(tester.getRect(list).left),
         );
         expect(find.text('Аль-Фатиха'), findsOneWidget);
@@ -77,7 +79,7 @@ void main() {
             matching: find.byType(Scrollable),
           ),
         );
-        await tester.ensureVisible(search);
+        await tester.ensureVisible(picker);
         await tester.tap(find.text(l10n.continueSaved));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
@@ -168,7 +170,7 @@ void main() {
   testWidgets('portrait keeps the cards above the surah list', (tester) async {
     await _pumpShell(tester, tab: 1, size: const Size(1080, 2340));
     expect(
-      tester.getRect(find.byType(SearchBar)).bottom,
+      tester.getRect(find.byType(QuranSurahAyahPicker)).bottom,
       lessThan(tester.getRect(find.byType(ListView)).top),
     );
     expect(tester.takeException(), isNull);

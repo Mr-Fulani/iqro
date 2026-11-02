@@ -15,6 +15,7 @@ import 'mushaf_edition_picker.dart';
 import 'mushaf_offline_repository.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
+import 'surah_ayah_picker.dart';
 import 'surah_name_art.dart';
 
 class QuranScreen extends ConsumerStatefulWidget {
@@ -25,15 +26,6 @@ class QuranScreen extends ConsumerStatefulWidget {
 }
 
 class _QuranScreenState extends ConsumerState<QuranScreen> {
-  final _searchController = TextEditingController();
-  var _query = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final preferences = ref.watch(appPreferencesProvider);
@@ -190,25 +182,9 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
         ),
       ),
       const SizedBox(height: 12),
-      SearchBar(
-        controller: _searchController,
-        hintText:
-            '${context.l10n.surah}, ${context.l10n.ayah}, ${context.l10n.juz}…',
-        leading: const Icon(Icons.search),
-        trailing: _query.isEmpty
-            ? null
-            : <Widget>[
-                IconButton(
-                  tooltip: context.l10n.close,
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _query = '');
-                  },
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-        onChanged: (value) =>
-            setState(() => _query = value.trim().toLowerCase()),
+      QuranSurahAyahPicker(
+        surahs: catalog.valueOrNull?.surahs ?? const <Surah>[],
+        onOpen: (surah, ayah) => _openAyah(preferences.readerMode, surah, ayah),
       ),
       if (landscape && catalog.valueOrNull?.fromCache == true) ...<Widget>[
         const SizedBox(height: 12),
@@ -223,14 +199,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
         onRetry: () => ref.invalidate(quranCatalogProvider),
       ),
       data: (data) {
-        final filtered = data.surahs
-            .where((surah) {
-              if (_query.isEmpty) return true;
-              return '${surah.number} ${surah.nameAr} ${surah.nameEn} ${surah.nameRu}'
-                  .toLowerCase()
-                  .contains(_query);
-            })
-            .toList(growable: false);
+        final surahs = data.surahs;
         return Column(
           children: <Widget>[
             if (data.fromCache && !landscape)
@@ -243,11 +212,11 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
                 padding: EdgeInsets.zero,
                 child: ListView.separated(
                   padding: EdgeInsets.zero,
-                  itemCount: filtered.length,
+                  itemCount: surahs.length,
                   separatorBuilder: (context, index) =>
                       const Divider(height: 1),
                   itemBuilder: (context, index) {
-                    final surah = filtered[index];
+                    final surah = surahs[index];
                     return _SurahRow(
                       surah: surah,
                       locale: locale,
@@ -327,6 +296,30 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
     } else {
       context.push('/reader/$surah?ayah=$ayah');
     }
+  }
+
+  /// The mushaf opens on the page that holds the ayah, the text at the ayah.
+  Future<void> _openAyah(ReaderMode mode, Surah surah, int ayah) async {
+    if (mode == ReaderMode.text) {
+      _openPosition(mode, surah.number, ayah, surah.firstPage ?? 1);
+      return;
+    }
+    var page = surah.firstPage ?? 1;
+    try {
+      final ayahs = await ref.read(quranRepositoryProvider).ayahs(surah.number);
+      page =
+          ayahs
+              .where((item) => item.number == ayah)
+              .firstOrNull
+              ?.pages
+              .firstOrNull ??
+          page;
+    } on Object {
+      // Offline without this surah: the surah's first page is close, and
+      // Quran Foundation mushafs look the ayah's page up themselves.
+    }
+    if (!mounted) return;
+    _openPosition(mode, surah.number, ayah, page);
   }
 
   Future<void> _showMushafPicker(BuildContext context) async {
