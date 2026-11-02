@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A7D1E3F5C2B4960817263542 /* adhan_madinah.caf in Resources */ = {isa = PBXBuildFile; fileRef = B8E2F4A6D3C5A71928374653 /* adhan_madinah.caf */; };
+		A7D1E3F5C2B4960817263541 /* adhan_makkah.caf in Resources */ = {isa = PBXBuildFile; fileRef = B8E2F4A6D3C5A71928374652 /* adhan_makkah.caf */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
@@ -71,6 +73,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B8E2F4A6D3C5A71928374653 /* adhan_madinah.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan_madinah.caf; sourceTree = "<group>"; };
+		B8E2F4A6D3C5A71928374652 /* adhan_makkah.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan_makkah.caf; sourceTree = "<group>"; };
 		06E11E98801BB36318FB46FB /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
@@ -212,6 +216,8 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				B8E2F4A6D3C5A71928374653 /* adhan_madinah.caf */,
+				B8E2F4A6D3C5A71928374652 /* adhan_makkah.caf */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
@@ -359,6 +365,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7D1E3F5C2B4960817263542 /* adhan_madinah.caf in Resources */,
+				A7D1E3F5C2B4960817263541 /* adhan_makkah.caf in Resources */,
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				A1B2C3D4E5F60718293A4B5C /* InfoPlist.strings in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,

@@ -59,6 +59,24 @@ class MainActivity : AudioServiceActivity() {
                     }
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/notification_settings")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "open" -> {
+                        startActivity(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                        )
+                        result.success(null)
+                    }
+                    "soundAllowed" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        NotificationSoundCheck(applicationContext, result::success).start()
+                    } else {
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         val compass = QiblaCompassStreamHandler(applicationContext, ::displayRotation)
         qiblaCompass = compass
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/qibla_compass")

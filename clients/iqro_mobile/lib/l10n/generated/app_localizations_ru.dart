@@ -653,6 +653,20 @@ class AppLocalizationsRu extends AppLocalizations {
   String get noAudio => 'Нет доступной аудиозаписи';
 
   @override
+  String get searchReciters => 'Найти чтеца';
+
+  @override
+  String get reciterNotFound => 'Такого чтеца нет';
+
+  @override
+  String get fullReciterHint => 'Есть в Мусхафе и Заучивании';
+
+  @override
+  String showAllReciters(int count) {
+    return 'Показать всех: $count';
+  }
+
+  @override
   String get nowPlaying => 'Сейчас играет';
 
   @override
@@ -1669,6 +1683,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get prayerReminders => 'Напоминания о намазе';
+
+  @override
+  String get adhan => 'Азан';
+
+  @override
+  String get adhanMakkah => 'Мекка';
+
+  @override
+  String get adhanMadinah => 'Медина';
+
+  @override
+  String get adhanSystemSound => 'Обычный';
+
+  @override
+  String get adhanHint =>
+      'Короткий азан во время намаза. На телефоне должен быть включён звук.';
 
   @override
   String get prayerReminderSetup =>
@@ -3215,6 +3245,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get onboardingKeepApproximate => 'Оставить примерное время';
+
+  @override
+  String get onboardingSoundTitle => 'Звук азана';
+
+  @override
+  String get onboardingSoundBody =>
+      'Звук уведомлений выключен. Если его не включить, азана не будет.';
+
+  @override
+  String get onboardingSoundSwitch => 'Звук уведомлений';
+
+  @override
+  String get onboardingSoundOn => 'Звук включён, азан будет слышно.';
 
   @override
   String get onboardingAnalyticsCounts =>

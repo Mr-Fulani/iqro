@@ -31,6 +31,7 @@ enum OnboardingStep {
   prayer,
   reminders,
   exactReminders,
+  reminderSound,
   analytics,
   done,
 }
@@ -59,7 +60,8 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
+    with WidgetsBindingObserver {
   late final List<OnboardingStep> _steps;
   var _index = 0;
   late final _tour = PageController(initialPage: widget.initialTourSlide);
@@ -81,10 +83,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   ReminderPermission? _notifications;
   var _notificationsBlocked = false;
   var _remindersOn = false;
+  var _soundOn = false;
+  var _readingSound = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final analytics = ref.read(analyticsProvider.notifier);
     final preferences = ref.read(appPreferencesProvider);
     _goal = preferences.goal;
@@ -98,6 +103,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       OnboardingStep.reminders,
       if (widget.initialStep == OnboardingStep.exactReminders)
         OnboardingStep.exactReminders,
+      if (widget.initialStep == OnboardingStep.reminderSound)
+        OnboardingStep.reminderSound,
       if (analytics.available &&
           (ref.read(analyticsProvider) == null ||
               widget.initialStep == OnboardingStep.analytics))
@@ -159,8 +166,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tour.dispose();
     super.dispose();
+  }
+
+  // The switch itself lives in the system settings; read it on the way back.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _step == OnboardingStep.reminderSound) {
+      unawaited(_readSound());
+    }
+  }
+
+  Future<void> _readSound() async {
+    if (_readingSound) return;
+    _readingSound = true;
+    final allowed = await ref
+        .read(onboardingServicesProvider)
+        .reminderSoundAllowed();
+    _readingSound = false;
+    if (mounted) setState(() => _soundOn = allowed);
   }
 
   OnboardingStep get _step => _steps[_index];
@@ -297,7 +324,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     final needsExact =
         _remindersOn && await services.needsExactReminderAccess();
+    final soundOn = !_remindersOn || await services.reminderSoundAllowed();
     if (!mounted) return;
+    if (_remindersOn) {
+      unawaited(
+        ref.read(appPreferencesProvider.notifier).markReminderSoundChecked(),
+      );
+    }
+    _soundOn = soundOn;
+    if (!soundOn && !_steps.contains(OnboardingStep.reminderSound)) {
+      _steps.insert(_index + 1, OnboardingStep.reminderSound);
+    }
     if (needsExact && !_steps.contains(OnboardingStep.exactReminders)) {
       _steps.insert(_index + 1, OnboardingStep.exactReminders);
     }
@@ -424,6 +461,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       onRemindPrayers: (value) => setState(() => _remindPrayers = value),
     ),
     OnboardingStep.exactReminders => const _ExactRemindersStep(),
+    OnboardingStep.reminderSound => _ReminderSoundStep(
+      on: _soundOn,
+      onToggle: ref.read(onboardingServicesProvider).openNotificationSettings,
+    ),
     OnboardingStep.analytics => _AnalyticsStep(
       consent: ref.watch(analyticsProvider),
       onPolicy: _openPolicy,
@@ -512,6 +553,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           l10n.onboardingKeepApproximate,
           _advance,
           key: const Key('onboarding-later'),
+        ),
+      ],
+      OnboardingStep.reminderSound => <Widget>[
+        primary(
+          l10n.continueLabel,
+          _advance,
+          key: const Key('onboarding-next'),
         ),
       ],
       OnboardingStep.analytics => <Widget>[

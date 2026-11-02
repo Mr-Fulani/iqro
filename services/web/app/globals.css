@@ -2382,10 +2382,33 @@ input:focus, select:focus, textarea:focus {
     linear-gradient(145deg, #ffffff 0%, #f8fffc 100%);
 }
 
+.reciter-search {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 16px;
+  padding: 0 14px;
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
 .reciter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 16px;
+}
+
+.reciter-show-all {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+/* The full catalog runs to hundreds of cards: lay out only those near the screen. */
+.seo-quran-page .reciter-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
 }
 
 /* Server-rendered home catalogs far below the first screen: skip their layout
@@ -2450,6 +2473,13 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* Five columns here: 30 cards of the short list fill the last row. */
+@media (min-width: 700px) and (max-width: 999px) {
+  .reciter-showcase .reciter-grid.is-collapsed .reciter-card:nth-child(n + 31) {
+    display: none;
+  }
+}
+
 @media (min-width: 1000px) {
   .reciter-grid {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -2500,6 +2530,42 @@ input:focus, select:focus, textarea:focus {
   text-align: center;
   box-shadow: var(--shadow-sm);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.reciter-card.is-full {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 1px var(--accent-gold-border), var(--shadow-sm);
+}
+
+.reciter-full-badge {
+  position: absolute;
+  inset-inline-start: -2px;
+  inset-block-end: 4px;
+  z-index: 2;
+  width: 30%;
+  aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent-gold);
+  color: #fff;
+}
+
+.reciter-full-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.reciter-full-hint .reciter-full-badge {
+  position: static;
+  width: 22px;
+  flex: 0 0 22px;
 }
 
 .reciter-card:hover {

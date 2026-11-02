@@ -1,5 +1,6 @@
 import type { Recitation, Reciter } from "./api";
 import type { MessageKey } from "./i18n";
+import { reciterHasPortrait } from "./reciter-portraits.ts";
 
 const CANONICAL_RECITER_SLUGS: Readonly<Record<string, string>> = {
   "qf-1-abdulbaset-abdulsamad-mujawwad": "qf-2-abdul-baset-abdul-samad",
@@ -24,6 +25,87 @@ export function reciterPersonKey(reciter: Pick<Reciter, "slug"> | string): strin
   return CANONICAL_RECITER_SLUGS[slug] || slug;
 }
 
+function normalizedName(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f\u064b-\u0655\u0640]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/[-‘’'ʼ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const CYRILLIC_LETTERS: Readonly<Record<string, string>> = {
+  а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ж: "j", з: "z", и: "i", к: "k",
+  л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f",
+  х: "h", ц: "s", ч: "ch", ш: "sh", щ: "sh", ъ: "", ы: "i", ь: "", э: "e", ю: "u",
+  я: "a",
+};
+
+/**
+ * What a word sounds like, whatever alphabet or spelling it came in: its
+ * consonants, with the letters that transcribe one Arabic sound merged. Родзия,
+ * Радия and Rodziah all read "rd"; the app holds the same rules.
+ */
+function nameSound(word: string): string {
+  return word
+    .replace(/[а-я]/g, (letter) => CYRILLIC_LETTERS[letter] ?? letter)
+    .replace(/dzh|dj/g, "j")
+    .replace(/dz/g, "d")
+    .replace(/kh/g, "h")
+    .replace(/gh/g, "g")
+    .replace(/sh|ch/g, "x")
+    .replace(/th/g, "s")
+    .replace(/dh/g, "z")
+    .replace(/[qc]/g, "k")
+    .replace(/p/g, "b")
+    .replace(/w/g, "v")
+    .replace(/[aeiouy]/g, "")
+    .replace(/h$/, "")
+    .replace(/(.)\1+/g, "$1");
+}
+
+type SearchableReciter = Pick<Reciter, "name_ar" | "name_en" | "name_ru" | "name_tr">;
+
+/**
+ * The catalog's search: any word order, in any of the reciter's four names.
+ * Only when nothing is spelled as asked does it look for names that sound the
+ * same. The names are prepared once, so typing stays quick in a long catalog.
+ */
+export function reciterSearch<T extends SearchableReciter>(
+  reciters: readonly T[],
+): (query: string) => readonly T[] {
+  const prepared = reciters.map((reciter) => {
+    const names = [reciter.name_ar, reciter.name_en, reciter.name_ru, reciter.name_tr ?? ""]
+      .map(normalizedName);
+    return {
+      reciter,
+      text: names.join(" "),
+      // Each word with those after it, so "абдульбасит" meets "Абдуль-Басит".
+      sounds: names.flatMap((name) => {
+        const words = name.split(" ").map(nameSound);
+        return words.map((_, index) => words.slice(index).join(""));
+      }),
+    };
+  });
+  return (query) => {
+    const words = normalizedName(query).split(" ").filter(Boolean);
+    if (words.length === 0) return reciters;
+    const spelled = prepared.filter(({ text }) => words.every((word) => text.includes(word)));
+    if (spelled.length > 0) return spelled.map((item) => item.reciter);
+    const sounds = words.map(nameSound);
+    if (sounds.some((sound) => sound.length < 2)) return [];
+    return prepared
+      .filter((item) =>
+        sounds.every((sound) => item.sounds.some((name) => name.startsWith(sound))),
+      )
+      .map((item) => item.reciter);
+  };
+}
+
 export function groupRecitersByPerson(reciters: Reciter[]): Reciter[] {
   const people = new Map<string, Reciter>();
   for (const reciter of reciters) {
@@ -37,14 +119,23 @@ export function groupRecitersByPerson(reciters: Reciter[]): Reciter[] {
     const representative = reciter.slug === personKey ? reciter : current;
     const portraitUrl =
       representative.portrait_url || current.portrait_url || reciter.portrait_url || null;
+    const fullSupport = Boolean(current.full_support || reciter.full_support);
     people.set(
       personKey,
-      portraitUrl === representative.portrait_url
+      portraitUrl === representative.portrait_url && fullSupport === representative.full_support
         ? representative
-        : { ...representative, portrait_url: portraitUrl },
+        : { ...representative, portrait_url: portraitUrl, full_support: fullSupport },
     );
   }
   return [...people.values()];
+}
+
+/** Reciters with a portrait open the list, each group in its own order. */
+export function recitersWithPortraitsFirst(reciters: Reciter[]): Reciter[] {
+  return [
+    ...reciters.filter(reciterHasPortrait),
+    ...reciters.filter((reciter) => !reciterHasPortrait(reciter)),
+  ];
 }
 
 export function selectHomePopularReciters(reciters: Reciter[]): Reciter[] {

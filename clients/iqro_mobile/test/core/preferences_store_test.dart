@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
+import 'package:iqro_mobile/features/reminders/reminder_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -33,6 +34,23 @@ void main() {
       }
     },
   );
+
+  test('adhan choice persists and defaults to Makkah', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = PreferencesStore(await SharedPreferences.getInstance());
+    expect(store.read().reminderAdhan, ReminderAdhan.makkah);
+
+    await store.write(
+      store.read().copyWith(reminderAdhan: ReminderAdhan.madinah),
+    );
+    expect(store.read().reminderAdhan, ReminderAdhan.madinah);
+
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'reminder_adhan': 'unknown',
+    });
+    final damaged = PreferencesStore(await SharedPreferences.getInstance());
+    expect(damaged.read().reminderAdhan, ReminderAdhan.makkah);
+  });
 
   test('player background persists and rejects malformed ids', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});

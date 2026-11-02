@@ -128,7 +128,10 @@ class AppDependencies {
       database: database,
     );
     final reminders = ReminderRepository(api: api, database: database);
-    final notifications = NotificationGateway(database: database);
+    final notifications = NotificationGateway(
+      database: database,
+      adhan: () => preferences.read().reminderAdhan,
+    );
     await notifications.initialize();
     final offlineMushaf = MushafOfflineRepository(api: api, database: database);
     final mushafThumbnails = await MushafThumbnailCache.open();

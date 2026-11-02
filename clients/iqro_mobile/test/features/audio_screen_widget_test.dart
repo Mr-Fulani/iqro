@@ -152,6 +152,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the search narrows the reciter cards', (tester) async {
+    await _pumpAudioScreen(tester);
+    final search = find.byKey(const ValueKey<String>('audio-reciter-search'));
+
+    await tester.ensureVisible(search);
+    await tester.enterText(search, 'такого чтеца нет');
+    await tester.pumpAndSettle();
+    expect(find.text('Тестовый чтец'), findsNothing);
+    expect(find.text('Такого чтеца нет'), findsOneWidget);
+
+    await tester.enterText(search, 'тестовый');
+    await tester.pumpAndSettle();
+    expect(find.text('Тестовый чтец'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Audio keeps its reader while Mushaf owns the physical player', (
     tester,
   ) async {

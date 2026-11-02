@@ -1254,6 +1254,30 @@ abstract class AppLocalizations {
   /// **'No playable audio is available'**
   String get noAudio;
 
+  /// No description provided for @searchReciters.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a reciter'**
+  String get searchReciters;
+
+  /// No description provided for @reciterNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No reciter found'**
+  String get reciterNotFound;
+
+  /// No description provided for @fullReciterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Also in the Mushaf and Memorize'**
+  String get fullReciterHint;
+
+  /// No description provided for @showAllReciters.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all: {count}'**
+  String showAllReciters(int count);
+
   /// No description provided for @nowPlaying.
   ///
   /// In en, this message translates to:
@@ -3131,6 +3155,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Prayer reminders'**
   String get prayerReminders;
+
+  /// No description provided for @adhan.
+  ///
+  /// In en, this message translates to:
+  /// **'Adhan'**
+  String get adhan;
+
+  /// No description provided for @adhanMakkah.
+  ///
+  /// In en, this message translates to:
+  /// **'Makkah'**
+  String get adhanMakkah;
+
+  /// No description provided for @adhanMadinah.
+  ///
+  /// In en, this message translates to:
+  /// **'Madinah'**
+  String get adhanMadinah;
+
+  /// No description provided for @adhanSystemSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get adhanSystemSound;
+
+  /// No description provided for @adhanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A short adhan at the prayer time. Your phone’s sound needs to be on.'**
+  String get adhanHint;
 
   /// No description provided for @prayerReminderSetup.
   ///
@@ -5651,6 +5705,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep approximate time'**
   String get onboardingKeepApproximate;
+
+  /// No description provided for @onboardingSoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adhan sound'**
+  String get onboardingSoundTitle;
+
+  /// No description provided for @onboardingSoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification sound is off. Without it there will be no adhan.'**
+  String get onboardingSoundBody;
+
+  /// No description provided for @onboardingSoundSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification sound'**
+  String get onboardingSoundSwitch;
+
+  /// No description provided for @onboardingSoundOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound is on, you will hear the adhan.'**
+  String get onboardingSoundOn;
 
   /// No description provided for @onboardingAnalyticsCounts.
   ///
