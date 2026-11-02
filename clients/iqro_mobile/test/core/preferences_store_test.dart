@@ -35,6 +35,19 @@ void main() {
     },
   );
 
+  test('the mini player fold hint keeps its count and last time', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = PreferencesStore(await SharedPreferences.getInstance());
+    expect(store.read().playerHintsShown, 0);
+    expect(store.read().playerHintShownAt, isNull);
+    final shownAt = DateTime.utc(2026, 11, 2, 9, 30);
+    await store.write(
+      store.read().copyWith(playerHintsShown: 2, playerHintShownAt: shownAt),
+    );
+    expect(store.read().playerHintsShown, 2);
+    expect(store.read().playerHintShownAt, shownAt);
+  });
+
   test('adhan choice persists and defaults to Makkah', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = PreferencesStore(await SharedPreferences.getInstance());

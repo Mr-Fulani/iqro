@@ -105,6 +105,55 @@ export function swipeDismisses({ deltaY, durationMs }: SwipeSample): boolean {
   return deltaY >= 24 && velocity >= SWIPE_DISMISS_VELOCITY;
 }
 
+/** The bar is 66 px tall, so rolling it up takes a shorter swipe than closing the sheet. */
+export type BarSwipeSample = { deltaX: number; deltaY: number; durationMs: number };
+
+export const SWIPE_COLLAPSE_DISTANCE = 32;
+export const SWIPE_COLLAPSE_FLICK = 16;
+export const SWIPE_COLLAPSE_VELOCITY = 0.5;
+/** Past this a press is a drag: it no longer counts as a tap on the bar. */
+export const SWIPE_TAP_SLOP = 8;
+
+/**
+ * A swipe on the bar in any direction rolls it into the round button, as in
+ * the app (mini_player.dart): long enough or a quick flick. A tap on the
+ * button unrolls it.
+ */
+export function swipeCollapses({ deltaX, deltaY, durationMs }: BarSwipeSample): boolean {
+  const distance = Math.hypot(deltaX, deltaY);
+  if (distance >= SWIPE_COLLAPSE_DISTANCE) return true;
+  const velocity = durationMs > 0 ? distance / durationMs : 0;
+  return distance >= SWIPE_COLLAPSE_FLICK && velocity >= SWIPE_COLLAPSE_VELOCITY;
+}
+
+/**
+ * Until someone folds the bar themselves, it shows how on the home page: it
+ * rolls up and back by itself, once a day and three times at most (as the app).
+ */
+export const PLAYER_HINT_LIMIT = 3;
+export const PLAYER_HINT_GAP_MS = 24 * 60 * 60 * 1000;
+export const PLAYER_HINT_DELAY_MS = 2500;
+export const PLAYER_HINT_HOLD_MS = 1600;
+export const PLAYER_HINT_STORAGE_KEY = "iqro_player_hint_v1";
+
+export type PlayerHintRecord = { shown: number; lastShownAt: number | null };
+
+export function playerHintDue({ shown, lastShownAt }: PlayerHintRecord, now: number): boolean {
+  return shown < PLAYER_HINT_LIMIT && (lastShownAt === null || now - lastShownAt >= PLAYER_HINT_GAP_MS);
+}
+
+/** A stored record, or none shown yet when it is missing or malformed. */
+export function parsePlayerHint(raw: string | null): PlayerHintRecord {
+  try {
+    const value = JSON.parse(raw ?? "null") as Partial<PlayerHintRecord> | null;
+    const shown = Number.isInteger(value?.shown) ? Math.max(0, value!.shown!) : 0;
+    const lastShownAt = typeof value?.lastShownAt === "number" && Number.isFinite(value.lastShownAt) ? value.lastShownAt : null;
+    return { shown, lastShownAt };
+  } catch {
+    return { shown: 0, lastShownAt: null };
+  }
+}
+
 /** A tap on the full player's body hides its controls; taps on controls do not. */
 export const PLAYER_CONTROL_SELECTOR =
   "button, a, input, select, textarea, label, [role='slider'], .player-background-options, .mobile-player-queue-sheet";

@@ -1,4 +1,5 @@
 import { devices, expect, Page, test as base } from "@playwright/test";
+import { swipe } from "./swipe";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
@@ -3775,13 +3776,13 @@ test.describe("Desktop Mushaf page arrows", () => {
 });
 
 // The site's phone player stays on the Mushaf page outside the full-screen
-// reader. Rolled up, its own box is the round button: quick taps, taps on the
+// reader. Rolled up, its own box is the round button: quick swipes, taps on the
 // page and the reader hiding it mid-roll never leave the bar's body behind.
 for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }]) {
   test.describe(`phone player on the Mushaf page at ${viewport.width}×${viewport.height}`, () => {
     test.use({ viewport, isMobile: true, hasTouch: true });
 
-    test("rolls up whole into the round button, however quickly it is tapped", async ({ page }) => {
+    test("rolls up whole into the round button, however quickly it is swiped", async ({ page }) => {
       test.setTimeout(120_000);
       await page.goto("/ru/audio");
       await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
@@ -3796,7 +3797,6 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
       await exit.click();
       await expect(bar).toBeVisible();
 
-      const collapse = bar.getByRole("button", { name: "Свернуть панель плеера", exact: true });
       const roundButton = bar.getByRole("button", { name: "Показать панель плеера", exact: true });
       const pageSurface = page.locator(".mushaf-page-container").filter({ visible: true });
       const box = async (locator: typeof bar) => (await locator.boundingBox())!;
@@ -3824,12 +3824,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
       };
 
       for (const pause of [0, 40, 120, 250]) {
-        // A tap back while it still rolls, then up again.
-        await collapse.tap();
+        // A tap back while it still rolls, then a swipe rolls it up again.
+        await swipe(page, bar.locator(".mobile-player-titles"), 60);
         await page.waitForTimeout(pause);
         await roundButton.tap();
         await page.waitForTimeout(pause);
-        await collapse.tap();
+        await swipe(page, bar.locator(".mobile-player-titles"), 60);
         await expectRolledUp();
         // A tap on the page while it unrolls.
         await roundButton.tap();
@@ -3837,7 +3837,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
         await pageSurface.tap({ position: { x: 20, y: 20 } });
         await expectBar();
         // A tap on the page while it rolls up.
-        await collapse.tap();
+        await swipe(page, bar.locator(".mobile-player-titles"), 60);
         await page.waitForTimeout(pause);
         await pageSurface.tap({ position: { x: 20, y: 20 } });
         await expectRolledUp();
@@ -3847,7 +3847,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
 
       // The full-screen reader hides the bar mid-roll: no animation ends there,
       // and the bar is the round button on the way back all the same.
-      await collapse.tap();
+      await swipe(page, bar.locator(".mobile-player-titles"), 60);
       await page.getByRole("button", { name: "Открыть читалку" }).tap();
       await expect(bar).toBeHidden();
       await page.waitForTimeout(800);

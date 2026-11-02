@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -9,11 +10,72 @@ import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
 import 'package:iqro_mobile/features/audio/listening_queue.dart';
+import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/features/audio/mini_player.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 
 void main() {
+  test('the fold hint shows once a day, three times at most', () {
+    final now = DateTime.utc(2026, 11, 2, 12);
+    expect(miniPlayerHintDue(shown: 0, lastShownAt: null, now: now), isTrue);
+    expect(
+      miniPlayerHintDue(
+        shown: 1,
+        lastShownAt: now.subtract(const Duration(hours: 23)),
+        now: now,
+      ),
+      isFalse,
+    );
+    expect(
+      miniPlayerHintDue(
+        shown: 2,
+        lastShownAt: now.subtract(const Duration(hours: 25)),
+        now: now,
+      ),
+      isTrue,
+    );
+    expect(
+      miniPlayerHintDue(
+        shown: miniPlayerHintLimit,
+        lastShownAt: now.subtract(const Duration(days: 5)),
+        now: now,
+      ),
+      isFalse,
+    );
+  });
+
+  testWidgets(
+    'the hint folds the bar and unfolds it, unless tapped meanwhile',
+    (tester) async {
+      late WidgetRef widgetRef;
+      await tester.pumpWidget(
+        ProviderScope(
+          child: Consumer(
+            builder: (context, ref, _) {
+              widgetRef = ref;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Consumer)),
+      );
+      expect(container.read(miniPlayerCollapsedProvider), isTrue);
+      showMiniPlayerHint(widgetRef);
+      expect(container.read(miniPlayerCollapsedProvider), isFalse);
+      await tester.pump(miniPlayerHintHold);
+      expect(container.read(miniPlayerCollapsedProvider), isTrue);
+      // Folded by the person while the hint holds: it is left as they set it.
+      container.read(miniPlayerCollapsedProvider.notifier).state = false;
+      showMiniPlayerHint(widgetRef);
+      container.read(miniPlayerCollapsedProvider.notifier).state = false;
+      await tester.pump(miniPlayerHintHold);
+      expect(container.read(miniPlayerCollapsedProvider), isFalse);
+    },
+  );
+
   for (final locale in <String>['ru', 'en', 'ar', 'tr']) {
     testWidgets(
       'idle player opens reciter choice, not empty playback: $locale',
@@ -63,13 +125,18 @@ void main() {
         );
         expect(find.text(l10n.audioTitle), findsOneWidget);
         expect(find.text(l10n.chooseReciter), findsOneWidget);
-        final collapse = find.byKey(const ValueKey('mini-player-collapse'));
+        // No visible collapse button: a swipe on the bar, any way, rolls it up.
+        expect(
+          find.byKey(const ValueKey('mini-player-collapse')),
+          findsNothing,
+        );
+        final bar = find.byKey(const ValueKey('mini-player-bar'));
         final expand = find.byKey(const ValueKey('mini-player-expand'));
         final expandedWidth = tester.getSize(find.byType(ListTile)).width;
         await tester.pumpAndSettle();
         expect(tester.getSize(expand), const Size(60, 60));
         expect(expand.hitTestable(), findsOneWidget);
-        expect(collapse.hitTestable(), findsNothing);
+        expect(bar.hitTestable(), findsNothing);
         final container = ProviderScope.containerOf(
           tester.element(find.byType(IqroMiniPlayer)),
         );
@@ -78,25 +145,76 @@ void main() {
         await tester.pumpAndSettle();
         expect(container.read(miniPlayerCollapsedProvider), isFalse);
         expect(tester.getSize(find.byType(ListTile)).width, expandedWidth);
-        expect(collapse.hitTestable(), findsOneWidget);
+        expect(bar.hitTestable(), findsOneWidget);
         expect(expand.hitTestable(), findsNothing);
         expect(tester.takeException(), isNull);
-        await tester.tap(collapse);
+        // A slow drag past the touch slop is neither a swipe nor a tap.
+        await tester.timedDrag(
+          find.text(l10n.audioTitle),
+          const Offset(0, 24),
+          const Duration(milliseconds: 400),
+        );
+        await tester.pumpAndSettle();
+        expect(container.read(miniPlayerCollapsedProvider), isFalse);
+        expect(find.text('tab=3'), findsNothing);
+        await tester.drag(find.text(l10n.audioTitle), const Offset(0, 60));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
         expect(tester.takeException(), isNull);
         await tester.pumpAndSettle();
         expect(tester.getSize(expand), const Size(60, 60));
         expect(expand.hitTestable(), findsOneWidget);
-        expect(collapse.hitTestable(), findsNothing);
+        expect(bar.hitTestable(), findsNothing);
         expect(container.read(miniPlayerCollapsedProvider), isTrue);
         expect(find.text('tab=3'), findsNothing);
+        // A swipe on the round button does nothing; a tap brings the bar back.
+        await tester.drag(expand, const Offset(0, -60));
+        await tester.pumpAndSettle();
+        expect(container.read(miniPlayerCollapsedProvider), isTrue);
         await tester.tap(expand);
         await tester.pumpAndSettle();
         expect(container.read(miniPlayerCollapsedProvider), isFalse);
         expect(tester.getSize(find.byType(ListTile)).width, expandedWidth);
-        expect(collapse.hitTestable(), findsOneWidget);
+        expect(bar.hitTestable(), findsOneWidget);
         expect(tester.takeException(), isNull);
+        // Sideways and upwards fold it too.
+        for (final direction in const <Offset>[
+          Offset(-80, 0),
+          Offset(80, 0),
+          Offset(0, -60),
+        ]) {
+          await tester.drag(find.text(l10n.audioTitle), direction);
+          await tester.pumpAndSettle();
+          expect(container.read(miniPlayerCollapsedProvider), isTrue);
+          await tester.tap(expand);
+          await tester.pumpAndSettle();
+          expect(container.read(miniPlayerCollapsedProvider), isFalse);
+        }
+        expect(find.text('tab=3'), findsNothing);
+        // Screen readers cannot swipe: they get "collapse" as an action.
+        final semantics = tester.ensureSemantics();
+        final collapseLabel = MaterialLocalizations.of(
+          tester.element(bar),
+        ).expandedIconTapHint;
+        final node = tester.getSemantics(bar);
+        final actionId = node
+            .getSemanticsData()
+            .customSemanticsActionIds!
+            .firstWhere(
+              (id) =>
+                  CustomSemanticsAction.getAction(id)?.label == collapseLabel,
+            );
+        node.owner!.performAction(
+          node.id,
+          SemanticsAction.customAction,
+          actionId,
+        );
+        await tester.pumpAndSettle();
+        expect(container.read(miniPlayerCollapsedProvider), isTrue);
+        semantics.dispose();
+        await tester.tap(expand);
+        await tester.pumpAndSettle();
+        expect(container.read(miniPlayerCollapsedProvider), isFalse);
         await tester.tap(find.byTooltip(l10n.play));
         await tester.pumpAndSettle();
         expect(find.text('tab=3'), findsOneWidget);

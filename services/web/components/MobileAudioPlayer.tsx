@@ -19,8 +19,8 @@ import type {
 
 /*
  * The phone player, as clients/iqro_mobile/lib/features/audio/mini_player.dart and
- * player_screen.dart draw it: a 66 px bar with the portrait, the collapse button,
- * the title and three transport buttons; a full-screen player with the 210 px
+ * player_screen.dart draw it: a 66 px bar with the portrait, the title and three
+ * transport buttons that a swipe in any direction rolls into a round button; a full-screen player with the 210 px
  * portrait, the seek bar, five transport buttons and a grid of option tiles.
  * SegmentedAudioPlayer keeps the <audio> element and the playback logic and
  * renders these parts in its slots; lib/audio-player-context loads this module
@@ -127,6 +127,8 @@ function Summary({ engine, mobile }: MobilePlayerPartProps) {
             <span className={problem ? "is-error" : undefined}>{problem ?? artist}</span>
           </span>
         </button>
+        {/* Hidden: the bar collapses with a swipe. Screen readers and the keyboard
+            still reach it, and it shows while focused. */}
         <button type="button" className="mobile-player-collapse" onClick={mobile.onCollapse} aria-label={t("player.hideBar")}>
           <Icon name="collapse" size={24} />
         </button>

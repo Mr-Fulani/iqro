@@ -321,6 +321,16 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> markReminderSoundChecked() =>
       _set(state.copyWith(reminderSoundChecked: true));
 
+  Future<void> notePlayerHint(DateTime at) => _set(
+    state.copyWith(
+      playerHintsShown: state.playerHintsShown + 1,
+      playerHintShownAt: at,
+    ),
+  );
+
+  Future<void> markPlayerHintLearned() =>
+      _set(state.copyWith(playerHintsShown: miniPlayerHintLimit));
+
   Future<void> setDailyReadingGoal({
     required DailyUnit unit,
     required int target,
