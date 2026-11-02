@@ -427,5 +427,6 @@ def test_every_biography_fits_the_reciter_model() -> None:
         reciter = Reciter.objects.get(code=code)
         assert reciter.name_ru == MP3QURAN_RECITER_NAMES[code][0]
         assert reciter.profile_source_url == profile["profile_source_url"]
+        assert reciter.profile_source_checked_on == profile["profile_source_checked_on"]
         for language in ("ar", "en", "ru", "tr"):
             assert getattr(reciter, f"biography_{language}"), (code, language)

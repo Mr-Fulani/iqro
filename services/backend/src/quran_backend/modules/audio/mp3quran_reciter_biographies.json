@@ -1,10 +1,20 @@
 {
+  "abdelbari-al-toubayti": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في مكة المكرمة. نال المركز الأول في المسابقة الدولية لتحفيظ القرآن بمكة عام 1399هـ، وعُيّن إمامًا وخطيبًا للمسجد النبوي عام 1414هـ، وحصل على الدكتوراه في الفقه من الجامعة الإسلامية بالمدينة عام 1422هـ.",
+    "biography_en": "A Saudi Quran reciter born in Mecca. He took first place in the international Quran memorisation competition in Mecca in 1399 AH, was appointed imam and preacher of the Prophet's Mosque in 1414 AH, and earned a doctorate in fiqh from the Islamic University of Madinah in 1422 AH.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в Мекке. Занял первое место в международном конкурсе по заучиванию Корана в Мекке в 1399 году по хиджре; в 1414 году по хиджре назначен имамом и хатибом Мечети Пророка, а в 1422 году по хиджре получил докторскую степень по фикху в Исламском университете Медины.",
+    "biography_tr": "Mekke'de doğan Suudi Kur'an kârisi. hicrî 1399'da Mekke'deki uluslararası Kur'an ezberi yarışmasında birinci olmuş, hicrî 1414'te Mescid-i Nebevî'nin imam ve hatipliğine atanmış, hicrî 1422'de Medine İslam Üniversitesi'nde fıkıh alanında doktora yapmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://saudipedia.com/article/16186/شخصيات/شخصيات-دينية/عبدالباري-الثبيتي"
+  },
   "abdullah-al-johany": {
     "biography_ar": "قارئ قرآن سعودي وُلد في 13 يناير 1976 في المدينة. عُيّن إمامًا دائمًا للمسجد الحرام في مكة في يوليو 2007، وتخرج في كلية القرآن بالجامعة الإسلامية بالمدينة، ونال الدكتوراه من جامعة أم القرى.",
     "biography_en": "A Saudi Quran reciter born on 13 January 1976 in Medina. He was appointed a permanent imam of the Grand Mosque in Mecca in July 2007; he graduated from the Faculty of the Quran at the Islamic University of Madinah and earned a PhD from Umm al-Qura University.",
     "biography_ru": "Саудовский чтец Корана, родившийся 13 января 1976 года в Медине. В июле 2007 года назначен постоянным имамом Запретной мечети в Мекке; окончил факультет Корана Исламского университета Медины и получил докторскую степень в Университете Умм аль-Кура.",
     "biography_tr": "13 Ocak 1976'da Medine'de doğan Suudi Kur'an kârisi. Temmuz 2007'de Mekke'deki Mescid-i Haram'ın daimî imamlığına atanmıştır; Medine İslam Üniversitesi Kur'an Fakültesi'nden mezun olmuş, Ümmülkurâ Üniversitesi'nde doktora yapmıştır.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://en.wikipedia.org/wiki/Abdullah_Awad_Al_Juhany"
   },
   "abdullah-al-mattrod": {
@@ -13,6 +23,7 @@
     "biography_ru": "Саудовский чтец Корана, родившийся в 1963 году в городе Эль-Хардж. В 1978 году назначен имамом мечети в районе Аль-Уд в Эр-Рияде, затем служил в других мечетях города; в 2003 году получил докторскую степень в Исламском университете имама Мухаммада ибн Сауда.",
     "biography_tr": "1963'te Harc şehrinde doğan Suudi Kur'an kârisi. 1978'de Riyad'ın Ud semtindeki bir camiye imam olarak atanmış, ardından şehrin başka camilerinde görev yapmıştır; 2003'te İmam Muhammed bin Suud İslam Üniversitesi'nde doktora derecesi almıştır.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/عبد_الله_المطرود"
   },
   "abdullah-albuajan": {
@@ -21,6 +32,7 @@
     "biography_ru": "Саудовский чтец Корана, родившийся в 1979 году. Имам и хатиб Мечети Пророка в Медине, назначенный королевским указом в октябре 2013 года, и преподаватель Исламского университета Медины.",
     "biography_tr": "1979'da doğan Suudi Kur'an kârisi. Ekim 2013'te kraliyet kararnamesiyle Medine'deki Mescid-i Nebevî'nin imam-hatibi olarak atanmıştır; Medine İslam Üniversitesi'nde öğretim üyesidir.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/عبد_الله_البعيجان"
   },
   "abdullah-basfer": {
@@ -29,7 +41,17 @@
     "biography_ru": "Саудовский чтец Корана, родившийся в 1961 году в Джидде. Имам и хатиб мечети Мансура аш-Шуайби в Джидде, доцент кафедры шариата и исламоведения Университета короля Абдул-Азиза; его чтение транслируют многие радио- и телеканалы.",
     "biography_tr": "1961'de Cidde'de doğan Suudi Kur'an kârisi. Cidde'deki Mansur eş-Şuaybi Camii'nin imam-hatibi ve Kral Abdulaziz Üniversitesi Şeriat ve İslami İlimler Bölümü'nde doçenttir; tilavetleri birçok radyo ve televizyon kanalında yayımlanmaktadır.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/عبد_الله_بصفر"
+  },
+  "abdullah-kamel": {
+    "biography_ar": "قارئ قرآن مصري وُلد في إحدى قرى مركز يوسف الصديق بمحافظة الفيوم. تخرج في كلية دار العلوم بجامعة الفيوم عام 2005، وتوفي في الولايات المتحدة في أبريل 2023.",
+    "biography_en": "An Egyptian Quran reciter, born in a village of the Yusuf al-Siddiq district in Fayoum Governorate. He graduated from the Faculty of Dar al-Ulum at Fayoum University in 2005 and died in the United States in April 2023.",
+    "biography_ru": "Египетский чтец Корана, родившийся в деревне района Юсуф ас-Сиддик в мухафазе Фаюм. В 2005 году окончил факультет Дар аль-Улюм Университета Фаюма; умер в США в апреле 2023 года.",
+    "biography_tr": "Fayyum vilayetindeki Yusuf es-Sıddîk ilçesine bağlı bir köyde doğan Mısırlı Kur'an kârisi. 2005'te Fayyum Üniversitesi Dâru'l-Ulûm Fakültesi'nden mezun olmuş; Nisan 2023'te Amerika Birleşik Devletleri'nde vefat etmiştir.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/عبد_الله_كامل"
   },
   "abdulmohsen-al-qasim": {
     "biography_ar": "عالم دين وقارئ قرآن سعودي وُلد عام 1388هـ في مكة. إمام وخطيب المسجد النبوي في المدينة منذ عام 1418هـ، وعمل قاضيًا في المدينة.",
@@ -37,7 +59,62 @@
     "biography_ru": "Саудовский религиозный учёный и чтец Корана, родившийся в 1388 году хиджры в Мекке. С 1418 года хиджры имам и хатиб Мечети Пророка в Медине; работал судьёй в Медине.",
     "biography_tr": "Hicri 1388'de Mekke'de doğan Suudi din âlimi ve Kur'an kârisi. Hicri 1418'den beri Medine'deki Mescid-i Nebevî'nin imam-hatibidir; Medine'de hâkimlik yapmıştır.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/عبد_المحسن_القاسم"
+  },
+  "abdulrasheed-soufi": {
+    "biography_ar": "قارئ قرآن صومالي تعلّم القراءات على يد والده مفتي الصومال. انتقل إلى مصر عام 1981 ونال الشهادة العالية في القراءات العشر وأُجيز في الأزهر، وقدم إلى قطر عام 1991 فعمل إمامًا وخطيبًا في جامع أنس بن مالك.",
+    "biography_en": "A Somali Quran reciter who learned the qira'at from his father, the mufti of Somalia. He moved to Egypt in 1981, earned the higher certificate in the ten qira'at and received ijazahs at Al-Azhar; he came to Qatar in 1991 and worked as imam and preacher at the Anas ibn Malik Mosque.",
+    "biography_ru": "Сомалийский чтец Корана, изучавший кираат у отца, муфтия Сомали. В 1981 году переехал в Египет, получил высшее свидетельство по десяти кираатам и иджазы в Аль-Азхаре; в 1991 году приехал в Катар и работал имамом и хатибом мечети Анас ибн Малик.",
+    "biography_tr": "Kıraatleri Somali müftüsü olan babasından öğrenen Somalili Kur'an kârisi. 1981'de Mısır'a gitmiş, on kıraatte yüksek belge almış ve Ezher'de icazet kazanmış; 1991'de Katar'a gelerek Enes b. Malik Camii'nde imam ve hatip olarak çalışmıştır.",
+    "country_code": "SO",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://www.okaz.com.sa/local/na/2236616"
+  },
+  "abdulwadood-haneef": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في مكة المكرمة عام 1382هـ. حصل على المركز الأول في مسابقة دولية للقرآن الكريم عام 1404هـ، وأمّ المصلين في التهجد والقيام بالمسجد النبوي عام 1414هـ، ونال الدكتوراه من جامعة أم القرى عام 1415هـ.",
+    "biography_en": "A Saudi Quran reciter born in Mecca in 1382 AH. He took first place in an international Quran competition in 1404 AH, led the tahajjud and qiyam prayers at the Prophet's Mosque in 1414 AH, and earned a doctorate from Umm al-Qura University in 1415 AH.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в Мекке в 1382 году по хиджре. Занял первое место на международном конкурсе Корана в 1404 году по хиджре, в 1414 году по хиджре вёл молитвы тахаджуд и кийам в Мечети Пророка, а в 1415 году по хиджре получил докторскую степень в Университете Умм аль-Кура.",
+    "biography_tr": "Hicrî 1382'de Mekke'de doğan Suudi Kur'an kârisi. hicrî 1404'te uluslararası bir Kur'an yarışmasında birinci olmuş, 1414'te Mescid-i Nebevî'de teheccüd ve kıyam namazlarında imamlık yapmış, 1415'te Ümmülkurâ Üniversitesi'nde doktora yapmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/عبد_الودود_حنيف"
+  },
+  "adel-al-khalbany": {
+    "biography_ar": "قارئ قرآن وإمام سعودي وُلد في الرياض عام 1959. كان إمامًا لجامع الملك خالد بالرياض زهاء عشرين عامًا، وكُلِّف بإمامة صلاة التراويح في المسجد الحرام بمكة في رمضان 1429هـ بمرسوم ملكي.",
+    "biography_en": "A Saudi Quran reciter and imam born in Riyadh in 1959. He was imam of the King Khalid Mosque in Riyadh for about twenty years, and by royal decree was assigned to lead the tarawih prayers at the Grand Mosque in Mecca in Ramadan 1429 AH.",
+    "biography_ru": "Саудовский чтец Корана и имам, родившийся в 1959 году в Эр-Рияде. Около двадцати лет был имамом мечети короля Халида в Эр-Рияде; королевским указом в рамадане 1429 года по хиджре ему поручили возглавлять молитвы таравих в Запретной мечети в Мекке.",
+    "biography_tr": "1959'da Riyad'da doğan Suudi Kur'an kârisi ve imam. Yaklaşık yirmi yıl Riyad'daki Kral Halid Camii'nin imamlığını yapmış; kraliyet kararnamesiyle hicrî 1429 Ramazanı'nda Mekke'deki Mescid-i Haram'da teravih namazını kıldırmakla görevlendirilmiştir.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/عادل_الكلباني"
+  },
+  "ahmad-al-hawashi": {
+    "biography_ar": "قارئ قرآن سعودي وُلد عام 1955م (1374هـ) في منطقة أحد رفيدة بعسير. حفظ القرآن في سن مبكرة وتلقى علومه على يد عدد من المقرئين والعلماء، وعُيّن إمامًا وخطيبًا للجامع الكبير بخميس مشيط عام 1396هـ.",
+    "biography_en": "A Saudi Quran reciter born in 1955 (1374 AH) in the Ahad Rafidah area of the Asir region. He memorized the Quran at an early age and studied under a number of reciters and scholars; in 1396 AH he was appointed imam and khatib of the Great Mosque of Khamis Mushait.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в 1955 году (1374 год по хиджре) в районе Ахад-Рафида в области Асир. Выучил Коран в раннем возрасте и учился у ряда чтецов и учёных; в 1396 году по хиджре назначен имамом и хатибом Большой мечети Хамис-Мушайта.",
+    "biography_tr": "1955'te (hicrî 1374) Asir bölgesindeki Ahad Rufeyde'de doğan Suudi Kur'an kârisi. Kur'an'ı erken yaşta ezberlemiş, çeşitli kârilerden ve âlimlerden ders almıştır; hicrî 1396'de Hamis Müşeyt Ulu Camii'nin imam-hatipliğine atanmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/أحمد_الحواشي"
+  },
+  "ahmad-alhuthaifi": {
+    "biography_ar": "قارئ قرآن سعودي، حاصل على الماجستير والدكتوراه من الجامعة الإسلامية بالمدينة المنورة، وأُجيز في رواية حفص عن عاصم على يد أحمد الزيات. صدر قرار بتعيينه إمامًا رسميًا للمسجد النبوي بتاريخ 13 صفر 1441هـ.",
+    "biography_en": "A Saudi Quran reciter who earned his master's degree and doctorate from the Islamic University of Madinah and received an ijazah in the Hafs riwaya from Ahmad al-Zayyat. A decision appointing him an official imam of the Prophet's Mosque was issued on 13 Safar 1441 AH.",
+    "biography_ru": "Саудовский чтец Корана, получивший степень магистра и докторскую степень в Исламском университете Медины и иджазу в риваяте Хафса от Ахмада аз-Зайята. Решение о назначении его официальным имамом Мечети Пророка издано 13 сафара 1441 года по хиджре.",
+    "biography_tr": "Medine İslam Üniversitesi'nde yüksek lisans ve doktora yapan, Ahmed ez-Zeyyât'tan Hafs rivayetinde icazet alan Suudi Kur'an kârisi. Mescid-i Nebevî'nin resmî imamlığına atanmasına ilişkin karar hicrî 13 Safer 1441 tarihinde çıkmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/أحمد_علي_الحذيفي"
+  },
+  "ahmad-issa-al-maasaraawi": {
+    "biography_ar": "قارئ قرآن مصري وُلد في 1 مارس 1953 في قرية دنديط بمحافظة الدقهلية. قرأ القراءات العشر بالإجازة على الشيخ عبد الحكيم عبد اللطيف، ونال الدكتوراه في الحديث وعلومه عام 1992، وعمل أستاذًا للحديث في جامعة الأزهر.",
+    "biography_en": "An Egyptian Quran reciter born on 1 March 1953 in the village of Dandit in Dakahlia governorate. He read the ten qira'at with an ijazah from Sheikh Abd al-Hakim Abd al-Latif, earned a doctorate in Hadith and its sciences in 1992, and worked as a professor of Hadith at Al-Azhar University.",
+    "biography_ru": "Египетский чтец Корана, родившийся 1 марта 1953 года в деревне Дандит в мухафазе Дакахлия. Прочитал десять кираатов с иджазой у шейха Абдуль-Хакима Абдуль-Латифа, в 1992 году получил докторскую степень по хадисоведению и работал профессором хадисоведения в Университете Аль-Азхар.",
+    "biography_tr": "1 Mart 1953'te Dakahliye vilayetinin Dandît köyünde doğan Mısırlı Kur'an kârisi. On kıraati Şeyh Abdülhakîm Abdüllatîf'ten icazetle okumuş, 1992'de hadis ve hadis ilimleri alanında doktora yapmış, Ezher Üniversitesi'nde hadis profesörü olarak çalışmıştır.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/أحمد_عيسى_المعصراوي"
   },
   "ahmad-nauina": {
     "biography_ar": "قارئ قرآن مصري وطبيب وُلد في 15 مارس 1954 في مركز مطوبس بمحافظة كفر الشيخ. وهو شيخ عموم المقارئ المصرية، وتخرج في كلية الطب بجامعة الإسكندرية.",
@@ -45,7 +122,26 @@
     "biography_ru": "Египетский чтец Корана и врач, родившийся 15 марта 1954 года в районе Мутубас мухафазы Кафр-эш-Шейх. Занимает должность шейха египетских школ чтения Корана (макари); окончил медицинский факультет Александрийского университета.",
     "biography_tr": "15 Mart 1954'te Kefrüşşeyh vilayetinin Mutubas ilçesinde doğan Mısırlı Kur'an kârisi ve hekim. Mısır Kur'an tilavet okulları (makâri) şeyhliği görevini yürütmektedir; İskenderiye Üniversitesi Tıp Fakültesi'nden mezun olmuştur.",
     "country_code": "EG",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/أحمد_نعينع"
+  },
+  "ahmad-shaheen": {
+    "biography_ar": "قارئ قرآن مصري وُلد عام 1375هـ في محافظة قنا بصعيد مصر. حفظ القرآن في عامين على يد الشيخ أحمد السيد كيلاني، ودرس القراءات في معهد القراءات بالأزهر الشريف، وسجّل المصحف المرتل كاملًا لإذاعة القرآن الكريم في السعودية.",
+    "biography_en": "An Egyptian Quran reciter born in 1375 AH in Qena Governorate in Upper Egypt. He memorised the Quran in two years under Sheikh Ahmad al-Sayyid Kilani, studied the qira'at at the Institute of Qira'at at Al-Azhar, and recorded the complete murattal Quran for Saudi Quran Radio.",
+    "biography_ru": "Египетский чтец Корана, родившийся в 1375 году по хиджре в мухафазе Кена на юге Египта. За два года выучил Коран наизусть у шейха Ахмада ас-Сайида Киляни, изучал кираат в Институте кираатов при Аль-Азхаре и записал полный Коран в стиле мураттал для радио «Коран» в Саудовской Аравии.",
+    "biography_tr": "Hicrî 1375'te Mısır'ın güneyindeki Kına vilayetinde doğan Mısırlı Kur'an kârisi. Kur'an'ı iki yılda Şeyh Ahmed es-Seyyid Kilânî'nin yanında ezberlemiş, Ezher'deki Kıraat Enstitüsü'nde kıraatleri öğrenmiş ve Suudi Kur'an Radyosu için Kur'an'ın tamamını mürettel kaydetmiştir.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://www.okaz.com.sa/local/na/2236312"
+  },
+  "ahmad-talib-bin-humaid": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في الرياض سنة 1401هـ. نال البكالوريوس من كلية الشريعة بجامعة الإمام محمد بن سعود الإسلامية والماجستير من المعهد العالي للقضاء، وفي عام 2013 عُيّن إمامًا في المسجد النبوي.",
+    "biography_en": "A Saudi Quran reciter born in Riyadh in 1401 AH. He earned a bachelor's degree from the Faculty of Sharia at Imam Muhammad ibn Saud Islamic University and a master's from the Higher Institute of Judiciary; in 2013 he was appointed an imam of the Prophet's Mosque.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в Эр-Рияде в 1401 году по хиджре. Получил степень бакалавра на факультете шариата Исламского университета имама Мухаммада ибн Сауда и магистра в Высшем судебном институте; в 2013 году назначен имамом Мечети Пророка.",
+    "biography_tr": "Riyad'da hicrî 1401 yılında doğan Suudi Kur'an kârisi. İmam Muhammed b. Suud İslam Üniversitesi Şeriat Fakültesi'nden lisans, Yüksek Yargı Enstitüsü'nden yüksek lisans derecesi almış; 2013'te Mescid-i Nebevî imamlığına atanmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/أحمد_طالب_حميد"
   },
   "ali-alhuthaifi": {
     "biography_ar": "قارئ قرآن سعودي وُلد في 22 مايو 1947 في قرية القرن المستقيم جنوب منطقة مكة. إمام وخطيب المسجد النبوي في المدينة منذ عام 1399هـ، وكان قبل ذلك إمامًا لمسجد قباء، وهو عضو لجنة الإشراف على تسجيل المصاحف المرتلة بمجمع الملك فهد لطباعة المصحف.",
@@ -53,7 +149,62 @@
     "biography_ru": "Саудовский чтец Корана, родившийся 22 мая 1947 года в деревне Аль-Карн аль-Мустаким на юге региона Мекка. С 1399 года хиджры имам и хатиб Мечети Пророка в Медине, ранее был имамом мечети Куба; член комиссии, курирующей запись чтений Корана в Комплексе короля Фахда.",
     "biography_tr": "22 Mayıs 1947'de Mekke bölgesinin güneyindeki Karn el-Müstakim köyünde doğan Suudi Kur'an kârisi. Hicri 1399'dan beri Medine'deki Mescid-i Nebevî'nin imam-hatibidir, daha önce Kuba Mescidi'nin imamıydı; Kral Fehd Kompleksi'nde Kur'an tilavet kayıtlarını denetleyen komisyonun üyesidir.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/علي_بن_عبد_الرحمن_الحذيفي"
+  },
+  "ali-hajjaj-alsouasi": {
+    "biography_ar": "قارئ قرآن مصري وُلد في 10 سبتمبر 1926 في حي الجمالية بالقاهرة. درس القرآن على الشيخ أبو عزيز السحار، والتحق بالإذاعة عام 1946، وتوفي في 9 سبتمبر 2002.",
+    "biography_en": "An Egyptian Quran reciter born on 10 September 1926 in the Gamaliya district of Cairo. He studied the Quran with Sheikh Abu Aziz al-Sahhar, joined the radio in 1946, and died on 9 September 2002.",
+    "biography_ru": "Египетский чтец Корана, родившийся 10 сентября 1926 года в каирском районе Гамалия. Изучал Коран у шейха Абу Азиза ас-Саххара, в 1946 году начал работать на радио; умер 9 сентября 2002 года.",
+    "biography_tr": "10 Eylül 1926'da Kahire'nin Cemâliyye semtinde doğan Mısırlı Kur'an kârisi. Kur'an'ı Şeyh Ebû Azîz es-Sahhâr'dan öğrenmiş, 1946'da radyoya katılmış ve 9 Eylül 2002'de vefat etmiştir.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/علي_حجاج_السويسي"
+  },
+  "alwaleed-alshamsan": {
+    "biography_ar": "قارئ قرآن سعودي نال الدكتوراه بامتياز مع مرتبة الشرف من الجامعة الإسلامية بالمدينة المنورة عام 2017، وعُيّن إمامًا للمسجد الحرام في مكة المكرمة في أكتوبر 2024.",
+    "biography_en": "A Saudi Quran reciter who earned a PhD with first-class honours from the Islamic University of Madinah in 2017. He was appointed an imam of the Grand Mosque in Mecca in October 2024.",
+    "biography_ru": "Саудовский чтец Корана, получивший в 2017 году докторскую степень с отличием в Исламском университете Медины. В октябре 2024 года назначен имамом Запретной мечети в Мекке.",
+    "biography_tr": "2017'de Medine İslam Üniversitesi'nden üstün başarıyla doktora almış Suudi Kur'an kârisi. Ekim 2024'te Mekke'deki Mescid-i Haram imamlığına atanmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/الوليد_الشمسان"
+  },
+  "alzain-mohammad-ahmad": {
+    "biography_ar": "قارئ قرآن سوداني وُلد عام 1982. أحرز المركز الأول في المهرجان القومي للقرآن الكريم في السودان عام 1998، واختير عام 2001 لإمامة مسجد السيدة سنهوري، وحصل على الإجازة من الأزهر الشريف عام 2008.",
+    "biography_en": "A Sudanese Quran reciter born in 1982. He took first place at Sudan's national Quran festival in 1998, was chosen in 2001 to lead prayers at the Sayyida Sanhouri Mosque, and received an ijazah from Al-Azhar in 2008.",
+    "biography_ru": "Суданский чтец Корана, родившийся в 1982 году. В 1998 году занял первое место на национальном фестивале Корана в Судане, в 2001 году был выбран имамом мечети Ас-Сайида Санхури, а в 2008 году получил иджазу в Аль-Азхаре.",
+    "biography_tr": "1982 doğumlu Sudanlı Kur'an kârisi. 1998'de Sudan ulusal Kur'an festivalinde birinci olmuş, 2001'de Seyyide Sinhûrî Camii'nin imamlığına seçilmiş, 2008'de Ezher'den icazet almıştır.",
+    "country_code": "SD",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/الزين_محمد_أحمد"
+  },
+  "anas-alemadi": {
+    "biography_ar": "قارئ قرآن بحريني وُلد عام 1983. درس الشريعة في دبي وأخذ رواية حفص عن عاصم عن الشيخ محمد أحمد شقرون، ونال الدكتوراه في التفسير وعلوم القرآن من جامعة الملك فيصل في يونيو 2024.",
+    "biography_en": "A Bahraini Quran reciter born in 1983. He studied Islamic law in Dubai, took the riwaya of Hafs from 'Asim from Sheikh Muhammad Ahmad Shaqroun, and earned a PhD in tafsir and Quranic sciences from King Faisal University in June 2024.",
+    "biography_ru": "Бахрейнский чтец Корана, родившийся в 1983 году. Изучал шариат в Дубае, получил риваят Хафса от Асима у шейха Мухаммада Ахмада Шакруна; в июне 2024 года получил докторскую степень по тафсиру и наукам Корана в Университете имени короля Фейсала.",
+    "biography_tr": "1983'te doğan Bahreynli Kur'an kârisi. Dubai'de şeriat eğitimi almış, Hafs'ın Âsım'dan rivayetini Şeyh Muhammed Ahmed Şakrun'dan almış; Haziran 2024'te Kral Faysal Üniversitesi'nden tefsir ve Kur'an ilimleri alanında doktora derecesi almıştır.",
+    "country_code": "BH",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/أنس_العمادي"
+  },
+  "bader-alturki": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في 19 أغسطس 1984 في بريدة. عُيّن إمامًا في المسجد الحرام بمكة في 3 أكتوبر 2024، ونال البكالوريوس من كلية الدعوة بجامعة الإمام محمد بن سعود في الرياض عام 1433هـ.",
+    "biography_en": "A Saudi Quran reciter born on 19 August 1984 in Buraydah. He was appointed an imam of the Grand Mosque in Mecca on 3 October 2024; he earned a bachelor's degree from the Faculty of Da'wah at Imam Muhammad ibn Saud Islamic University in Riyadh in 1433 AH.",
+    "biography_ru": "Саудовский чтец Корана, родившийся 19 августа 1984 года в Бурайде. 3 октября 2024 года назначен имамом Запретной мечети в Мекке; в 1433 году по хиджре получил степень бакалавра на факультете даъвы Исламского университета имама Мухаммада ибн Сауда в Эр-Рияде.",
+    "biography_tr": "19 Ağustos 1984'te Büreyde'de doğan Suudi Kur'an kârisi. 3 Ekim 2024'te Mekke'deki Mescid-i Haram imamlığına atanmıştır; hicrî 1433 yılında Riyad'daki İmam Muhammed b. Suud İslam Üniversitesi Da'vet Fakültesi'nden lisans derecesi almıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/بدر_التركي"
+  },
+  "emad-hafez": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في المدينة النبوية سنة 1382هـ. نال الدكتوراه في التفسير من الجامعة الإسلامية سنة 1412هـ، وعُيّن في رمضان سنة 1432هـ إمامًا لصلاة التراويح في المسجد النبوي.",
+    "biography_en": "A Saudi Quran reciter born in Medina in 1382 AH. He earned a PhD in Quranic exegesis (tafsir) from the Islamic University of Madinah in 1412 AH, and in Ramadan 1432 AH he was appointed imam of the tarawih prayer at the Prophet's Mosque.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в Медине в 1382 году по хиджре. Получил докторскую степень по тафсиру в Исламском университете Медины в 1412 году по хиджре, а в рамадане 1432 года по хиджре был назначен имамом таравих в Мечети Пророка.",
+    "biography_tr": "Hicrî 1382'de Medine'de doğan Suudi Kur'an kârisi. hicrî 1412'de Medine İslam Üniversitesi'nden tefsir alanında doktora almış, hicrî 1432 Ramazan'ında Mescid-i Nebevî'de teravih namazı imamlığına atanmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://islamhouse.com/ar/author/725025/"
   },
   "fares-abbad": {
     "biography_ar": "قارئ قرآن يمني وُلد في 11 أبريل 1980. حفظ القرآن في حلقات مسجد بلال بن رباح في صنعاء وأمّ المصلين فيه في صلاة التراويح ابتداءً من عام 1994، ودُعي عام 2006 إلى إمامة المصلين في مسجد علي بن أبي طالب في الظهران بالسعودية.",
@@ -61,7 +212,17 @@
     "biography_ru": "Йеменский чтец Корана, родившийся 11 апреля 1980 года. Выучил Коран в кружках при мечети Билала ибн Рабаха в Сане и с 1994 года руководил там молитвами таравих; в 2006 году был приглашён руководить молитвами в мечети Али ибн Абу Талиба в Дахране (Саудовская Аравия).",
     "biography_tr": "11 Nisan 1980'de doğan Yemenli Kur'an kârisi. Kur'an'ı San'a'daki Bilal bin Rebah Camii'nin halkalarında ezberlemiş, 1994'ten itibaren burada teravih namazı kıldırmıştır; 2006'da Suudi Arabistan'ın Zahran şehrindeki Ali bin Ebu Talib Camii'nde namaz kıldırmaya davet edilmiştir.",
     "country_code": "YE",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/فارس_عباد"
+  },
+  "hussain-alshaik": {
+    "biography_ar": "قارئ قرآن سعودي وُلد عام 1384هـ (1964م). عُيّن إمامًا وخطيبًا للمسجد النبوي عام 1418هـ (1997م)، وتخرج في كلية الشريعة بالرياض، ونال الدكتوراه في القضاء من جامعة الإمام محمد بن سعود الإسلامية.",
+    "biography_en": "A Saudi Quran reciter born in 1384 AH (1964). He was appointed imam and preacher of the Prophet's Mosque in 1418 AH (1997); he graduated from the College of Sharia in Riyadh and earned a doctorate in judiciary from Imam Muhammad ibn Saud Islamic University.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в 1384 году по хиджре (1964). В 1418 году по хиджре (1997) назначен имамом и хатибом Мечети Пророка; окончил факультет шариата в Эр-Рияде и получил докторскую степень по судопроизводству в Исламском университете имама Мухаммада ибн Сауда.",
+    "biography_tr": "Hicrî 1384'te (1964) doğan Suudi Kur'an kârisi. hicrî 1418'de (1997) Mescid-i Nebevî'nin imam ve hatipliğine atanmış; Riyad'daki Şeriat Fakültesi'nden mezun olmuş, İmam Muhammed b. Suud İslam Üniversitesi'nde yargı alanında doktora yapmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://saudipedia.com/حسين-بن-عبدالعزيز-آل-الشيخ"
   },
   "ibrahim-al-akdar": {
     "biography_ar": "قارئ قرآن وإمام سعودي وُلد عام 1364هـ في المدينة. شارك منذ عام 1406هـ ولمدة تسع سنوات في الإمامة بالمسجد النبوي، ودرّس في الجامعة الإسلامية بالمدينة.",
@@ -69,7 +230,53 @@
     "biography_ru": "Саудовский чтец Корана и имам, родившийся в 1364 году хиджры в Медине. С 1406 года хиджры в течение девяти лет был одним из имамов Мечети Пророка; преподавал в Исламском университете Медины.",
     "biography_tr": "Hicri 1364'te Medine'de doğan Suudi Kur'an kârisi ve imam. Hicri 1406'dan itibaren dokuz yıl boyunca Mescid-i Nebevî'nin imamlarından biri olmuş, Medine İslam Üniversitesi'nde ders vermiştir.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/إبراهيم_الأخضر"
+  },
+  "ibrahim-aldosari": {
+    "biography_ar": "قارئ قرآن سعودي وُلد عام 1385هـ في الرياض، ونال البكالوريوس والماجستير والدكتوراه من كلية أصول الدين بجامعة الإمام محمد بن سعود الإسلامية. أُجيز برواية حفص على الشيخ أحمد الزيات عام 1403هـ.",
+    "biography_en": "A Saudi Quran reciter born in 1385 AH in Riyadh. He earned his bachelor's, master's and doctoral degrees at the Faculty of Usul al-Din of Imam Muhammad ibn Saud Islamic University, and received an ijazah in the riwaya of Hafs from Sheikh Ahmad al-Zayyat in 1403 AH.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в 1385 году по хиджре в Эр-Рияде. Получил степени бакалавра, магистра и доктора на факультете усуль ад-дин Исламского университета имама Мухаммада ибн Сауда; в 1403 году по хиджре получил иджазу в риваяте Хафс у шейха Ахмада аз-Заййата.",
+    "biography_tr": "Hicrî 1385'te Riyad'da doğan Suudi Kur'an kârisi. İmam Muhammed b. Suud İslam Üniversitesi Usûlüddîn Fakültesi'nde lisans, yüksek lisans ve doktora yapmış; hicrî 1403'te Şeyh Ahmed ez-Zeyyât'tan Hafs rivayetinde icazet almıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "http://dousari.blogspot.com/p/blog-page_5613.html"
+  },
+  "khalid-algamdi": {
+    "biography_ar": "قارئ قرآن سعودي من مواليد مكة المكرمة. حصل على البكالوريوس ثم الدكتوراه من جامعة أم القرى، وصدر قرار ملكي بتعيينه إمامًا للمسجد الحرام في ذي القعدة 1428هـ.",
+    "biography_en": "A Saudi Quran reciter born in Mecca. He earned his bachelor's degree and doctorate at Umm al-Qura University, and a royal decree appointed him imam of the Grand Mosque in Dhu al-Qi'dah 1428 AH.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в Мекке. Получил степень бакалавра и докторскую степень в Университете Умм аль-Кура; королевским указом назначен имамом Запретной мечети в зуль-каада 1428 года по хиджре.",
+    "biography_tr": "Mekke'de doğan Suudi Kur'an kârisi. Ümmülkurâ Üniversitesi'nde lisans ve doktora yapmış; hicrî 1428 Zilkadesinde kraliyet kararıyla Mescid-i Haram imamlığına atanmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/خالد_الغامدي"
+  },
+  "khalid-almohana": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في الأحساء سنة 1976 وانتقل إلى الرياض. تخرج في كلية أصول الدين بجامعة الإمام محمد بن سعود الإسلامية ونال منها الدكتوراه عام 2010، وعُيّن إمامًا للمسجد النبوي في أكتوبر 2019.",
+    "biography_en": "A Saudi Quran reciter born in 1976 in Al-Ahsa, who later moved to Riyadh. He graduated from the Faculty of Usul al-Din at Imam Muhammad ibn Saud Islamic University, earned a PhD there in 2010, and was appointed an imam of the Prophet's Mosque in October 2019.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в 1976 году в Эль-Хасе и позднее переехавший в Эр-Рияд. Окончил факультет усуль ад-дин Исламского университета имама Мухаммада ибн Сауда, получил там докторскую степень в 2010 году; в октябре 2019 года назначен имамом Мечети Пророка.",
+    "biography_tr": "1976'da Ahsa'da doğan ve sonra Riyad'a taşınan Suudi Kur'an kârisi. İmam Muhammed b. Suud İslam Üniversitesi Usûlüddîn Fakültesi'nden mezun olmuş, aynı üniversitede 2010'da doktora yapmış; Ekim 2019'da Mescid-i Nebevî imamlığına atanmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://saudipedia.com/خالد-المهنا"
+  },
+  "mahmood-al-rifai": {
+    "biography_ar": "قارئ قرآن كويتي، حاصل على المركز الأول في مسابقة الكويت الكبرى العاشرة لحفظ القرآن الكريم وتجويده. نال إجازة برواية حفص عن عاصم من الشيخ عبدالرافع رضوان الشرقاوي، عضو مجمع المصحف بالمدينة المنورة.",
+    "biography_en": "A Kuwaiti Quran reciter who took first place in the tenth Grand Kuwait Competition for Quran memorisation and tajwid. He received an ijazah in the riwaya of Hafs from Asim from Sheikh Abdulrafi Radwan al-Sharqawi, a member of the Medina Quran printing complex.",
+    "biography_ru": "Кувейтский чтец Корана, занявший первое место в десятом Большом кувейтском конкурсе по заучиванию Корана и таджвиду. Получил иджазу в риваяте Хафс от Асима у шейха Абдуррафи Радвана аш-Шаркави, члена Комплекса печати Корана в Медине.",
+    "biography_tr": "Kuveytli Kur'an kârisi; onuncu Büyük Kuveyt Kur'an Ezberleme ve Tecvit Yarışması'nda birinci olmuştur. Asım'dan Hafs rivayetinde, Medine'deki Mushaf Kompleksi üyesi Şeyh Abdurrafi Rıdvan eş-Şarkavi'den icazet almıştır.",
+    "country_code": "KW",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://www.alraimedia.com/article/1621862/محليات/أخبار-محلية/الخارجية-تتابع-قضية-توقيف-مقرئ-كويتي-في-تونس"
+  },
+  "mahmoud-abdul-hakam": {
+    "biography_ar": "قارئ قرآن مصري وُلد سنة 1915. حفظ القرآن في العاشرة من عمره ودرس عامين في المعهد الأحمدي بطنطا، وشارك عام 1940 في إنشاء أول رابطة لقراء القرآن الكريم في مصر، وتوفي سنة 1982.",
+    "biography_en": "An Egyptian Quran reciter born in 1915. He memorised the Quran at the age of ten and then studied for two years at the Ahmadi Institute in Tanta; in 1940 he took part in founding the first association of Quran reciters in Egypt, and he died in 1982.",
+    "biography_ru": "Египетский чтец Корана, родившийся в 1915 году. Выучил Коран наизусть в десять лет, затем два года учился в Ахмадийском институте в Танте; в 1940 году участвовал в создании первой ассоциации чтецов Корана в Египте. Умер в 1982 году.",
+    "biography_tr": "1915'te doğan Mısırlı Kur'an kârisi. On yaşında Kur'an'ı ezberlemiş, ardından Tanta'daki Ahmedî Enstitüsü'nde iki yıl okumuş; 1940'ta Mısır'daki ilk Kur'an kâriler derneğinin kurulmasına katılmıştır. 1982'de vefat etmiştir.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/محمود_عبد_الحكم"
   },
   "mahmoud-ali-albanna": {
     "biography_ar": "قارئ قرآن مصري وُلد في 17 ديسمبر 1926 في قرية شبرا باص بمحافظة المنوفية وتوفي في 20 يوليو 1985 في القاهرة. التحق بالإذاعة المصرية عام 1948، وكان قارئًا للمسجد الأحمدي في طنطا منذ 1959، ثم لمسجد الإمام الحسين في القاهرة منذ 1980.",
@@ -77,6 +284,7 @@
     "biography_ru": "Египетский чтец Корана, родившийся 17 декабря 1926 года в деревне Шибра-Басс в мухафазе Минуфия и умерший 20 июля 1985 года в Каире. В 1948 году начал читать на египетском радио, с 1959 года был чтецом мечети Ахмади в Танте, а с 1980 года — мечети имама Хусейна в Каире.",
     "biography_tr": "17 Aralık 1926'da Münûfiye vilayetinin Şibra Bass köyünde doğan, 20 Temmuz 1985'te Kahire'de vefat eden Mısırlı Kur'an kârisi. 1948'de Mısır radyosunda okumaya başlamış, 1959'dan itibaren Tanta'daki Ahmedî Camii'nin, 1980'den itibaren Kahire'deki İmam Hüseyin Camii'nin kârisi olmuştur.",
     "country_code": "EG",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/محمود_علي_البنا"
   },
   "mohammad-al-tablaway": {
@@ -85,7 +293,35 @@
     "biography_ru": "Египетский чтец Корана, родившийся 14 ноября 1934 года и умерший 5 мая 2020 года. Выучил Коран к девяти годам, с двенадцати лет читал на вечерах Корана, позже был судьёй международных конкурсов по заучиванию Корана.",
     "biography_tr": "14 Kasım 1934'te doğan, 5 Mayıs 2020'de vefat eden Mısırlı Kur'an kârisi. Dokuz yaşında Kur'an'ı ezberlemiş, on iki yaşından itibaren Kur'an gecelerinde okumaya başlamış, daha sonra uluslararası hafızlık yarışmalarında jüri üyeliği yapmıştır.",
     "country_code": "EG",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/محمد_محمود_الطبلاوي"
+  },
+  "mohammad-khalil-al-qari": {
+    "biography_ar": "قارئ قرآن وُلد عام 1386هـ (1966م) في مكة المكرمة وحفظ القرآن على يد والده خليل القارئ. أمّ المصلين في مسجد قباء، وكُلّف بإمامة التراويح والتهجد في المسجد النبوي عامي 1437 و1438هـ، وتوفي في مايو 2023.",
+    "biography_en": "A Quran reciter born in 1386 AH (1966) in Mecca, who memorised the Quran under his father, Khalil al-Qari. He led prayers at Quba Mosque and was assigned to lead the tarawih and tahajjud prayers at the Prophet's Mosque in 1437 and 1438 AH; he died in May 2023.",
+    "biography_ru": "Чтец Корана, родившийся в 1386 году по хиджре (1966) в Мекке и выучивший Коран у отца, Халиля аль-Кари. Был имамом мечети Куба, в 1437 и 1438 годах по хиджре назначался имамом таравих и тахаджуда в Мечети Пророка; умер в мае 2023 года.",
+    "biography_tr": "Hicrî 1386'da (1966) Mekke'de doğan, Kur'an'ı babası Halil el-Kârî'den ezberleyen kâri. Kuba Mescidi'nde imamlık yapmış, hicrî 1437 ve 1438 yıllarında Mescid-i Nebevî'de teravih ve teheccüd namazlarını kıldırmakla görevlendirilmiş; Mayıs 2023'te vefat etmiştir.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://islamonline.net/محمد-خليل-قارئ-رحيل-إمام-المسجد-النبو/"
+  },
+  "mohammad-rashad-alshareef": {
+    "biography_ar": "قارئ قرآن فلسطيني وُلد عام 1925 في الخليل، وقرأ القرآن برواية حفص وورش. عُيّن قارئًا للمسجد الأقصى عام 1966، وأنهى تسجيل المصحف كاملًا عام 1984، وتوفي في عمّان عام 2016.",
+    "biography_en": "A Palestinian Quran reciter born in 1925 in Hebron who recited in the riwayas of Hafs and Warsh. He was appointed reciter of the Al-Aqsa Mosque in 1966, finished recording the complete Quran in 1984, and died in Amman in 2016.",
+    "biography_ru": "Палестинский чтец Корана, родившийся в 1925 году в Хевроне; читал Коран по риваятам Хафс и Варш. В 1966 году назначен чтецом мечети Аль-Акса, в 1984 году завершил запись полного Корана, умер в Аммане в 2016 году.",
+    "biography_tr": "1925'te Halil'de doğan Filistinli Kur'an kârisi; Hafs ve Verş rivayetleriyle okumuştur. 1966'da Mescid-i Aksâ kârisi olarak atanmış, 1984'te Kur'an'ın tamamının kaydını bitirmiş, 2016'da Amman'da vefat etmiştir.",
+    "country_code": "PS",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/محمد_رشاد_الشريف"
+  },
+  "mohammad-refat": {
+    "biography_ar": "قارئ قرآن مصري وُلد في القاهرة في 9 مايو 1882. درس القراءات والتجويد على الشيخ عبد الفتاح هنيدي ونال إجازته، وقرأ في افتتاح بثّ الإذاعة المصرية عام 1934، وتوفي عام 1950.",
+    "biography_en": "An Egyptian Quran reciter born in Cairo on 9 May 1882. He studied the qira'at and tajweed under Sheikh Abdel Fattah Hunaidi and received his ijazah; he recited at the opening of Egyptian radio broadcasting in 1934, and died in 1950.",
+    "biography_ru": "Египетский чтец Корана, родившийся в Каире 9 мая 1882 года. Изучал кираат и таджвид у шейха Абд аль-Фаттаха Хунайди и получил у него иджазу; читал при открытии вещания египетского радио в 1934 году; умер в 1950 году.",
+    "biography_tr": "9 Mayıs 1882'de Kahire'de doğan Mısırlı Kur'an kârisi. Kıraat ve tecvidi Şeyh Abdülfettah Hüneydî'den öğrenip icazet almış; 1934'te Mısır radyosunun yayına başlamasında Kur'an okumuş, 1950'de vefat etmiştir.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/محمد_رفعت"
   },
   "mohammed-ayyub": {
     "biography_ar": "قارئ قرآن وإمام سعودي وُلد في أكتوبر 1952 في مكة وتوفي في 16 أبريل 2016 في المدينة. كان إمامًا للمسجد النبوي من 1990 إلى 1997 ثم عام 2015، وإمامًا لمسجد قباء منذ 1997، وعضو هيئة التدريس في الجامعة الإسلامية بالمدينة.",
@@ -93,7 +329,44 @@
     "biography_ru": "Саудовский чтец Корана и имам, родившийся в октябре 1952 года в Мекке и умерший 16 апреля 2016 года в Медине. Был имамом Мечети Пророка в 1990–1997 годах и в 2015 году, с 1997 года — имамом мечети Куба; преподавал в Исламском университете Медины.",
     "biography_tr": "Ekim 1952'de Mekke'de doğan, 16 Nisan 2016'da Medine'de vefat eden Suudi Kur'an kârisi ve imam. 1990-1997 yıllarında ve 2015'te Mescid-i Nebevî'nin, 1997'den itibaren Kuba Mescidi'nin imamlığını yapmış, Medine İslam Üniversitesi'nde öğretim üyesi olarak görev almıştır.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://en.wikipedia.org/wiki/Muhammad_Ayyub"
+  },
+  "mohammed-jibreel": {
+    "biography_ar": "قارئ قرآن مصري وُلد في قرية طحوريا بمحافظة القليوبية، وحفظ القرآن في سن التاسعة، وتخرج في جامعة الأزهر بليسانس الشريعة والقانون. بدأ إمامة صلاة التراويح في مسجد عمرو بن العاص بالقاهرة عام 1988.",
+    "biography_en": "An Egyptian Quran reciter born in the village of Tahouria in Qalyubia Governorate; he memorised the Quran at the age of nine and graduated from Al-Azhar University with a degree in Sharia and law. He began leading the tarawih prayers at the Mosque of Amr ibn al-As in Cairo in 1988.",
+    "biography_ru": "Египетский чтец Корана, родившийся в деревне Тахурия в мухафазе Калюбия; выучил Коран в девять лет и окончил Университет Аль-Азхар по специальности «шариат и право». В 1988 году начал проводить таравих в мечети Амр ибн аль-Ас в Каире.",
+    "biography_tr": "Kalyubiye vilayetinin Tahuriya köyünde doğan Mısırlı Kur'an kârisi; dokuz yaşında Kur'an'ı ezberlemiş, Ezher Üniversitesi'nden şeriat ve hukuk lisansıyla mezun olmuştur. 1988'de Kahire'deki Amr b. el-Âs Camii'nde teravih namazı kıldırmaya başlamıştır.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://www.alraimedia.com/ampArticle/844040"
+  },
+  "muamar-from-indonesia": {
+    "biography_ar": "قارئ قرآن وحافظ إندونيسي وُلد في 14 يونيو 1954 في منطقة بمالانغ بجاوة الوسطى. فاز بمسابقات تلاوة القرآن في إندونيسيا وخارجها في ثمانينيات القرن العشرين، وأسّس عام 2002 معهد «أم القرى» الإسلامي في تانغيرانغ.",
+    "biography_en": "An Indonesian Quran reciter and hafiz born on 14 June 1954 in the Pemalang area of Central Java. He won Quran recitation contests in Indonesia and abroad in the 1980s, and in 2002 founded the Ummul Qura Islamic boarding school in Tangerang.",
+    "biography_ru": "Индонезийский чтец и хафиз Корана, родившийся 14 июня 1954 года в районе Пемаланг в Центральной Яве. В 1980-х годах побеждал на конкурсах чтецов Корана в Индонезии и за рубежом, а в 2002 году основал исламскую школу-интернат «Умм аль-Кура» в Тангеранге.",
+    "biography_tr": "14 Haziran 1954'te Orta Java'daki Pemalang bölgesinde doğan Endonezyalı Kur'an kârisi ve hâfız. 1980'lerde Endonezya'da ve yurt dışında Kur'an okuma yarışmalarını kazanmış, 2002'de Tangerang'da Ümmülkurâ İslam yatılı okulunu kurmuştur.",
+    "country_code": "ID",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://en.wikipedia.org/wiki/Muammar_ZA"
+  },
+  "muftah-alsaltany": {
+    "biography_ar": "قارئ قرآن ليبي وُلد في 21 مايو 1973 في بنغازي. نال بكالوريوس الطب والجراحة من جامعة قاريونس عام 1999، وحصل على إجازة في القراءات العشر، وله تسجيلات للقرآن بعدة روايات.",
+    "biography_en": "A Libyan Quran reciter born on 21 May 1973 in Benghazi. He earned a bachelor's degree in medicine and surgery from Garyounis University in 1999, holds an ijazah in the ten qira'at, and has recorded the Quran in several riwayas.",
+    "biography_ru": "Ливийский чтец Корана, родившийся 21 мая 1973 года в Бенгази. В 1999 году получил степень бакалавра медицины и хирургии в Университете Гарьюнис, имеет иджазу в десяти кираатах и записал Коран в нескольких риваятах.",
+    "biography_tr": "21 Mayıs 1973'te Bingazi'de doğan Libyalı Kur'an kârisi. 1999'da Garyunus Üniversitesi'nden tıp ve cerrahi lisansı almış, on kıraatte icazet edinmiş ve Kur'an'ı birçok rivayetle kaydetmiştir.",
+    "country_code": "LY",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/مفتاح_السلطني"
+  },
+  "mukhtar-al-haj": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في مكة المكرمة عام 1991. بدأ إمامة المصلين عام 2009 في جامع البغدادي بمكة، وحصل على إجازة برواية حفص عن عاصم.",
+    "biography_en": "A Saudi Quran reciter born in Mecca in 1991. He began leading congregational prayers in 2009 at the Al-Baghdadi Mosque in Mecca, and holds an ijazah in the riwaya of Hafs from Asim.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в Мекке в 1991 году. В 2009 году вести общие молитвы в мечети аль-Багдади в Мекке, имеет иджазу по риваяту Хафс от Асима.",
+    "biography_tr": "1991'de Mekke'de doğan Suudi Kur'an kârisi. 2009'da Mekke'deki el-Bağdâdî Camii'nde cemaate imamlık yapmaya başlamış, Âsım'dan Hafs rivayeti için icazet almıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://www.okaz.com.sa/local/na/2236937"
   },
   "mustafa-ismail": {
     "biography_ar": "قارئ قرآن مصري وُلد في 17 يونيو 1905 في قرية ميت غزال قرب طنطا وتوفي في 26 ديسمبر 1978 في الإسكندرية. بُثّت تلاواته عبر الإذاعة المصرية وقرأ في المناسبات الدينية، وتلا القرآن في المسجد الأقصى عام 1977.",
@@ -101,7 +374,26 @@
     "biography_ru": "Египетский чтец Корана, родившийся 17 июня 1905 года в деревне Мит-Газаль близ Танты и умерший 26 декабря 1978 года в Александрии. Его чтение транслировало египетское радио, он выступал на религиозных церемониях и в 1977 году читал Коран в мечети Аль-Акса.",
     "biography_tr": "17 Haziran 1905'te Tanta yakınlarındaki Mit Gazal köyünde doğan, 26 Aralık 1978'de İskenderiye'de vefat eden Mısırlı Kur'an kârisi. Tilavetleri Mısır radyosunda yayımlanmış, dinî törenlerde okumuş ve 1977'de Mescid-i Aksâ'da Kur'an tilavet etmiştir.",
     "country_code": "EG",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://en.wikipedia.org/wiki/Mustafa_Ismail"
+  },
+  "mustafa-raad-alazawy": {
+    "biography_ar": "قارئ ومؤذن عراقي وُلد في بغداد عام 1986. نال الإجازة في روايتي حفص وشعبة عن عاصم على يد الشيخ علي حسن داود، ودرس في كلية الإمام الأعظم، وتوفي في مايو 2007.",
+    "biography_en": "An Iraqi Quran reciter and muezzin born in Baghdad in 1986. He received an ijazah in the riwayas of Hafs and Shu'ba from Asim from Sheikh Ali Hassan Dawood, studied at the Imam al-A'zam College, and died in May 2007.",
+    "biography_ru": "Иракский чтец Корана и муаззин, родившийся в 1986 году в Багдаде. Получил иджазу в риваятах Хафса и Шу'бы от Асима у шейха Али Хасана Дауда, учился в колледже Имама аль-А'зама; умер в мае 2007 года.",
+    "biography_tr": "1986'da Bağdat'ta doğan Iraklı Kur'an kârisi ve müezzin. Şeyh Ali Hasan Davud'dan Asım'dan Hafs ve Şu'be rivayetlerinde icazet almış, İmam-ı A'zam Koleji'nde okumuş; Mayıs 2007'de vefat etmiştir.",
+    "country_code": "IQ",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/مصطفى_رعد_العزاوي"
+  },
+  "nabil-al-rifay": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في 26 مايو 1978 في جدة. تخرج في كلية الهندسة بجامعة الملك عبدالعزيز عام 1420هـ، وتعلّم القرآن على يد عدد من المشايخ منهم عبدالوهاب حضيري وعلي جابر.",
+    "biography_en": "A Saudi Quran reciter born on 26 May 1978 in Jeddah. He graduated from the Faculty of Engineering at King Abdulaziz University in 1420 AH and studied the Quran under several sheikhs, among them Abdulwahab Hudairi and Ali Jaber.",
+    "biography_ru": "Саудовский чтец Корана, родившийся 26 мая 1978 года в Джидде. В 1420 году по хиджре окончил инженерный факультет Университета короля Абдул-Азиза; учил Коран у ряда шейхов, среди которых Абдульвахаб Худайри и Али Джабир.",
+    "biography_tr": "26 Mayıs 1978'de Cidde'de doğan Suudi Kur'an kârisi. hicrî 1420 yılında Kral Abdülaziz Üniversitesi Mühendislik Fakültesi'nden mezun olmuş; Abdülvehhab Hudayri ve Ali Câbir gibi çeşitli şeyhlerden Kur'an öğrenmiştir.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/نبيل_الرفاعي"
   },
   "nasser-alqatami": {
     "biography_ar": "قارئ قرآن سعودي وُلد عام 1980 في الرياض. إمام وخطيب جامع عبد الله بن ناصر المهيني في الرياض، أصدر أكثر من عشرين تسجيلًا صوتيًا، وأمّ المصلين في صلاة التراويح في الكويت والإمارات والبحرين وقطر والأردن.",
@@ -109,7 +401,35 @@
     "biography_ru": "Саудовский чтец Корана, родившийся в 1980 году в Эр-Рияде. Имам и хатиб мечети Абдуллаха ибн Насира аль-Мухайни в Эр-Рияде; выпустил более двадцати аудиозаписей и руководил молитвами таравих в Кувейте, ОАЭ, Бахрейне, Катаре и Иордании.",
     "biography_tr": "1980'de Riyad'da doğan Suudi Kur'an kârisi. Riyad'daki Abdullah bin Nasır el-Muheyni Camii'nin imam-hatibidir; yirmiden fazla ses kaydı yayımlamış, Kuveyt, BAE, Bahreyn, Katar ve Ürdün'de teravih namazı kıldırmıştır.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://ar.wikipedia.org/wiki/ناصر_القطامي"
+  },
+  "qf-176-ahmed-abdelhamid-tahoun": {
+    "biography_ar": "قارئ مصري متخصص في علوم القرآن والتلاوة والمقامات. يحمل إجازات في القراءات العشر، وحصل على درجة البكالوريوس من جامعة الأزهر.",
+    "biography_en": "An Egyptian reciter specializing in Quranic sciences, recitation, and maqamat. He holds ijazahs in all ten qira'at and earned a bachelor's degree from Al-Azhar University.",
+    "biography_ru": "Египетский чтец, специализирующийся на коранических науках, чтении и макамате. Он имеет иджазы по всем десяти кираатам и степень бакалавра Университета Аль-Азхар.",
+    "biography_tr": "Kur'an ilimleri, tilavet ve makamlar konusunda uzmanlaşmış Mısırlı kâri. On kıraatin tamamında icazet sahibi olup El-Ezher Üniversitesi'nden lisans derecesi almıştır.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://quran.com/ar/reciters/176"
+  },
+  "raad-al-kurdi": {
+    "biography_ar": "قارئ قرآن عراقي وُلد سنة 1991 في كركوك. تخرج في معهد الأئمة والخطباء بكركوك، وأمّ المصلين في مساجد بمكة المكرمة وجدة، وفي مسجد زايد الكبير في أبوظبي.",
+    "biography_en": "An Iraqi Quran reciter born in 1991 in Kirkuk. He graduated from the Institute of Imams and Preachers in Kirkuk and has led prayers in mosques in Mecca and Jeddah, as well as at the Sheikh Zayed Grand Mosque in Abu Dhabi.",
+    "biography_ru": "Иракский чтец Корана, родившийся в 1991 году в Киркуке. Окончил Институт имамов и проповедников в Киркуке; руководил молитвами в мечетях Мекки и Джидды, а также в Большой мечети шейха Зайда в Абу-Даби.",
+    "biography_tr": "1991'de Kerkük'te doğan Iraklı Kur'an kârisi. Kerkük'teki İmam-Hatip Enstitüsü'nden mezun olmuş; Mekke ve Cidde'deki camilerde ve Abu Dabi'deki Şeyh Zayed Büyük Camii'nde cemaate imamlık yapmıştır.",
+    "country_code": "IQ",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://www.noonpost.com/36850/"
+  },
+  "rogayah-sulong": {
+    "biography_ar": "قارئة قرآن ماليزية وُلدت في 24 يناير 1942 في ولاية ترنجانو. توّجت بطلةً لمسابقة تلاوة القرآن الوطنية للقارئات عام 1963، وتوفيت في 9 أغسطس 2023.",
+    "biography_en": "A Malaysian Quran reciter born on 24 January 1942 in Terengganu. She was crowned national champion qariah of the Quran recitation competition in 1963, and died on 9 August 2023.",
+    "biography_ru": "Малайзийская чтица Корана, родившаяся 24 января 1942 года в штате Теренггану. В 1963 году стала национальной чемпионкой среди чтиц в конкурсе чтения Корана; умерла 9 августа 2023 года.",
+    "biography_tr": "24 Ocak 1942'de Terengganu'da doğan Malezyalı Kur'an kâriyesi. 1963'te ulusal Kur'an tilaveti yarışmasında kâriye şampiyonu ilan edilmiş; 9 Ağustos 2023'te vefat etmiştir.",
+    "country_code": "MY",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://berita.rtm.gov.my/?p=12736"
   },
   "salah-albudair": {
     "biography_ar": "إمام وقارئ قرآن سعودي وُلد عام 1970 في الهفوف بالمنطقة الشرقية. إمام وخطيب المسجد النبوي في المدينة منذ عام 1998، وقاضٍ في المحكمة العليا بالمدينة.",
@@ -117,7 +437,35 @@
     "biography_ru": "Саудовский имам и чтец Корана, родившийся в 1970 году в Эль-Хуфуфе (Восточная провинция). С 1998 года имам и хатиб Мечети Пророка в Медине, судья Высокого суда Медины.",
     "biography_tr": "1970'te Doğu Bölgesi'ndeki Hufuf'ta doğan Suudi imam ve Kur'an kârisi. 1998'den beri Medine'deki Mescid-i Nebevî'nin imam-hatibidir; Medine Yüksek Mahkemesi'nde hâkimdir.",
     "country_code": "SA",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://en.wikipedia.org/wiki/Salah_Al_Budair"
+  },
+  "saleh-al-talib": {
+    "biography_ar": "قارئ قرآن وإمام وخطيب سعودي وُلد في الرياض عام 1393هـ (1974م). تخرج بالماجستير في الفقه المقارن من المعهد العالي للقضاء عام 1417هـ، وصدر أمر ملكي بتعيينه إمامًا للمسجد الحرام في شعبان 1423هـ.",
+    "biography_en": "A Saudi Quran reciter, imam and preacher born in Riyadh in 1393 AH (1974). He graduated with a master's degree in comparative fiqh from the Higher Judicial Institute in 1417 AH, and a royal order appointed him imam of the Grand Mosque in Sha'ban 1423 AH.",
+    "biography_ru": "Саудовский чтец Корана, имам и хатиб, родившийся в Эр-Рияде в 1393 году по хиджре (1974 г.). Окончил магистратуру по сравнительному фикху в Высшем судебном институте в 1417 году по хиджре; королевским указом назначен имамом Запретной мечети в шаабане 1423 года по хиджре.",
+    "biography_tr": "Riyad'da hicrî 1393 (1974) yılında doğan Suudi Kur'an kârisi, imam ve hatip. hicrî 1417 yılında Yüksek Yargı Enstitüsü'nde karşılaştırmalı fıkıh alanında yüksek lisansını tamamlamış; Şaban hicrî 1423'de kraliyet emriyle Mescid-i Haram imamlığına atanmıştır.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/صالح_آل_طالب"
+  },
+  "shaban-al-sayiaad": {
+    "biography_ar": "قارئ قرآن مصري وُلد في 20 سبتمبر 1940 في قرية صراوة بمحافظة المنوفية. درس في كلية أصول الدين بجامعة الأزهر، والتحق بالإذاعة المصرية قارئًا عام 1975، وتوفي سنة 1998.",
+    "biography_en": "An Egyptian Quran reciter born on 20 September 1940 in the village of Sarawa in Menoufia Governorate. He studied at the Faculty of Usul al-Din at Al-Azhar University, joined Egyptian Radio as a reciter in 1975, and died in 1998.",
+    "biography_ru": "Египетский чтец Корана, родившийся 20 сентября 1940 года в деревне Сарава в мухафазе Эль-Менуфия. Учился на факультете усуль ад-дин Университета Аль-Азхар, в 1975 году начал работать чтецом на египетском радио. Умер в 1998 году.",
+    "biography_tr": "20 Eylül 1940'ta Menûfiyye vilayetinin Sarava köyünde doğan Mısırlı Kur'an kârisi. Ezher Üniversitesi Usûlüddîn Fakültesi'nde okumuş, 1975'te Mısır Radyosu'na kâri olarak katılmış; 1998'de vefat etmiştir.",
+    "country_code": "EG",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://www.masrawy.com/islameyat/quran-sofraa_quran/details/2013/4/3/1323/القارئ-الشيخ-شعبان-عبد-العزيز-الصياد"
+  },
+  "shirazad-taher": {
+    "biography_ar": "قارئ قرآن وُلد عام 1968 في الموصل بالعراق. نال الإجازة برواية حفص عن عاصم من الشيخ عبد اللطيف الصوفي عام 1988، وتخرج في هندسة الإلكترونيات بجامعة الموصل عام 1991، ونال الدكتوراه في الدعوة والإعلام الإسلامي عام 2022.",
+    "biography_en": "A Quran reciter born in 1968 in Mosul, Iraq. He received an ijazah in the riwaya of Hafs from Sheikh Abd al-Latif al-Sufi in 1988, graduated in electronic engineering from the University of Mosul in 1991, and earned a doctorate in Islamic da'wa and media in 2022.",
+    "biography_ru": "Чтец Корана, родившийся в 1968 году в Мосуле (Ирак). В 1988 году получил иджазу в риваяте Хафс от шейха Абдуль-Латифа ас-Суфи, в 1991 году окончил Университет Мосула по электронной инженерии, а в 2022 году получил докторскую степень по исламскому призыву и медиа.",
+    "biography_tr": "1968'de Irak'ın Musul şehrinde doğan Kur'an kârisi. 1988'de Şeyh Abdüllatîf es-Sûfî'den Hafs rivayetiyle icazet almış, 1991'de Musul Üniversitesi'nde elektronik mühendisliğinden mezun olmuş, 2022'de İslami davet ve medya alanında doktora yapmıştır.",
+    "country_code": "IQ",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/شيرزاد_عبد_الرحمن"
   },
   "slaah-bukhatir": {
     "biography_ar": "قارئ قرآن ورجل أعمال من الإمارات العربية المتحدة. يؤم المصلين في مسجد الشيخ سعود القاسمي في الشارقة منذ عام 1996، وهو مؤسس ورئيس مؤسسة Bukhatir Education Advancement and Management (BEAM) التعليمية.",
@@ -125,6 +473,16 @@
     "biography_ru": "Чтец Корана и предприниматель из Объединённых Арабских Эмиратов. С 1996 года руководит молитвами в мечети шейха Сауда аль-Касими в Шардже; основатель и председатель образовательной организации Bukhatir Education Advancement and Management (BEAM).",
     "biography_tr": "Birleşik Arap Emirlikleri'nden Kur'an kârisi ve iş insanı. 1996'dan beri Şarika'daki Şeyh Suud el-Kasımi Camii'nde namaz kıldırmaktadır; Bukhatir Education Advancement and Management (BEAM) kuruluşunun kurucusu ve başkanıdır.",
     "country_code": "AE",
+    "profile_source_checked_on": "2026-10-31",
     "profile_source_url": "https://khaleejtimes.com/kt-network/sheikh-salah-bukhatir-the-businessman-and-quran-reciter-who-leads-prayers-at-sheikh-saud-al-qasimi?amp=1"
+  },
+  "zaki-daghistani": {
+    "biography_ar": "قارئ قرآن سعودي وُلد في مكة المكرمة سنة 1925. نال إجازة في رواية حفص عن عاصم من الشيخ أحمد حجازي، وعُيّن عام 1382هـ معلّمًا للقرآن في مدرسة تحفيظ ابتدائية، وتوفي سنة 2004.",
+    "biography_en": "A Saudi Quran reciter born in Mecca in 1925. He received an ijazah in the Hafs ʿan ʿAsim riwaya from Sheikh Ahmad Hijazi, was appointed in 1382 AH as a Quran teacher at a primary Quran memorisation school, and died in 2004.",
+    "biography_ru": "Саудовский чтец Корана, родившийся в Мекке в 1925 году. Получил иджазу в риваяте Хафс от Асима у шейха Ахмада Хиджази; в 1382 году по хиджре назначен учителем Корана в начальной школе тахфиза. Умер в 2004 году.",
+    "biography_tr": "1925'te Mekke'de doğan Suudi Kur'an kârisi. Hafs an Âsım rivayetinde Şeyh Ahmed Hicâzî'den icazet almış; hicrî 1382'de bir ilkokul seviyesindeki Kur'an hıfz okulunda Kur'an öğretmeni olarak atanmış, 2004'te vefat etmiştir.",
+    "country_code": "SA",
+    "profile_source_checked_on": "2026-11-02",
+    "profile_source_url": "https://ar.wikipedia.org/wiki/زكي_داغستاني"
   }
 }
