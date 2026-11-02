@@ -4531,7 +4531,7 @@ input:focus, select:focus, textarea:focus {
   display: none;
 }
 
-.global-audio-player-dock.is-compact .global-audio-player-size-toggle {
+.global-audio-player-dock.is-compact :is(.global-audio-player-size-toggle, .global-audio-player-fold) {
   width: 36px;
   min-width: 36px;
   padding-inline: 8px;
@@ -5024,6 +5024,98 @@ input:focus, select:focus, textarea:focus {
 
   .global-audio-player-dock.is-compact .segmented-audio-player {
     grid-template-columns: minmax(130px, 0.7fr) minmax(280px, 1.5fr) auto;
+  }
+}
+
+/* The dock folded into a 60 px round button at the end of the row, as the
+   phone bar's (app/mobile.css). The body stays mounted, so the sound plays on. */
+.global-audio-player-fold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.global-audio-player-spacer.is-folded {
+  height: 92px;
+}
+
+.global-audio-player-dock.is-folded {
+  display: block;
+  left: auto;
+  inset-inline-end: 24px;
+  bottom: 24px;
+  width: 60px;
+  height: 60px;
+  max-height: none;
+  overflow: visible;
+  transform: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+  animation: global-audio-player-fold-in 0.24s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.global-audio-player-dock.is-folded > :not(.global-audio-player-fab) {
+  display: none;
+}
+
+.global-audio-player-dock.is-unfolded {
+  animation: global-audio-player-unfold 0.28s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.global-audio-player-fab {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.global-audio-player-fab:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.global-audio-player-fab:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 3px;
+}
+
+/* The play arrow points along the reading direction, as the phone's. */
+.global-audio-player-fab .is-directional {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+
+[dir="rtl"] .global-audio-player-fab .is-directional {
+  transform: scaleX(-1);
+}
+
+@keyframes global-audio-player-fold-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes global-audio-player-unfold {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .global-audio-player-dock:is(.is-folded, .is-unfolded) {
+    animation: none;
   }
 }
 

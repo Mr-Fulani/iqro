@@ -129,6 +129,12 @@ export function AudioPlayerProvider({
   const mobile = mobileWidth && mobileParts !== null;
   const [player, dispatchView] = useReducer(miniPlayerReducer, INITIAL_MINI_PLAYER_STATE);
   const { view, controlsHidden } = player;
+  // On desktop the dock folds into a round button in the corner, as the phone
+  // bar does. The choice holds across pages and visits.
+  const storedDockFolded = useMemo(() => (hydrated ? readDockFolded() : false), [hydrated]);
+  const [chosenDockFolded, setChosenDockFolded] = useState<boolean | null>(null);
+  const folded = !mobile && (chosenDockFolded ?? storedDockFolded);
+  const focusAfterFold = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [controlRequest, setControlRequest] = useState<AudioPlayerControlRequest | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
@@ -321,6 +327,22 @@ export function AudioPlayerProvider({
       ?.focus({ preventScroll: true });
   }, [controlsHidden, fullOpen]);
 
+  const foldDock = useCallback((next: boolean) => {
+    focusAfterFold.current = true;
+    setChosenDockFolded(next);
+    writeDockFolded(next);
+  }, []);
+
+  // Folding parks focus on the round button and unfolding returns it to the
+  // fold button, since the button that was pressed leaves the page.
+  useEffect(() => {
+    if (!focusAfterFold.current) return;
+    focusAfterFold.current = false;
+    dockRef.current
+      ?.querySelector<HTMLElement>(folded ? ".global-audio-player-fab" : ".global-audio-player-fold")
+      ?.focus({ preventScroll: true });
+  }, [folded]);
+
   // As in the app: a tap on the full player's empty body hides the controls and
   // leaves the picture, the portrait and the sound bars; taps on controls do not.
   const handleSheetClick = (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -466,7 +488,7 @@ export function AudioPlayerProvider({
   const compact = !expanded;
   const showPlayer = isAudioPage || request !== null;
   const showReciterControls = Boolean(reciterControls?.options.length);
-  const pictureShown = mobile ? sheetOpen : expanded;
+  const pictureShown = mobile ? sheetOpen : expanded && !folded;
   const showBackground = pictureShown && background.image !== null;
   const modeActionLabel = expanded
     ? t("player.collapseWidget")
@@ -500,10 +522,27 @@ export function AudioPlayerProvider({
   const queueClass = queueControls && expanded ? " has-queue" : "";
   const dockClassName = mobile
     ? `mobile-audio-player is-${view}${hintNudge ? " is-hint-nudge" : ""}${controlsHidden ? " is-controls-hidden" : ""}${showBackground ? " has-player-background" : ""}`
-    : `global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${queueClass}${showBackground ? " has-player-background" : ""}${mobilePartsFailed ? " is-fallback" : ""}`;
+    : `global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${folded ? " is-folded" : chosenDockFolded === false ? " is-unfolded" : ""}${showReciterControls ? " has-reciter-controls" : ""}${queueClass}${showBackground ? " has-player-background" : ""}${mobilePartsFailed ? " is-fallback" : ""}`;
   const spacerClassName = mobile
     ? "global-audio-player-spacer is-mobile"
-    : `global-audio-player-spacer ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${queueClass}`;
+    : folded
+      ? "global-audio-player-spacer is-folded"
+      : `global-audio-player-spacer ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${queueClass}`;
+  const foldLabel = t("player.foldDock");
+  const foldButton = (
+    <button
+      className="btn btn-secondary btn-sm global-audio-player-fold"
+      type="button"
+      aria-label={foldLabel}
+      title={foldLabel}
+      onClick={() => foldDock(true)}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d={DOCK_FOLD_ICON} />
+      </svg>
+      <span className="global-audio-player-size-toggle-label">{foldLabel}</span>
+    </button>
+  );
   const dragStyle: CSSProperties | undefined = dragOffset > 0
     ? { transform: `translateY(${dragOffset}px)`, transition: "none" }
     : undefined;
@@ -530,7 +569,7 @@ export function AudioPlayerProvider({
             {showBackground && <PlayerBackdrop background={background} />}
             <div
               className={mobile ? "mobile-player-sheet-body" : "global-audio-player-body"}
-              inert={collapsed || undefined}
+              inert={collapsed || folded || undefined}
               onClick={mobile ? handleSheetClick : undefined}
               {...barSwipeHandlers}
             >
@@ -583,6 +622,7 @@ export function AudioPlayerProvider({
                         <span className="global-audio-player-size-toggle-label">{modeActionLabel}</span>
                       </button>
                     )}
+                    {expanded && foldButton}
                   </div>
                 )
               )}
@@ -647,6 +687,7 @@ export function AudioPlayerProvider({
                       <span className="global-audio-player-link-label">{t("player.openAudio")}</span>
                     </Link>
                   )}
+                  {foldButton}
                 </div>
               )}
               {fullOpen && controlsHidden ? (
@@ -661,11 +702,49 @@ export function AudioPlayerProvider({
             {collapsed && mobileParts && (
               <mobileParts.CollapsedButton playing={isPlaying} onExpand={() => dispatchView({ type: "expand" })} />
             )}
+            {folded && (
+              <button
+                type="button"
+                className="global-audio-player-fab"
+                aria-label={t("player.unfoldDock")}
+                title={t("player.unfoldDock")}
+                onClick={() => foldDock(false)}
+              >
+                <svg width={isPlaying ? 30 : 34} height={isPlaying ? 30 : 34} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <g className={isPlaying ? undefined : "is-directional"}>
+                    <path d={isPlaying ? DOCK_PAUSE_ICON : DOCK_PLAY_ICON} />
+                  </g>
+                </svg>
+              </button>
+            )}
           </div>
         </>
       )}
     </AudioPlayerContext.Provider>
   );
+}
+
+// Material rounded icons, 24-unit grid, as the phone player's.
+const DOCK_FOLD_ICON = "M6 19h12v2H6z";
+const DOCK_PLAY_ICON = "M8 5v14l11-7z";
+const DOCK_PAUSE_ICON = "M6 19h4V5H6v14zm8-14v14h4V5h-4z";
+const DOCK_FOLDED_STORAGE_KEY = "iqro_desktop_player_folded_v1";
+
+function readDockFolded(): boolean {
+  try {
+    return window.localStorage.getItem(DOCK_FOLDED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeDockFolded(folded: boolean) {
+  try {
+    if (folded) window.localStorage.setItem(DOCK_FOLDED_STORAGE_KEY, "1");
+    else window.localStorage.removeItem(DOCK_FOLDED_STORAGE_KEY);
+  } catch {
+    // Storage blocked: the dock stays folded for this visit only.
+  }
 }
 
 function readPlayerHint() {

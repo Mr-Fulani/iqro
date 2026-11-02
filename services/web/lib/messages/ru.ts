@@ -804,6 +804,8 @@ const ru = {
   "player.openFull": "Открыть плеер",
   "player.hideBar": "Свернуть панель плеера",
   "player.showBar": "Показать панель плеера",
+  "player.foldDock": "Свернуть плеер в кнопку",
+  "player.unfoldDock": "Показать плеер",
   "player.previousSurah": "Предыдущая сура",
   "player.nextSurah": "Следующая сура",
   "player.surahUnavailable": "Этой суры нет в записи",
