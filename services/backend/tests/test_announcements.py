@@ -30,6 +30,7 @@ from quran_backend.modules.announcements import services as announcement_service
 from quran_backend.modules.announcements import tasks as announcement_tasks
 from quran_backend.modules.announcements.media import upload_announcement_image
 from quran_backend.modules.announcements.models import (
+    MAX_STEPS,
     Announcement,
     AnnouncementDailyStat,
     AnnouncementKind,
@@ -1052,6 +1053,52 @@ def test_admin_pages_show_language_tabs_preview_and_sign_off(
     assert "Снять с публикации" in published_body
     assert 'name="_publish"' not in published_body
     assert listing.status_code == 200
+
+
+@pytest.mark.django_db
+def test_admin_language_tabs_edit_the_steps(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    announcement = _announcement(languages=("ru",))
+    translation = announcement.translations.get()
+    translation.steps = [{"title": "Откройте «Намаз»", "text": "Внизу экрана."}]
+    translation.save(update_fields=["steps"])
+    page = f"/admin/announcements/announcement/{announcement.pk}/change/"
+
+    body = client.get(page).content.decode()
+    for order in range(1, MAX_STEPS + 1):
+        assert f'name="translations-0-step_{order}_title"' in body
+        assert f'name="translations-0-step_{order}_text"' in body
+    assert 'value="Откройте «Намаз»"' in body
+    assert "Внизу экрана.</textarea>" in body
+
+    data = _change_form_data(announcement) | {
+        "translations-INITIAL_FORMS": "1",
+        "translations-0-id": str(translation.pk),
+        "translations-0-language": "ru",
+        "translations-0-title": translation.title,
+        "translations-0-summary": translation.summary,
+        "translations-0-cta_label": translation.cta_label,
+        "translations-0-image_alt": translation.image_alt,
+        "translations-0-step_1_title": "Откройте «Намаз»",
+        "translations-0-step_1_text": "Внизу экрана.",
+        "translations-0-step_2_title": "Включите азан",
+        "translations-0-step_2_text": "В настройках напоминаний.",
+        "_continue": "1",
+    }
+    response = client.post(page, data)
+
+    assert response.status_code == 302, response.content.decode()
+    translation.refresh_from_db()
+    assert translation.steps == [
+        {"title": "Откройте «Намаз»", "text": "Внизу экрана."},
+        {"title": "Включите азан", "text": "В настройках напоминаний."},
+    ]
+    # A published announcement is read-only; its preview lists the steps.
+    _publish(announcement, owner)
+    published_body = client.get(page).content.decode()
+    assert "step_1_title" not in published_body
+    assert "Включите азан" in published_body
 
 
 @pytest.mark.django_db
