@@ -950,6 +950,8 @@
     background: var(--primary);
     color: #ffffff;
     cursor: pointer;
+    /* A swipe up on it unrolls the bar instead of scrolling the page. */
+    touch-action: none;
     animation: mobile-player-fab-in 0.3s ease 0.12s both;
   }
 
@@ -978,8 +980,8 @@
     min-width: 0;
   }
 
-  /* Portrait 44, collapse button 44, then the title; the artwork and the title
-     are one button that opens the full player. */
+  /* Portrait 44, then the title; the artwork and the title are one button that
+     opens the full player. A swipe down on the bar rolls it up. */
   .mobile-player-summary {
     position: relative;
     display: flex;
@@ -995,7 +997,7 @@
     width: 100%;
     min-height: 48px;
     padding: 0;
-    padding-inline: 96px 6px;
+    padding-inline: 60px 6px;
     border: 0;
     border-radius: 12px;
     background: transparent;
@@ -1017,9 +1019,23 @@
     transform: translateY(-50%);
   }
 
+  /* Only screen readers and the keyboard use it; it shows over the portrait while focused. */
+  .mobile-player-collapse:not(:focus-visible) {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  /* The bar takes the vertical drag itself, so the page under it does not scroll. */
+  .mobile-audio-player.is-bar .mobile-player-sheet-body,
+  .mobile-audio-player.is-expanding .mobile-player-sheet-body {
+    touch-action: pan-x;
+  }
+
   .mobile-player-collapse {
     position: absolute;
-    inset-inline-start: 48px;
+    inset-inline-start: 0;
     top: 50%;
     display: grid;
     place-items: center;

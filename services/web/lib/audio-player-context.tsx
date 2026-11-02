@@ -13,7 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import {
   SegmentedAudioPlayer,
 } from "../components/SegmentedAudioPlayer";
@@ -36,9 +36,11 @@ import {
   MOBILE_PLAYER_MEDIA_QUERY,
   PLAYER_CONTROL_SELECTOR,
   SHEET_CLOSE_FALLBACK_MS,
+  SWIPE_TAP_SLOP,
   miniPlayerReducer,
   rolledUp,
   sheetShown,
+  swipeCollapses,
 } from "./mini-player";
 import {
   loadPlayerBackgroundId,
@@ -315,6 +317,52 @@ export function AudioPlayerProvider({
     dispatchView({ type: "toggle-controls" });
   };
 
+  // As in the app: a swipe down on the bar rolls it into the round button. The
+  // pointer is captured only once it moves, so a tap still reaches its button,
+  // and a drag that falls short is not taken for a tap.
+  const barSwipe = useRef<{ pointerId: number; startY: number; startedAt: number; moved: boolean } | null>(null);
+  const dragWasSwipe = useRef(false);
+  // While the bar still unrolls, a swipe rolls it straight back up, as a tap on the old button did.
+  const barSwipeHandlers = mobile && (view === "bar" || view === "expanding")
+    ? {
+      onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+        dragWasSwipe.current = false;
+        barSwipe.current = { pointerId: event.pointerId, startY: event.clientY, startedAt: performance.now(), moved: false };
+      },
+      onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => {
+        const swipe = barSwipe.current;
+        if (!swipe || swipe.moved || event.pointerId !== swipe.pointerId) return;
+        if (Math.abs(event.clientY - swipe.startY) < SWIPE_TAP_SLOP) return;
+        swipe.moved = true;
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+          // Synthetic pointers have no capture.
+        }
+      },
+      onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => {
+        const swipe = barSwipe.current;
+        barSwipe.current = null;
+        if (!swipe || event.pointerId !== swipe.pointerId) return;
+        const deltaY = event.clientY - swipe.startY;
+        dragWasSwipe.current = swipe.moved;
+        if (swipeCollapses({ deltaY, durationMs: performance.now() - swipe.startedAt })) {
+          dispatchView({ type: "collapse" });
+        }
+      },
+      onPointerCancel: () => {
+        barSwipe.current = null;
+      },
+      onClickCapture: (event: ReactMouseEvent<HTMLDivElement>) => {
+        if (!dragWasSwipe.current) return;
+        dragWasSwipe.current = false;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+    }
+    : {};
+
   const value = useMemo<AudioPlayerContextValue>(() => ({
     request,
     isPlaying,
@@ -395,6 +443,7 @@ export function AudioPlayerProvider({
               className={mobile ? "mobile-player-sheet-body" : "global-audio-player-body"}
               inert={collapsed || undefined}
               onClick={mobile ? handleSheetClick : undefined}
+              {...barSwipeHandlers}
             >
               {mobile ? (
                 sheetOpen && mobileParts && (

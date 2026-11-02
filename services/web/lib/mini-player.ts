@@ -105,6 +105,29 @@ export function swipeDismisses({ deltaY, durationMs }: SwipeSample): boolean {
   return deltaY >= 24 && velocity >= SWIPE_DISMISS_VELOCITY;
 }
 
+/** The bar is 66 px tall, so rolling it up takes a shorter swipe than closing the sheet. */
+export const SWIPE_COLLAPSE_DISTANCE = 32;
+export const SWIPE_COLLAPSE_FLICK = 16;
+export const SWIPE_COLLAPSE_VELOCITY = 0.5;
+/** Past this a press is a drag: it no longer counts as a tap on the bar. */
+export const SWIPE_TAP_SLOP = 8;
+
+/**
+ * A downward swipe on the bar rolls it into the round button, as in the app
+ * (mini_player.dart): long enough or a quick flick.
+ */
+export function swipeCollapses({ deltaY, durationMs }: SwipeSample): boolean {
+  if (deltaY <= 0) return false;
+  if (deltaY >= SWIPE_COLLAPSE_DISTANCE) return true;
+  const velocity = durationMs > 0 ? deltaY / durationMs : 0;
+  return deltaY >= SWIPE_COLLAPSE_FLICK && velocity >= SWIPE_COLLAPSE_VELOCITY;
+}
+
+/** An upward swipe on the round button unrolls the bar; a tap does the same. */
+export function swipeExpands({ deltaY, durationMs }: SwipeSample): boolean {
+  return swipeCollapses({ deltaY: -deltaY, durationMs });
+}
+
 /** A tap on the full player's body hides its controls; taps on controls do not. */
 export const PLAYER_CONTROL_SELECTOR =
   "button, a, input, select, textarea, label, [role='slider'], .player-background-options, .mobile-player-queue-sheet";

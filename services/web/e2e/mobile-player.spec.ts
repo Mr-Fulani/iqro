@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { ConsoleMessage, Locator, Page } from "@playwright/test";
 import { recitation, surahPlayback, tracks } from "./fixtures/audio";
+import { swipe } from "./swipe";
 
 // The phone player follows the app's mini player (clients/iqro_mobile/lib/features/audio/mini_player.dart):
 // a 66 px bar above the bottom navigation, a 60 px round button when collapsed and a
@@ -121,19 +122,21 @@ for (const phone of PHONES) {
     await expect(bar).toContainText("1 · Аль-Фатиха");
     await expect(bar).toContainText("Махер аль-Муайкли");
     await expect(bar.getByRole("button", { name: "Предыдущая сура", exact: true })).toBeDisabled();
-    for (const name of ["Открыть плеер", "Свернуть панель плеера", "Поставить на паузу", "Следующая сура"]) {
+    for (const name of ["Открыть плеер", "Поставить на паузу", "Следующая сура"]) {
       const target = await box(bar.getByRole("button", { name, exact: true }));
       expect(target.width).toBeGreaterThanOrEqual(44);
       expect(target.height).toBeGreaterThanOrEqual(44);
     }
-    // The artwork, the collapse button, the title, then the three transport buttons.
+    // The artwork, the title, then the three transport buttons. The collapse button
+    // is only for screen readers and the keyboard: a swipe down rolls the bar up.
     const artwork = await box(bar.locator(".mobile-player-artwork"));
-    const collapse = await box(bar.getByRole("button", { name: "Свернуть панель плеера", exact: true }));
+    const titles = await box(bar.locator(".mobile-player-titles"));
     const play = await box(bar.getByRole("button", { name: "Поставить на паузу", exact: true }));
     expect(artwork.width).toBe(44);
-    expect(artwork.x).toBeLessThan(collapse.x);
-    expect(collapse.x + collapse.width).toBeLessThanOrEqual(play.x);
+    expect(artwork.x + artwork.width).toBeLessThanOrEqual(titles.x);
+    expect(titles.x + titles.width).toBeLessThanOrEqual(play.x);
     expect(play.width).toBe(48);
+    expect((await box(bar.getByRole("button", { name: "Свернуть панель плеера", exact: true }))).width).toBeLessThanOrEqual(1);
 
     // The page keeps its last pixel above the bar.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
@@ -192,8 +195,13 @@ for (const phone of PHONES) {
     await full.getByRole("button", { name: "Назад", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
 
-    // The bar collapses to the 60 px round button at the end of the row and comes back.
-    await bar.getByRole("button", { name: "Свернуть панель плеера", exact: true }).click();
+    // A short drag is not a tap: the bar stays and the full player does not open.
+    await swipe(page, bar.locator(".mobile-player-titles"), 12);
+    await expect(bar).toHaveClass(/is-bar/);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    // A swipe down rolls the bar into the 60 px round button at the end of the row.
+    await swipe(page, bar.locator(".mobile-player-titles"), 60);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     const roundButton = bar.getByRole("button", { name: "Показать панель плеера", exact: true });
     await expect(roundButton).toBeVisible();
     const roundBox = await box(roundButton);
@@ -203,9 +211,20 @@ for (const phone of PHONES) {
     await expect(bar.locator(".mobile-player-sheet-body")).toHaveAttribute("inert", "");
     await expectBodyIsTheButton(bar, roundButton);
     expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
-    await roundButton.click();
+    // A swipe up brings the bar back.
+    await swipe(page, roundButton, -60);
     await expect(roundButton).toHaveCount(0);
     await expect(bar.locator(".mobile-player-sheet-body")).not.toHaveAttribute("inert", "");
+    await expect(bar.getByRole("button", { name: "Открыть плеер", exact: true })).toBeVisible();
+    // The keyboard still rolls it up: the hidden button shows while focused; a tap unrolls it.
+    await bar.getByRole("button", { name: "Открыть плеер", exact: true }).focus();
+    await page.keyboard.press("Tab");
+    const collapse = bar.getByRole("button", { name: "Свернуть панель плеера", exact: true });
+    await expect(collapse).toBeFocused();
+    expect((await box(collapse)).width).toBe(44);
+    await page.keyboard.press("Enter");
+    await expect(bar).toHaveClass(/is-(collapsing|collapsed)(\s|$)/);
+    await bar.getByRole("button", { name: "Показать панель плеера", exact: true }).click();
     await expect(bar.getByRole("button", { name: "Открыть плеер", exact: true })).toBeVisible();
     expect(errors).toEqual([]);
   });
@@ -519,7 +538,7 @@ test("with reduced motion the bar and the full player switch without transitions
   await expect(full).toHaveCSS("transition-duration", "0s");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await bar.getByRole("button", { name: "Свернуть панель плеера", exact: true }).click();
+  await swipe(page, bar.locator(".mobile-player-titles"), 60);
   const roundButton = bar.getByRole("button", { name: "Показать панель плеера", exact: true });
   await expect(roundButton).toHaveCSS("animation-name", "none");
   await expectBodyIsTheButton(bar, roundButton);

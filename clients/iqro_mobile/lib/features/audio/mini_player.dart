@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,6 +15,17 @@ import 'premium_reciter_portrait.dart';
 import 'reciter_portraits.dart';
 
 final miniPlayerCollapsedProvider = StateProvider<bool>((ref) => true);
+
+/// The bar is 66 dp tall, so a short swipe rolls it up; the site uses the same
+/// reach (services/web/lib/mini-player.ts).
+const _swipeCollapseDistance = 32.0;
+const _swipeCollapseFlick = 16.0;
+const _swipeCollapseVelocity = 500.0;
+
+/// A swipe of [distance] downwards (negative: upwards) at [velocity] dp/s.
+bool _swipeRollsUp(double distance, double velocity) =>
+    distance >= _swipeCollapseDistance ||
+    (distance >= _swipeCollapseFlick && velocity >= _swipeCollapseVelocity);
 
 class IqroMiniPlayer extends ConsumerStatefulWidget {
   const IqroMiniPlayer({
@@ -130,6 +142,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
         padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0),
         child: _CollapsiblePlayer(
           collapsed: collapsed,
+          onCollapse: widget.allowCollapse ? () => setCollapsed(true) : null,
           onExpand: () => setCollapsed(false),
           playing: player.playing,
           child: ClipRRect(
@@ -148,40 +161,7 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                   6,
                   0,
                 ),
-                leading: widget.allowCollapse
-                    ? SizedBox(
-                        width: 96,
-                        child: Row(
-                          children: <Widget>[
-                            artwork,
-                            const SizedBox(width: 4),
-                            IconButton(
-                              key: const ValueKey('mini-player-collapse'),
-                              tooltip: MaterialLocalizations.of(
-                                context,
-                              ).expandedIconTapHint,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints.tightFor(
-                                width: 44,
-                                height: 44,
-                              ),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white.withValues(
-                                  alpha: .12,
-                                ),
-                                foregroundColor: Colors.white,
-                                shape: const CircleBorder(),
-                              ),
-                              onPressed: () => setCollapsed(true),
-                              icon: const Icon(
-                                Icons.keyboard_double_arrow_down_rounded,
-                                size: 24,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : artwork,
+                leading: artwork,
                 title: Text(
                   title,
                   maxLines: 1,
@@ -465,21 +445,54 @@ class _MiniPlayerControl extends StatelessWidget {
   }
 }
 
-class _CollapsiblePlayer extends StatelessWidget {
+/// A swipe down on the bar rolls it into the round button and a swipe up on
+/// the button (or a tap) unrolls it. Screen readers get "collapse" as an action.
+class _CollapsiblePlayer extends StatefulWidget {
   const _CollapsiblePlayer({
     required this.collapsed,
+    required this.onCollapse,
     required this.onExpand,
     required this.playing,
     required this.child,
   });
 
   final bool collapsed;
+
+  /// Null where the bar never collapses (the Mushaf's inline player).
+  final VoidCallback? onCollapse;
   final VoidCallback onExpand;
   final bool playing;
   final Widget child;
 
   @override
+  State<_CollapsiblePlayer> createState() => _CollapsiblePlayerState();
+}
+
+class _CollapsiblePlayerState extends State<_CollapsiblePlayer> {
+  var _dragDistance = 0.0;
+
+  void _startDrag(DragStartDetails _) => _dragDistance = 0;
+
+  void _updateDrag(DragUpdateDetails details) =>
+      _dragDistance += details.primaryDelta ?? 0;
+
+  void _endBarDrag(DragEndDetails details) {
+    if (_swipeRollsUp(_dragDistance, details.primaryVelocity ?? 0)) {
+      widget.onCollapse?.call();
+    }
+  }
+
+  void _endButtonDrag(DragEndDetails details) {
+    if (_swipeRollsUp(-_dragDistance, -(details.primaryVelocity ?? 0))) {
+      widget.onExpand();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final collapsed = widget.collapsed;
+    final onCollapse = widget.onCollapse;
+    final playing = widget.playing;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return LayoutBuilder(
       builder: (context, constraints) => TweenAnimationBuilder<double>(
@@ -488,7 +501,25 @@ class _CollapsiblePlayer extends StatelessWidget {
             ? Duration.zero
             : const Duration(milliseconds: 420),
         curve: Curves.easeInOutCubicEmphasized,
-        child: child,
+        child: onCollapse == null
+            ? widget.child
+            : Semantics(
+                customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+                  CustomSemanticsAction(
+                    label: MaterialLocalizations.of(
+                      context,
+                    ).expandedIconTapHint,
+                  ): onCollapse,
+                },
+                child: GestureDetector(
+                  key: const ValueKey('mini-player-bar'),
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragStart: _startDrag,
+                  onVerticalDragUpdate: _updateDrag,
+                  onVerticalDragEnd: _endBarDrag,
+                  child: widget.child,
+                ),
+              ),
         builder: (context, progress, panel) {
           final width = constraints.maxWidth;
           return Align(
@@ -527,28 +558,33 @@ class _CollapsiblePlayer extends StatelessWidget {
                           opacity: ((progress - .2) / .8).clamp(0.0, 1.0),
                           child: Align(
                             alignment: AlignmentDirectional.centerEnd,
-                            child: SizedBox.square(
-                              dimension: 60,
-                              child: IconButton.filled(
-                                key: const ValueKey('mini-player-expand'),
-                                tooltip: MaterialLocalizations.of(
-                                  context,
-                                ).collapsedIconTapHint,
-                                onPressed: onExpand,
-                                style: IconButton.styleFrom(
-                                  backgroundColor: Theme.of(
+                            child: GestureDetector(
+                              onVerticalDragStart: _startDrag,
+                              onVerticalDragUpdate: _updateDrag,
+                              onVerticalDragEnd: _endButtonDrag,
+                              child: SizedBox.square(
+                                dimension: 60,
+                                child: IconButton.filled(
+                                  key: const ValueKey('mini-player-expand'),
+                                  tooltip: MaterialLocalizations.of(
                                     context,
-                                  ).colorScheme.primary,
-                                  foregroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                  shape: const CircleBorder(),
-                                ),
-                                icon: Icon(
-                                  playing
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
-                                  size: playing ? 34 : 38,
+                                  ).collapsedIconTapHint,
+                                  onPressed: widget.onExpand,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    foregroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary,
+                                    shape: const CircleBorder(),
+                                  ),
+                                  icon: Icon(
+                                    playing
+                                        ? Icons.pause_rounded
+                                        : Icons.play_arrow_rounded,
+                                    size: playing ? 34 : 38,
+                                  ),
                                 ),
                               ),
                             ),

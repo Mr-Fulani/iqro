@@ -8,7 +8,9 @@ import {
   seekPositionMs,
   sheetDragOffset,
   sheetShown,
+  swipeCollapses,
   swipeDismisses,
+  swipeExpands,
 } from "./mini-player.ts";
 import type { MiniPlayerAction, MiniPlayerState, MiniPlayerView } from "./mini-player.ts";
 
@@ -106,6 +108,18 @@ test("a long or fast downward swipe dismisses, a short slow one or an upward one
   assert.equal(swipeDismisses({ deltaY: 10, durationMs: 5 }), false);
   assert.equal(swipeDismisses({ deltaY: -200, durationMs: 100 }), false);
   assert.equal(swipeDismisses({ deltaY: 30, durationMs: 0 }), false);
+});
+
+test("a swipe down rolls the bar up and a swipe up unrolls it, with a shorter reach than the sheet", () => {
+  assert.equal(swipeCollapses({ deltaY: 40, durationMs: 900 }), true);
+  assert.equal(swipeCollapses({ deltaY: 20, durationMs: 30 }), true);
+  assert.equal(swipeCollapses({ deltaY: 20, durationMs: 400 }), false);
+  assert.equal(swipeCollapses({ deltaY: 6, durationMs: 5 }), false);
+  assert.equal(swipeCollapses({ deltaY: -60, durationMs: 100 }), false);
+  assert.equal(swipeCollapses({ deltaY: 20, durationMs: 0 }), false);
+  assert.equal(swipeExpands({ deltaY: -40, durationMs: 900 }), true);
+  assert.equal(swipeExpands({ deltaY: -20, durationMs: 30 }), true);
+  assert.equal(swipeExpands({ deltaY: 40, durationMs: 100 }), false);
 });
 
 test("a seek stays within the active range", () => {
