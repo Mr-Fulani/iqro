@@ -33,6 +33,13 @@ from quran_backend.modules.courses.lesson_media import (
     set_texts,
     store_media_image,
 )
+from quran_backend.modules.courses.lesson_media_admin import (
+    MAKE_DRAFT_HINT,
+    NEW_LESSON_HINT,
+    NO_DRAFT_HINT,
+    OPEN_LESSON_HINT,
+    media_hint,
+)
 from quran_backend.modules.courses.models import (
     Course,
     CourseDocument,
@@ -473,3 +480,25 @@ def test_admin_media_needs_the_right_to_change_the_lesson(
     )
     assert answer.status_code == 403
     assert stored == []
+
+
+@pytest.mark.django_db
+def test_a_new_theme_says_when_media_can_be_added(owner: User) -> None:
+    page = _client(owner).get("/admin/courses/courselesson/add/").content.decode()
+    assert NEW_LESSON_HINT in page
+
+
+@pytest.mark.parametrize(
+    ("on_lesson", "editable", "draft_url", "hint"),
+    [
+        (True, True, "", ""),
+        (False, True, "", OPEN_LESSON_HINT),
+        (True, False, "/copy/", MAKE_DRAFT_HINT),
+        (False, False, "/copy/", MAKE_DRAFT_HINT),
+        (True, False, "", NO_DRAFT_HINT),
+    ],
+)
+def test_media_hint_leads_to_the_buttons(
+    on_lesson: bool, editable: bool, draft_url: str, hint: str
+) -> None:
+    assert media_hint(on_lesson=on_lesson, editable=editable, draft_url=draft_url) == hint

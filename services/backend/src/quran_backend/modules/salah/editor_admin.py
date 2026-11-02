@@ -42,7 +42,12 @@ from django.utils.http import urlencode
 from quran_backend.modules.audio.player_background_upload import player_background_uploader
 from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.object_storage import ObjectStorageError
-from quran_backend.modules.courses.lesson_media_admin import MediaPage, render_media
+from quran_backend.modules.courses.lesson_media_admin import (
+    MediaPage,
+    media_hint,
+    render_media,
+    render_media_hint,
+)
 from quran_backend.modules.courses.snapshot_media_admin import media_view, video_view
 from quran_backend.modules.salah import editor
 from quran_backend.modules.salah.importer import (
@@ -55,6 +60,7 @@ from quran_backend.modules.salah.importer import (
 )
 from quran_backend.modules.salah.lesson_media import draft_lesson
 from quran_backend.modules.salah.lesson_media_admin import (
+    draft_url,
     lesson_video_block,
     media_page,
     review_videos,
@@ -350,11 +356,7 @@ class SalahEditorAdminMixin:
             "next_id": ids[position + 1] if position + 1 < len(ids) else None,
             "next_missing_id": next_missing if next_missing != node.id else None,
             "preview": self._preview(snapshot, version, node, languages, assets),
-            "media_block": render_media(
-                media_page(request, version, node.data["slug"], editable=editable), request
-            )
-            if node.kind == "lesson"
-            else "",
+            "media_block": self._media_block(request, version, node, editable=editable),
             "videos": review_videos(version, node.id)
             if version.status == SalahPublicationStatus.DRAFT
             else [],
@@ -362,6 +364,21 @@ class SalahEditorAdminMixin:
             "status_label": self._status_label(version),
         }
         return TemplateResponse(request, "admin/salah/salahcourseversion/editor.html", context)
+
+    @staticmethod
+    def _media_block(
+        request: HttpRequest, version: SalahCourseVersion, node: Any, *, editable: bool
+    ) -> str:
+        """The block on a lesson, the way to it on the course and its sections."""
+        if node.kind == "lesson":
+            return render_media(
+                media_page(request, version, node.data["slug"], editable=editable), request
+            )
+        if node.kind not in ("course", "section"):
+            return ""
+        copy_url = draft_url(request, version, editable=editable)
+        hint = media_hint(on_lesson=False, editable=editable, draft_url=copy_url)
+        return render_media_hint(hint, copy_url, request)
 
     @staticmethod
     def _status_label(version: SalahCourseVersion) -> str:
