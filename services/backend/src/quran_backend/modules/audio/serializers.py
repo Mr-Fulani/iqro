@@ -39,6 +39,7 @@ def public_audio_url(object_key: str) -> str:
 class ReciterSummarySerializer(serializers.ModelSerializer[Reciter]):
     slug = serializers.CharField(source="code", read_only=True)
     portrait_url = serializers.SerializerMethodField()
+    portrait_thumbnail_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Reciter
@@ -51,13 +52,26 @@ class ReciterSummarySerializer(serializers.ModelSerializer[Reciter]):
             "name_tr",
             "country_code",
             "portrait_url",
+            "portrait_thumbnail_url",
         )
 
     @extend_schema_field(serializers.URLField(allow_null=True))
     def get_portrait_url(self, obj: Reciter) -> str | None:
+        """The 640 px copy for the player artwork; the original until it is generated."""
         if not obj.portrait_object_key:
             return None
-        return public_audio_url(obj.portrait_object_key)
+        return public_audio_url(obj.portrait_display_object_key or obj.portrait_object_key)
+
+    @extend_schema_field(serializers.URLField(allow_null=True))
+    def get_portrait_thumbnail_url(self, obj: Reciter) -> str | None:
+        """The 320 px copy for avatars in lists and cards."""
+        if not obj.portrait_object_key:
+            return None
+        return public_audio_url(
+            obj.portrait_thumbnail_object_key
+            or obj.portrait_display_object_key
+            or obj.portrait_object_key
+        )
 
 
 class ReciterDetailSerializer(ReciterSummarySerializer):
@@ -78,6 +92,7 @@ class ReciterDetailSerializer(ReciterSummarySerializer):
             "biography_ru",
             "biography_tr",
             "portrait_url",
+            "portrait_thumbnail_url",
             "full_support",
         )
 

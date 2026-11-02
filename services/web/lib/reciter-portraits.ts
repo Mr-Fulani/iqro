@@ -35,3 +35,10 @@ export function reciterPortraitUrl(
 ): string {
   return reciter.portrait_url || RECITER_PORTRAITS[reciter.slug] || DEFAULT_RECITER_PORTRAIT;
 }
+
+/** The same portrait for an avatar: its 320 px copy, as avatars are at most 112 px. */
+export function reciterAvatarUrl(
+  reciter: Pick<Reciter, "portrait_url" | "portrait_thumbnail_url" | "slug">,
+): string {
+  return reciter.portrait_thumbnail_url || reciterPortraitUrl(reciter);
+}

@@ -526,6 +526,10 @@ def test_anonymous_clients_can_read_audio_catalog_and_details(
     assert reciter_list.json()["results"][0]["portrait_url"] == (
         "https://cdn.example.test/quran-audio/audio/reciters/test-reciter.webp"
     )
+    # Until its copies are generated, the original serves avatars too.
+    assert reciter_list.json()["results"][0]["portrait_thumbnail_url"] == (
+        "https://cdn.example.test/quran-audio/audio/reciters/test-reciter.webp"
+    )
     assert reciter_detail.status_code == 200
     assert reciter_detail.json()["slug"] == "test-reciter"
     assert reciter_detail.json()["name_tr"] == "Test Okuyucu"
@@ -850,6 +854,35 @@ def test_offline_audio_manifest_is_complete_verified_and_cacheable(
 
     unavailable_quality = api_client.get(url, {"quality": "high"})
     assert unavailable_quality.status_code == 404
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_AUDIO_BASE_URL="https://cdn.example.test/quran-audio/")
+def test_reciter_portrait_urls_prefer_the_smaller_copies(
+    published_audio_dataset: dict[str, Any],
+) -> None:
+    reciter = published_audio_dataset["reciter"]
+    Reciter.objects.filter(pk=reciter.pk).update(
+        portrait_display_object_key="audio/reciters/test-reciter-640.webp",
+        portrait_thumbnail_object_key="audio/reciters/test-reciter-320.webp",
+    )
+    client = APIClient()
+
+    listed = client.get(reverse("audio:reciter-list")).json()["results"][0]
+    detail = client.get(reverse("audio:reciter-detail", kwargs={"reciter_id": reciter.id})).json()
+
+    for payload in (listed, detail):
+        assert payload["portrait_url"] == (
+            "https://cdn.example.test/quran-audio/audio/reciters/test-reciter-640.webp"
+        )
+        assert payload["portrait_thumbnail_url"] == (
+            "https://cdn.example.test/quran-audio/audio/reciters/test-reciter-320.webp"
+        )
+
+    Reciter.objects.filter(pk=reciter.pk).update(portrait_object_key="")
+    listed = client.get(reverse("audio:reciter-list")).json()["results"][0]
+    assert listed["portrait_url"] is None
+    assert listed["portrait_thumbnail_url"] is None
 
 
 @pytest.mark.django_db

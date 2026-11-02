@@ -63,6 +63,13 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
             apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
             reciters: catalog,
           );
+    final thumbnailUrl = reciter == null
+        ? null
+        : resolveReciterThumbnailUrl(
+            reciter,
+            apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+            reciters: catalog,
+          );
     final controlsEnabled =
         (player.track != null || standalone != null) &&
         !player.buffering &&
@@ -83,7 +90,11 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
     final collapsed =
         widget.allowCollapse && ref.watch(miniPlayerCollapsedProvider);
     final artwork = standalone == null
-        ? PremiumReciterPortrait(url: portraitUrl, size: 44)
+        ? PremiumReciterPortrait(
+            url: portraitUrl,
+            thumbnailUrl: thumbnailUrl,
+            size: 44,
+          )
         : Container(
             width: 44,
             height: 44,

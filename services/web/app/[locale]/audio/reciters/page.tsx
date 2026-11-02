@@ -7,7 +7,7 @@ import { isLocale } from "@/lib/i18n";
 import { translate } from "@/lib/translate";
 import { getPublishedReciters } from "@/lib/public-content";
 import { groupRecitersByPerson, recitersWithPortraitsFirst } from "@/lib/reciter-catalog";
-import { reciterPortraitUrl } from "@/lib/reciter-portraits";
+import { reciterAvatarUrl } from "@/lib/reciter-portraits";
 import { localizedPath } from "@/lib/routing";
 import { createPageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
@@ -69,7 +69,7 @@ export default async function ReciterCatalogPage({
             >
               <ReciterAvatar
                 name={name}
-                portraitUrl={reciterPortraitUrl(reciter)}
+                portraitUrl={reciterAvatarUrl(reciter)}
                 tone={index}
                 full={reciter.full_support}
               />

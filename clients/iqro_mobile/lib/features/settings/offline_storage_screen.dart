@@ -112,6 +112,12 @@ class _OfflineStorageScreenState extends ConsumerState<OfflineStorageScreen> {
                   apiBaseUrl: apiBaseUrl,
                   reciters: reciters,
                 ),
+                thumbnailUrl: _reciterPortraitUrl(
+                  packages[index],
+                  apiBaseUrl: apiBaseUrl,
+                  reciters: reciters,
+                  thumbnail: true,
+                ),
                 deleting: _deletingPackageId == packages[index].packageId,
                 onDelete: packages[index].isDownloading
                     ? null
@@ -198,6 +204,7 @@ class _OfflinePackageCard extends StatelessWidget {
     required this.package,
     required this.edition,
     required this.portraitUrl,
+    required this.thumbnailUrl,
     required this.deleting,
     required this.onDelete,
   });
@@ -209,6 +216,9 @@ class _OfflinePackageCard extends StatelessWidget {
 
   /// The reciter's portrait of an audio package, null for the default figure.
   final String? portraitUrl;
+
+  /// Its small copy for the 44 dp avatar, null when the backend has none.
+  final String? thumbnailUrl;
   final bool deleting;
   final VoidCallback? onDelete;
 
@@ -235,7 +245,11 @@ class _OfflinePackageCard extends StatelessWidget {
               else if (package.mushafPreviewPath case final path?)
                 SizedBox(width: 44, child: _DownloadedPage(path: path))
               else if (package.isAudio)
-                PremiumReciterPortrait(url: portraitUrl, size: 44)
+                PremiumReciterPortrait(
+                  url: portraitUrl,
+                  thumbnailUrl: thumbnailUrl,
+                  size: 44,
+                )
               else
                 Container(
                   width: 44,
@@ -343,19 +357,28 @@ class _DownloadedPage extends StatelessWidget {
   }
 }
 
-/// The portrait of an audio package's reciter, as the Audio tab shows it.
+/// The portrait of an audio package's reciter, as the Audio tab shows it, or
+/// its small copy when [thumbnail].
 String? _reciterPortraitUrl(
   OfflinePackageSummary package, {
   required String apiBaseUrl,
   required Iterable<Reciter>? reciters,
+  bool thumbnail = false,
 }) {
   final raw = package.manifest['reciter'];
   if (!package.isAudio || raw is! Map) return null;
-  return resolveReciterPortraitUrl(
-    Reciter.fromJson(Map<String, Object?>.from(raw)),
-    apiBaseUrl: apiBaseUrl,
-    reciters: reciters,
-  );
+  final reciter = Reciter.fromJson(Map<String, Object?>.from(raw));
+  return thumbnail
+      ? resolveReciterThumbnailUrl(
+          reciter,
+          apiBaseUrl: apiBaseUrl,
+          reciters: reciters,
+        )
+      : resolveReciterPortraitUrl(
+          reciter,
+          apiBaseUrl: apiBaseUrl,
+          reciters: reciters,
+        );
 }
 
 String _packageTitle(

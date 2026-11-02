@@ -35,7 +35,7 @@ import {
   reciterPersonKey,
   reciterSourcesForPerson,
 } from "../lib/reciter-catalog";
-import { reciterPortraitUrl } from "../lib/reciter-portraits";
+import { reciterAvatarUrl, reciterPortraitUrl } from "../lib/reciter-portraits";
 import {
   loadReciterPreference,
   preferredRecitation,
@@ -537,7 +537,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
                 >
                   <ReciterAvatar
                     name={name}
-                    portraitUrl={reciterPortraitUrl(reciter)}
+                    portraitUrl={reciterAvatarUrl(reciter)}
                     tone={index}
                     full={reciter.full_support}
                   />

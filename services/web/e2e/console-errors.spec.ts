@@ -35,7 +35,6 @@ const MOCK_GAPS = [
 ];
 
 const ALLOWED: { reason: string; matches: (message: ConsoleMessage) => boolean }[] = [
-  { reason: "a guest has no session to refresh", matches: (message) => failedRequest(message, "/api/web-auth/refresh") },
   { reason: "a guest has no prayer profile", matches: (message) => failedRequest(message, "/api/v1/me/prayer-profile") },
   { reason: "the mock API does not serve it", matches: (message) => MOCK_GAPS.some((part) => failedRequest(message, part)) },
 ];

@@ -84,6 +84,18 @@ class Reciter(BaseModel):
         blank=True,
         validators=[validate_relative_object_key],
     )
+    # Smaller WebP copies of the portrait (audio/portrait_upload.py); the
+    # original's key when it is already smaller, empty until generated.
+    portrait_display_object_key = models.CharField(
+        max_length=512,
+        blank=True,
+        validators=[validate_relative_object_key],
+    )
+    portrait_thumbnail_object_key = models.CharField(
+        max_length=512,
+        blank=True,
+        validators=[validate_relative_object_key],
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:

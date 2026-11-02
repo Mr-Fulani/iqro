@@ -25,7 +25,9 @@ def announcement_payload(announcement: Announcement, locale: str) -> dict[str, A
     """The audience-facing announcement in one language, identical for site and app."""
     translation = next(item for item in announcement.translations.all() if item.language == locale)
     reciter = announcement.reciter
-    image_key = announcement.image_object_key or (reciter.portrait_object_key if reciter else "")
+    image_key = announcement.image_object_key or (
+        (reciter.portrait_display_object_key or reciter.portrait_object_key) if reciter else ""
+    )
     image = None
     if image_key:
         image = {

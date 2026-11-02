@@ -78,11 +78,16 @@ Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
         person.portraitSource,
         apiBaseUrl: apiBaseUrl,
       );
+      final thumbnailUrl = resolveReciterThumbnailUrl(
+        person.portraitSource,
+        apiBaseUrl: apiBaseUrl,
+      );
       if (!context.mounted) continue;
       unawaited(
         precacheImage(
           reciterPortraitImage(
             url,
+            thumbnailUrl: thumbnailUrl,
             size: portraitSize,
             devicePixelRatio: pixelRatio,
           ),
@@ -497,6 +502,10 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                   full: catalog.fullPeople.contains(person.key),
                   loading: _loadingTrack && _loadingPersonKey == person.key,
                   portraitUrl: resolveReciterPortraitUrl(
+                    person.portraitSource,
+                    apiBaseUrl: apiBaseUrl,
+                  ),
+                  thumbnailUrl: resolveReciterThumbnailUrl(
                     person.portraitSource,
                     apiBaseUrl: apiBaseUrl,
                   ),
@@ -975,6 +984,7 @@ class _ReciterCard extends StatelessWidget {
     required this.full,
     required this.loading,
     required this.portraitUrl,
+    required this.thumbnailUrl,
     required this.onTap,
   });
 
@@ -985,6 +995,7 @@ class _ReciterCard extends StatelessWidget {
   final bool full;
   final bool loading;
   final String? portraitUrl;
+  final String? thumbnailUrl;
   final VoidCallback? onTap;
 
   @override
@@ -1014,6 +1025,7 @@ class _ReciterCard extends StatelessWidget {
             _ReciterPortrait(
               size: portraitSize,
               portraitUrl: portraitUrl,
+              thumbnailUrl: thumbnailUrl,
               active: active,
               full: full,
               loading: loading,
@@ -1076,6 +1088,7 @@ class _ReciterPortrait extends StatelessWidget {
   const _ReciterPortrait({
     required this.size,
     required this.portraitUrl,
+    required this.thumbnailUrl,
     required this.active,
     required this.full,
     required this.loading,
@@ -1083,6 +1096,7 @@ class _ReciterPortrait extends StatelessWidget {
 
   final double size;
   final String? portraitUrl;
+  final String? thumbnailUrl;
   final bool active;
   final bool full;
   final bool loading;
@@ -1099,6 +1113,7 @@ class _ReciterPortrait extends StatelessWidget {
           Positioned.fill(
             child: PremiumReciterPortrait(
               url: portraitUrl,
+              thumbnailUrl: thumbnailUrl,
               size: size,
               selected: active,
             ),

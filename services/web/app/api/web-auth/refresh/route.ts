@@ -10,9 +10,11 @@ import {
 
 export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get(REFRESH_COOKIE_NAME)?.value;
+  // A first-time visitor has no session to restore. That is not an error, so
+  // the browser console stays clean; an expired session still answers 401.
   if (!refreshToken) {
     return new Response(null, {
-      status: 401,
+      status: 204,
       headers: { "Cache-Control": "private, no-store" },
     });
   }

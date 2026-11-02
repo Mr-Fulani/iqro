@@ -1596,6 +1596,10 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                       person.portraitSource,
                       apiBaseUrl: widget.apiBaseUrl,
                     ),
+                    thumbnailUrl: resolveReciterThumbnailUrl(
+                      person.portraitSource,
+                      apiBaseUrl: widget.apiBaseUrl,
+                    ),
                     selected: recitation.id == widget.currentRecitationId,
                     onTap: () => Navigator.pop<_ReciterSelection>(context, (
                       person: person,
@@ -1617,6 +1621,7 @@ class _PickerReciterCard extends StatelessWidget {
     required this.person,
     required this.locale,
     required this.portraitUrl,
+    required this.thumbnailUrl,
     required this.selected,
     required this.onTap,
   });
@@ -1624,6 +1629,7 @@ class _PickerReciterCard extends StatelessWidget {
   final ReciterPerson person;
   final String locale;
   final String? portraitUrl;
+  final String? thumbnailUrl;
   final bool selected;
   final VoidCallback onTap;
 
@@ -1649,6 +1655,7 @@ class _PickerReciterCard extends StatelessWidget {
                   children: <Widget>[
                     PremiumReciterPortrait(
                       url: portraitUrl,
+                      thumbnailUrl: thumbnailUrl,
                       size: 70,
                       selected: selected,
                     ),

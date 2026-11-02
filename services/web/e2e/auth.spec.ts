@@ -212,7 +212,11 @@ test("guest session keeps the email login CTA in main content, not the header", 
   await expect(guestStatus).toBeVisible();
   await expect(guestStatus).toHaveClass(/guest-online/);
   await expect(guestStatus).toHaveCSS("color", "rgb(15, 118, 110)");
-  await expect(guestStatus.locator(".status-dot")).toHaveCSS("animation-name", "guest-online-pulse");
+  expect(
+    await guestStatus
+      .locator(".status-dot")
+      .evaluate((dot) => getComputedStyle(dot, "::after").animationName),
+  ).toBe("guest-online-pulse");
   await expect(page.locator(".app-header").getByRole("link", { name: "Войти по email" })).toHaveCount(0);
   const emailLogin = page.locator("main").getByRole("link", { name: "Войти по email" }).first();
   await expect(emailLogin).toBeVisible();

@@ -624,7 +624,10 @@ export type Reciter = {
   biography_en?: string;
   biography_ru?: string;
   biography_tr?: string;
+  /** The 640 px portrait copy for the player artwork; the original until it is generated. */
   portrait_url?: string | null;
+  /** The 320 px copy for avatars in lists and cards. */
+  portrait_thumbnail_url?: string | null;
   /** Also plays in the Mushaf and Memorization, not only in the audio player. */
   full_support?: boolean;
 };
@@ -1626,10 +1629,15 @@ export class ApiClient {
     }
     this.refreshingPromise = (async () => {
       try {
-        const session = await this.webAuthRequest<GuestBootstrapResponse>("/refresh", {
+        const session = await this.webAuthRequest<Partial<GuestBootstrapResponse>>("/refresh", {
           method: "POST",
         });
-        this.setSession(session);
+        // 204: no session cookie to restore.
+        if (!session.access_token) {
+          this.setSession(null);
+          return null;
+        }
+        this.setSession(session as GuestBootstrapResponse);
         return session.access_token;
       } catch {
         this.setSession(null);
