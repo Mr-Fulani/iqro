@@ -42,8 +42,7 @@ class ContentShare {
   final List<InlineSpan> arabicGlyphs;
   final String translation;
 
-  /// A line only the message has: how many times a du'a is said, or the
-  /// ayah's translator.
+  /// A practical line, such as how many times a du'a is said.
   final String note;
 
   /// Where it comes from: the du'a's source, shown under the meaning.

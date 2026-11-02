@@ -21,7 +21,6 @@ export type AyahShareTarget = {
   /** The selected translation, also when the reader hides it, as in the app. */
   translationId: number | null;
   translation: string | undefined;
-  translator: string;
 };
 
 /**
@@ -62,14 +61,8 @@ async function ayahShareText(target: AyahShareTarget): Promise<ContentShareText>
   const arabicGlyphs = tajweedGlyphs(target.ayahKey);
   arabicGlyphs.catch(() => {});
   const [arabicText, meaning] = await Promise.all([arabic, translation]);
-  // The translator is named in the message only, not on the picture.
-  return {
-    arabic: arabicText,
-    arabicGlyphs,
-    translation: meaning,
-    note: meaning.trim() ? target.translator.trim() : "",
-    reference: "",
-  };
+  // Neither the picture nor the message names the translator.
+  return { arabic: arabicText, arabicGlyphs, translation: meaning, reference: "" };
 }
 
 /** The ayah's picture with the Arabic, the meaning and the link. */

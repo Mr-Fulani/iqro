@@ -1549,11 +1549,8 @@ function QuranContent() {
       arabic: ayah?.text_uthmani,
       translationId: selectedTranslationId,
       // While another translation loads, the old text is still shown; the
-      // dialog then fetches the selected one, so text and translator match.
+      // dialog then fetches the selected one.
       translation: translationLoading ? undefined : translationsByVerse[ayahKey]?.text,
-      translator: selectedTranslation
-        ? selectedTranslation.author_name.trim() || selectedTranslation.name
-        : "",
     });
   };
 
@@ -1562,14 +1559,9 @@ function QuranContent() {
   const shareAyahWithoutPicture = async (target: AyahShareTarget) => {
     reloadAyahShareDialog();
     setShareTarget(null);
-    const translation = target.translation ?? "";
     const result = await shareTextOnly(target.title, contentShareText(
       target.title,
-      {
-        arabic: target.arabic ?? "",
-        translation,
-        reference: translation.trim() ? target.translator : "",
-      },
+      { arabic: target.arabic ?? "", translation: target.translation ?? "", reference: "" },
       t("contentShare.readInIqro"),
       target.url,
     ));

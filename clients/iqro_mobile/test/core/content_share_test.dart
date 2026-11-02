@@ -69,7 +69,7 @@ void main() {
   });
 
   testWidgets(
-    'an ayah card has its tajweed glyphs and no translator; the message names the translator',
+    'an ayah card has its tajweed glyphs; neither it nor the message names the translator',
     (tester) async {
       final ayah = ayahContentShare(
         locale: 'ru',
@@ -78,7 +78,6 @@ void main() {
         ayah: 2,
         arabic: 'هُوَ ٱلَّذِى خَلَقَكُم',
         translation: 'Он — Тот, Кто сотворил вас',
-        translator: 'Эльмир Кулиев',
         glyphs: const [
           TextSpan(
             text: 'ﱃ',
@@ -93,7 +92,11 @@ void main() {
       );
       expect(
         contentShareText(ayah),
-        contains('«Он — Тот, Кто сотворил вас»\n\nЭльмир Кулиев\n\n'),
+        'Аль-Анам · 6:2\n\n'
+        'هُوَ ٱلَّذِى خَلَقَكُم\n\n'
+        '«Он — Тот, Кто сотворил вас»\n\n'
+        'Читать в IQRO: '
+        'https://iqro.forum/ru/quran/madani-hafs/surah/6/ayah/2',
       );
 
       final recorder = ui.PictureRecorder();
@@ -107,7 +110,6 @@ void main() {
           child: ShareCard(share: ayah, logo: logo!),
         ),
       );
-      expect(find.text('Эльмир Кулиев'), findsNothing);
       expect(find.text('Он — Тот, Кто сотворил вас'), findsOneWidget);
       expect(find.text('هُوَ ٱلَّذِى خَلَقَكُم'), findsNothing);
       final glyphs = tester

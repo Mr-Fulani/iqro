@@ -6,10 +6,7 @@ export type ContentShareText = {
   /** The picture's Arabic in a Mushaf's page fonts, such as an ayah in the tajweed script. */
   arabicGlyphs?: Promise<ShareCardGlyph[]>;
   translation: string;
-  /**
-   * A line only the message has, as in the app: how many times a du'a is
-   * said, or the ayah's translator.
-   */
+  /** A practical line, such as how many times a du'a is said. Only the message has it, as in the app. */
   note?: string;
   /** Where it comes from: the du'a's sources. */
   reference: string;

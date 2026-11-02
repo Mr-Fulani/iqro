@@ -580,9 +580,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   }
 
   Future<void> _share(QuranAyah ayah, String surahName, Rect? origin) async {
-    final edition = _translationEditions
-        .where((item) => item.sourceId == _translationSourceId)
-        .firstOrNull;
     final analytics = ref.read(analyticsProvider.notifier);
     final glyphs = await ayahShareGlyphs(
       ref.read(mushafRepositoryProvider(MushafIdentity.defaultEdition)),
@@ -600,11 +597,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         arabic: ayah.textUthmani,
         glyphs: glyphs,
         translation: _translations[ayah.number]?.text ?? '',
-        translator: edition == null
-            ? ''
-            : edition.authorName.trim().isEmpty
-            ? edition.name
-            : edition.authorName,
         readInIqro: context.l10n.shareReadInIqro,
       ),
       origin: origin,

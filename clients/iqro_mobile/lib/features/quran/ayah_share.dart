@@ -6,9 +6,9 @@ import 'foundation_mushaf_page.dart';
 import 'quran_repository.dart';
 
 /// An ayah as shared: the surah and its number, the Arabic, the meaning
-/// and a link to the ayah on the site. The translator is named only in the
-/// message; the picture shows [glyphs], the ayah in the tajweed Mushaf's
-/// script, or the plain Arabic without them.
+/// and a link to the ayah on the site, without the translator's name. The
+/// picture shows [glyphs], the ayah in the tajweed Mushaf's script, or the
+/// plain Arabic without them.
 ContentShare ayahContentShare({
   required String locale,
   required String surahName,
@@ -17,14 +17,12 @@ ContentShare ayahContentShare({
   required String arabic,
   required String readInIqro,
   String translation = '',
-  String translator = '',
   List<InlineSpan> glyphs = const [],
 }) => ContentShare(
   title: '$surahName · $surah:$ayah',
   arabic: arabic,
   arabicGlyphs: glyphs,
   translation: translation,
-  note: translation.trim().isEmpty ? '' : translator.trim(),
   url: ayahShareUrl(locale, surah, ayah),
   readInIqro: readInIqro,
 );

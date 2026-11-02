@@ -921,9 +921,6 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
             .firstOrNull
             ?.nameFor(locale) ??
         '${context.l10n.surah} ${reference.surah}';
-    final edition = details.translationEditions
-        .where((item) => item.sourceId == _translationSourceId)
-        .firstOrNull;
     final box = context.findRenderObject();
     final analytics = ref.read(analyticsProvider.notifier);
     final glyphs = await ayahShareGlyphs(
@@ -942,11 +939,6 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         arabic: ayah.textUthmani,
         glyphs: glyphs,
         translation: details.translation?.text ?? '',
-        translator: edition == null
-            ? ''
-            : edition.authorName.trim().isEmpty
-            ? edition.name
-            : edition.authorName,
         readInIqro: context.l10n.shareReadInIqro,
       ),
       origin: box is RenderBox

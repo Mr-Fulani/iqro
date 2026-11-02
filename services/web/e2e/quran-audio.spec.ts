@@ -2405,7 +2405,7 @@ test("text mode ends ayahs with the app's marker and shares an ayah picture thro
   await expect.poll(() => page.evaluate(() => (window as unknown as { sharedAyah?: unknown }).sharedAyah))
     .toEqual({
       title: "Аль-Анам · 6:1",
-      text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nElmir Kuliev\n\nЧитать в IQRO: ${link}`,
+      text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nЧитать в IQRO: ${link}`,
       file: { name: "iqro-6-1.png", type: "image/png", width: 1080, height: 1350 },
     });
   await dialog.getByRole("button", { name: "Закрыть" }).click();
@@ -2462,7 +2462,7 @@ async function captureWebShare(page: Page) {
   return () => page.evaluate(() => (window as unknown as { sharedAyah?: unknown }).sharedAyah);
 }
 
-test("sharing while another translation loads uses that translation and its translator", async ({ page }) => {
+test("sharing while another translation loads uses that translation, without the translator's name", async ({ page }) => {
   const shared = await captureWebShare(page);
   let release = () => {};
   const arrived = new Promise<void>((resolve) => { release = resolve; });
@@ -2480,7 +2480,7 @@ test("sharing while another translation loads uses that translation and its tran
   await expect(dialog.getByRole("img", { name: "Картинка аята 6:1" })).toBeVisible();
   await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
   await expect.poll(shared).toMatchObject({
-    text: expect.stringContaining("«Хвала Аллаху (Абу Адель)»\n\nAbu Adel\n\n"),
+    text: expect.stringContaining("«Хвала Аллаху (Абу Адель)»\n\nЧитать в IQRO: "),
   });
 });
 
@@ -2538,7 +2538,7 @@ async function recordCardText(page: Page) {
   return () => page.evaluate(() => (window as unknown as { cardText: { text: string; font: string }[] }).cardText);
 }
 
-test("an ayah picture has its tajweed Mushaf glyphs from every page it spans and no translator", async ({ page }) => {
+test("an ayah picture has its tajweed Mushaf glyphs from every page it spans and no translator's name", async ({ page }) => {
   const cardText = await recordCardText(page);
   // 6:2 begins on page 128 of Mushaf 19 and ends on page 129.
   for (const [pageNumber, ids] of [[128, [1, 2, 3, 4]], [129, [5, 6]]] as const) {
@@ -2597,7 +2597,7 @@ test("without the share dialog's code an ayah still goes as text, and the next p
   const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/1", page.url()).href;
   await expect.poll(shared).toEqual({
     title: "Аль-Анам · 6:1",
-    text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nElmir Kuliev\n\nЧитать в IQRO: ${link}`,
+    text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nЧитать в IQRO: ${link}`,
     files: 0,
   });
   await expect(page.getByRole("dialog")).toHaveCount(0);
