@@ -96,6 +96,7 @@ class Reciter {
     required this.biographyRu,
     required this.biographyTr,
     this.portraitUrl,
+    this.portraitThumbnailUrl,
     this.countryCode,
   });
 
@@ -112,6 +113,7 @@ class Reciter {
       biographyRu: json['biography_ru']?.toString() ?? '',
       biographyTr: json['biography_tr']?.toString() ?? '',
       portraitUrl: json['portrait_url']?.toString(),
+      portraitThumbnailUrl: json['portrait_thumbnail_url']?.toString(),
       countryCode: json['country_code']?.toString(),
     );
   }
@@ -126,10 +128,15 @@ class Reciter {
   final String biographyEn;
   final String biographyRu;
   final String biographyTr;
+
+  /// The 640 px copy of the portrait, the original until the copies exist.
   final String? portraitUrl;
+
+  /// The 320 px copy for small avatars.
+  final String? portraitThumbnailUrl;
   final String? countryCode;
 
-  Reciter withPortraitUrl(String? value) => Reciter(
+  Reciter withPortraitUrl(String? value, {String? thumbnailUrl}) => Reciter(
     id: id,
     slug: slug,
     nameAr: nameAr,
@@ -141,6 +148,7 @@ class Reciter {
     biographyRu: biographyRu,
     biographyTr: biographyTr,
     portraitUrl: value,
+    portraitThumbnailUrl: thumbnailUrl,
     countryCode: countryCode,
   );
 
@@ -156,6 +164,7 @@ class Reciter {
     'biography_ru': biographyRu,
     'biography_tr': biographyTr,
     'portrait_url': portraitUrl,
+    'portrait_thumbnail_url': portraitThumbnailUrl,
     'country_code': countryCode,
   };
 

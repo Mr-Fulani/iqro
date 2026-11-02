@@ -219,3 +219,20 @@ test("a person has full support through any of their cards", () => {
   assert.equal(groupRecitersByPerson([listening, full])[0].full_support, true);
   assert.equal(groupRecitersByPerson([full, listening])[0].full_support, true);
 });
+
+test("a person's avatar copy comes with the portrait it was made from", () => {
+  const bare = { ...reciter, id: "bare", slug: "qf-1-abdulbaset-abdulsamad-mujawwad", portrait_url: null };
+  const pictured = {
+    ...reciter,
+    id: "pictured",
+    slug: "qf-2-abdul-baset-abdul-samad",
+    portrait_url: "https://cdn/640.webp",
+    portrait_thumbnail_url: "https://cdn/320.webp",
+  };
+
+  for (const order of [[bare, pictured], [pictured, bare]]) {
+    const [person] = groupRecitersByPerson(order);
+    assert.equal(person.portrait_url, "https://cdn/640.webp");
+    assert.equal(person.portrait_thumbnail_url, "https://cdn/320.webp");
+  }
+});

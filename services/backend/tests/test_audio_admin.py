@@ -30,7 +30,10 @@ from quran_backend.modules.audio.models import (
     RecitationEdition,
     Reciter,
 )
-from quran_backend.modules.audio.portrait_upload import ReciterPortraitUploadResult
+from quran_backend.modules.audio.portrait_upload import (
+    ReciterPortraitUploadResult,
+    ReciterPortraitVariants,
+)
 
 
 def _create_audio_aggregate(
@@ -181,6 +184,10 @@ def test_reciter_admin_uploads_portrait_and_exposes_turkish_fields() -> None:
         object_key="audio/reciter-portraits/saad-al-ghamdi/hash.webp",
         etag='"portrait-etag"',
         created=True,
+        variants=ReciterPortraitVariants(
+            display_object_key="audio/reciter-portraits/saad-al-ghamdi/display.webp",
+            thumbnail_object_key="audio/reciter-portraits/saad-al-ghamdi/thumbnail.webp",
+        ),
     )
     with patch(
         "quran_backend.modules.audio.admin.upload_reciter_portrait",
@@ -212,6 +219,8 @@ def test_reciter_admin_uploads_portrait_and_exposes_turkish_fields() -> None:
     assert updated.name_tr == "Saad el-Gamidi"
     assert updated.biography_tr == "Türkçe biyografi"
     assert updated.portrait_object_key == result.object_key
+    assert updated.portrait_display_object_key == result.variants.display_object_key
+    assert updated.portrait_thumbnail_object_key == result.variants.thumbnail_object_key
     mocked_upload.assert_called_once()
 
     model_admin = ReciterAdmin(Reciter, admin.site)

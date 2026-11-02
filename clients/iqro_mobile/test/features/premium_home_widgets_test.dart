@@ -171,6 +171,46 @@ void main() {
     expect(find.byType(ColorFiltered), findsNothing);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('a small portrait loads the small copy, a large one the full', (
+    tester,
+  ) async {
+    const url = 'https://media.example.test/640.webp';
+    const thumbnailUrl = 'https://media.example.test/320.webp';
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Column(
+          children: <Widget>[
+            PremiumReciterPortrait(
+              url: url,
+              thumbnailUrl: thumbnailUrl,
+              size: 44,
+            ),
+            PremiumReciterPortrait(
+              url: url,
+              thumbnailUrl: thumbnailUrl,
+              size: 210,
+            ),
+          ],
+        ),
+      ),
+    );
+    final images = tester
+        .widgetList<CachedNetworkImage>(find.byType(CachedNetworkImage))
+        .map((image) => image.imageUrl);
+    expect(images, <String>[thumbnailUrl, url]);
+    final provider =
+        reciterPortraitImage(
+              url,
+              thumbnailUrl: thumbnailUrl,
+              size: 44,
+              devicePixelRatio: 3,
+            )
+            as ResizeImage;
+    expect(
+      (provider.imageProvider as CachedNetworkImageProvider).url,
+      thumbnailUrl,
+    );
+  });
   testWidgets('a reciter without a portrait shows the bundled figure', (
     tester,
   ) async {

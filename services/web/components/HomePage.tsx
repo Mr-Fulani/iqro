@@ -14,7 +14,7 @@ import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { selectHomePopularReciters } from "../lib/reciter-catalog";
 import { reciterName as localizedReciterName } from "../lib/audio-content";
-import { reciterPortraitUrl } from "../lib/reciter-portraits";
+import { reciterAvatarUrl } from "../lib/reciter-portraits";
 import { rememberReciterPreference } from "../lib/reciter-preference";
 import { useHydrated } from "../lib/use-hydrated";
 import { localizedPath } from "../lib/routing";
@@ -326,7 +326,7 @@ export default function HomePage({
                 >
                   <ReciterAvatar
                     name={name || reciter.name_en}
-                    portraitUrl={reciterPortraitUrl(reciter)}
+                    portraitUrl={reciterAvatarUrl(reciter)}
                     tone={index}
                   />
                   <span className="reciter-card-copy">

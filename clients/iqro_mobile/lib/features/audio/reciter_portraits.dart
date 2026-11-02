@@ -34,16 +34,31 @@ String? resolveReciterPortraitUrl(
   final portraitSource = reciters == null
       ? reciter
       : reciterPortraitSourceFor(reciter, reciters);
-  final managedUrl = portraitSource.portraitUrl?.trim();
-  if (managedUrl != null && managedUrl.isNotEmpty) {
-    final uri = Uri.tryParse(managedUrl);
-    if (uri?.hasScheme == true) return managedUrl;
-    return Uri.parse(apiBaseUrl).resolve(managedUrl).toString();
-  }
+  final managedUrl = _absoluteUrl(portraitSource.portraitUrl, apiBaseUrl);
+  if (managedUrl != null) return managedUrl;
   final fallbackPath = _fallbackPortraits[portraitSource.slug];
   return fallbackPath == null
       ? null
       : Uri.parse(apiBaseUrl).resolve(fallbackPath).toString();
+}
+
+/// The 320 px copy of the same portrait, null when the backend has none.
+String? resolveReciterThumbnailUrl(
+  Reciter reciter, {
+  required String apiBaseUrl,
+  Iterable<Reciter>? reciters,
+}) {
+  final portraitSource = reciters == null
+      ? reciter
+      : reciterPortraitSourceFor(reciter, reciters);
+  return _absoluteUrl(portraitSource.portraitThumbnailUrl, apiBaseUrl);
+}
+
+String? _absoluteUrl(String? value, String apiBaseUrl) {
+  final url = value?.trim();
+  if (url == null || url.isEmpty) return null;
+  if (Uri.tryParse(url)?.hasScheme == true) return url;
+  return Uri.parse(apiBaseUrl).resolve(url).toString();
 }
 
 /// People with a portrait open the list, each group in its own order.
@@ -70,7 +85,13 @@ Reciter reciterWithPersonPortrait(
     apiBaseUrl: apiBaseUrl,
     reciters: reciters,
   );
-  return portraitUrl == reciter.portraitUrl
+  final thumbnailUrl = resolveReciterThumbnailUrl(
+    reciter,
+    apiBaseUrl: apiBaseUrl,
+    reciters: reciters,
+  );
+  return portraitUrl == reciter.portraitUrl &&
+          thumbnailUrl == reciter.portraitThumbnailUrl
       ? reciter
-      : reciter.withPortraitUrl(portraitUrl);
+      : reciter.withPortraitUrl(portraitUrl, thumbnailUrl: thumbnailUrl);
 }

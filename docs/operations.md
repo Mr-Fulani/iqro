@@ -847,6 +847,36 @@ python manage.py import_mp3quran_catalog --include-untimed
   приходит из API, поэтому виден и на сайте, и в уже выпущенных версиях приложения.
 
 
+### Уменьшенные копии портретов чтецов
+
+При загрузке портрета в админке backend сам сохраняет копии 640 px и 320 px в WebP, и API
+отдаёт их вместо исходника (подробно — `services/backend/docs/audio-api.md`). Портреты,
+загруженные раньше, весят до 2,8 МБ и тормозили главную страницу сайта и вкладку «Аудио».
+Копии для них создаёт команда; исходники не трогаются, в R2 только добавляются новые файлы,
+в базе заполняются два поля у чтецов.
+
+Сначала посмотреть, каких чтецов она затронет (ничего не меняет):
+
+```bash
+docker compose --env-file services/backend/.env.production -f compose.production.yaml \
+  exec backend python manage.py generate_reciter_portrait_variants
+```
+
+Затем после бэкапа базы записать копии:
+
+```bash
+docker compose --env-file services/backend/.env.production -f compose.production.yaml \
+  exec backend python manage.py generate_reciter_portrait_variants --apply
+```
+
+- Команда читает исходник с публичного CDN (`PUBLIC_AUDIO_BASE_URL`) и пишет копии в
+  `MEDIA_OBJECT_STORAGE_*`. На 22 портретах прода она идёт около двух минут.
+- Каждый обработанный чтец отправляет событие инвалидации кэша сайта.
+- Повтор безопасен: чтецы с готовыми копиями пропускаются. Если у кого-то файл не прочитался,
+  команда называет его и завершается с ошибкой; остальные сохраняются.
+- Проверка: `curl -s https://iqro.forum/api/v1/reciters?page_size=100` — у чтецов с портретом
+  `portrait_url` и `portrait_thumbnail_url` оканчиваются на `.webp`.
+
 ### Bounded Quran.Foundation real-audio probe
 
 `ops/media/qf_audio_probe.py` выполняет обычную интеграционную проверку внешних

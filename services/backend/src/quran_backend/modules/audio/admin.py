@@ -68,6 +68,7 @@ from quran_backend.modules.audio.player_background_video import (
 from quran_backend.modules.audio.portrait_upload import (
     MAX_RECITER_PORTRAIT_MIB,
     ReciterPortraitUploadError,
+    ReciterPortraitUploadResult,
     upload_reciter_portrait,
 )
 from quran_backend.modules.audio.selectors import (
@@ -155,7 +156,7 @@ class ReciterAdminForm(forms.ModelForm):  # type: ignore[type-arg]
             "country_code": "Двухбуквенный ISO-код страны, например SA или EG.",
         }
 
-    _uploaded_portrait_key: str | None = None
+    _uploaded_portrait: ReciterPortraitUploadResult | None = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -191,14 +192,22 @@ class ReciterAdminForm(forms.ModelForm):  # type: ignore[type-arg]
                     "Не удалось загрузить портрет в media-хранилище. Повторите позже.",
                 )
             else:
-                self._uploaded_portrait_key = result.object_key
+                self._uploaded_portrait = result
 
     def save(self, commit: bool = True) -> Reciter:
         instance = cast("Reciter", super().save(commit=False))
         if self.cleaned_data.get("remove_portrait") is True:
             instance.portrait_object_key = ""
-        elif self._uploaded_portrait_key is not None:
-            instance.portrait_object_key = self._uploaded_portrait_key
+            instance.portrait_display_object_key = ""
+            instance.portrait_thumbnail_object_key = ""
+        elif self._uploaded_portrait is not None:
+            instance.portrait_object_key = self._uploaded_portrait.object_key
+            instance.portrait_display_object_key = (
+                self._uploaded_portrait.variants.display_object_key
+            )
+            instance.portrait_thumbnail_object_key = (
+                self._uploaded_portrait.variants.thumbnail_object_key
+            )
         if commit:
             instance.save()
             self.save_m2m()
@@ -585,7 +594,7 @@ class ReciterAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             '<img src="{}" alt="" width="160" height="160" '
             'style="object-fit:cover;border-radius:18px" /></a>',
             public_audio_url(obj.portrait_object_key),
-            public_audio_url(obj.portrait_object_key),
+            public_audio_url(obj.portrait_thumbnail_object_key or obj.portrait_object_key),
         )
 
     @admin.display(description="Адрес файла в хранилище (служебное поле)")

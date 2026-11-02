@@ -469,6 +469,8 @@ FIELD_LABELS: dict[str, str] = {
     "policy_version": "Версия политики",
     "polygon": "Полигон",
     "portrait_object_key": "Ключ портрета",
+    "portrait_display_object_key": "Ключ портрета 640 px",
+    "portrait_thumbnail_object_key": "Ключ портрета 320 px",
     "image_object_key": "Ключ изображения",
     "video_object_key": "Ключ видео",
     "video": "Видео",

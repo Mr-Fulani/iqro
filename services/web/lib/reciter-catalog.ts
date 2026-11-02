@@ -117,14 +117,20 @@ export function groupRecitersByPerson(reciters: Reciter[]): Reciter[] {
     }
 
     const representative = reciter.slug === personKey ? reciter : current;
-    const portraitUrl =
-      representative.portrait_url || current.portrait_url || reciter.portrait_url || null;
+    // The portrait and its avatar copy come from the same reciter.
+    const portraitSource = [representative, current, reciter].find((item) => item.portrait_url);
+    const portraitUrl = portraitSource?.portrait_url || null;
     const fullSupport = Boolean(current.full_support || reciter.full_support);
     people.set(
       personKey,
       portraitUrl === representative.portrait_url && fullSupport === representative.full_support
         ? representative
-        : { ...representative, portrait_url: portraitUrl, full_support: fullSupport },
+        : {
+            ...representative,
+            portrait_url: portraitUrl,
+            portrait_thumbnail_url: portraitSource?.portrait_thumbnail_url ?? null,
+            full_support: fullSupport,
+          },
     );
   }
   return [...people.values()];
