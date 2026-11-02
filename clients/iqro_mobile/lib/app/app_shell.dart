@@ -29,13 +29,16 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell>
+    with WidgetsBindingObserver {
   late var _index = widget.initialIndex.clamp(0, 4);
-  Timer? _playerHint;
+  Timer? _playerHintTimer;
+  MiniPlayerHint? _playerHint;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // The Audio tab is built only when first opened; warm what it shows.
     // The Mushaf's surah-name font is fetched once (on the first launch) and
     // then read from disk, so surah lists open with the calligraphy.
@@ -44,20 +47,53 @@ class _AppShellState extends ConsumerState<AppShell> {
       unawaited(warmAudioCatalog(context, ref));
       unawaited(ref.read(surahHeaderFontProvider.future));
       unawaited(checkReminderSoundOnce(context, ref));
-      _playerHint = Timer(miniPlayerHintDelay, _showPlayerHint);
+      _schedulePlayerHint();
     });
   }
 
   @override
   void dispose() {
-    _playerHint?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _playerHintTimer?.cancel();
+    _playerHint?.stop();
     super.dispose();
+  }
+
+  /// An open mini player folds when another tab opens; Home may show the hint.
+  void _switchedTab(int next) {
+    _stopPlayerHint();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(miniPlayerCollapsedProvider.notifier).state = true;
+      if (next == 0) _schedulePlayerHint();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _schedulePlayerHint();
+    } else if (state == AppLifecycleState.paused) {
+      _stopPlayerHint();
+    }
+  }
+
+  void _schedulePlayerHint() {
+    _stopPlayerHint();
+    _playerHintTimer = Timer(miniPlayerHintDelay, _showPlayerHint);
+  }
+
+  void _stopPlayerHint() {
+    _playerHintTimer?.cancel();
+    _playerHintTimer = null;
+    _playerHint?.cancel();
+    _playerHint = null;
   }
 
   /// Once in a while the mini player folds and unfolds by itself on Home, so
   /// people learn that a swipe folds it (mini_player.dart).
   void _showPlayerHint() {
-    _playerHint = null;
+    _playerHintTimer = null;
     if (!mounted || _index != 0 || widget.child != null) return;
     if (MediaQuery.disableAnimationsOf(context)) return;
     if (ModalRoute.of(context)?.isCurrent == false) return;
@@ -76,14 +112,16 @@ class _AppShellState extends ConsumerState<AppShell> {
       // Without stored preferences there is no telling how often it showed.
       return;
     }
-    _playerHint = showMiniPlayerHint(ref);
+    _playerHint = MiniPlayerHint.show(ref);
   }
 
   @override
   void didUpdateWidget(covariant AppShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialIndex != widget.initialIndex) {
-      _index = widget.initialIndex.clamp(0, 4);
+      final next = widget.initialIndex.clamp(0, 4);
+      if (next != _index) _switchedTab(next);
+      _index = next;
     }
   }
 
@@ -159,7 +197,13 @@ class _AppShellState extends ConsumerState<AppShell> {
                 context,
               ).colorScheme.surface.withValues(alpha: .96),
               selectedIndex: _index,
-              onDestinationSelected: (value) => context.go('/app?tab=$value'),
+              onDestinationSelected: (value) {
+                // Leaving a screen of the tab (After prayer under Plan) counts too.
+                if (value != _index || widget.child != null) {
+                  _switchedTab(value);
+                }
+                context.go('/app?tab=$value');
+              },
               destinations: <NavigationDestination>[
                 NavigationDestination(
                   icon: const Icon(Icons.home_outlined),

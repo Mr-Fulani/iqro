@@ -32,6 +32,7 @@ import { pauseAllAudioPlayers } from "./audio-focus";
 import { useI18n } from "./i18n-context";
 import {
   BAR_ROLL_FALLBACK_MS,
+  BAR_ROLL_MS,
   INITIAL_MINI_PLAYER_STATE,
   MOBILE_PLAYER_MEDIA_QUERY,
   PLAYER_CONTROL_SELECTOR,
@@ -39,6 +40,7 @@ import {
   PLAYER_HINT_DELAY_MS,
   PLAYER_HINT_HOLD_MS,
   PLAYER_HINT_LIMIT,
+  PLAYER_HINT_NUDGE_MS,
   PLAYER_HINT_STORAGE_KEY,
   SWIPE_TAP_SLOP,
   miniPlayerReducer,
@@ -225,8 +227,12 @@ export function AudioPlayerProvider({
     previousAudioSection.current = nextSection;
   }, [pathname]);
 
-  // The app's full player is a pushed route: leaving the screen closes it.
+  // The app's full player is a pushed route: leaving the screen closes it, and
+  // an open bar folds when another page opens. The first render is no change.
+  const shownPathname = useRef(pathname);
   useEffect(() => {
+    if (shownPathname.current === pathname) return;
+    shownPathname.current = pathname;
     dispatchView({ type: "route-change" });
   }, [pathname]);
 
@@ -328,32 +334,64 @@ export function AudioPlayerProvider({
   // its button, and a drag that falls short is not taken for a tap.
   const barSwipe = useRef<{ pointerId: number; startX: number; startY: number; startedAt: number; moved: boolean } | null>(null);
   const dragWasSwipe = useRef(false);
-  // Once in a while on the home page the bar folds and unfolds by itself, so
-  // people learn that a swipe folds it; the same rule as the app (AppShell).
+  // Once in a while on the home page the bar shows how it folds: a folded bar
+  // opens, waits, slides aside and folds; an open one slides aside, folds,
+  // waits and opens. The same steps as the app (MiniPlayerHint). It starts on
+  // arriving at the page and on coming back to the tab; anything the person
+  // does meanwhile ends it.
   const viewRef = useRef(view);
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
+  const [hintNudge, setHintNudge] = useState(false);
   const onHome = stripLocalePrefix(pathname) === "/";
   const hasPlayback = request !== null;
   useEffect(() => {
     if (!mobile || !onHome || !hasPlayback || reduceMotion) return;
-    let holdTimer: ReturnType<typeof setTimeout> | undefined;
-    const startTimer = setTimeout(() => {
-      if (viewRef.current !== "bar") return;
-      const now = Date.now();
-      if (!playerHintDue(readPlayerHint(), now)) return;
-      const record = readPlayerHint();
-      writePlayerHint({ shown: record.shown + 1, lastShownAt: now });
-      dispatchView({ type: "collapse" });
-      holdTimer = setTimeout(() => {
-        // A tap or a swipe meanwhile wins.
-        if (rolledUp(viewRef.current)) dispatchView({ type: "expand" });
-      }, PLAYER_HINT_HOLD_MS);
-    }, PLAYER_HINT_DELAY_MS);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const later = (delay: number, expectRolledUp: boolean, step: () => void) => {
+      timer = setTimeout(() => {
+        if (rolledUp(viewRef.current) !== expectRolledUp) {
+          setHintNudge(false);
+          return;
+        }
+        step();
+      }, delay);
+    };
+    const fold = (then: (() => void) | null) => {
+      setHintNudge(true);
+      later(PLAYER_HINT_NUDGE_MS, false, () => {
+        setHintNudge(false);
+        dispatchView({ type: "collapse" });
+        if (then) later(PLAYER_HINT_HOLD_MS, true, then);
+      });
+    };
+    const start = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (document.visibilityState !== "visible") return;
+        const now = Date.now();
+        const record = readPlayerHint();
+        if (!playerHintDue(record, now)) return;
+        writePlayerHint({ shown: record.shown + 1, lastShownAt: now });
+        if (rolledUp(viewRef.current)) {
+          dispatchView({ type: "expand" });
+          later(PLAYER_HINT_HOLD_MS + BAR_ROLL_MS, false, () => fold(null));
+        } else {
+          fold(() => dispatchView({ type: "expand" }));
+        }
+      }, PLAYER_HINT_DELAY_MS);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") start();
+      else clearTimeout(timer);
+    };
+    start();
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      clearTimeout(startTimer);
-      clearTimeout(holdTimer);
+      clearTimeout(timer);
+      setHintNudge(false);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [hasPlayback, mobile, onHome, reduceMotion]);
 
@@ -461,7 +499,7 @@ export function AudioPlayerProvider({
     : null;
   const queueClass = queueControls && expanded ? " has-queue" : "";
   const dockClassName = mobile
-    ? `mobile-audio-player is-${view}${controlsHidden ? " is-controls-hidden" : ""}${showBackground ? " has-player-background" : ""}`
+    ? `mobile-audio-player is-${view}${hintNudge ? " is-hint-nudge" : ""}${controlsHidden ? " is-controls-hidden" : ""}${showBackground ? " has-player-background" : ""}`
     : `global-audio-player-dock ${compact ? "is-compact" : "is-expanded"}${showReciterControls ? " has-reciter-controls" : ""}${queueClass}${showBackground ? " has-player-background" : ""}${mobilePartsFailed ? " is-fallback" : ""}`;
   const spacerClassName = mobile
     ? "global-audio-player-spacer is-mobile"

@@ -70,10 +70,12 @@ test("a tap while the sheet sinks brings it back; a second close request changes
   assert.deepEqual(run(at("full"), { type: "close-full" }, { type: "open-full" }, { type: "closed" }), at("full"));
 });
 
-test("leaving the page or clearing playback closes an open or sinking player only", () => {
+test("leaving the page closes an open player and folds an open bar; clearing playback closes the player only", () => {
   assert.deepEqual(miniPlayerReducer(at("full"), { type: "route-change" }), at("bar"));
   assert.deepEqual(miniPlayerReducer(at("closing"), { type: "route-change" }), at("bar"));
   assert.equal(miniPlayerReducer(at("collapsed"), { type: "route-change" }).view, "collapsed");
+  assert.equal(miniPlayerReducer(at("bar"), { type: "route-change" }).view, "collapsing");
+  assert.equal(miniPlayerReducer(at("expanding"), { type: "route-change" }).view, "collapsing");
   assert.deepEqual(miniPlayerReducer(at("full"), { type: "request-change", hasRequest: false }), at("bar"));
   assert.deepEqual(miniPlayerReducer(at("closing"), { type: "request-change", hasRequest: false }), at("bar"));
   assert.equal(miniPlayerReducer(at("full"), { type: "request-change", hasRequest: true }).view, "full");
@@ -123,12 +125,12 @@ test("a swipe in any direction rolls the bar up, with a shorter reach than the s
   assert.equal(swipeCollapses({ deltaX: 0, deltaY: 20, durationMs: 0 }), false);
 });
 
-test("the fold hint shows once a day, three times at most, and survives bad storage", () => {
+test("the fold hint waits six hours between showings, five at most, and survives bad storage", () => {
   const now = Date.UTC(2026, 10, 2, 12);
   const hour = 60 * 60 * 1000;
   assert.equal(playerHintDue({ shown: 0, lastShownAt: null }, now), true);
-  assert.equal(playerHintDue({ shown: 1, lastShownAt: now - 23 * hour }, now), false);
-  assert.equal(playerHintDue({ shown: 2, lastShownAt: now - 25 * hour }, now), true);
+  assert.equal(playerHintDue({ shown: 1, lastShownAt: now - 5 * hour }, now), false);
+  assert.equal(playerHintDue({ shown: 4, lastShownAt: now - 7 * hour }, now), true);
   assert.equal(playerHintDue({ shown: PLAYER_HINT_LIMIT, lastShownAt: now - 120 * hour }, now), false);
   assert.deepEqual(parsePlayerHint(null), { shown: 0, lastShownAt: null });
   assert.deepEqual(parsePlayerHint("{oops"), { shown: 0, lastShownAt: null });

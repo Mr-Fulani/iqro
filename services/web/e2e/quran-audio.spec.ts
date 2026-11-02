@@ -3823,6 +3823,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
         await expect(bar.locator(".mobile-player-sheet-body")).not.toHaveAttribute("inert", "");
       };
 
+      // The bar folded when the Quran page opened; a tap brings it back.
+      await expectRolledUp();
+      await roundButton.tap();
+      await expectBar();
+
       for (const pause of [0, 40, 120, 250]) {
         // A tap back while it still rolls, then a swipe rolls it up again.
         await swipe(page, bar.locator(".mobile-player-titles"), 60);

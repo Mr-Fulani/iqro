@@ -928,12 +928,12 @@
     display: flex;
     align-items: center;
     padding-inline: 8px 6px;
-    transition: opacity 0.25s ease 0.12s;
+    transition: opacity 0.25s ease 0.12s, transform 0.28s cubic-bezier(0.33, 1, 0.68, 1);
   }
 
   .mobile-audio-player:is(.is-collapsing, .is-collapsed) .mobile-player-sheet-body {
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.33, 1, 0.68, 1);
   }
 
   .mobile-player-fab {
@@ -1023,6 +1023,15 @@
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
+  }
+
+  /* The fold hint slides the bar towards the corner it folds into, as a swipe would. */
+  .mobile-audio-player.is-hint-nudge .mobile-player-sheet-body {
+    transform: translateX(18%);
+  }
+
+  [dir="rtl"] .mobile-audio-player.is-hint-nudge .mobile-player-sheet-body {
+    transform: translateX(-18%);
   }
 
   /* The bar takes every drag itself, so the page under it does not scroll. */

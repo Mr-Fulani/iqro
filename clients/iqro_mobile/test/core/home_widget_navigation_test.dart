@@ -13,6 +13,7 @@ import 'package:iqro_mobile/core/auth/auth_session.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/core/widgets/home_widget_routes.dart';
+import 'package:iqro_mobile/features/audio/mini_player.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_screen.dart';
 import 'package:iqro_mobile/features/prayer/prayer_screen.dart';
@@ -62,6 +63,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(AfterPrayerScreen), findsOneWidget);
         expect(find.byType(NavigationBar), findsOneWidget);
+        // An open mini player folds when another tab opens.
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AppShell)),
+        );
+        container.read(miniPlayerCollapsedProvider.notifier).state = false;
         await tester.tap(
           find.descendant(
             of: find.byType(NavigationBar),
@@ -69,6 +75,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        expect(container.read(miniPlayerCollapsedProvider), isTrue);
         expect(
           router.routeInformationProvider.value.uri.toString(),
           '/app?tab=2',

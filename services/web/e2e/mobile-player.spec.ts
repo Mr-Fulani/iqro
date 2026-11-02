@@ -542,30 +542,38 @@ test("the Arabic bar mirrors its layout and the full player stays within the scr
   expect(errors).toEqual([]);
 });
 
-test("on the home page the bar shows once that it folds, and not again the same day", async ({ page }) => {
+test("an open bar folds on another page, and on the home page it shows how it folds", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/audio");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   await expect(bar).toHaveClass(/is-bar/);
+  // Another page: the open bar folds into the round button.
   await page.locator("header .brand-link").click();
   await expect(page).toHaveURL(/\/ru$/);
-  // After a pause it rolls up into the round button and unrolls by itself.
-  await expect(bar).toHaveClass(/is-(collapsing|collapsed)(\s|$)/, { timeout: 6_000 });
+  await expect(bar).toHaveClass(/is-(collapsing|collapsed)(\s|$)/);
+  // After a pause on Home it opens, slides aside as if swiped and folds again.
   await expect(bar).toHaveClass(/is-bar/, { timeout: 6_000 });
+  await expect(bar).toHaveClass(/is-hint-nudge/, { timeout: 4_000 });
+  await expect(bar).toHaveClass(/is-collapsed/, { timeout: 4_000 });
+  await expect(bar).not.toHaveClass(/is-hint-nudge/);
   const stored = async () =>
-    JSON.parse((await page.evaluate(() => window.localStorage.getItem("iqro_player_hint_v1"))) ?? "{}") as { shown?: number };
+    JSON.parse((await page.evaluate(() => window.localStorage.getItem("iqro_player_hint_v2"))) ?? "{}") as { shown?: number };
   expect((await stored()).shown).toBe(1);
-  // Back on the home page the same day: no second showing.
+  // Back on Home within six hours: no second showing.
+  const roundButton = bar.getByRole("button", { name: "Показать панель плеера", exact: true });
   await page.locator(".mobile-navigation a[href='/ru/audio']").first().click();
   await page.locator("header .brand-link").click();
   await page.waitForTimeout(4_000);
-  await expect(bar).toHaveClass(/is-bar/);
+  await expect(bar).toHaveClass(/is-collapsed/);
   expect((await stored()).shown).toBe(1);
   // Folding it by hand ends the hint for good.
+  await roundButton.click();
+  await expect(bar).toHaveClass(/is-bar/);
   await swipe(page, bar.locator(".mobile-player-titles"), 60);
-  expect((await stored()).shown).toBe(3);
+  expect((await stored()).shown).toBe(5);
 });
+
 
 test("with reduced motion the bar and the full player switch without transitions", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });

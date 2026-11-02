@@ -79,8 +79,10 @@ export function miniPlayerReducer(state: MiniPlayerState, action: MiniPlayerActi
     case "toggle-controls":
       return view === "full" ? { ...state, controlsHidden: !state.controlsHidden } : state;
     case "route-change":
-      // The app's player is a pushed route: leaving the screen closes it.
-      return sheetShown(view) ? { view: "bar", controlsHidden: false } : state;
+      // The app's player is a pushed route: leaving the screen closes it. An
+      // open bar folds when another page opens, as the app's does on a tab.
+      if (sheetShown(view)) return { view: "bar", controlsHidden: false };
+      return view === "bar" || view === "expanding" ? { ...state, view: "collapsing" } : state;
     case "request-change":
       // The full player has nothing to show once playback is cleared.
       return !action.hasRequest && sheetShown(view) ? { view: "bar", controlsHidden: false } : state;
@@ -128,13 +130,15 @@ export function swipeCollapses({ deltaX, deltaY, durationMs }: BarSwipeSample): 
 
 /**
  * Until someone folds the bar themselves, it shows how on the home page: it
- * rolls up and back by itself, once a day and three times at most (as the app).
+ * slides aside as if swiped, rolls up and comes back, at most every six hours
+ * and five times in all (as the app's MiniPlayerHint).
  */
-export const PLAYER_HINT_LIMIT = 3;
-export const PLAYER_HINT_GAP_MS = 24 * 60 * 60 * 1000;
+export const PLAYER_HINT_LIMIT = 5;
+export const PLAYER_HINT_GAP_MS = 6 * 60 * 60 * 1000;
 export const PLAYER_HINT_DELAY_MS = 2500;
 export const PLAYER_HINT_HOLD_MS = 1600;
-export const PLAYER_HINT_STORAGE_KEY = "iqro_player_hint_v1";
+export const PLAYER_HINT_NUDGE_MS = 280;
+export const PLAYER_HINT_STORAGE_KEY = "iqro_player_hint_v2";
 
 export type PlayerHintRecord = { shown: number; lastShownAt: number | null };
 
