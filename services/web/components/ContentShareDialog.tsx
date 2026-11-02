@@ -58,11 +58,11 @@ export default function ContentShareDialog({
     void Promise.resolve().then(load).then(async (content) => {
       if (cancelled) return;
       setText(contentShareText(title, content, readInIqro, url));
-      const { arabic, translation, reference } = content;
+      const { arabic, arabicGlyphs, translation, reference } = content;
       const root = getComputedStyle(document.documentElement);
       // A late font brings a second picture, which replaces the first.
       await renderShareCard(
-        { title, arabic, translation, reference },
+        { title, arabic, arabicGlyphs, translation, reference },
         {
           arabic: root.getPropertyValue("--font-arabic").trim() || "serif",
           text: root.getPropertyValue("--font-sans").trim() || "sans-serif",
