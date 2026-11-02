@@ -82,15 +82,18 @@ class NotificationGateway {
     FlutterLocalNotificationsPlugin? plugin,
     Future<void> Function()? initializeForTesting,
     Future<void> Function(int id)? cancelForTesting,
+    ReminderAdhan Function()? adhan,
   }) : _database = database,
        _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
        _initializeForTesting = initializeForTesting,
-       _cancelForTesting = cancelForTesting;
+       _cancelForTesting = cancelForTesting,
+       _adhan = adhan ?? (() => ReminderAdhan.none);
 
   final LocalDatabase _database;
   final FlutterLocalNotificationsPlugin _plugin;
   final Future<void> Function()? _initializeForTesting;
   final Future<void> Function(int id)? _cancelForTesting;
+  final ReminderAdhan Function() _adhan;
   final StreamController<String> _routeController =
       StreamController<String>.broadcast(sync: true);
   String? _initialRoute;
@@ -318,6 +321,7 @@ class NotificationGateway {
         ? AndroidScheduleMode.exactAllowWhileIdle
         : AndroidScheduleMode.inexactAllowWhileIdle;
     final copy = ReminderNotificationCopy.forLocale(locale);
+    final selectedAdhan = _adhan();
     final candidates = <_PlannedReminderNotification>[];
 
     for (final rule in rules.where(
@@ -440,7 +444,10 @@ class NotificationGateway {
         title: copy.titleFor(item.rule),
         body: copy.bodyFor(item.rule),
         scheduledDate: item.scheduledDate,
-        notificationDetails: _details(item.rule.signal),
+        notificationDetails: _details(
+          item.rule.signal,
+          item.rule.adhanFor(selectedAdhan),
+        ),
         androidScheduleMode: mode,
         matchDateTimeComponents: item.matchDateTimeComponents,
         payload: _payloadFor(
@@ -572,17 +579,24 @@ class NotificationGateway {
     }
   }
 
-  NotificationDetails _details(ReminderSignal signal) {
+  NotificationDetails _details(ReminderSignal signal, ReminderAdhan adhan) {
     final silent = signal == ReminderSignal.silent;
     final vibrate = signal != ReminderSignal.silent;
     final sound = signal == ReminderSignal.sound;
+    final called = adhan != ReminderAdhan.none;
     return NotificationDetails(
       android: AndroidNotificationDetails(
-        'iqro_reminders_${signal.name}',
-        switch (signal) {
-          ReminderSignal.sound => 'IQRO reminders with sound',
-          ReminderSignal.vibration => 'IQRO vibrating reminders',
-          ReminderSignal.silent => 'IQRO silent reminders',
+        // Android fixes a channel's sound when it is created, so each adhan
+        // needs a channel of its own.
+        called
+            ? 'iqro_reminders_adhan_${adhan.name}'
+            : 'iqro_reminders_${signal.name}',
+        switch ((signal, adhan)) {
+          (_, ReminderAdhan.makkah) => 'IQRO adhan of Makkah',
+          (_, ReminderAdhan.madinah) => 'IQRO adhan of Madinah',
+          (ReminderSignal.sound, _) => 'IQRO reminders with sound',
+          (ReminderSignal.vibration, _) => 'IQRO vibrating reminders',
+          (ReminderSignal.silent, _) => 'IQRO silent reminders',
         },
         channelDescription: 'Prayer and Quran reminders',
         icon: 'iqro_status_icon',
@@ -590,6 +604,9 @@ class NotificationGateway {
         priority: Priority.high,
         category: AndroidNotificationCategory.reminder,
         playSound: sound,
+        sound: called
+            ? RawResourceAndroidNotificationSound('adhan_${adhan.name}')
+            : null,
         enableVibration: vibrate,
         silent: silent,
         visibility: NotificationVisibility.public,
@@ -598,6 +615,7 @@ class NotificationGateway {
         presentAlert: true,
         presentBadge: true,
         presentSound: sound,
+        sound: called ? 'adhan_${adhan.name}.caf' : null,
       ),
     );
   }

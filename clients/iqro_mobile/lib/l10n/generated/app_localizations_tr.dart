@@ -649,6 +649,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reciterNotFound => 'Kâri bulunamadı';
 
   @override
+  String get fullReciterHint => 'Mushaf ve Ezber\'de de var';
+
+  @override
   String showAllReciters(int count) {
     return 'Tümünü göster: $count';
   }
@@ -1671,6 +1674,22 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get prayerReminders => 'Namaz hatırlatıcıları';
+
+  @override
+  String get adhan => 'Ezan';
+
+  @override
+  String get adhanMakkah => 'Mekke';
+
+  @override
+  String get adhanMadinah => 'Medine';
+
+  @override
+  String get adhanSystemSound => 'Standart';
+
+  @override
+  String get adhanHint =>
+      'Namaz vaktinde kısa ezan. Telefonun sesi açık olmalıdır.';
 
   @override
   String get prayerReminderSetup =>
@@ -3155,6 +3174,19 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get onboardingKeepApproximate => 'Yaklaşık vakit kalsın';
+
+  @override
+  String get onboardingSoundTitle => 'Ezan sesi';
+
+  @override
+  String get onboardingSoundBody =>
+      'Bildirim sesi kapalı. Açmazsanız ezan duyulmaz.';
+
+  @override
+  String get onboardingSoundSwitch => 'Bildirim sesi';
+
+  @override
+  String get onboardingSoundOn => 'Ses açık, ezanı duyacaksınız.';
 
   @override
   String get onboardingAnalyticsCounts =>

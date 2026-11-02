@@ -1008,6 +1008,32 @@ class _RemindersStep extends StatelessWidget {
   }
 }
 
+class _ReminderSoundStep extends StatelessWidget {
+  const _ReminderSoundStep({required this.on, required this.onToggle});
+
+  final bool on;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _StepFrame(
+      top: const _Badge(Icons.volume_up_outlined),
+      title: l10n.onboardingSoundTitle,
+      body: on ? l10n.onboardingSoundOn : l10n.onboardingSoundBody,
+      child: IqroCard(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: SwitchListTile.adaptive(
+          key: const Key('onboarding-reminder-sound'),
+          value: on,
+          onChanged: (_) => onToggle(),
+          title: Text(l10n.onboardingSoundSwitch),
+        ),
+      ),
+    );
+  }
+}
+
 class _ExactRemindersStep extends StatelessWidget {
   const _ExactRemindersStep();
 

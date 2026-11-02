@@ -58,7 +58,7 @@ Future<void> warmAudioCatalog(BuildContext context, WidgetRef ref) async {
     if (!context.mounted) return;
     final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final people = groupRecitersByPerson(reciters);
+    final people = peopleWithPortraitsFirst(groupRecitersByPerson(reciters));
     // The tab's width (the page padding is 16 on each side) gives the size
     // its cards decode at; a guess here would decode every face twice.
     final screen = MediaQuery.sizeOf(context);
@@ -113,6 +113,14 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
   var _refreshingReciters = false;
   var _showAllReciters = false;
   String _reciterQuery = '';
+  ({
+    List<Reciter> reciters,
+    List<Recitation> recitations,
+    String style,
+    ReciterSearch search,
+    Set<String> fullPeople,
+  })?
+  _lastCatalogSearch;
   var _playRequest = 0;
   var _refreshRequest = 0;
 
@@ -265,6 +273,53 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     );
   }
 
+  /// The people with a recording in [style], ready to search. The catalog
+  /// changes rarely and this tab rebuilds with every player tick, so this
+  /// reuses the last answer rather than walking the catalog each time.
+  ({ReciterSearch search, Set<String> fullPeople}) _catalogSearch(
+    List<Reciter> reciters,
+    List<Recitation> recitations,
+    String style,
+  ) {
+    final last = _lastCatalogSearch;
+    if (last != null &&
+        identical(last.reciters, reciters) &&
+        identical(last.recitations, recitations) &&
+        last.style == style) {
+      return (search: last.search, fullPeople: last.fullPeople);
+    }
+    final reciterIds = <String>{
+      for (final recitation in recitations)
+        if (recitation.style == style &&
+            recitation.supports(AudioRecitationRole.listening))
+          recitation.reciter.id,
+    };
+    final search = ReciterSearch(
+      peopleWithPortraitsFirst(
+        groupRecitersByPerson(reciters)
+            .where(
+              (person) => person.sources.any(
+                (source) => reciterIds.contains(source.id),
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+    final fullPeople = <String>{
+      for (final recitation in recitations)
+        if (recitation.supports(AudioRecitationRole.ayahPlayback))
+          reciterPersonKey(recitation.reciter),
+    };
+    _lastCatalogSearch = (
+      reciters: reciters,
+      recitations: recitations,
+      style: style,
+      search: search,
+      fullPeople: fullPeople,
+    );
+    return (search: search, fullPeople: fullPeople);
+  }
+
   Widget _buildReciterCatalog({
     required List<Reciter> reciters,
     required List<Recitation> recitations,
@@ -279,7 +334,6 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
         title: context.l10n.noAudio,
       );
     }
-    final people = groupRecitersByPerson(reciters);
     final styles = orderedRecitationStyles(
       recitations.where((item) => item.supports(AudioRecitationRole.listening)),
     );
@@ -292,13 +346,9 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
     final selectedStyle = styles.contains(_selectedStyle)
         ? _selectedStyle
         : styles.first;
-    final visiblePeople = people
-        .where(
-          (person) =>
-              recitationForPersonStyle(person, recitations, selectedStyle) !=
-              null,
-        )
-        .toList(growable: false);
+    final catalog = _catalogSearch(reciters, recitations, selectedStyle);
+    final search = catalog.search;
+    final visiblePeople = search.people;
     if (visiblePeople.isEmpty) {
       return IqroStatusBanner(
         icon: Icons.volume_off_outlined,
@@ -314,9 +364,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
               ? preferredPersonKey
               : reciterPersonKey(player.reciter!)
         : preferredPersonKey;
-    final foundPeople = visiblePeople
-        .where((person) => reciterMatchesQuery(person, _reciterQuery))
-        .toList(growable: false);
+    final foundPeople = search.find(_reciterQuery);
     // A GridView inside the page builds every card at once, so hundreds of
     // reciters open a short list first; the search still reads all of them.
     final shownPeople = _showAllReciters || _reciterQuery.trim().isNotEmpty
@@ -391,7 +439,24 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
           ),
           onChanged: (value) => setState(() => _reciterQuery = value),
           textInputAction: TextInputAction.search,
+          // Lifts the field far enough that results stay above the keyboard.
+          scrollPadding: const EdgeInsets.only(bottom: 320),
         ),
+        if (catalog.fullPeople.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              const _ReciterFullBadge(),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  context.l10n.fullReciterHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
         if (foundPeople.isEmpty)
           IqroStatusBanner(
@@ -429,6 +494,7 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
                   portraitSize: grid.portrait,
                   locale: locale,
                   active: active,
+                  full: catalog.fullPeople.contains(person.key),
                   loading: _loadingTrack && _loadingPersonKey == person.key,
                   portraitUrl: resolveReciterPortraitUrl(
                     person.portraitSource,
@@ -906,6 +972,7 @@ class _ReciterCard extends StatelessWidget {
     required this.portraitSize,
     required this.locale,
     required this.active,
+    required this.full,
     required this.loading,
     required this.portraitUrl,
     required this.onTap,
@@ -915,6 +982,7 @@ class _ReciterCard extends StatelessWidget {
   final double portraitSize;
   final String locale;
   final bool active;
+  final bool full;
   final bool loading;
   final String? portraitUrl;
   final VoidCallback? onTap;
@@ -930,7 +998,11 @@ class _ReciterCard extends StatelessWidget {
       child: IqroCard(
         onTap: onTap,
         color: active ? colorScheme.primaryContainer : null,
-        borderColor: active ? colorScheme.primary : context.iqroColors.line,
+        borderColor: active
+            ? colorScheme.primary
+            : full
+            ? context.iqroColors.gold
+            : context.iqroColors.line,
         padding: const EdgeInsets.fromLTRB(
           _cardSidePadding,
           10,
@@ -943,6 +1015,7 @@ class _ReciterCard extends StatelessWidget {
               size: portraitSize,
               portraitUrl: portraitUrl,
               active: active,
+              full: full,
               loading: loading,
             ),
             const SizedBox(height: 9),
@@ -975,17 +1048,43 @@ class _ReciterCard extends StatelessWidget {
   }
 }
 
+/// Marks a reciter who also plays in the Mushaf and Memorization.
+class _ReciterFullBadge extends StatelessWidget {
+  const _ReciterFullBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: context.iqroColors.gold,
+        border: Border.all(color: colorScheme.surface, width: 2),
+      ),
+      child: Icon(
+        Icons.menu_book_rounded,
+        size: 13,
+        color: colorScheme.surface,
+      ),
+    );
+  }
+}
+
 class _ReciterPortrait extends StatelessWidget {
   const _ReciterPortrait({
     required this.size,
     required this.portraitUrl,
     required this.active,
+    required this.full,
     required this.loading,
   });
 
   final double size;
   final String? portraitUrl;
   final bool active;
+  final bool full;
   final bool loading;
 
   @override
@@ -1004,6 +1103,12 @@ class _ReciterPortrait extends StatelessWidget {
               selected: active,
             ),
           ),
+          if (full)
+            const PositionedDirectional(
+              start: -1,
+              bottom: -1,
+              child: _ReciterFullBadge(),
+            ),
           PositionedDirectional(
             end: -1,
             bottom: -1,

@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
+import '../../core/platform/notification_settings.dart';
 import '../prayer/prayer_places.dart';
 import '../prayer/prayer_repository.dart';
 import '../reminders/reminder_controller.dart';
@@ -66,6 +67,14 @@ abstract interface class OnboardingServices {
   Future<bool> needsExactReminderAccess();
 
   Future<bool> requestExactReminders();
+
+  /// Prayer reminders that are allowed and meant to sound.
+  Future<bool> soundingPrayerReminders();
+
+  /// False when a setting keeps reminders silent.
+  Future<bool> reminderSoundAllowed();
+
+  Future<void> openNotificationSettings();
 }
 
 final onboardingServicesProvider = Provider<OnboardingServices>(
@@ -188,6 +197,22 @@ class AppOnboardingServices implements OnboardingServices {
   }
 
   @override
+  Future<bool> soundingPrayerReminders() async {
+    // On launch the session is still loading; a device without an account
+    // times out here rather than getting one for the sake of this check.
+    await _accountBound();
+    await _ref.read(reminderProvider.notifier).reload();
+    final state = _ref.read(reminderProvider);
+    return state.permission == ReminderPermission.granted &&
+        state.rules.any(
+          (rule) =>
+              rule.type == ReminderType.prayer &&
+              rule.isEnabled &&
+              rule.signal == ReminderSignal.sound,
+        );
+  }
+
+  @override
   Future<ReminderPermission> requestNotifications() => _ref
       .read(reminderProvider.notifier)
       .requestPermission(exactAlarms: false);
@@ -205,22 +230,25 @@ class AppOnboardingServices implements OnboardingServices {
   /// and wait for the reminder controller bound to it.
   Future<ReminderController> _accountReminders() async {
     await _ref.read(localDatabaseProvider).captureAccount();
-    if (_ref.read(activeAccountScopeKeyProvider) == null) {
-      final bound = Completer<void>();
-      final subscription = _ref.listen<AccountScopeKey?>(
-        activeAccountScopeKeyProvider,
-        (_, key) {
-          if (key != null && !bound.isCompleted) bound.complete();
-        },
-        fireImmediately: true,
-      );
-      try {
-        await bound.future.timeout(const Duration(seconds: 10));
-      } finally {
-        subscription.close();
-      }
-    }
+    await _accountBound();
     return _ref.read(reminderProvider.notifier);
+  }
+
+  Future<void> _accountBound() async {
+    if (_ref.read(activeAccountScopeKeyProvider) != null) return;
+    final bound = Completer<void>();
+    final subscription = _ref.listen<AccountScopeKey?>(
+      activeAccountScopeKeyProvider,
+      (_, key) {
+        if (key != null && !bound.isCompleted) bound.complete();
+      },
+      fireImmediately: true,
+    );
+    try {
+      await bound.future.timeout(const Duration(seconds: 10));
+    } finally {
+      subscription.close();
+    }
   }
 
   @override
@@ -235,4 +263,10 @@ class AppOnboardingServices implements OnboardingServices {
     if (granted) await _ref.read(reminderProvider.notifier).replan();
     return granted;
   }
+
+  @override
+  Future<bool> reminderSoundAllowed() => NotificationSettings.soundAllowed();
+
+  @override
+  Future<void> openNotificationSettings() => NotificationSettings.open();
 }

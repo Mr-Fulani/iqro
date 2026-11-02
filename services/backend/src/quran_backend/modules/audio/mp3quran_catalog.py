@@ -31,6 +31,7 @@ import subprocess
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Protocol
 
 from django.core.exceptions import ValidationError
@@ -49,6 +50,11 @@ from quran_backend.modules.audio.models import (
     RecitationPublicationStatus,
     RecitationStyle,
     Reciter,
+)
+from quran_backend.modules.audio.mp3quran_reciter_profiles import (
+    MP3QURAN_RECITER_BIOGRAPHIES,
+    MP3QURAN_RECITER_ENGLISH_NAMES,
+    MP3QURAN_RECITER_NAMES,
 )
 from quran_backend.modules.audio.mp3quran_timings import (
     MP3QURAN_API_BASE,
@@ -219,6 +225,11 @@ def _folder(url: str) -> str:
     return url if url.endswith("/") else f"{url}/"
 
 
+def _usable_name(name: str, fallback: str) -> str:
+    # A few MP3Quran translations are page keywords: "Коран,Аудио,Библиотека,MP3".
+    return fallback if not name.strip() or "," in name else " ".join(name.split())
+
+
 def read_mp3quran_readings(source: Mp3QuranCatalogSource) -> list[Reading]:
     names = {
         language: {int(row["id"]): str(row.get("name") or "") for row in source.reciters(language)}
@@ -247,8 +258,8 @@ def read_mp3quran_readings(source: Mp3QuranCatalogSource) -> list[Reading]:
                     moshaf_id=int(moshaf["id"]),
                     name_ar=str(row.get("name") or ""),
                     name_en=name_en,
-                    name_ru=names["ru"].get(reciter_key) or name_en,
-                    name_tr=names["tr"].get(reciter_key) or name_en,
+                    name_ru=_usable_name(names["ru"].get(reciter_key, ""), name_en),
+                    name_tr=_usable_name(names["tr"].get(reciter_key, ""), name_en),
                     folder_url=folder_url,
                     style=_style_of(moshaf_name),
                     hafs=_is_hafs(moshaf_name),
@@ -355,12 +366,14 @@ def _create_draft(
     files: list[Any],
 ) -> RecitationEdition:
     if reciter is None:
+        code = _reciter_code(reading)
+        name_ru, name_tr = MP3QURAN_RECITER_NAMES.get(code, (reading.name_ru, reading.name_tr))
         reciter = Reciter.objects.create(
-            code=_reciter_code(reading),
+            code=code,
             name_ar=reading.name_ar,
-            name_en=reading.name_en,
-            name_ru=reading.name_ru,
-            name_tr=reading.name_tr,
+            name_en=MP3QURAN_RECITER_ENGLISH_NAMES.get(code, reading.name_en),
+            name_ru=name_ru,
+            name_tr=name_tr,
         )
     assert reading.style is not None
     recitation = RecitationEdition.objects.create(
@@ -428,6 +441,67 @@ def import_reading(
     except ValidationError as exc:
         raise Mp3QuranCatalogError(" ".join(exc.messages)) from exc
     return ImportedReading(recitation, timed, note)
+
+
+def apply_reciter_profiles() -> list[str]:
+    """Write the curated names and biographies; returns the reciters that changed."""
+    changed: list[str] = []
+    for reciter in Reciter.objects.filter(code__in=MP3QURAN_RECITER_NAMES):
+        name_ru, name_tr = MP3QURAN_RECITER_NAMES[reciter.code]
+        values = {
+            "name_en": MP3QURAN_RECITER_ENGLISH_NAMES.get(reciter.code, reciter.name_en),
+            "name_ru": name_ru,
+            "name_tr": name_tr,
+            **MP3QURAN_RECITER_BIOGRAPHIES.get(reciter.code, {}),
+        }
+        fields = [name for name, value in values.items() if getattr(reciter, name) != value]
+        if not fields:
+            continue
+        with transaction.atomic():
+            for name in fields:
+                setattr(reciter, name, values[name])
+            reciter.save(update_fields=[*fields, "updated_at"])
+            recitation = reciter.recitations.filter(
+                status=RecitationPublicationStatus.PUBLISHED
+            ).first()
+            if recitation is not None:
+                transaction.on_commit(partial(_announce, recitation))
+        changed.append(reciter.code)
+    return changed
+
+
+def timing_recovery_candidates() -> list[RecitationEdition]:
+    """Readings this import left on the Audio tab although they have all 114 surahs.
+
+    A source checksum marks them as ours: recitations an editor uploaded have
+    none and keep the provenance rules of their own.
+    """
+    return [
+        recitation
+        for recitation in RecitationEdition.objects.filter(
+            status=RecitationPublicationStatus.PUBLISHED,
+            listening_only=True,
+            source_name=SOURCE_NAME,
+        ).exclude(source_checksum_sha256="")
+        if recitation.tracks.filter(
+            scope=AudioTrackScope.SURAH, timing_version__isnull=True
+        ).count()
+        == SURAH_COUNT
+    ]
+
+
+def recover_timings(recitation: RecitationEdition, source: Mp3QuranCatalogSource) -> None:
+    """Add the timings and open the reading to the Mushaf and Memorization, or change nothing."""
+    prepared = prepare_mp3quran_timings(recitation, source)
+    try:
+        with transaction.atomic():
+            import_mp3quran_timings(prepared)
+            recitation.refresh_from_db()
+            recitation.listening_only = False
+            recitation.save()
+            transaction.on_commit(lambda: _announce(recitation))
+    except ValidationError as exc:
+        raise Mp3QuranCatalogError(" ".join(exc.messages)) from exc
 
 
 def _without_timings(recitation: RecitationEdition) -> RecitationEdition:

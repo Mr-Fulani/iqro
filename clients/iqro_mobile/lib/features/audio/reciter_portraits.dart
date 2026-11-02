@@ -23,6 +23,7 @@ const _fallbackPortraits = <String, String>{
   'qf-175-abdullah-hamad-abu-sharida':
       '/reciters/abdullah-hamad-abu-sharida.webp',
   'qf-176-ahmed-tahoun': '/reciters/ahmed-tahoun.webp',
+  'qf-176-ahmed-abdelhamid-tahoun': '/reciters/ahmed-tahoun.webp',
 };
 
 String? resolveReciterPortraitUrl(
@@ -43,6 +44,20 @@ String? resolveReciterPortraitUrl(
   return fallbackPath == null
       ? null
       : Uri.parse(apiBaseUrl).resolve(fallbackPath).toString();
+}
+
+/// People with a portrait open the list, each group in its own order.
+List<ReciterPerson> peopleWithPortraitsFirst(List<ReciterPerson> people) {
+  bool hasPortrait(ReciterPerson person) {
+    final source = person.portraitSource;
+    return source.portraitUrl?.trim().isNotEmpty == true ||
+        _fallbackPortraits.containsKey(source.slug);
+  }
+
+  return <ReciterPerson>[
+    ...people.where(hasPortrait),
+    ...people.where((person) => !hasPortrait(person)),
+  ];
 }
 
 Reciter reciterWithPersonPortrait(

@@ -696,6 +696,8 @@ const en: Messages = {
   "audio.reciter": "Reciter (Qari)",
   "audio.searchReciters": "Find a reciter",
   "audio.noRecitersFound": "No reciter found",
+  "audio.showAllReciters": "Show all: {count}",
+  "audio.fullReciterHint": "Also in the Mushaf and Memorize",
   "audio.editionStyle": "Edition and recitation style",
   "audio.tracksShort": "Tracks: {count}",
   "audio.codeCountry": "Code: {code} · Country: {country}",

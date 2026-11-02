@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/reminders/reminder_models.dart';
+
 enum ReaderMode { text, mushaf }
 
 enum DailyUnit { minutes, pages, ayahs }
@@ -18,6 +20,7 @@ const minReaderAyahSpacing = 4.0;
 const maxReaderAyahSpacing = 20.0;
 const defaultPreferredAudioQuality = 'auto';
 const defaultPlayerBackgroundId = 'bundled:desert-night';
+const defaultReminderAdhan = ReminderAdhan.makkah;
 const supportedAudioQualityPreferences = <String>{
   defaultPreferredAudioQuality,
   'economy',
@@ -49,6 +52,8 @@ class AppPreferences {
     this.memorizationDefaultRecitationId,
     this.preferredAudioQuality = defaultPreferredAudioQuality,
     this.playerBackgroundId = defaultPlayerBackgroundId,
+    this.reminderAdhan = defaultReminderAdhan,
+    this.reminderSoundChecked = false,
   });
 
   const AppPreferences.defaults()
@@ -73,7 +78,9 @@ class AppPreferences {
       mushafRecitationId = null,
       memorizationDefaultRecitationId = null,
       preferredAudioQuality = defaultPreferredAudioQuality,
-      playerBackgroundId = defaultPlayerBackgroundId;
+      playerBackgroundId = defaultPlayerBackgroundId,
+      reminderAdhan = defaultReminderAdhan,
+      reminderSoundChecked = false;
 
   final bool onboardingComplete;
   final String locale;
@@ -102,6 +109,10 @@ class AppPreferences {
   final String? memorizationDefaultRecitationId;
   final String preferredAudioQuality;
   final String playerBackgroundId;
+  final ReminderAdhan reminderAdhan;
+
+  /// The reminder sound check has run on this device.
+  final bool reminderSoundChecked;
 
   AppPreferences copyWith({
     bool? onboardingComplete,
@@ -126,6 +137,8 @@ class AppPreferences {
     String? memorizationDefaultRecitationId,
     String? preferredAudioQuality,
     String? playerBackgroundId,
+    ReminderAdhan? reminderAdhan,
+    bool? reminderSoundChecked,
   }) {
     final nextListening =
         listeningRecitationId ??
@@ -159,6 +172,8 @@ class AppPreferences {
       preferredAudioQuality:
           preferredAudioQuality ?? this.preferredAudioQuality,
       playerBackgroundId: playerBackgroundId ?? this.playerBackgroundId,
+      reminderAdhan: reminderAdhan ?? this.reminderAdhan,
+      reminderSoundChecked: reminderSoundChecked ?? this.reminderSoundChecked,
     );
   }
 }
@@ -278,6 +293,13 @@ class PreferencesStore {
       playerBackgroundId: _playerBackground(
         _preferences.getString('player_background_id'),
       ),
+      reminderAdhan:
+          ReminderAdhan.values.asNameMap()[_preferences.getString(
+            'reminder_adhan',
+          )] ??
+          defaultReminderAdhan,
+      reminderSoundChecked:
+          _preferences.getBool('reminder_sound_checked') ?? false,
     );
   }
 
@@ -339,6 +361,11 @@ class PreferencesStore {
         ),
       _preferences.setString('audio_quality', value.preferredAudioQuality),
       _preferences.setString('player_background_id', value.playerBackgroundId),
+      _preferences.setString('reminder_adhan', value.reminderAdhan.name),
+      _preferences.setBool(
+        'reminder_sound_checked',
+        value.reminderSoundChecked,
+      ),
     ]);
   }
 

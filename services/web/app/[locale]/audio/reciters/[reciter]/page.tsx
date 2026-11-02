@@ -39,7 +39,7 @@ function parseParams(params: RouteParams): { locale: Locale; reciter: string } {
 async function publishedReciter(reciter: string) {
   try {
     const published = await getPublishedReciter(reciter);
-    return [published, await getPublishedRecitationsForPerson(published.slug)] as const;
+    return [published, await getPublishedRecitationsForPerson(published)] as const;
   } catch (error) {
     if (error instanceof PublicContentNotFoundError) notFound();
     throw error;

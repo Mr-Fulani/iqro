@@ -106,6 +106,40 @@ void main() {
     });
   });
 
+  test('only a sounding reminder at the prayer time calls the adhan', () {
+    ReminderRule rule({
+      ReminderType type = ReminderType.prayer,
+      int offset = 0,
+      ReminderSignal signal = ReminderSignal.sound,
+    }) => ReminderRule(
+      id: '01900000-0000-7000-8000-000000000002',
+      type: type,
+      schedule: ReminderSchedule.prayer(
+        prayerEvent: 'fajr',
+        prayerOffsetMinutes: offset,
+      ),
+      weekdaysMask: 127,
+      timezoneMode: ReminderTimezoneMode.deviceLocal,
+      signal: signal,
+      isEnabled: true,
+      revision: 0,
+      clientUpdatedAt: DateTime.utc(2026, 11, 1),
+    );
+
+    const selected = ReminderAdhan.madinah;
+    expect(rule().adhanFor(selected), ReminderAdhan.madinah);
+    expect(rule(offset: -10).adhanFor(selected), ReminderAdhan.none);
+    expect(
+      rule(signal: ReminderSignal.vibration).adhanFor(selected),
+      ReminderAdhan.none,
+    );
+    expect(
+      rule(type: ReminderType.quranReading).adhanFor(selected),
+      ReminderAdhan.none,
+    );
+    expect(rule().adhanFor(ReminderAdhan.none), ReminderAdhan.none);
+  });
+
   test('weekly planner preserves local wall-clock time across DST', () {
     final location = tz.getLocation('Europe/Berlin');
     final beforeDst = tz.TZDateTime(location, 2026, 3, 23, 9);

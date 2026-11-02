@@ -654,6 +654,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reciterNotFound => 'No reciter found';
 
   @override
+  String get fullReciterHint => 'Also in the Mushaf and Memorize';
+
+  @override
   String showAllReciters(int count) {
     return 'Show all: $count';
   }
@@ -1676,6 +1679,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get prayerReminders => 'Prayer reminders';
+
+  @override
+  String get adhan => 'Adhan';
+
+  @override
+  String get adhanMakkah => 'Makkah';
+
+  @override
+  String get adhanMadinah => 'Madinah';
+
+  @override
+  String get adhanSystemSound => 'Standard';
+
+  @override
+  String get adhanHint =>
+      'A short adhan at the prayer time. Your phone’s sound needs to be on.';
 
   @override
   String get prayerReminderSetup =>
@@ -3199,6 +3218,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingKeepApproximate => 'Keep approximate time';
+
+  @override
+  String get onboardingSoundTitle => 'Adhan sound';
+
+  @override
+  String get onboardingSoundBody =>
+      'Notification sound is off. Without it there will be no adhan.';
+
+  @override
+  String get onboardingSoundSwitch => 'Notification sound';
+
+  @override
+  String get onboardingSoundOn => 'Sound is on, you will hear the adhan.';
 
   @override
   String get onboardingAnalyticsCounts =>

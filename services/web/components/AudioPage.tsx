@@ -1,7 +1,15 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   api,
   AudioTrack,
@@ -10,7 +18,7 @@ import {
 } from "../lib/api";
 import type { Surah } from "../lib/api";
 import type { PublishedAudioInitialData } from "../lib/public-content";
-import { ReciterAvatar } from "./ReciterAvatar";
+import { ReciterAvatar, ReciterFullBadge } from "./ReciterAvatar";
 import { heldSurahs } from "../lib/listening-queue";
 import type { ListeningQueue } from "../lib/listening-queue";
 import { formatClock, reciterName as localizedReciterName } from "../lib/audio-content";
@@ -18,11 +26,12 @@ import { useAudioPlayer } from "../lib/audio-player-context";
 import { useI18n } from "../lib/i18n-context";
 import {
   groupRecitersByPerson,
+  recitersWithPortraitsFirst,
   latestRecitationsByVariant,
   recitationHasSurah,
   recitationStyleLabel,
   recitationVariantLabel,
-  reciterMatchesQuery,
+  reciterSearch,
   reciterPersonKey,
   reciterSourcesForPerson,
 } from "../lib/reciter-catalog";
@@ -38,6 +47,8 @@ import { SurahNameArt } from "./SurahNameArt";
 
 // useSearchParams() renders its subtree in the browser only, so it stays out of
 // the server-rendered catalog and reports the requested reciter after hydration.
+const COLLAPSED_RECITER_COUNT = 32;
+
 function RequestedReciter({ onChange }: { onChange: (reciterId: string | null) => void }) {
   const reciterId = useSearchParams().get("reciter");
   useEffect(() => onChange(reciterId), [onChange, reciterId]);
@@ -60,10 +71,12 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
   } = useAudioPlayer();
   const [reciterSources, setReciterSources] = useState<Reciter[]>(initialData?.reciters ?? []);
   const [reciters, setReciters] = useState<Reciter[]>(
-    () => groupRecitersByPerson(initialData?.reciters ?? []),
+    () => recitersWithPortraitsFirst(groupRecitersByPerson(initialData?.reciters ?? [])),
   );
   const [selectedReciterId, setSelectedReciterId] = useState<string>(initialData?.reciterId ?? "");
   const [reciterQuery, setReciterQuery] = useState("");
+  const deferredReciterQuery = useDeferredValue(reciterQuery);
+  const [showAllReciters, setShowAllReciters] = useState(false);
   const [selectionReady, setSelectionReady] = useState(false);
   const [recitations, setRecitations] = useState<Recitation[]>(initialData?.recitations ?? []);
   const [selectedRecitationId, setSelectedRecitationId] = useState<string>(
@@ -82,7 +95,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
     if (requestedReciterId === undefined) return;
     let cancelled = false;
     const applyCatalog = (availableReciters: Reciter[]) => {
-      const people = groupRecitersByPerson(availableReciters);
+      const people = recitersWithPortraitsFirst(groupRecitersByPerson(availableReciters));
       setReciterSources(availableReciters);
       setReciters(people);
       if (people.length > 0) {
@@ -257,10 +270,22 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
     setSelectedRecitationId(recitationId);
   }, [recitations, rememberCurrentTrackFor, selectedRecitationId, selectedReciterId]);
 
-  const shownReciters = useMemo(
-    () => reciters.filter((reciter) => reciterMatchesQuery(reciter, reciterQuery)),
-    [reciterQuery, reciters],
+  const searchReciters = useMemo(() => reciterSearch(reciters), [reciters]);
+  const foundReciters = useMemo(
+    () => searchReciters(deferredReciterQuery),
+    [deferredReciterQuery, searchReciters],
   );
+  // Hundreds of cards would weigh down the page, so it opens a short list;
+  // the search still reads all of them. The chosen reciter stays in view, and
+  // the count stays the same so that the last row of the grid is full.
+  const shownReciters = useMemo(() => {
+    if (showAllReciters || deferredReciterQuery.trim()) return foundReciters;
+    const shown = foundReciters.slice(0, COLLAPSED_RECITER_COUNT);
+    const selected = foundReciters.find((reciter) => reciter.id === selectedReciterId);
+    return selected && !shown.includes(selected)
+      ? [selected, ...shown.slice(0, COLLAPSED_RECITER_COUNT - 1)]
+      : shown;
+  }, [deferredReciterQuery, foundReciters, selectedReciterId, showAllReciters]);
 
   const reciterControlOptions = useMemo(() => reciters.map((reciter) => ({
     value: reciter.id,
@@ -487,14 +512,21 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
           />
         ) : null}
 
+        {reciters.some((reciter) => reciter.full_support) ? (
+          <p className="reciter-full-hint">
+            <ReciterFullBadge />
+            {t("audio.fullReciterHint")}
+          </p>
+        ) : null}
+
         {shownReciters.length > 0 ? (
-          <div className="reciter-grid">
+          <div className={`reciter-grid${shownReciters.length < foundReciters.length ? " is-collapsed" : ""}`}>
             {shownReciters.map((reciter, index) => {
               const name = reciterName(reciter) || reciter.name_en;
               const isSelected = reciter.id === selectedReciterId;
               return (
                 <button
-                  className={`reciter-card audio-reciter-card${isSelected ? " is-selected" : ""}`}
+                  className={`reciter-card audio-reciter-card${reciter.full_support ? " is-full" : ""}${isSelected ? " is-selected" : ""}`}
                   type="button"
                   key={reciter.id}
                   onClick={() => selectReciter(reciter.id)}
@@ -507,6 +539,7 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
                     name={name}
                     portraitUrl={reciterPortraitUrl(reciter)}
                     tone={index}
+                    full={reciter.full_support}
                   />
                   <span className="reciter-card-copy">
                     <strong>{name}</strong>
@@ -523,6 +556,16 @@ export default function AudioPage({ initialData }: { initialData?: PublishedAudi
                 </button>
               );
             })}
+            {shownReciters.length < foundReciters.length ? (
+              <button
+                className="btn btn-secondary reciter-show-all"
+                data-testid="audio-show-all-reciters"
+                onClick={() => setShowAllReciters(true)}
+                type="button"
+              >
+                {t("audio.showAllReciters", { count: foundReciters.length })}
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className="reciter-empty" aria-live="polite">
