@@ -439,6 +439,8 @@ class _AudioScreenState extends ConsumerState<AudioScreen> {
           ),
           onChanged: (value) => setState(() => _reciterQuery = value),
           textInputAction: TextInputAction.search,
+          // Lifts the field far enough that results stay above the keyboard.
+          scrollPadding: const EdgeInsets.only(bottom: 320),
         ),
         if (catalog.fullPeople.isNotEmpty) ...<Widget>[
           const SizedBox(height: 10),
