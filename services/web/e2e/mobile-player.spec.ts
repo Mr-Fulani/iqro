@@ -559,14 +559,22 @@ test("an open bar folds on another page, and on the home page it shows how it fo
   const bar = page.getByTestId("mobile-audio-player");
   await unroll(bar);
   await expect(bar).toHaveClass(/is-bar/);
+  // The slide aside lasts 280 ms, shorter than an assertion's polling: the page keeps every class the bar wears.
+  await bar.evaluate((element) => {
+    const seen: string[] = [];
+    (window as unknown as { barClasses: string[] }).barClasses = seen;
+    new MutationObserver(() => seen.push(element.className)).observe(element, { attributeFilter: ["class"] });
+  });
+  const woreNudge = () =>
+    page.evaluate(() => (window as unknown as { barClasses: string[] }).barClasses.some((name) => name.includes("is-hint-nudge")));
   // Another page: the open bar folds into the round button.
   await page.locator("header .brand-link").click();
   await expect(page).toHaveURL(/\/ru$/);
   await expect(bar).toHaveClass(/is-(collapsing|collapsed)(\s|$)/);
   // After a pause on Home it opens, slides aside as if swiped and folds again.
   await expect(bar).toHaveClass(/is-bar/, { timeout: 6_000 });
-  await expect(bar).toHaveClass(/is-hint-nudge/, { timeout: 4_000 });
   await expect(bar).toHaveClass(/is-collapsed/, { timeout: 4_000 });
+  expect(await woreNudge()).toBe(true);
   await expect(bar).not.toHaveClass(/is-hint-nudge/);
   const stored = async () =>
     JSON.parse((await page.evaluate(() => window.localStorage.getItem("iqro_player_hint_v2"))) ?? "{}") as { shown?: number };
