@@ -5,7 +5,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { formatClock } from "../lib/audio-content";
 import { DEFAULT_RECITER_PORTRAIT } from "../lib/reciter-portraits";
 import { useI18n } from "../lib/i18n-context";
-import { sheetDragOffset, swipeDismisses, swipeExpands } from "../lib/mini-player";
+import { sheetDragOffset, swipeDismisses } from "../lib/mini-player";
 import { playerBackgroundTitle } from "../lib/player-backgrounds";
 import { PlayerBackgroundPicker } from "./PlayerBackground";
 import { PlayerEqualizer } from "./PlayerEqualizer";
@@ -20,7 +20,7 @@ import type {
 /*
  * The phone player, as clients/iqro_mobile/lib/features/audio/mini_player.dart and
  * player_screen.dart draw it: a 66 px bar with the portrait, the title and three
- * transport buttons that a swipe down rolls into a round button; a full-screen player with the 210 px
+ * transport buttons that a swipe in any direction rolls into a round button; a full-screen player with the 210 px
  * portrait, the seek bar, five transport buttons and a grid of option tiles.
  * SegmentedAudioPlayer keeps the <audio> element and the playback logic and
  * renders these parts in its slots; lib/audio-player-context loads this module
@@ -127,7 +127,7 @@ function Summary({ engine, mobile }: MobilePlayerPartProps) {
             <span className={problem ? "is-error" : undefined}>{problem ?? artist}</span>
           </span>
         </button>
-        {/* Hidden: the bar collapses with a swipe down. Screen readers and the keyboard
+        {/* Hidden: the bar collapses with a swipe. Screen readers and the keyboard
             still reach it, and it shows while focused. */}
         <button type="button" className="mobile-player-collapse" onClick={mobile.onCollapse} aria-label={t("player.hideBar")}>
           <Icon name="collapse" size={24} />
@@ -477,29 +477,11 @@ function FullHeader({ subtitle, hidden, onClose, onDragOffset, onDismiss }: Mobi
   );
 }
 
-/** The 60 px round button the bar collapses to; a tap or a swipe up brings the bar back. */
+/** The 60 px round button the bar collapses to; a tap brings the bar back. */
 function CollapsedButton({ playing, onExpand }: { playing: boolean; onExpand: () => void }) {
   const { t } = useI18n();
-  const drag = useRef<Drag | null>(null);
   return (
-    <button
-      type="button"
-      className="mobile-player-fab"
-      aria-label={t("player.showBar")}
-      onClick={onExpand}
-      onPointerDown={(event) => {
-        if (event.button === 0) drag.current = { pointerId: event.pointerId, startY: event.clientY, startedAt: performance.now() };
-      }}
-      onPointerUp={(event) => {
-        const current = drag.current;
-        drag.current = null;
-        if (!current || event.pointerId !== current.pointerId) return;
-        if (swipeExpands({ deltaY: event.clientY - current.startY, durationMs: performance.now() - current.startedAt })) onExpand();
-      }}
-      onPointerCancel={() => {
-        drag.current = null;
-      }}
-    >
+    <button type="button" className="mobile-player-fab" aria-label={t("player.showBar")} onClick={onExpand}>
       <Icon name={playing ? "pause" : "play"} size={playing ? 34 : 38} directional />
     </button>
   );

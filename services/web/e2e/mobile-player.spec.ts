@@ -211,9 +211,25 @@ for (const phone of PHONES) {
     await expect(bar.locator(".mobile-player-sheet-body")).toHaveAttribute("inert", "");
     await expectBodyIsTheButton(bar, roundButton);
     expect(await audio.evaluate((element) => (element as HTMLAudioElement).currentTime)).toBe(12.5);
-    // A swipe up brings the bar back.
+    // A swipe on the round button does nothing; a tap brings the bar back.
     await swipe(page, roundButton, -60);
+    await expect(bar).toHaveClass(/is-collapsed/);
+    await roundButton.click();
     await expect(roundButton).toHaveCount(0);
+    // A swipe sideways or up folds the bar too.
+    for (const [deltaX, deltaY] of [[-80, 0], [80, 0], [0, -60]] as const) {
+      await expect(bar).toHaveClass(/is-bar/);
+      await swipe(page, bar.locator(".mobile-player-titles"), deltaY, deltaX);
+      await expect(bar).toHaveClass(/is-(collapsing|collapsed)(\s|$)/);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await bar.getByRole("button", { name: "Показать панель плеера", exact: true }).click();
+    }
+    await expect(roundButton).toHaveCount(0);
+    // The swipes left nothing behind: the next tap on the bar opens the player.
+    await bar.locator(".mobile-player-titles").click();
+    await expect(page.getByRole("dialog", { name: "Сейчас играет" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(bar.locator(".mobile-player-sheet-body")).not.toHaveAttribute("inert", "");
     await expect(bar.getByRole("button", { name: "Открыть плеер", exact: true })).toBeVisible();
     // The keyboard still rolls it up: the hidden button shows while focused; a tap unrolls it.
@@ -496,11 +512,11 @@ test("the Arabic bar mirrors its layout and the full player stays within the scr
   await expect(bar.locator("audio")).toHaveAttribute("src", tracks[0].asset.url);
   const artwork = await box(bar.locator(".mobile-player-artwork"));
   const play = await box(bar.getByRole("button", { name: "إيقاف مؤقت", exact: true }));
-  const collapse = await box(bar.getByRole("button", { name: "إخفاء شريط المشغل", exact: true }));
-  // Portrait at the right edge, transport at the left.
+  const titles = await box(bar.locator(".mobile-player-titles"));
+  // Portrait at the right edge, then the title, transport at the left.
   expect(artwork.x).toBeGreaterThan(play.x);
-  expect(collapse.x).toBeLessThan(artwork.x);
-  expect(collapse.x).toBeGreaterThan(play.x);
+  expect(titles.x + titles.width).toBeLessThanOrEqual(artwork.x);
+  expect(titles.x).toBeGreaterThanOrEqual(play.x + play.width);
   await expect(bar.locator(".mobile-player-icon .is-directional").first()).toHaveCSS("transform", "matrix(-1, 0, 0, 1, 0, 0)");
   expect(await scrollWidth(page)).toBeLessThanOrEqual(390);
 
@@ -517,12 +533,38 @@ test("the Arabic bar mirrors its layout and the full player stays within the scr
   await bar.locator(".mobile-player-full-head").dispatchEvent("pointerup", { pointerId: 3, pointerType: "touch", isPrimary: true, button: 0, clientX: 200, clientY: 240 });
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  await bar.getByRole("button", { name: "إخفاء شريط المشغل", exact: true }).click();
+  // A swipe toward the round button's corner folds the bar in Arabic too.
+  await swipe(page, bar.locator(".mobile-player-titles"), 0, -80);
   const roundButtonLocator = bar.getByRole("button", { name: "إظهار شريط المشغل", exact: true });
   await expectBodyIsTheButton(bar, roundButtonLocator);
   const roundButton = await box(roundButtonLocator);
   expect(Math.abs(roundButton.x - 10)).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);
+});
+
+test("on the home page the bar shows once that it folds, and not again the same day", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/audio");
+  await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
+  const bar = page.getByTestId("mobile-audio-player");
+  await expect(bar).toHaveClass(/is-bar/);
+  await page.locator("header .brand-link").click();
+  await expect(page).toHaveURL(/\/ru$/);
+  // After a pause it rolls up into the round button and unrolls by itself.
+  await expect(bar).toHaveClass(/is-(collapsing|collapsed)(\s|$)/, { timeout: 6_000 });
+  await expect(bar).toHaveClass(/is-bar/, { timeout: 6_000 });
+  const stored = async () =>
+    JSON.parse((await page.evaluate(() => window.localStorage.getItem("iqro_player_hint_v1"))) ?? "{}") as { shown?: number };
+  expect((await stored()).shown).toBe(1);
+  // Back on the home page the same day: no second showing.
+  await page.locator(".mobile-navigation a[href='/ru/audio']").first().click();
+  await page.locator("header .brand-link").click();
+  await page.waitForTimeout(4_000);
+  await expect(bar).toHaveClass(/is-bar/);
+  expect((await stored()).shown).toBe(1);
+  // Folding it by hand ends the hint for good.
+  await swipe(page, bar.locator(".mobile-player-titles"), 60);
+  expect((await stored()).shown).toBe(3);
 });
 
 test("with reduced motion the bar and the full player switch without transitions", async ({ page }) => {

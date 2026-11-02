@@ -31,6 +31,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   late var _index = widget.initialIndex.clamp(0, 4);
+  Timer? _playerHint;
 
   @override
   void initState() {
@@ -43,7 +44,39 @@ class _AppShellState extends ConsumerState<AppShell> {
       unawaited(warmAudioCatalog(context, ref));
       unawaited(ref.read(surahHeaderFontProvider.future));
       unawaited(checkReminderSoundOnce(context, ref));
+      _playerHint = Timer(miniPlayerHintDelay, _showPlayerHint);
     });
+  }
+
+  @override
+  void dispose() {
+    _playerHint?.cancel();
+    super.dispose();
+  }
+
+  /// Once in a while the mini player folds and unfolds by itself on Home, so
+  /// people learn that a swipe folds it (mini_player.dart).
+  void _showPlayerHint() {
+    _playerHint = null;
+    if (!mounted || _index != 0 || widget.child != null) return;
+    if (MediaQuery.disableAnimationsOf(context)) return;
+    if (ModalRoute.of(context)?.isCurrent == false) return;
+    final now = DateTime.now();
+    try {
+      final preferences = ref.read(appPreferencesProvider);
+      if (!miniPlayerHintDue(
+        shown: preferences.playerHintsShown,
+        lastShownAt: preferences.playerHintShownAt,
+        now: now,
+      )) {
+        return;
+      }
+      unawaited(ref.read(appPreferencesProvider.notifier).notePlayerHint(now));
+    } on Object {
+      // Without stored preferences there is no telling how often it showed.
+      return;
+    }
+    _playerHint = showMiniPlayerHint(ref);
   }
 
   @override

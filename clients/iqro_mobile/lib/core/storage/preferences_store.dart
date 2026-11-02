@@ -28,6 +28,9 @@ const supportedAudioQualityPreferences = <String>{
   'high',
 };
 
+/// The mini player shows that it folds at most this many times.
+const miniPlayerHintLimit = 3;
+
 class AppPreferences {
   const AppPreferences({
     required this.onboardingComplete,
@@ -54,6 +57,8 @@ class AppPreferences {
     this.playerBackgroundId = defaultPlayerBackgroundId,
     this.reminderAdhan = defaultReminderAdhan,
     this.reminderSoundChecked = false,
+    this.playerHintsShown = 0,
+    this.playerHintShownAt,
   });
 
   const AppPreferences.defaults()
@@ -80,7 +85,9 @@ class AppPreferences {
       preferredAudioQuality = defaultPreferredAudioQuality,
       playerBackgroundId = defaultPlayerBackgroundId,
       reminderAdhan = defaultReminderAdhan,
-      reminderSoundChecked = false;
+      reminderSoundChecked = false,
+      playerHintsShown = 0,
+      playerHintShownAt = null;
 
   final bool onboardingComplete;
   final String locale;
@@ -114,6 +121,11 @@ class AppPreferences {
   /// The reminder sound check has run on this device.
   final bool reminderSoundChecked;
 
+  /// How often the mini player has shown that it folds; the limit once someone
+  /// has folded it by hand.
+  final int playerHintsShown;
+  final DateTime? playerHintShownAt;
+
   AppPreferences copyWith({
     bool? onboardingComplete,
     String? locale,
@@ -139,6 +151,8 @@ class AppPreferences {
     String? playerBackgroundId,
     ReminderAdhan? reminderAdhan,
     bool? reminderSoundChecked,
+    int? playerHintsShown,
+    DateTime? playerHintShownAt,
   }) {
     final nextListening =
         listeningRecitationId ??
@@ -174,6 +188,8 @@ class AppPreferences {
       playerBackgroundId: playerBackgroundId ?? this.playerBackgroundId,
       reminderAdhan: reminderAdhan ?? this.reminderAdhan,
       reminderSoundChecked: reminderSoundChecked ?? this.reminderSoundChecked,
+      playerHintsShown: playerHintsShown ?? this.playerHintsShown,
+      playerHintShownAt: playerHintShownAt ?? this.playerHintShownAt,
     );
   }
 }
@@ -300,6 +316,10 @@ class PreferencesStore {
           defaultReminderAdhan,
       reminderSoundChecked:
           _preferences.getBool('reminder_sound_checked') ?? false,
+      playerHintsShown: _preferences.getInt('player_hints_shown') ?? 0,
+      playerHintShownAt: DateTime.tryParse(
+        _preferences.getString('player_hint_shown_at') ?? '',
+      ),
     );
   }
 
@@ -366,6 +386,12 @@ class PreferencesStore {
         'reminder_sound_checked',
         value.reminderSoundChecked,
       ),
+      _preferences.setInt('player_hints_shown', value.playerHintsShown),
+      if (value.playerHintShownAt case final shownAt?)
+        _preferences.setString(
+          'player_hint_shown_at',
+          shownAt.toUtc().toIso8601String(),
+        ),
     ]);
   }
 

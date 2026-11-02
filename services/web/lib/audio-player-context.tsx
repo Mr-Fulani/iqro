@@ -36,8 +36,14 @@ import {
   MOBILE_PLAYER_MEDIA_QUERY,
   PLAYER_CONTROL_SELECTOR,
   SHEET_CLOSE_FALLBACK_MS,
+  PLAYER_HINT_DELAY_MS,
+  PLAYER_HINT_HOLD_MS,
+  PLAYER_HINT_LIMIT,
+  PLAYER_HINT_STORAGE_KEY,
   SWIPE_TAP_SLOP,
   miniPlayerReducer,
+  parsePlayerHint,
+  playerHintDue,
   rolledUp,
   sheetShown,
   swipeCollapses,
@@ -317,23 +323,58 @@ export function AudioPlayerProvider({
     dispatchView({ type: "toggle-controls" });
   };
 
-  // As in the app: a swipe down on the bar rolls it into the round button. The
-  // pointer is captured only once it moves, so a tap still reaches its button,
-  // and a drag that falls short is not taken for a tap.
-  const barSwipe = useRef<{ pointerId: number; startY: number; startedAt: number; moved: boolean } | null>(null);
+  // As in the app: a swipe on the bar in any direction rolls it into the round
+  // button. The pointer is captured only once it moves, so a tap still reaches
+  // its button, and a drag that falls short is not taken for a tap.
+  const barSwipe = useRef<{ pointerId: number; startX: number; startY: number; startedAt: number; moved: boolean } | null>(null);
   const dragWasSwipe = useRef(false);
+  // Once in a while on the home page the bar folds and unfolds by itself, so
+  // people learn that a swipe folds it; the same rule as the app (AppShell).
+  const viewRef = useRef(view);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+  const onHome = stripLocalePrefix(pathname) === "/";
+  const hasPlayback = request !== null;
+  useEffect(() => {
+    if (!mobile || !onHome || !hasPlayback || reduceMotion) return;
+    let holdTimer: ReturnType<typeof setTimeout> | undefined;
+    const startTimer = setTimeout(() => {
+      if (viewRef.current !== "bar") return;
+      const now = Date.now();
+      if (!playerHintDue(readPlayerHint(), now)) return;
+      const record = readPlayerHint();
+      writePlayerHint({ shown: record.shown + 1, lastShownAt: now });
+      dispatchView({ type: "collapse" });
+      holdTimer = setTimeout(() => {
+        // A tap or a swipe meanwhile wins.
+        if (rolledUp(viewRef.current)) dispatchView({ type: "expand" });
+      }, PLAYER_HINT_HOLD_MS);
+    }, PLAYER_HINT_DELAY_MS);
+    return () => {
+      clearTimeout(startTimer);
+      clearTimeout(holdTimer);
+    };
+  }, [hasPlayback, mobile, onHome, reduceMotion]);
+
   // While the bar still unrolls, a swipe rolls it straight back up, as a tap on the old button did.
   const barSwipeHandlers = mobile && (view === "bar" || view === "expanding")
     ? {
       onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
         if (event.button !== 0) return;
         dragWasSwipe.current = false;
-        barSwipe.current = { pointerId: event.pointerId, startY: event.clientY, startedAt: performance.now(), moved: false };
+        barSwipe.current = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          startedAt: performance.now(),
+          moved: false,
+        };
       },
       onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => {
         const swipe = barSwipe.current;
         if (!swipe || swipe.moved || event.pointerId !== swipe.pointerId) return;
-        if (Math.abs(event.clientY - swipe.startY) < SWIPE_TAP_SLOP) return;
+        if (Math.hypot(event.clientX - swipe.startX, event.clientY - swipe.startY) < SWIPE_TAP_SLOP) return;
         swipe.moved = true;
         try {
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -345,10 +386,20 @@ export function AudioPlayerProvider({
         const swipe = barSwipe.current;
         barSwipe.current = null;
         if (!swipe || event.pointerId !== swipe.pointerId) return;
-        const deltaY = event.clientY - swipe.startY;
+        // The click that follows this pointerup, if any, comes before the next task.
         dragWasSwipe.current = swipe.moved;
-        if (swipeCollapses({ deltaY, durationMs: performance.now() - swipe.startedAt })) {
+        if (swipe.moved) setTimeout(() => {
+          dragWasSwipe.current = false;
+        }, 0);
+        const sample = {
+          deltaX: event.clientX - swipe.startX,
+          deltaY: event.clientY - swipe.startY,
+          durationMs: performance.now() - swipe.startedAt,
+        };
+        if (swipeCollapses(sample)) {
           dispatchView({ type: "collapse" });
+          // Once folded by hand, the bar stops showing how.
+          writePlayerHint({ shown: PLAYER_HINT_LIMIT, lastShownAt: Date.now() });
         }
       },
       onPointerCancel: () => {
@@ -577,6 +628,23 @@ export function AudioPlayerProvider({
       )}
     </AudioPlayerContext.Provider>
   );
+}
+
+function readPlayerHint() {
+  try {
+    return parsePlayerHint(window.localStorage.getItem(PLAYER_HINT_STORAGE_KEY));
+  } catch {
+    // Storage blocked: the record is never kept, so the hint stops at the limit only per visit.
+    return { shown: PLAYER_HINT_LIMIT, lastShownAt: null };
+  }
+}
+
+function writePlayerHint(record: { shown: number; lastShownAt: number }) {
+  try {
+    window.localStorage.setItem(PLAYER_HINT_STORAGE_KEY, JSON.stringify(record));
+  } catch {
+    // Storage blocked: nothing to remember.
+  }
 }
 
 export function useAudioPlayer(): AudioPlayerContextValue {

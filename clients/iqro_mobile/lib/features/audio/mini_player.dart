@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/preferences_store.dart';
 import 'audio_models.dart';
 import 'listening_queue.dart';
 import 'premium_reciter_portrait.dart';
@@ -16,16 +19,41 @@ import 'reciter_portraits.dart';
 
 final miniPlayerCollapsedProvider = StateProvider<bool>((ref) => true);
 
-/// The bar is 66 dp tall, so a short swipe rolls it up; the site uses the same
-/// reach (services/web/lib/mini-player.ts).
+/// The bar is 66 dp tall, so a short swipe in any direction rolls it up; the
+/// site uses the same reach (services/web/lib/mini-player.ts).
 const _swipeCollapseDistance = 32.0;
 const _swipeCollapseFlick = 16.0;
 const _swipeCollapseVelocity = 500.0;
 
-/// A swipe of [distance] downwards (negative: upwards) at [velocity] dp/s.
+/// A swipe of [distance] dp, whichever way, at [velocity] dp/s.
 bool _swipeRollsUp(double distance, double velocity) =>
     distance >= _swipeCollapseDistance ||
     (distance >= _swipeCollapseFlick && velocity >= _swipeCollapseVelocity);
+
+/// Until someone folds the bar themselves, it shows how once a day, at most
+/// [miniPlayerHintLimit] times, on Home: it rolls up and back by itself.
+const miniPlayerHintGap = Duration(days: 1);
+const miniPlayerHintDelay = Duration(milliseconds: 2500);
+const miniPlayerHintHold = Duration(milliseconds: 1600);
+
+bool miniPlayerHintDue({
+  required int shown,
+  required DateTime? lastShownAt,
+  required DateTime now,
+}) =>
+    shown < miniPlayerHintLimit &&
+    (lastShownAt == null || now.difference(lastShownAt) >= miniPlayerHintGap);
+
+/// Folds the bar the other way and back once. Returns the timer that undoes
+/// the fold, so the caller can cancel it; a tap meanwhile wins.
+Timer showMiniPlayerHint(WidgetRef ref) {
+  final start = ref.read(miniPlayerCollapsedProvider);
+  ref.read(miniPlayerCollapsedProvider.notifier).state = !start;
+  return Timer(miniPlayerHintHold, () {
+    final collapsed = ref.read(miniPlayerCollapsedProvider.notifier);
+    if (collapsed.state == !start) collapsed.state = start;
+  });
+}
 
 class IqroMiniPlayer extends ConsumerStatefulWidget {
   const IqroMiniPlayer({
@@ -143,6 +171,19 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
         child: _CollapsiblePlayer(
           collapsed: collapsed,
           onCollapse: widget.allowCollapse ? () => setCollapsed(true) : null,
+          onSwipe: () {
+            setCollapsed(true);
+            // Once folded by hand, the bar stops showing how.
+            try {
+              unawaited(
+                ref
+                    .read(appPreferencesProvider.notifier)
+                    .markPlayerHintLearned(),
+              );
+            } on Object {
+              // A missing preference store only means the hint may show again.
+            }
+          },
           onExpand: () => setCollapsed(false),
           playing: player.playing,
           child: ClipRRect(
@@ -445,12 +486,13 @@ class _MiniPlayerControl extends StatelessWidget {
   }
 }
 
-/// A swipe down on the bar rolls it into the round button and a swipe up on
-/// the button (or a tap) unrolls it. Screen readers get "collapse" as an action.
+/// A swipe on the bar in any direction rolls it into the round button and a
+/// tap on the button unrolls it. Screen readers get "collapse" as an action.
 class _CollapsiblePlayer extends StatefulWidget {
   const _CollapsiblePlayer({
     required this.collapsed,
     required this.onCollapse,
+    required this.onSwipe,
     required this.onExpand,
     required this.playing,
     required this.child,
@@ -460,6 +502,7 @@ class _CollapsiblePlayer extends StatefulWidget {
 
   /// Null where the bar never collapses (the Mushaf's inline player).
   final VoidCallback? onCollapse;
+  final VoidCallback onSwipe;
   final VoidCallback onExpand;
   final bool playing;
   final Widget child;
@@ -469,22 +512,18 @@ class _CollapsiblePlayer extends StatefulWidget {
 }
 
 class _CollapsiblePlayerState extends State<_CollapsiblePlayer> {
-  var _dragDistance = 0.0;
+  var _drag = Offset.zero;
 
-  void _startDrag(DragStartDetails _) => _dragDistance = 0;
+  void _startDrag(DragStartDetails _) => _drag = Offset.zero;
 
-  void _updateDrag(DragUpdateDetails details) =>
-      _dragDistance += details.primaryDelta ?? 0;
+  void _updateDrag(DragUpdateDetails details) => _drag += details.delta;
 
-  void _endBarDrag(DragEndDetails details) {
-    if (_swipeRollsUp(_dragDistance, details.primaryVelocity ?? 0)) {
-      widget.onCollapse?.call();
-    }
-  }
-
-  void _endButtonDrag(DragEndDetails details) {
-    if (_swipeRollsUp(-_dragDistance, -(details.primaryVelocity ?? 0))) {
-      widget.onExpand();
+  void _endDrag(DragEndDetails details) {
+    if (_swipeRollsUp(
+      _drag.distance,
+      details.velocity.pixelsPerSecond.distance,
+    )) {
+      widget.onSwipe();
     }
   }
 
@@ -514,9 +553,9 @@ class _CollapsiblePlayerState extends State<_CollapsiblePlayer> {
                 child: GestureDetector(
                   key: const ValueKey('mini-player-bar'),
                   behavior: HitTestBehavior.translucent,
-                  onVerticalDragStart: _startDrag,
-                  onVerticalDragUpdate: _updateDrag,
-                  onVerticalDragEnd: _endBarDrag,
+                  onPanStart: _startDrag,
+                  onPanUpdate: _updateDrag,
+                  onPanEnd: _endDrag,
                   child: widget.child,
                 ),
               ),
@@ -558,33 +597,28 @@ class _CollapsiblePlayerState extends State<_CollapsiblePlayer> {
                           opacity: ((progress - .2) / .8).clamp(0.0, 1.0),
                           child: Align(
                             alignment: AlignmentDirectional.centerEnd,
-                            child: GestureDetector(
-                              onVerticalDragStart: _startDrag,
-                              onVerticalDragUpdate: _updateDrag,
-                              onVerticalDragEnd: _endButtonDrag,
-                              child: SizedBox.square(
-                                dimension: 60,
-                                child: IconButton.filled(
-                                  key: const ValueKey('mini-player-expand'),
-                                  tooltip: MaterialLocalizations.of(
+                            child: SizedBox.square(
+                              dimension: 60,
+                              child: IconButton.filled(
+                                key: const ValueKey('mini-player-expand'),
+                                tooltip: MaterialLocalizations.of(
+                                  context,
+                                ).collapsedIconTapHint,
+                                onPressed: widget.onExpand,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Theme.of(
                                     context,
-                                  ).collapsedIconTapHint,
-                                  onPressed: widget.onExpand,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    foregroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimary,
-                                    shape: const CircleBorder(),
-                                  ),
-                                  icon: Icon(
-                                    playing
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                    size: playing ? 34 : 38,
-                                  ),
+                                  ).colorScheme.primary,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
+                                  shape: const CircleBorder(),
+                                ),
+                                icon: Icon(
+                                  playing
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  size: playing ? 34 : 38,
                                 ),
                               ),
                             ),

@@ -8,9 +8,11 @@ import {
   seekPositionMs,
   sheetDragOffset,
   sheetShown,
+  PLAYER_HINT_LIMIT,
+  parsePlayerHint,
+  playerHintDue,
   swipeCollapses,
   swipeDismisses,
-  swipeExpands,
 } from "./mini-player.ts";
 import type { MiniPlayerAction, MiniPlayerState, MiniPlayerView } from "./mini-player.ts";
 
@@ -110,16 +112,28 @@ test("a long or fast downward swipe dismisses, a short slow one or an upward one
   assert.equal(swipeDismisses({ deltaY: 30, durationMs: 0 }), false);
 });
 
-test("a swipe down rolls the bar up and a swipe up unrolls it, with a shorter reach than the sheet", () => {
-  assert.equal(swipeCollapses({ deltaY: 40, durationMs: 900 }), true);
-  assert.equal(swipeCollapses({ deltaY: 20, durationMs: 30 }), true);
-  assert.equal(swipeCollapses({ deltaY: 20, durationMs: 400 }), false);
-  assert.equal(swipeCollapses({ deltaY: 6, durationMs: 5 }), false);
-  assert.equal(swipeCollapses({ deltaY: -60, durationMs: 100 }), false);
-  assert.equal(swipeCollapses({ deltaY: 20, durationMs: 0 }), false);
-  assert.equal(swipeExpands({ deltaY: -40, durationMs: 900 }), true);
-  assert.equal(swipeExpands({ deltaY: -20, durationMs: 30 }), true);
-  assert.equal(swipeExpands({ deltaY: 40, durationMs: 100 }), false);
+test("a swipe in any direction rolls the bar up, with a shorter reach than the sheet", () => {
+  assert.equal(swipeCollapses({ deltaX: 0, deltaY: 40, durationMs: 900 }), true);
+  assert.equal(swipeCollapses({ deltaX: 0, deltaY: -40, durationMs: 900 }), true);
+  assert.equal(swipeCollapses({ deltaX: -40, deltaY: 0, durationMs: 900 }), true);
+  assert.equal(swipeCollapses({ deltaX: 24, deltaY: 24, durationMs: 900 }), true);
+  assert.equal(swipeCollapses({ deltaX: 20, deltaY: 0, durationMs: 30 }), true);
+  assert.equal(swipeCollapses({ deltaX: 0, deltaY: 20, durationMs: 400 }), false);
+  assert.equal(swipeCollapses({ deltaX: 4, deltaY: 4, durationMs: 5 }), false);
+  assert.equal(swipeCollapses({ deltaX: 0, deltaY: 20, durationMs: 0 }), false);
+});
+
+test("the fold hint shows once a day, three times at most, and survives bad storage", () => {
+  const now = Date.UTC(2026, 10, 2, 12);
+  const hour = 60 * 60 * 1000;
+  assert.equal(playerHintDue({ shown: 0, lastShownAt: null }, now), true);
+  assert.equal(playerHintDue({ shown: 1, lastShownAt: now - 23 * hour }, now), false);
+  assert.equal(playerHintDue({ shown: 2, lastShownAt: now - 25 * hour }, now), true);
+  assert.equal(playerHintDue({ shown: PLAYER_HINT_LIMIT, lastShownAt: now - 120 * hour }, now), false);
+  assert.deepEqual(parsePlayerHint(null), { shown: 0, lastShownAt: null });
+  assert.deepEqual(parsePlayerHint("{oops"), { shown: 0, lastShownAt: null });
+  assert.deepEqual(parsePlayerHint('{"shown":-2,"lastShownAt":"x"}'), { shown: 0, lastShownAt: null });
+  assert.deepEqual(parsePlayerHint('{"shown":2,"lastShownAt":5}'), { shown: 2, lastShownAt: 5 });
 });
 
 test("a seek stays within the active range", () => {

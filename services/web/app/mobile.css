@@ -950,8 +950,6 @@
     background: var(--primary);
     color: #ffffff;
     cursor: pointer;
-    /* A swipe up on it unrolls the bar instead of scrolling the page. */
-    touch-action: none;
     animation: mobile-player-fab-in 0.3s ease 0.12s both;
   }
 
@@ -981,7 +979,7 @@
   }
 
   /* Portrait 44, then the title; the artwork and the title are one button that
-     opens the full player. A swipe down on the bar rolls it up. */
+     opens the full player. A swipe on the bar, any way, rolls it up. */
   .mobile-player-summary {
     position: relative;
     display: flex;
@@ -1027,10 +1025,10 @@
     clip-path: inset(50%);
   }
 
-  /* The bar takes the vertical drag itself, so the page under it does not scroll. */
+  /* The bar takes every drag itself, so the page under it does not scroll. */
   .mobile-audio-player.is-bar .mobile-player-sheet-body,
   .mobile-audio-player.is-expanding .mobile-player-sheet-body {
-    touch-action: pan-x;
+    touch-action: none;
   }
 
   .mobile-player-collapse {
