@@ -11,6 +11,7 @@ import {
   tracks,
 } from "./fixtures/audio";
 import type { Recitation } from "../lib/api";
+import { unroll } from "./swipe";
 
 // The Audio tab's queue (docs/audio-listening-queue.md): after a surah the
 // player moves on by the mode, the buttons and the lock screen step through
@@ -261,6 +262,7 @@ test("the phone's full player shows what plays next and opens the queue over its
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
   await expect(bar.locator("audio")).toHaveAttribute("src", tracks[0].asset.url);
+  await unroll(bar);
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
   const upNext = full.getByRole("button", { name: /Далее/ });

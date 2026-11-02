@@ -1,4 +1,11 @@
+import { expect } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
+
+/** The phone bar starts rolled up into the round button, as the app's does; a tap unrolls it. */
+export async function unroll(bar: Locator) {
+  await bar.locator(".mobile-player-fab").click();
+  await expect(bar).toHaveClass(/is-bar/);
+}
 
 /**
  * A finger-like drag from the middle of the target: a positive deltaY goes

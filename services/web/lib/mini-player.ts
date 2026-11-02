@@ -29,7 +29,8 @@ export type MiniPlayerAction =
   | { type: "route-change" }
   | { type: "request-change"; hasRequest: boolean };
 
-export const INITIAL_MINI_PLAYER_STATE: MiniPlayerState = { view: "bar", controlsHidden: false };
+/** The bar starts rolled up into the round button, as the app's does. */
+export const INITIAL_MINI_PLAYER_STATE: MiniPlayerState = { view: "collapsed", controlsHidden: false };
 
 export const MINI_PLAYER_BAR_HEIGHT = 66;
 export const MINI_PLAYER_BUTTON_SIZE = 60;
