@@ -1158,6 +1158,24 @@ test("Quran review deep link opens and highlights its first ayah", async ({ page
   await expect(linkedAyah.last()).toHaveClass(/is-selected/);
 });
 
+test("Mushaf page labels are Arabic in a Russian interface", async ({ page }) => {
+  const sheet = page.locator(".qf-mushaf-sheet");
+  const header = sheet.locator(".qf-mushaf-page-header");
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 375, height: 812 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/ru/quran?surah=6");
+
+    await expect(header).toHaveText("سورة الأنعامالجزء ١");
+    await expect(sheet.locator(".qf-mushaf-page-number")).toHaveText("١٢٨");
+    // The surah sits on the right, as the Mushaf reads, and clears the first line.
+    const [surah, juzLabel] = await header.locator("span").evaluateAll((spans) =>
+      spans.map((span) => span.getBoundingClientRect()).map(({ left, bottom }) => ({ left, bottom })));
+    expect(surah.left).toBeGreaterThan(juzLabel.left);
+    const lineTop = await sheet.locator(".qf-mushaf-line").first().evaluate((element) => element.getBoundingClientRect().top);
+    expect(Math.max(surah.bottom, juzLabel.bottom)).toBeLessThanOrEqual(lineTop);
+  }
+});
+
 test("legacy Quran bookmark deep link opens its saved Mushaf page", async ({ page }) => {
   await page.goto("/quran?page=128");
 

@@ -57,6 +57,9 @@ type ChapterIntro = {
 
 const BISMILLAH = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
 
+// The page's own labels are Arabic in every interface language, as in a printed Mushaf.
+const arabicNumber = new Intl.NumberFormat("ar-EG", { useGrouping: false });
+
 type QuranFoundationMushafPageProps = {
   mushaf: QuranFoundationMushaf;
   page: QuranFoundationMushafPage;
@@ -71,6 +74,8 @@ type QuranFoundationMushafPageProps = {
   /** `verse:ayah#position` of the QCF V4 words that carry tajweed rules. */
   tajweedWords?: ReadonlySet<string>;
   onSelectTajweedWord?: (verseKey: string, position: number) => void;
+  /** The juz of the page's first ayah. */
+  juz?: number | null;
 };
 
 function verseKeysFromMapping(mapping: Record<string, string>): string[] {
@@ -243,6 +248,7 @@ export function QuranFoundationMushafPageView({
   onSelectAyah,
   tajweedWords,
   onSelectTajweedWord,
+  juz,
 }: QuranFoundationMushafPageProps) {
   const { t } = useI18n();
   const layout = page.layout?.version === 1 ? page.layout : null;
@@ -260,6 +266,9 @@ export function QuranFoundationMushafPageView({
   const sheet = useRef<HTMLDivElement>(null);
   const [retry, setRetry] = useState(0);
   const verseKeys = useMemo(() => verseKeyById(page), [page]);
+  const firstVerseKey = page.verse_keys?.[0] ?? verseKeysFromMapping(page.verse_mapping)[0];
+  const pageSurah = Number(firstVerseKey?.split(":")[0]) || null;
+  const pageSurahName = surahs.find((surah) => surah.number === pageSurah)?.name_ar;
   const intros = useMemo(
     () => layout ? [] : chapterIntros(page, lines, verseKeys, surahs),
     [layout, lines, page, surahs, verseKeys],
@@ -393,6 +402,10 @@ export function QuranFoundationMushafPageView({
           translate="no"
           aria-label={t("quran.qfPageAria", { name: mushaf.name, page: page.page_number })}
         >
+          <div className="qf-mushaf-page-header" aria-hidden="true">
+            <span>سورة {pageSurahName ?? (pageSurah ? arabicNumber.format(pageSurah) : "")}</span>
+            <span>الجزء {juz ? arabicNumber.format(juz) : "—"}</span>
+          </div>
           {fontState === "loading" && (
             <div className="qf-mushaf-font-loading">{t("quran.mushafFontLoading")}</div>
           )}
@@ -515,7 +528,7 @@ export function QuranFoundationMushafPageView({
             );
           })}
           <span className="qf-mushaf-page-number" aria-hidden="true">
-            {page.page_number}
+            {arabicNumber.format(page.page_number)}
           </span>
         </div>
       )}
