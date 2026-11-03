@@ -31,6 +31,7 @@ export function duaEntryForTime(entry: DuaEntry, time: DuaTimeOfDay | undefined)
       ...entry.translation,
       meaning_text: variant.meaning_text,
       transliteration: variant.transliteration,
+      note: variant.note,
     },
   };
 }

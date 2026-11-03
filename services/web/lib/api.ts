@@ -399,6 +399,8 @@ export type DuaEntry = {
     language_code: SupportedLocale;
     meaning_text: string;
     transliteration: string;
+    /** Commentary the source printed in brackets; absent before the API had it. */
+    note?: string;
   } | null;
   /** The morning and evening adhkar cards' own reading, by time of day. */
   time_variants?: Partial<Record<DuaTimeOfDay, DuaTimeVariant>>;
@@ -413,6 +415,7 @@ export type DuaTimeVariant = {
   arabic_text: string;
   meaning_text: string;
   transliteration: string;
+  note?: string;
 };
 
 export type DuaFavorite = {

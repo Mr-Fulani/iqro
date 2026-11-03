@@ -17,7 +17,9 @@
   В файле только то, что отличается; остальные языки миграция берёт из книги. Для арабского
   смысл — это сам арабский текст варианта.
 - API отдаёт у записи поле `time_variants`: `{"morning": {arabic_text, meaning_text,
-  transliteration}, "evening": {…}}` на языке запроса; у остальных записей — `{}`.
+  transliteration, note}, "evening": {…}}` на языке запроса; у остальных записей — `{}`.
+  С 4 ноября 2026 года тексты вариантов без скобок, а пояснения — в `note`
+  (`docs/dua/text-without-brackets-2026-11-04.md`).
 - У тем «morning» и «evening» в каталоге стоит `time_of_day`. Лента такой темы подставляет
   вариант: приложение — `DuaEntry.forTimeOfDay` (`dua_repository.dart`), сайт —
   `duaEntryForTime` (`lib/dua-topics.ts`). Над лентой вместо названия главы книги («…утром и

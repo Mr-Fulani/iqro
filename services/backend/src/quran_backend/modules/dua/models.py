@@ -285,6 +285,8 @@ class DuaEntryTranslation(BaseModel):
     language_code = models.CharField(max_length=8)
     meaning_text = models.TextField()
     transliteration = models.TextField(blank=True)
+    # Commentary that the source printed in brackets inside the text.
+    note = models.TextField(blank=True)
 
     class Meta:
         db_table = "dua_entry_translation"
@@ -334,6 +336,7 @@ class DuaEntryTimeVariant(BaseModel):
     arabic_text = models.TextField()
     meaning_text = models.TextField()
     transliteration = models.TextField(blank=True)
+    note = models.TextField(blank=True)
 
     class Meta:
         db_table = "dua_entry_time_variant"

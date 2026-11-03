@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'dua_repository.dart';
 import '../../core/share/content_share.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 const int _maxPracticeStage = 1000;
 const int _maxPracticeTotal = 10000;
@@ -100,6 +101,25 @@ ContentShare duaContentShare(
 /// meaning repeats the du'a itself.
 String duaMeaning(DuaEntry entry, String locale) =>
     locale == 'ar' ? '' : entry.meaning;
+
+/// The source line under a du'a card in the reader's language:
+/// «Крепость мусульманина, № 75», «Коран, 2:126». The evidence keeps the
+/// source's own English reference for the source sheet.
+String duaReference(DuaEntry entry, AppLocalizations l10n) {
+  if (entry.collection == 'hisn-al-muslim') {
+    return l10n.duaReferenceHisn(entry.sourceNumber);
+  }
+  final quran = entry.evidence
+      .where((item) => item.kind == 'quran')
+      .map((item) => item.sourceReference.trim())
+      .where((item) => item.isNotEmpty)
+      .firstOrNull;
+  if (quran != null) return l10n.duaReferenceQuran(quran);
+  final source = entry.sourceLabel.trim();
+  return source.isEmpty
+      ? '#${entry.sourceNumber}'
+      : l10n.duaReferenceEntry(source, entry.sourceNumber);
+}
 
 String duaAudioPlaybackId(DuaEntry entry, DuaAudioAsset asset, int assetIndex) {
   final assetId = asset.id.trim();

@@ -5869,6 +5869,17 @@ input:focus, select:focus, textarea:focus {
   line-height: 1.55;
 }
 
+/* Commentary the source printed in brackets, under the translation. */
+.dua-note {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .dua-source-link {
   align-self: center;
   max-width: 100%;

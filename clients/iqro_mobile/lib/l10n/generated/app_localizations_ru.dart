@@ -1090,6 +1090,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get duaShowTranslation => 'Перевод';
 
   @override
+  String duaReferenceHisn(int number) {
+    return 'Крепость мусульманина, № $number';
+  }
+
+  @override
+  String duaReferenceQuran(String reference) {
+    return 'Коран, $reference';
+  }
+
+  @override
+  String duaReferenceEntry(String source, int number) {
+    return '$source, № $number';
+  }
+
+  @override
   String duaChapterNumber(int number) {
     return 'Глава $number';
   }

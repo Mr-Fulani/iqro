@@ -715,6 +715,8 @@ MODEL_FIELD_LABELS = {
     ("audio.AudioCatalogSettings", "teaching_recitation"): "Учебный чтец",
     ("website.AllowedLinkSite", "domain"): "Сайт",
     ("website.AllowedLinkSite", "note"): "Что это за сайт",
+    ("dua.DuaEntryTranslation", "note"): "Примечание под переводом",
+    ("dua.DuaEntryTimeVariant", "note"): "Примечание под переводом",
     ("courses.Course", "slug"): "Адрес в ссылке",
     ("courses.Course", "position"): "Порядок в каталоге",
     ("courses.CourseLesson", "slug"): "Адрес в ссылке",

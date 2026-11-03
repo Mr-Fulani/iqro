@@ -6,7 +6,7 @@ import { useState } from "react";
 import type { DuaEntry } from "../lib/api";
 import { splitDuaArabic } from "../lib/dua-arabic";
 import { advanceRepetitionCount, duaRepetitionTotal } from "../lib/dua-practice";
-import { duaAnchor, duaEntryKey, duaEntryPath } from "../lib/dua-presentation";
+import { duaAnchor, duaEntryKey, duaEntryPath, duaReference } from "../lib/dua-presentation";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
 import { useDuaDisplay } from "./DuaDisplayMenu";
@@ -77,9 +77,10 @@ export function DuaEntryCard({
   const transliteration = display.transliteration ? entry.translation?.transliteration.trim() ?? "" : "";
   // Arabic shows no meaning: there it repeats the du'a itself.
   const meaning = locale === "ar" || !display.translation ? "" : entry.translation?.meaning_text.trim() ?? "";
-  const sourceLabel = entry.source?.title.trim() || entry.source?.provider.trim() || "";
-  const reference = entry.evidence.map((item) => item.source_reference.trim()).find(Boolean)
-    || `${sourceLabel} · #${entry.source_number}`;
+  // Commentary the source printed in brackets; it belongs to the translation,
+  // except in Arabic, where there is no translation to hide.
+  const note = locale === "ar" || display.translation ? entry.translation?.note?.trim() ?? "" : "";
+  const reference = duaReference(entry, t);
   const hasAudio = Boolean(entry.audio?.[0]?.url);
   const owned = audio.activeKey === duaEntryKey(entry);
   const playing = owned && audio.playing;
@@ -96,9 +97,10 @@ export function DuaEntryCard({
       {total > 1 ? <DuaCounter total={total} /> : null}
       {transliteration ? <p className="dua-transliteration">{transliteration}</p> : null}
       {meaning ? <p className="dua-meaning">{meaning}</p> : null}
+      {note ? <p className="dua-note">{note}</p> : null}
       {/* The source sits under the text it backs; the full record opens from it. */}
       <button type="button" className="dua-source-link" aria-haspopup="dialog" onClick={onShowSource}>
-        [<bdi>{reference}</bdi>]
+        <bdi>{reference}</bdi>
       </button>
       {favoriteError ? <p className="dua-action-error" role="alert">{favoriteError}</p> : null}
       <div className="dua-action-bar">

@@ -1085,6 +1085,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get duaShowTranslation => 'Translation';
 
   @override
+  String duaReferenceHisn(int number) {
+    return 'Hisn al-Muslim, No. $number';
+  }
+
+  @override
+  String duaReferenceQuran(String reference) {
+    return 'Quran $reference';
+  }
+
+  @override
+  String duaReferenceEntry(String source, int number) {
+    return '$source, No. $number';
+  }
+
+  @override
   String duaChapterNumber(int number) {
     return 'Chapter $number';
   }

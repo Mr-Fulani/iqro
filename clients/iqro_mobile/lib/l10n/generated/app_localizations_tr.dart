@@ -1080,6 +1080,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get duaShowTranslation => 'Meal';
 
   @override
+  String duaReferenceHisn(int number) {
+    return 'Hısnu\'l-Müslim, No. $number';
+  }
+
+  @override
+  String duaReferenceQuran(String reference) {
+    return 'Kur\'an, $reference';
+  }
+
+  @override
+  String duaReferenceEntry(String source, int number) {
+    return '$source, No. $number';
+  }
+
+  @override
   String duaChapterNumber(int number) {
     return 'Bölüm $number';
   }

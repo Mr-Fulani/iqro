@@ -505,6 +505,8 @@ function duaEntry(language) {
       language_code: language,
       meaning_text: localized.meaning,
       transliteration: localized.transliteration,
+      // Commentary the source printed in brackets (Russian only here).
+      note: language === "ru" ? "То есть послал нам сон, являющийся братом смерти." : "",
     },
     evidence: [{
       kind: "source_note",

@@ -368,10 +368,18 @@ void main() {
         arabicText: 'الحمد لله الذي أحيانا',
         meaning: 'Хвала Аллаху, Который оживил нас',
         transliteration: 'Аль-хамду ли-Лляхи аллязи ахйа-на',
+        note: 'То есть послал нам сон, являющийся братом смерти.',
       );
       await _pumpDetail(tester, load: (_) async => entry);
       expect(find.byKey(const ValueKey('dua-transliteration')), findsOneWidget);
       expect(find.byKey(const ValueKey('dua-meaning')), findsOneWidget);
+      // Commentary sits under the translation; the source reads in Russian,
+      // without brackets.
+      expect(
+        find.text('То есть послал нам сон, являющийся братом смерти.'),
+        findsOneWidget,
+      );
+      expect(find.text('Крепость мусульманина, № 1'), findsOneWidget);
 
       for (final option in <String>['Транскрипция', 'Перевод']) {
         await tester.tap(find.byTooltip('Что показывать'));
@@ -384,6 +392,7 @@ void main() {
       expect(find.byKey(const ValueKey('dua-arabic')), findsOneWidget);
       expect(find.byKey(const ValueKey('dua-transliteration')), findsNothing);
       expect(find.byKey(const ValueKey('dua-meaning')), findsNothing);
+      expect(find.byKey(const ValueKey('dua-note')), findsNothing);
       final preferences =
           ProviderScope.containerOf(
                 tester.element(find.byType(DuaEntryScreen)),
@@ -411,6 +420,7 @@ void main() {
         categoryTitle: 'أذكار الاستيقاظ من النوم',
         arabicText: arabic,
         meaning: arabic,
+        note: 'أو مرة واحدة عند الكسل.',
       );
       await _pumpDetail(
         tester,
@@ -423,6 +433,9 @@ void main() {
       expect(find.byKey(const ValueKey('dua-meaning')), findsNothing);
       // Arabic has neither transliteration nor meaning to switch.
       expect(find.byTooltip('ما يُعرض'), findsNothing);
+      // The note has no translation to follow, so it always shows.
+      expect(find.text('أو مرة واحدة عند الكسل.'), findsOneWidget);
+      expect(find.text('حصن المسلم، رقم 1'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -1038,6 +1051,7 @@ DuaEntry _entry({
   required String arabicText,
   required String meaning,
   String transliteration = '',
+  String note = '',
   List<DuaAudioAsset> audio = const <DuaAudioAsset>[],
   int repetitions = 1,
   Map<String, DuaTimeVariant> timeVariants = const <String, DuaTimeVariant>{},
@@ -1051,6 +1065,7 @@ DuaEntry _entry({
   arabicText: arabicText,
   meaning: meaning,
   transliteration: transliteration,
+  note: note,
   repetitions: repetitions,
   sourceLabel: 'Hisn al-Muslim',
   audio: audio,

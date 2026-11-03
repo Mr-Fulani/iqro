@@ -130,10 +130,12 @@ def test_morning_and_evening_cards_get_their_own_reading_without_the_other_time(
 ) -> None:
     """Chapter 27 keeps the book's notes; each adhkar card gets a reading without them."""
 
-    # The source keeps both readings and the note about the evening.
+    # The book's own card reads the morning text; the evening wording is its note.
     source = _hisn_entry(api_client, 77, "ru")
-    assert "Это читается вечером" in source["translation"]["meaning_text"]
-    assert "وإذا أمسى" in source["arabic_text"]
+    assert "вечер" not in source["translation"]["meaning_text"]
+    assert "Вечером:" in source["translation"]["note"]
+    assert "وإذا أمسى" not in source["arabic_text"]
+    assert "وإذا أمسى" in _hisn_entry(api_client, 77, "ar")["translation"]["note"]
 
     morning = source["time_variants"]["morning"]
     evening = source["time_variants"]["evening"]
@@ -149,7 +151,7 @@ def test_morning_and_evening_cards_get_their_own_reading_without_the_other_time(
     english = _hisn_entry(api_client, 89, "en")["time_variants"]
     assert "evening" not in english["morning"]["meaning_text"]
     assert "morning" not in english["evening"]["meaning_text"]
-    assert english["evening"]["transliteration"].startswith("(Amsayna")
+    assert english["evening"]["transliteration"].startswith("Amsayna")
 
     turkish = _hisn_entry(api_client, 90, "tr")["time_variants"]
     assert turkish["morning"]["meaning_text"].endswith("sabahlad\u0131k.")
@@ -160,15 +162,16 @@ def test_morning_and_evening_cards_get_their_own_reading_without_the_other_time(
     assert arabic["meaning_text"] == arabic["arabic_text"]
     assert "الْمَصِيرُ" in arabic["arabic_text"]
 
-    # Only a Russian note changes: the other languages keep the source text.
-    russian_only = _hisn_entry(api_client, 86, "ru")
-    assert russian_only["time_variants"]["morning"]["meaning_text"].endswith("утром. )")
-    assert russian_only["time_variants"]["evening"]["meaning_text"].endswith("вечером. )")
+    # Only a Russian note changes: the other languages keep the book's text.
+    russian_only = _hisn_entry(api_client, 86, "ru")["time_variants"]
+    assert russian_only["morning"]["note"].endswith("по три раза утром.")
+    assert russian_only["evening"]["note"].endswith("по три раза вечером.")
     english_86 = _hisn_entry(api_client, 86, "en")
     assert english_86["time_variants"]["morning"] == {
         "arabic_text": english_86["arabic_text"],
         "meaning_text": english_86["translation"]["meaning_text"],
         "transliteration": english_86["translation"]["transliteration"],
+        "note": english_86["translation"]["note"],
     }
 
     # A morning-only entry has only a morning reading; others have none.
@@ -195,6 +198,46 @@ def test_no_morning_or_evening_reading_mentions_the_other_time(api_client: APICl
                 plain = re.sub("[\u064b-\u065f\u0670]", "", text)
                 for word in other_time[time_of_day]:
                     assert word not in plain.lower(), (source_number, language, time_of_day, word)
+
+
+@pytest.mark.django_db
+def test_published_dua_texts_have_no_brackets() -> None:
+    """The cards show the du'a, its transliteration, meaning and note without brackets.
+
+    The ornamental Quran brackets around verses stay: they mark the quotation.
+    """
+
+    brackets = re.compile(r"[()\[\]{}]")
+    published = {"collection_version__status": DuaPublicationStatus.PUBLISHED}
+    for entry in DuaEntry.objects.filter(**published):
+        assert not brackets.search(entry.arabic_text), entry
+    entry_published = {f"entry__{key}": value for key, value in published.items()}
+    for row in [
+        *DuaEntryTranslation.objects.filter(**entry_published),
+        *DuaEntryTimeVariant.objects.filter(**entry_published),
+    ]:
+        for field in ("arabic_text", "meaning_text", "transliteration", "note"):
+            assert not brackets.search(getattr(row, field, "")), (row, field)
+
+
+@pytest.mark.django_db
+def test_bracketed_commentary_becomes_a_note_and_the_count_stays_with_the_counter(
+    api_client: APIClient,
+) -> None:
+    russian = _hisn_entry(api_client, 92, "ru")
+    assert russian["repetitions"] == 10
+    assert not russian["arabic_text"].startswith("((")
+    assert russian["translation"]["meaning_text"].endswith("Он всё может.")
+    # The counter shows ten; the note keeps what it can't: once when lazy.
+    assert "один раз" in russian["translation"]["note"]
+    assert "عندَ الكَسَلِ" in _hisn_entry(api_client, 92, "ar")["translation"]["note"]
+    # A count-only remark is gone, with nothing left for a note.
+    seven = _hisn_entry(api_client, 83, "ru")
+    assert seven["repetitions"] == 7
+    assert seven["translation"]["note"] == ""
+    assert "سَبْعَ" not in seven["arabic_text"]
+    # The Ayat al-Kursi keeps its Quran brackets.
+    assert "\ufd3f" in _hisn_entry(api_client, 75, "ru")["arabic_text"]
 
 
 @pytest.mark.django_db
