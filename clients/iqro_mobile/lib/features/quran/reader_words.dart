@@ -75,6 +75,9 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
   var _offsets = const <int>[];
   QuranWord? _anchor;
 
+  /// The handle a finger pulls, and where it was taken.
+  ({bool start, Rect box})? _held;
+
   @override
   void initState() {
     super.initState();
@@ -200,21 +203,35 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     final start = indexOf(range.start);
     final end = indexOf(range.end);
     Widget? handle(int? index, {required bool start}) {
-      if (index == null || index < 0 || index >= widget.words.length) {
-        return null;
-      }
-      final box = _wordBox(index);
-      if (box == null) return null;
+      final box = index == null || index < 0 || index >= widget.words.length
+          ? null
+          : _wordBox(index);
+      // A handle pulled into another ayah stays here, unseen, until the
+      // finger lifts: its gesture lives in this card.
+      final held = _held?.start == start ? _held!.box : null;
+      final at = box ?? held;
+      if (at == null) return null;
       return Positioned(
         key: ValueKey(
           start ? 'word-range-start-handle' : 'word-range-end-handle',
         ),
-        left: (start ? box.right : box.left) - WordRangeHandle.width / 2,
-        top: box.top,
-        child: WordRangeHandle(
-          start: start,
-          lineHeight: box.height,
-          onDrag: (point) => _pull(point, start ? range.end : range.start),
+        left: (start ? at.right : at.left) - WordRangeHandle.width / 2,
+        top: at.top,
+        child: Opacity(
+          opacity: box == null ? 0 : 1,
+          child: WordRangeHandle(
+            start: start,
+            lineHeight: at.height,
+            onDrag: (point) {
+              _held ??= (start: start, box: at);
+              _pull(point, start ? range.end : range.start);
+            },
+            onEnd: () {
+              if (_held == null) return;
+              _held = null;
+              if (mounted) setState(() {});
+            },
+          ),
         ),
       );
     }

@@ -169,6 +169,7 @@ void main() {
         expect(harness.ranges.last.range.start, const QuranWord(112, 4, 1));
         expect(harness.ranges.last.range.end.position, greaterThanOrEqualTo(3));
         expect(find.byType(NativeMushafPage), findsOneWidget);
+        expect(wordRangePulling.value, isFalse);
       });
     }
 
@@ -370,16 +371,19 @@ void main() {
       final handle = find.byKey(const ValueKey('word-range-end-handle'));
       final knob = _knobCenter(tester, handle);
       final second = tester.getRect(find.byKey(const ValueKey('ayah-6')));
+      // To the last word of the next ayah (RTL: its left end). The handle
+      // leaves its card on the way, and the drag must go on in the other one.
       await _fingerDrag(
         tester,
         knob,
-        Offset(second.center.dx, second.center.dy) +
+        Offset(second.left + 30, second.center.dy) +
             (knob - tester.getTopLeft(handle)) -
             const Offset(22, 0),
       );
 
-      expect(range.end.ayah, 6);
+      expect(range.end, const QuranWord(1, 6, 3));
       expect(scroll.offset, 0);
+      expect(wordRangePulling.value, isFalse);
     });
   });
 }
