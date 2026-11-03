@@ -1667,7 +1667,7 @@ function QuranContent() {
       active={viewMode === "mushaf"}
       page={currentPage}
       count={mushafPageCount}
-      pageRatio={900 / 1380}
+      pageRatio={900 / 1481.4}
       hasNotes={translationEnabled || tafsirEnabled}
       hasSession={prayerReadingConfig !== null}
       onImmersiveChange={setIsImmersiveReader}
