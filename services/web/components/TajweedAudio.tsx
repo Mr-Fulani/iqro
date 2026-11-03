@@ -64,18 +64,23 @@ export type ClipPlayer = {
  * Plays one stretch of a surah track and stops at its end. Another player
  * taking audio focus stops it, and so does leaving the component. `onTime`
  * follows the position in milliseconds of the track, and gets null on stop.
+ * `onFinish` hears a clip that played to its end, after `onTime(null)`.
  */
-export function useClipPlayer(onTime?: (ms: number | null) => void): ClipPlayer {
+export function useClipPlayer(onTime?: (ms: number | null) => void, onFinish?: () => void): ClipPlayer {
   const ref = useRef<HTMLAudioElement | null>(null);
   const frame = useRef(0);
   // A stop while a clip is still loading must keep it from starting afterwards.
   const generation = useRef(0);
   const time = useRef(onTime);
+  const finish = useRef(onFinish);
   const [focusId] = useState(() => Symbol("tajweed-clip"));
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState(false);
 
-  useEffect(() => { time.current = onTime; });
+  useEffect(() => {
+    time.current = onTime;
+    finish.current = onFinish;
+  });
 
   const stop = useCallback(() => {
     generation.current += 1;
@@ -121,6 +126,7 @@ export function useClipPlayer(onTime?: (ms: number | null) => void): ClipPlayer 
         const ms = element.currentTime * 1000;
         if (ms >= clip.endMs) {
           stop();
+          finish.current?.();
           return;
         }
         time.current?.(ms);

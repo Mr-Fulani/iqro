@@ -50,11 +50,18 @@ export function MushafGestureSurface({ children, label, onTurnPage }: {
       // and so does the tajweed chip row under the sheet, which scrolls sideways.
       if (target.closest("button, a, input, select, [role='button']") && !target.closest("[data-ayah-key]")) return;
       if (target.closest(".mushaf-tajweed-legend")) return;
+      // A word selection handle drags the selection, never the page.
+      if (target.closest(".word-range-handle")) return;
       suppressClick = false;
       gesture = { source, id, x, y, time, axis: "pending", moved: false };
     };
     const move = (x: number, y: number, event: Event) => {
       if (!gesture) return;
+      // A held word became a selection (WordSelection.tsx): the finger pulls it.
+      if (document.documentElement.dataset.wordSelecting) {
+        cancel();
+        return;
+      }
       const dx = x - gesture.x;
       const dy = y - gesture.y;
       if (Math.max(Math.abs(dx), Math.abs(dy)) >= 8) {

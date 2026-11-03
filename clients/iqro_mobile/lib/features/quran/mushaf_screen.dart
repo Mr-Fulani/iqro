@@ -32,6 +32,7 @@ import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
 import 'surah_open_reporter.dart';
+import 'word_range.dart';
 
 typedef _PendingPositionSave = ({
   int page,
@@ -94,10 +95,12 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   late final LocalDatabase _database;
   late final QuranRepository _quranRepository;
   late final LatestAsyncWorkQueue<_PendingPositionSave> _positionSaves;
+  late final WordRangeController _words;
 
   @override
   void initState() {
     super.initState();
+    _words = WordRangeController(ref)..addListener(_onWords);
     _database = ref.read(localDatabaseProvider);
     _quranRepository = ref.read(quranRepositoryProvider);
     _positionSaves = LatestAsyncWorkQueue<_PendingPositionSave>(
@@ -190,6 +193,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
 
   @override
   void dispose() {
+    _words
+      ..removeListener(_onWords)
+      ..dispose();
     _positionSaves.close(discardPending: false);
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_readingSession?.finish());
@@ -209,6 +215,17 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     } else {
       _readingSession?.pause();
     }
+  }
+
+  void _onWords() {
+    if (mounted) setState(() {});
+  }
+
+  void _selectWords(QuranWordRange range, int count) {
+    if (_words.range == null && _controlsVisible) {
+      unawaited(_setControls(false));
+    }
+    _words.select(range, wordCount: count);
   }
 
   Future<void> _setControls(bool visible) async {
@@ -353,7 +370,16 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                         _selectAyah(reference, toggleControls: false),
                     tajweedRecitation: _tajweedRecitationId,
                     onOpenAyah: _openAyah,
-                    onBackgroundTap: () => _setControls(!_controlsVisible),
+                    wordRange: _words.range,
+                    playingWord: _words.playingWord,
+                    onWordRange: _selectWords,
+                    onOpenWord: (reference, position) {
+                      unawaited(_openAyah(reference, word: position));
+                      return true;
+                    },
+                    onBackgroundTap: () => _words.range != null
+                        ? _words.clear()
+                        : _setControls(!_controlsVisible),
                     onScale: (value) {
                       if (page == _currentPage && mounted) {
                         setState(() => _zoom = value);
@@ -464,6 +490,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                 ),
               ),
             ),
+            if (_words.range != null && !_controlsVisible)
+              PositionedDirectional(
+                start: 12,
+                end: 12,
+                bottom: 12 + MediaQuery.paddingOf(context).bottom,
+                child: WordRangePanel(controller: _words),
+              ),
             PositionedDirectional(
               start: 12,
               end: 12,
@@ -575,6 +608,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
 
   /// A tajweed card opening over the page leaves the controls as they are.
   void _selectAyah(QuranAyahReference reference, {bool toggleControls = true}) {
+    // A tap beside the selected words clears them, as with selected text.
+    if (_words.range != null && toggleControls) {
+      _words.clear();
+      return;
+    }
     final scope = _database.accountScope.current;
     if (scope == null || !_isCurrentAccount(scope)) return;
     final show = reference != _selectedAyah || !_controlsVisible;
@@ -1312,7 +1350,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     }
   }
 
-  Future<void> _openAyah(QuranAyahReference reference) async {
+  /// The ayah's menu; [word] is the `position_in_verse` of a long-pressed
+  /// word, which the menu then offers to play or to start a selection from.
+  Future<void> _openAyah(QuranAyahReference reference, {int? word}) async {
     final scope = _database.accountScope.current;
     if (_detailsOpen || scope == null || !_isCurrentAccount(scope)) return;
     _detailsOpen = true;
@@ -1338,6 +1378,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       final tajweed = _tajweedAyah(reference, page);
       var breakdown = false;
       var memorize = false;
+      var listenWord = false;
+      var selectWords = false;
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -1348,8 +1390,24 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           page: page,
           onTajweedBreakdown: tajweed == null ? null : () => breakdown = true,
           onMemorize: () => memorize = true,
+          word: word,
+          onListenWord: word == null ? null : () => listenWord = true,
+          onSelectWords: word == null ? null : () => selectWords = true,
         ),
       );
+      if ((listenWord || selectWords) && word != null && mounted) {
+        final range = QuranWordRange.single(
+          QuranWord(reference.surah, reference.ayah, word),
+        );
+        _words.select(range, wordCount: 1);
+        if (listenWord) {
+          unawaited(
+            _words.play(
+              title: '${context.l10n.ayah} ${wordRangeLabel(context, range)}',
+            ),
+          );
+        }
+      }
       if (memorize && mounted) {
         await showMemorizeAyahSheet(
           context,

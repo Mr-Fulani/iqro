@@ -8805,3 +8805,189 @@ svg.track-surah-name-ar {
   flex: 1;
   border-top: 1px solid var(--border);
 }
+
+/* Selected words to listen to (WordSelection.tsx, WordRangeBar.tsx). */
+.word-range-area {
+  display: contents;
+}
+
+.qf-mushaf-word[data-word-key],
+.quran-word {
+  position: relative;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.qf-mushaf-word.is-word-selected,
+.quran-word.is-word-selected {
+  border-radius: 4px;
+  background: rgba(11, 107, 87, 0.22);
+  box-shadow: 0 0 0 2px rgba(11, 107, 87, 0.22);
+}
+
+.qf-mushaf-word.is-word-playing,
+.quran-word.is-word-playing {
+  background: rgba(196, 150, 71, 0.55);
+  box-shadow: 0 0 0 2px rgba(196, 150, 71, 0.55), inset 0 -3px 0 #9a6d22;
+}
+
+.word-range-handle {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: #0b6b57;
+  touch-action: none;
+  cursor: ew-resize;
+  z-index: 2;
+}
+
+.word-range-handle.is-start {
+  right: -2px;
+}
+
+.word-range-handle.is-end {
+  left: -2px;
+}
+
+/* The knob under the line, with a 44 px target around it. */
+.word-range-handle::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  width: 16px;
+  height: 16px;
+  background: #0b6b57;
+}
+
+.word-range-handle.is-start::after {
+  left: 0;
+  border-radius: 0 50% 50% 50%;
+}
+
+.word-range-handle.is-end::after {
+  right: 0;
+  border-radius: 50% 0 50% 50%;
+}
+
+.word-range-handle::before {
+  content: "";
+  position: absolute;
+  top: calc(100% - 14px);
+  left: -21px;
+  width: 44px;
+  height: 44px;
+}
+
+.word-range-bar {
+  position: fixed;
+  z-index: 1000;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  width: min(640px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.word-range-bar-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.word-range-bar-title {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.word-range-bar-title small,
+.word-range-bar-hint,
+.word-range-bar-note {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.word-range-bar-note,
+.word-range-bar-hint {
+  margin: 0;
+}
+
+.word-range-bar-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--primary-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.word-range-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.word-range-bar-play {
+  flex: 1 1 220px;
+  min-height: 44px;
+}
+
+.word-range-bar-repeat {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+}
+
+.word-range-bar-repeat button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.word-range-bar-repeat button + button {
+  border-left: 1px solid var(--border-strong);
+}
+
+.word-range-bar-repeat button.is-active {
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+  font-weight: 600;
+}
+
+.word-range-bar-hint .is-touch {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .word-range-bar-hint .is-pointer {
+    display: none;
+  }
+
+  .word-range-bar-hint .is-touch {
+    display: inline;
+  }
+}

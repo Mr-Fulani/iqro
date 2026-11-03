@@ -10,7 +10,16 @@ import type {
 import { useI18n } from "../lib/i18n-context";
 import { isAllowedQuranWordImageUrl, isQuranFontReady, loadQuranFont, quranFontFamily, retainQuranFont } from "../lib/quran-font";
 import { fitMushafLines, qulGridRow } from "../lib/mushaf-line-layout";
-import { tajweedWordKey, type TajweedGlyph } from "../lib/tajweed";
+import { parseVerseKey, tajweedWordKey, type TajweedGlyph } from "../lib/tajweed";
+import {
+  sameWord,
+  wordKey,
+  wordRangeContains,
+  wordRangeSpansAyahEnd,
+  type QuranWord,
+  type QuranWordRange,
+} from "../lib/word-range";
+import { WordRangeHandles } from "./WordSelection";
 import {
   loadedSurahHeaderGlyphs,
   loadSurahHeaderGlyphs,
@@ -55,6 +64,9 @@ type ChapterIntro = {
   showBismillah: boolean;
 };
 
+/** How long a mouse click on a coloured word waits for a second click. */
+const DOUBLE_CLICK_MS = 250;
+
 const BISMILLAH = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
 
 // The page's own labels are Arabic in every interface language, as in a printed Mushaf.
@@ -76,6 +88,9 @@ type QuranFoundationMushafPageProps = {
   onSelectTajweedWord?: (verseKey: string, position: number) => void;
   /** The juz of the page's first ayah. */
   juz?: number | null;
+  /** The selected words and the one sounding (see WordRange.tsx). */
+  wordRange?: QuranWordRange | null;
+  playingWord?: QuranWord | null;
 };
 
 function verseKeysFromMapping(mapping: Record<string, string>): string[] {
@@ -249,8 +264,12 @@ export function QuranFoundationMushafPageView({
   tajweedWords,
   onSelectTajweedWord,
   juz,
+  wordRange = null,
+  playingWord = null,
 }: QuranFoundationMushafPageProps) {
   const { t } = useI18n();
+  const tajweedClick = useRef(0);
+  useEffect(() => () => window.clearTimeout(tajweedClick.current), []);
   const layout = page.layout?.version === 1 ? page.layout : null;
   const lineCount = Math.min(30, Math.max(1, layout?.lines_per_page ?? mushaf.lines_per_page));
   const imageMode = page.rendering.available && page.rendering.mode === "word-images";
@@ -471,17 +490,33 @@ export function QuranFoundationMushafPageView({
                   ayahKey && playingAyahKey === ayahKey ? "is-playing" : "",
                 ].filter(Boolean).join(" ");
                 const style = { fontFamily: `"${fontFamily}", serif` };
+                const reference = ayahKey ? parseVerseKey(ayahKey) : null;
                 const content = fragment.words.map((word) => {
                   const tajweed = Boolean(ayahKey && word.char_type_name === "word"
                     && tajweedWords?.has(tajweedWordKey(ayahKey, word.position_in_verse ?? 0)));
+                  const quranWord = reference && word.char_type_name === "word" && word.position_in_verse
+                    ? { ...reference, position: word.position_in_verse }
+                    : null;
+                  const selected = quranWord
+                    ? wordRangeContains(wordRange, quranWord)
+                    : Boolean(reference && word.char_type_name === "end"
+                      && wordRangeSpansAyahEnd(wordRange, reference.surah, reference.ayah));
                   return (
                     <span
-                      className={`qf-mushaf-word${word.char_type_name === "end" ? " is-ayah-end" : ""}${tajweed ? " has-tajweed" : ""}`}
+                      className={[
+                        "qf-mushaf-word",
+                        word.char_type_name === "end" ? "is-ayah-end" : "",
+                        tajweed ? "has-tajweed" : "",
+                        selected ? "is-word-selected" : "",
+                        selected && sameWord(quranWord, playingWord) ? "is-word-playing" : "",
+                      ].filter(Boolean).join(" ")}
                       style={word.css_class?.split(/\s+/).includes("bidi-override") ? { unicodeBidi: "bidi-override" } : undefined}
                       key={word.id}
                       data-position-in-page={word.position_in_page}
                       data-word-position={tajweed ? word.position_in_verse ?? undefined : undefined}
+                      data-word-key={quranWord ? wordKey(quranWord) : undefined}
                     >
+                      {quranWord && <WordRangeHandles range={wordRange} word={quranWord} />}
                       {imageMode && isAllowedQuranWordImageUrl(word.image_url) ? (
                         // Provider word images have intrinsic metrics, including the smaller verse markers.
                         // eslint-disable-next-line @next/next/no-img-element
@@ -509,8 +544,16 @@ export function QuranFoundationMushafPageView({
                       onSelectAyah(ayahKey);
                       // A tap on a coloured word also explains its tajweed rules.
                       const word = (event.target as Element).closest<HTMLElement>(".qf-mushaf-word.has-tajweed");
-                      if (word && onSelectTajweedWord) onSelectTajweedWord(ayahKey, Number(word.dataset.wordPosition));
+                      if (!word || !onSelectTajweedWord) return;
+                      const open = () => onSelectTajweedWord(ayahKey, Number(word.dataset.wordPosition));
+                      window.clearTimeout(tajweedClick.current);
+                      // A mouse may be double-clicking the word to select it (WordSelection.tsx):
+                      // the card waits for that, so it does not cover the second click.
+                      if ((event.nativeEvent as PointerEvent).pointerType === "mouse") {
+                        if (event.detail === 1) tajweedClick.current = window.setTimeout(open, DOUBLE_CLICK_MS);
+                      } else open();
                     }}
+                    onDoubleClick={() => window.clearTimeout(tajweedClick.current)}
                     data-highlight={highlightColors?.[ayahKey]}
                     aria-label={annotationLabels?.[ayahKey]
                       ? `${t("common.ayah", { ayah: ayahKey })} · ${annotationLabels[ayahKey]}`

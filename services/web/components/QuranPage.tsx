@@ -75,12 +75,23 @@ import {
 import { localizedPath } from "../lib/routing";
 import { trackEvent } from "../lib/analytics";
 import { isTajweedMushaf, tajweedWordIndex, type TajweedSelection } from "../lib/tajweed";
+import {
+  ayahTextParts,
+  sameWord,
+  wordKey,
+  wordRangeContains,
+  wordRangeCount,
+  type QuranWord,
+  type QuranWordRange,
+} from "../lib/word-range";
+import { WordRangeHandles, useWordSelection } from "./WordSelection";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
 const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
 const MemorizeAyahDialog = dynamic(() => import("./MemorizeAyahDialog"), { ssr: false });
 const TajweedCard = dynamic(() => import("./TajweedCard"), { ssr: false });
 const TajweedBreakdown = dynamic(() => import("./TajweedBreakdown"), { ssr: false });
+const WordRangeBar = dynamic(() => import("./WordRangeBar"), { ssr: false });
 // The share dialog is loaded again after a failed load, as React.lazy keeps it.
 const loadAyahShareDialog = () => lazy(() => import("./AyahShareDialog"));
 let AyahShareDialog = loadAyahShareDialog();
@@ -418,6 +429,9 @@ function QuranContent() {
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
   const [mushafRecitationId, setMushafRecitationId] = useState("");
+  const [wordRange, setWordRange] = useState<{ range: QuranWordRange; count: number } | null>(null);
+  const [playingWord, setPlayingWord] = useState<QuranWord | null>(null);
+  const [wordArea, setWordArea] = useState<HTMLElement | null>(null);
   const [tajweedSelection, setTajweedSelection] = useState<TajweedSelection | null>(null);
   const [breakdownAyah, setBreakdownAyah] = useState<string | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -1396,6 +1410,29 @@ function QuranContent() {
     };
   }, [ayahs, queueReadingPlace, viewMode]);
 
+  const selectWords = useCallback((range: QuranWordRange) => {
+    // The highest position on the page or in the surah stands for a whole ayah.
+    const wordsInAyah = (ayah: number) => {
+      if (viewMode === "text") {
+        const text = ayahs.find((item) => item.number === ayah)?.text_uthmani ?? "";
+        return ayahTextParts(range.start.surah, ayah, text).reduce((sum, part) => sum + (part.words?.length ?? 0), 0);
+      }
+      return Math.max(0, ...(foundationMushafPage?.words ?? [])
+        .filter((word) => word.verse_key === `${range.start.surah}:${ayah}` && word.char_type_name === "word")
+        .map((word) => word.position_in_verse ?? 0));
+    };
+    setWordRange({ range, count: wordRangeCount(range, wordsInAyah) });
+    // The first click of a double click opened the tajweed card of a coloured word.
+    setTajweedSelection(null);
+  }, [ayahs, foundationMushafPage, viewMode]);
+  const clearWords = useCallback(() => {
+    setWordRange(null);
+    setPlayingWord(null);
+  }, []);
+  useWordSelection(wordArea, wordRange?.range ?? null, selectWords, clearWords);
+  // Another surah or view starts without a selection.
+  useEffect(() => { clearWords(); }, [clearWords, selectedSurah, viewMode]);
+
   const handleSelectMushafAyah = useCallback((ayahKey: string) => {
     setSelectedMushafAyah(ayahKey);
     const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
@@ -2137,7 +2174,7 @@ function QuranContent() {
               {t("quran.loadingAyahs")}
             </div>
           ) : ayahs.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
+            <div ref={setWordArea} style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
               {ayahs.map((ayah) => {
                 const ayahKey = `${selectedSurah}:${ayah.number}`;
                 const isAyahActive = playingMushafAyah === ayahKey;
@@ -2246,7 +2283,27 @@ function QuranContent() {
                     {/* A no-break space keeps the marker with the last word. The
                         header already gives the number to screen readers. */}
                     <p className="quran-arabic-text">
-                      {ayah.text_uthmani}{"\u00A0"}
+                      {ayahTextParts(selectedSurah, ayah.number, ayah.text_uthmani).map((part, partIndex, parts) => {
+                        if (!part.words) return <span key={partIndex}>{part.text} </span>;
+                        const first = 1 + parts.slice(0, partIndex).reduce((sum, item) => sum + (item.words?.length ?? 0), 0);
+                        return part.words.map((text, index) => {
+                          const word = { surah: selectedSurah, ayah: ayah.number, position: first + index };
+                          const selected = wordRangeContains(wordRange?.range, word);
+                          return (
+                            <span key={`${partIndex}-${index}`}>
+                              {index > 0 && " "}
+                              <span
+                                className={`quran-word${selected ? " is-word-selected" : ""}${selected && sameWord(word, playingWord) ? " is-word-playing" : ""}`}
+                                data-word-key={wordKey(word)}
+                              >
+                                <WordRangeHandles range={wordRange?.range ?? null} word={word} />
+                                {text}
+                              </span>
+                            </span>
+                          );
+                        });
+                      })}
+                      {"\u00A0"}
                       <span className="ayah-end-marker" aria-hidden="true">{ayahEndMarker(ayah.number)}</span>
                     </p>
                     {translationEnabled && (
@@ -2362,6 +2419,7 @@ function QuranContent() {
                     pageId={`${selectedFoundationMushaf.source_id}-${foundationMushafPage.page_number}`}
                     key={selectedFoundationMushaf.source_id}
                   >
+                    <div ref={setWordArea} className="word-range-area">
                     <QuranFoundationMushafPageView
                       mushaf={selectedFoundationMushaf}
                       page={foundationMushafPage}
@@ -2374,7 +2432,10 @@ function QuranContent() {
                       tajweedWords={tajweedWords}
                       onSelectTajweedWord={handleSelectTajweedWord}
                       juz={divisionAtAyah(juz, mushafVerseKeys[0] ?? null) || null}
+                      wordRange={wordRange?.range ?? null}
+                      playingWord={playingWord}
                     />
+                    </div>
                   </MushafPageTurn>
                 ) : null
               ) : (
@@ -2593,6 +2654,15 @@ function QuranContent() {
         <ShareDialogBoundary key={shareTarget.ayahKey} onFailure={() => void shareAyahWithoutPicture(shareTarget)}>
           <AyahShareDialog target={shareTarget} onClose={() => setShareTarget(null)} />
         </ShareDialogBoundary>
+      )}
+      {wordRange && (
+        <WordRangeBar
+          range={wordRange.range}
+          wordCount={wordRange.count}
+          recitationId={mushafRecitationId || null}
+          onClear={clearWords}
+          onPlayingWord={setPlayingWord}
+        />
       )}
     </MushafReaderLayout>
   );

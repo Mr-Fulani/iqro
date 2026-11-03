@@ -1535,6 +1535,76 @@ test("tajweed Mushaf explains a tapped word, its letters and its sound", async (
   await expect(wordCard).toHaveCount(0);
 });
 
+test("word selection plays the selected words of the Mushaf and of the text", async ({ page }) => {
+  await installTajweedMocks(page);
+  await page.goto("/ru/quran?surah=6");
+  const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+  await expect(view).toHaveAttribute("data-font-status", "ready");
+
+  // A double click selects one word, Shift+click extends the selection to another.
+  await view.locator('[data-word-key="6:2:3"]').dblclick();
+  const bar = page.getByTestId("word-range-bar");
+  await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 3");
+  await expect(bar.getByTestId("word-range-play")).toHaveText(/Прослушать слово/);
+  await view.locator('[data-word-key="6:2:4"]').click({ modifiers: ["Shift"] });
+  await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 3 — 6:2, слово 4");
+  await expect(view.locator(".is-word-selected")).toHaveCount(2);
+  await expect(view.locator('[data-word-key="6:2:3"] .word-range-handle.is-start')).toHaveCount(1);
+  await expect(view.locator('[data-word-key="6:2:4"] .word-range-handle.is-end')).toHaveCount(1);
+
+  await bar.getByTestId("word-range-play").click();
+  // The clip starts with the first word, in the surah track.
+  expect(await bar.locator("audio").evaluate((audio: HTMLAudioElement) => ({
+    start: audio.currentTime,
+    src: audio.getAttribute("src"),
+  }))).toEqual({ start: 1, src: tracks[5].asset.url });
+  await bar.getByRole("button", { name: "3 раза" }).click();
+  await expect(bar.getByRole("button", { name: "3 раза" })).toHaveAttribute("aria-pressed", "true");
+
+  // Escape clears it, as a click beside it does.
+  await page.keyboard.press("Escape");
+  await expect(bar).toHaveCount(0);
+  await expect(view.locator(".is-word-selected")).toHaveCount(0);
+
+  // A reciter without the words' timings says why nothing plays.
+  await view.locator('[data-word-key="6:1:1"]').dblclick();
+  await expect(bar.getByTestId("word-range-unavailable")).toBeVisible();
+  await expect(bar.getByTestId("word-range-play")).toBeDisabled();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: /Текст/ }).first().click();
+  const text = page.locator(".quran-content-surface");
+  await text.locator('.quran-word[data-word-key="6:2:1"]').dblclick();
+  await text.locator('.quran-word[data-word-key="6:2:3"]').click({ modifiers: ["Shift"] });
+  await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 1 — 6:2, слово 3");
+  await expect(bar).toContainText("Слов: 3");
+});
+
+test.describe("word selection on a phone", () => {
+  test.use({ viewport: devices["Pixel 7"].viewport, userAgent: devices["Pixel 7"].userAgent,
+    deviceScaleFactor: devices["Pixel 7"].deviceScaleFactor, isMobile: true, hasTouch: true });
+
+  test("holding a word and moving the finger selects words and turns no page", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const from = await view.locator('[data-word-key="6:2:3"]').boundingBox();
+    const to = await view.locator('[data-word-key="6:2:1"]').boundingBox();
+    const session = await page.context().newCDPSession(page);
+    const point = (box: NonNullable<typeof from>) => [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }];
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: point(from!) });
+    await page.waitForTimeout(700);
+    await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: point(to!) });
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+
+    const bar = page.getByTestId("word-range-bar");
+    await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 1 — 6:2, слово 3");
+    await expect(page).toHaveURL(/surah=6/);
+    await expect(view.locator(".qf-mushaf-page-number")).toHaveText("١٢٨");
+  });
+});
+
 // The media stubs above never leave `paused`; these tests follow it through play and pause.
 async function trackPausedMedia(page: Page) {
   await page.evaluate(() => {

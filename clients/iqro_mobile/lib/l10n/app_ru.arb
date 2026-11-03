@@ -1023,5 +1023,22 @@
   "appUpdateInstall": "Обновить",
   "appUpdateReadyTitle": "Обновление загружено",
   "appUpdateReadyText": "Перезапустите, чтобы обновить. Приложение закроется на несколько секунд.",
-  "appUpdateRestart": "Перезапустить"
+  "appUpdateRestart": "Перезапустить",
+  "listenWord": "Прослушать слово",
+  "selectWords": "Выделить слова",
+  "listenSelection": "Прослушать выделенное",
+  "wordAt": "{ayah}, слово {position}",
+  "@wordAt": {"placeholders": {"ayah": {"type": "String"}, "position": {"type": "int"}}},
+  "wordNumberOf": "Слово {number} из {count}",
+  "@wordNumberOf": {"placeholders": {"number": {"type": "int"}, "count": {"type": "int"}}},
+  "repeatRound": "повтор {round} из {total}",
+  "@repeatRound": {"placeholders": {"round": {"type": "int"}, "total": {"type": "int"}}},
+  "clearSelection": "Снять выделение",
+  "repeatOnce": "1 раз",
+  "repeatThreeTimes": "3 раза",
+  "repeatForever": "Без конца",
+  "wordRangeHint": "Тяните ручки, чтобы изменить выделение",
+  "wordRangeError": "Не удалось воспроизвести выделенное.",
+  "wordTimingsUnavailable": "У этого чтеца нет разметки по словам: его можно слушать только аятами. Разметка по словам есть не у всех чтецов.",
+  "wordTimingsChooseReciter": "Выберите другого чтеца ниже."
 }

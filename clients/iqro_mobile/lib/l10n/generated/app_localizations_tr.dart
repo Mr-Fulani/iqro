@@ -3344,4 +3344,53 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get appUpdateRestart => 'Yeniden başlat';
+
+  @override
+  String get listenWord => 'Kelimeyi dinle';
+
+  @override
+  String get selectWords => 'Kelimeleri seç';
+
+  @override
+  String get listenSelection => 'Seçimi dinle';
+
+  @override
+  String wordAt(String ayah, int position) {
+    return '$ayah, $position. kelime';
+  }
+
+  @override
+  String wordNumberOf(int number, int count) {
+    return 'Kelime $number/$count';
+  }
+
+  @override
+  String repeatRound(int round, int total) {
+    return 'tekrar $round/$total';
+  }
+
+  @override
+  String get clearSelection => 'Seçimi kaldır';
+
+  @override
+  String get repeatOnce => '1 kez';
+
+  @override
+  String get repeatThreeTimes => '3 kez';
+
+  @override
+  String get repeatForever => 'Sürekli';
+
+  @override
+  String get wordRangeHint => 'Seçimi değiştirmek için tutamaçları sürükleyin';
+
+  @override
+  String get wordRangeError => 'Seçim çalınamadı.';
+
+  @override
+  String get wordTimingsUnavailable =>
+      'Bu kârinin kelime kelime zamanlaması yok; yalnızca tam ayetler dinlenebilir. Bu zamanlama her kâride yok.';
+
+  @override
+  String get wordTimingsChooseReciter => 'Aşağıdan başka bir kâri seçin.';
 }
