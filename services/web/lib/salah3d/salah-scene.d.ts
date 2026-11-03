@@ -9,7 +9,18 @@ export type SalahSceneStepId =
   | "jalsa"
   | "sujud2"
   | "tashahhud"
-  | "salam";
+  | "salam"
+  | "qunut"
+  | "tawarruk"
+  | "wudu-start"
+  | "wudu-hands"
+  | "wudu-mouth-nose"
+  | "wudu-face"
+  | "wudu-arms"
+  | "wudu-head"
+  | "wudu-ears"
+  | "wudu-feet"
+  | "wudu-finish";
 
 export type SalahSceneStep = { id: SalahSceneStepId; title: string };
 

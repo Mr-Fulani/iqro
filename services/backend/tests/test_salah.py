@@ -177,6 +177,11 @@ def test_course_pose_illustrations_are_stills_of_the_3d_scene() -> None:
         "position-takbir": "takbir", "position-qiyam": "qiyam", "position-ruku": "ruku",
         "position-itidal": "itidal", "position-sujud": "sujud", "position-jalsa": "jalsa",
         "position-tashahhud": "tashahhud", "position-taslim": "salam",
+        "position-qunut": "qunut", "position-tawarruk": "tawarruk",
+        "wudu-start": "wudu-start", "wudu-hands": "wudu-hands",
+        "wudu-mouth-nose": "wudu-mouth-nose", "wudu-face": "wudu-face",
+        "wudu-arms": "wudu-arms", "wudu-head": "wudu-head", "wudu-ears": "wudu-ears",
+        "wudu-feet": "wudu-feet", "wudu-finish": "wudu-finish",
     }  # fmt: skip
     assert {scene["view"] for scene in scenes.values()} == {"full"}
     assert {scene["pose"] for scene in scenes.values()} <= SCENE_POSES
@@ -184,12 +189,9 @@ def test_course_pose_illustrations_are_stills_of_the_3d_scene() -> None:
         still = (COURSE_SNAPSHOT.parent / f"media/{key}.webp").read_bytes()
         assert webp_size(still) == (720, 720), key
         assert len(still) <= 60 * 1024, key
-    # The poses the scene has no figure for keep their drawings.
+    # Every illustration of the course is a still of the one scene.
     pictures = {asset["key"] for asset in snapshot["media"] if asset["file"].endswith(".webp")}
-    assert {key for key in pictures - set(scenes) if key.startswith("position-")} == {
-        "position-qunut",
-        "position-tawarruk",
-    }
+    assert pictures == set(scenes)
 
 
 def test_a_scene_names_a_pose_and_a_view_of_the_scene() -> None:

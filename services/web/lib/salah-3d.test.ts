@@ -31,6 +31,8 @@ test("a step shows the scene pose its illustration is a still of", () => {
     "position-qunut": picture,
     "position-hand": still("tashahhud", "hand"),
     "position-newer": still("prostration-on-a-chair"),
+    "position-tawarruk": still("tawarruk"),
+    "wudu-feet": still("wudu-feet"),
   };
   const steps = [
     step("intention", "position-qiyam"),
@@ -42,6 +44,8 @@ test("a step shows the scene pose its illustration is a still of", () => {
     step("pointing", "position-hand"),
     step("newer", "position-newer"),
     step("taslim", "position-taslim"),
+    step("tawarruk", "position-tawarruk"),
+    step("feet", "wudu-feet"),
     step("intro"),
   ];
   assert.deepEqual(salahStepScenes(steps, media), [
@@ -56,6 +60,8 @@ test("a step shows the scene pose its illustration is a still of", () => {
     // a pose this build does not know stays a picture
     null,
     { pose: "salam", view: "full" },
+    { pose: "tawarruk", view: "full" },
+    { pose: "wudu-feet", view: "full" },
     null,
   ]);
 });

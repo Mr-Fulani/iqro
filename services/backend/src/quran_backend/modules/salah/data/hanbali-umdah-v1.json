@@ -2,7 +2,7 @@
   "schema_version": 1,
   "course": {
     "slug": "hanbali-umdah",
-    "version": "2026-10-21",
+    "version": "2026-11-03",
     "methodology": "hanbali",
     "source_title": {
       "ru": "Умдат аль-фикх (Ибн Кудама), по муътамаду мазхаба",
@@ -685,6 +685,10 @@
     {
       "key": "position-qunut",
       "file": "media/position-qunut.webp",
+      "scene": {
+        "pose": "qunut",
+        "view": "full"
+      },
       "alt": {
         "ru": "Стоящий мужчина держит ладони перед грудью, раскрыв их вверх",
         "en": "A standing man holds his palms before his chest, open upwards",
@@ -737,6 +741,10 @@
     {
       "key": "position-tawarruk",
       "file": "media/position-tawarruk.webp",
+      "scene": {
+        "pose": "tawarruk",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина сидит на полу, левая стопа выведена вправо, правая поставлена вертикально",
         "en": "A man sits on the floor, left foot brought out to the right, right foot upright",
@@ -761,6 +769,10 @@
     {
       "key": "wudu-start",
       "file": "media/wudu-start.webp",
+      "scene": {
+        "pose": "wudu-start",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина спокойно стоит у раковины с краном перед омовением",
         "en": "A man stands calmly at a basin with a tap before ablution",
@@ -771,6 +783,10 @@
     {
       "key": "wudu-hands",
       "file": "media/wudu-hands.webp",
+      "scene": {
+        "pose": "wudu-hands",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина моет кисти рук под струёй воды",
         "en": "A man washes his hands under running water",
@@ -781,6 +797,10 @@
     {
       "key": "wudu-mouth-nose",
       "file": "media/wudu-mouth-nose.webp",
+      "scene": {
+        "pose": "wudu-mouth-nose",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина подносит к лицу правую ладонь с водой, чтобы прополоскать рот и нос",
         "en": "A man raises water in his right palm to rinse his mouth and nose",
@@ -791,6 +811,10 @@
     {
       "key": "wudu-face",
       "file": "media/wudu-face.webp",
+      "scene": {
+        "pose": "wudu-face",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина омывает лицо водой из обеих ладоней",
         "en": "A man washes his face with water from both palms",
@@ -801,6 +825,10 @@
     {
       "key": "wudu-arms",
       "file": "media/wudu-arms.webp",
+      "scene": {
+        "pose": "wudu-arms",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина омывает правую руку до локтя",
         "en": "A man washes his right arm up to the elbow",
@@ -811,6 +839,10 @@
     {
       "key": "wudu-head",
       "file": "media/wudu-head.webp",
+      "scene": {
+        "pose": "wudu-head",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина проводит мокрыми ладонями по голове от лба к затылку",
         "en": "A man passes his wet palms over his head from the forehead to the nape",
@@ -821,6 +853,10 @@
     {
       "key": "wudu-ears",
       "file": "media/wudu-ears.webp",
+      "scene": {
+        "pose": "wudu-ears",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина протирает уши: указательные пальцы внутри, большие снаружи",
         "en": "A man wipes his ears: index fingers inside, thumbs behind",
@@ -831,6 +867,10 @@
     {
       "key": "wudu-feet",
       "file": "media/wudu-feet.webp",
+      "scene": {
+        "pose": "wudu-feet",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина омывает правую стопу до щиколотки, промывая между пальцами",
         "en": "A man washes his right foot up to the ankle, between the toes",
@@ -841,6 +881,10 @@
     {
       "key": "wudu-finish",
       "file": "media/wudu-finish.webp",
+      "scene": {
+        "pose": "wudu-finish",
+        "view": "full"
+      },
       "alt": {
         "ru": "Мужчина после омовения стоит спокойно, взгляд чуть поднят",
         "en": "A man stands calmly after ablution, gaze slightly raised",

@@ -4,7 +4,8 @@
 // scene's home camera (no camera moves) from clients/iqro_mobile/assets/salah3d (the same
 // code as lib/salah3d, see salah3d-app-assets.ts) and writes a 720×720 WebP of at most
 // 60 KB over the entry's file. Run from services/web after `npm run salah3d:app-assets`:
-//   node scripts/salah3d-frames.ts
+//   node scripts/salah3d-frames.ts [key ...]
+// With keys, only those stills are drawn: the others keep their bytes, and so their URLs.
 import { readFile, writeFile } from "node:fs/promises";
 
 import { chromium } from "@playwright/test";
@@ -18,6 +19,7 @@ type Scene = { pose: string; view: string };
 type Asset = { key: string; file: string; scene?: Scene };
 
 const snapshot = JSON.parse(await readFile(SNAPSHOT, "utf8")) as { media: Asset[] };
+const only = new Set(process.argv.slice(2));
 const browser = await chromium.launch();
 try {
   // Drawn at twice the size and scaled down, so the pencil lines stay smooth.
@@ -25,7 +27,7 @@ try {
   await page.addInitScript(() => Object.assign(window, { SalahBridge: { postMessage() {} } }));
   await page.goto(PAGE.href);
   for (const asset of snapshot.media) {
-    if (!asset.scene) continue;
+    if (!asset.scene || (only.size && !only.has(asset.key))) continue;
     const dataUrl = await page.evaluate(
       async ({ scene, size, maxBytes }) => {
         type Mount = (canvas: HTMLCanvasElement, options: object) => { dispose(): void };

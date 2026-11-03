@@ -30,7 +30,28 @@ WHEN_KEYS = frozenset(
 # Poses and views of the schematic 3D scene (docs/salah/salah-3d.md). An illustration with
 # `scene` is a still of that pose; clients that can run the scene show it instead.
 SCENE_POSES = frozenset(
-    {"qiyam", "takbir", "ruku", "itidal", "sujud", "sujud2", "jalsa", "tashahhud", "salam"}
+    {
+        "qiyam",
+        "takbir",
+        "ruku",
+        "itidal",
+        "sujud",
+        "sujud2",
+        "jalsa",
+        "tashahhud",
+        "salam",
+        "qunut",
+        "tawarruk",
+        "wudu-start",
+        "wudu-hands",
+        "wudu-mouth-nose",
+        "wudu-face",
+        "wudu-arms",
+        "wudu-head",
+        "wudu-ears",
+        "wudu-feet",
+        "wudu-finish",
+    }
 )
 SCENE_VIEWS = frozenset({"full", "hand", "back"})
 # A step's notes open from small icons: «?» for a help note, «!» for a warning.

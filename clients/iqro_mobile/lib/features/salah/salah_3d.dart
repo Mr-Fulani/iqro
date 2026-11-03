@@ -25,6 +25,17 @@ const salahScenePoses = <String>{
   'sujud2',
   'tashahhud',
   'salam',
+  'qunut',
+  'tawarruk',
+  'wudu-start',
+  'wudu-hands',
+  'wudu-mouth-nose',
+  'wudu-face',
+  'wudu-arms',
+  'wudu-head',
+  'wudu-ears',
+  'wudu-feet',
+  'wudu-finish',
 };
 
 /// The scene of each step, from the still its picture is, or null where the

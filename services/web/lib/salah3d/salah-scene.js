@@ -5,7 +5,9 @@
    Technical changes: module import/export instead of globals, SEGMENTS + setStep (one
    course step's movement, played once to its last frame; onEnd, replay), rendering while
    the paused view is turned, the pageScroll option (the page keeps vertical swipes and
-   the wheel) and the WebGL context released on dispose. The app's copy
+   the wheel) and the WebGL context released on dispose. Added for the course's other
+   illustrations: the qunut, tawarruk and wudu poses after the cycle, and the washbasin props
+   shown instead of the rug on the wudu keys. The app's copy
    (clients/iqro_mobile/assets/salah3d) is generated from this file by
    scripts/salah3d-app-assets.mjs. */
 /* eslint-disable @typescript-eslint/no-this-alias, @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions -- author's code, kept as delivered */
@@ -277,7 +279,8 @@ import * as THREE from 'three';
     grasp: [0.13, 0.42, 0.42, 0.25, 0.03, 0.42, 0.45, 0.25, -0.07, 0.42, 0.45, 0.25, -0.16, 0.42, 0.45, 0.25, 0.95, 0.35, 0.25, 0.3, 0.25],
     tashahhud: [0.0, 0.18, 0.14, 0.06, 0.0, 1.0, 1.3, 0.7, -0.02, 1.45, 1.6, 0.9, -0.06, 1.45, 1.55, 0.9, 0.55, 1.05, 0.35, 0.45, 0.35],
     pointing: [0.0, -0.58, 0.0, 0.0, 0.0, 1.0, 1.3, 0.7, -0.02, 1.45, 1.6, 0.9, -0.06, 1.45, 1.55, 0.9, 0.55, 1.05, 0.35, 0.45, 0.35],
-    grip: [0.04, 0.55, 0.6, 0.35, 0, 0.6, 0.65, 0.35, -0.04, 0.68, 0.65, 0.35, -0.08, 0.72, 0.65, 0.35, 0.35, 1.1, 0.45, 0.45, 0.3]
+    grip: [0.04, 0.55, 0.6, 0.35, 0, 0.6, 0.65, 0.35, -0.04, 0.68, 0.65, 0.35, -0.08, 0.72, 0.65, 0.35, 0.35, 1.1, 0.45, 0.45, 0.3],
+    cup: [0.02, 0.35, 0.3, 0.15, 0, 0.38, 0.32, 0.15, -0.02, 0.4, 0.33, 0.15, -0.04, 0.42, 0.35, 0.15, 0.2, 0.5, 0.2, 0.2, 0.1]
   };
 
   // ---------------------------------------------------------------- the rig
@@ -953,6 +956,120 @@ import * as THREE from 'three';
   }));
   POSES.sitEnd = pose(SIT);
 
+  // ---- added for the course's other illustrations (docs/salah/salah-3d.md): qunut, tawarruk, wudu
+  // qunut: standing, open palms raised before the chest
+  POSES.qunut = pose({
+    neck: [0.12, 0, 0], head: [0.08, 0, 0],
+    handL: { p: [0.1, 1.07, -0.17], f: [-0.2, 0.3, 0.93], n: [-0.2, 0.95, -0.25] },
+    handR: { p: [-0.1, 1.07, -0.17], f: [0.2, 0.3, 0.93], n: [0.2, 0.95, -0.25] },
+    elbowL: [0.7, -1, -0.4], elbowR: [-0.7, -1, -0.4],
+    fingersL: 'flat', fingersR: 'flat'
+  });
+  // tawarruk: seated on the floor, the left foot brought out to the right under the upright right foot
+  POSES.tawarruk = pose(deepMerge(SIT, {
+    pelvis: { p: [0.07, 0.2, -0.13], r: [0.04, 0.12, 0.16] },
+    auto: { kneeY: null },
+    spine: [[0.04, 0, -0.08], [0.0, 0, -0.06]],
+    footL: { b: [-0.37, FLOOR + 0.09, -0.1], r: [Math.PI - 0.3, Math.PI / 2 + 0.1, 0], toe: 0.1 },
+    footR: { b: [-0.22, FLOOR + 0.012, -0.25], r: [1.42, -0.2, 0], toe: 'auto' },
+    kneeL: [0.5, -0.2, 1], kneeR: [-0.4, -0.3, 1],
+    handL: { p: [0.17, 0.2, 0.07], f: [-0.04, 0, 1], n: [0, -1, 0], onRobe: 0.018 },
+    handR: { p: [-0.1, 0.22, 0.07], f: [0.18, 0, 1], n: [0.72, -0.7, 0], onRobe: 0.036 },
+    fingersR: 'tashahhud'
+  }));
+
+  // wudu at a washbasin (the WUDU props in mount): the figure faces it as it faces the qibla
+  var AT_BASIN = { pelvis: { p: [0, 0.95, -0.45], r: [-0.02, 0, 0] } };
+  var LEAN = deepMerge(AT_BASIN, { pelvis: { p: [0, 0.94, -0.47], r: [0.2, 0, 0] }, spine: [[0.12, 0, 0], [0.08, 0, 0]], neck: [0.12, 0, 0], head: [0.2, 0, 0] });
+  POSES.wuduStand = pose(deepMerge(AT_BASIN, { neck: [0.1, 0, 0], head: [0.1, 0, 0] }));
+  POSES.wuduHandsA = pose(deepMerge(LEAN, {
+    handL: { p: [0.04, 0.95, -0.06], f: [-0.25, -0.35, 0.9], n: [-0.95, 0.25, 0] },
+    handR: { p: [-0.035, 0.94, -0.09], f: [0.25, -0.35, 0.9], n: [0.95, 0.25, 0] },
+    elbowL: [1, -0.4, -0.3], elbowR: [-1, -0.4, -0.3],
+    fingersL: 'flat', fingersR: 'flat'
+  }));
+  POSES.wuduHandsB = pose(deepMerge(LEAN, {
+    handL: { p: [0.035, 0.94, -0.09], f: [-0.25, -0.35, 0.9], n: [-0.95, 0.25, 0] },
+    handR: { p: [-0.04, 0.95, -0.06], f: [0.25, -0.35, 0.9], n: [0.95, 0.25, 0] },
+    elbowL: [1, -0.4, -0.3], elbowR: [-1, -0.4, -0.3],
+    fingersL: 'flat', fingersR: 'flat'
+  }));
+  var REST_L = { p: [0.19, 0.9, -0.16], f: [-0.2, -0.2, 1], n: [0, -1, 0] }; // left hand on the basin's rim
+  // water taken in the right palm, then to the mouth and nose
+  POSES.wuduTakeR = pose(deepMerge(LEAN, {
+    handL: REST_L, handR: { p: [-0.06, 0.93, -0.1], f: [0.45, 0.1, 0.9], n: [0.1, 1, -0.1] },
+    elbowL: [1, -0.3, -0.5], elbowR: [-1, -0.4, -0.3], fingersL: 'relaxed', fingersR: 'cup'
+  }));
+  POSES.wuduMouth = pose(deepMerge(AT_BASIN, {
+    pelvis: { r: [0.08, 0, 0] }, neck: [0.08, 0, 0], head: [0.02, 0, 0],
+    handL: REST_L, handR: { p: [-0.07, 1.47, -0.22], f: [0.55, 0.62, 0.15], n: [0.2, 0.0, -1] },
+    elbowL: [1, -0.3, -0.5], elbowR: [-0.6, -1, 0.1], fingersL: 'relaxed', fingersR: 'cup'
+  }));
+  // water in both palms, washed over the face from the forehead to the chin
+  POSES.wuduTake2 = pose(deepMerge(LEAN, {
+    handL: { p: [0.05, 0.93, -0.1], f: [-0.3, 0.1, 0.95], n: [-0.3, 1, 0] },
+    handR: { p: [-0.05, 0.93, -0.1], f: [0.3, 0.1, 0.95], n: [0.3, 1, 0] },
+    elbowL: [1, -0.4, -0.3], elbowR: [-1, -0.4, -0.3], fingersL: 'cup', fingersR: 'cup'
+  }));
+  var FACE = { pelvis: { r: [0.1, 0, 0] }, neck: [0.06, 0, 0], head: [0.0, 0, 0], elbowL: [0.6, -1, 0.1], elbowR: [-0.6, -1, 0.1], fingersL: 'flat', fingersR: 'flat' };
+  POSES.wuduFaceUp = pose(deepMerge(AT_BASIN, deepMerge(FACE, {
+    handL: { p: [0.07, 1.5, -0.23], f: [-0.2, 1, 0.1], n: [0.1, 0, -1] },
+    handR: { p: [-0.07, 1.5, -0.23], f: [0.2, 1, 0.1], n: [-0.1, 0, -1] }
+  })));
+  POSES.wuduFaceDown = pose(deepMerge(AT_BASIN, deepMerge(FACE, {
+    handL: { p: [0.07, 1.41, -0.21], f: [-0.2, 1, 0.15], n: [0.1, 0, -1] },
+    handR: { p: [-0.07, 1.41, -0.21], f: [0.2, 1, 0.15], n: [-0.1, 0, -1] }
+  })));
+  // the right arm over the basin, washed by the left hand from the wrist to the elbow
+  var ARM = deepMerge(LEAN, {
+    handR: { p: [-0.02, 0.96, -0.02], f: [0.35, 0, 1], n: [0.1, 1, 0] },
+    elbowR: [-1, -0.6, -0.4], elbowL: [1, -0.2, -0.6], fingersR: 'relaxed', fingersL: 'cup'
+  });
+  POSES.wuduArmA = pose(deepMerge(ARM, { handL: { p: [-0.02, 1.02, -0.08], f: [-0.9, 0.0, 0.4], n: [0, -1, 0] } }));
+  POSES.wuduArmB = pose(deepMerge(ARM, { handL: { p: [-0.13, 1.06, -0.25], f: [-0.9, 0.0, 0.4], n: [0, -1, 0] } }));
+  // wet palms over the head from the forehead to the nape and back
+  var HEAD = { neck: [0.1, 0, 0], head: [0.1, 0, 0], elbowL: [1, 0.6, 0.2], elbowR: [-1, 0.6, 0.2], fingersL: 'flat', fingersR: 'flat' };
+  POSES.wuduHeadFront = pose(deepMerge(AT_BASIN, deepMerge(HEAD, {
+    handL: { p: [0.05, 1.71, -0.27], f: [-0.1, 0.2, -1], n: [0, -1, 0.15] },
+    handR: { p: [-0.05, 1.71, -0.27], f: [0.1, 0.2, -1], n: [0, -1, 0.15] }
+  })));
+  POSES.wuduHeadBack = pose(deepMerge(AT_BASIN, deepMerge(HEAD, {
+    handL: { p: [0.05, 1.79, -0.42], f: [-0.1, -0.5, -1], n: [0, -1, -0.45] },
+    handR: { p: [-0.05, 1.79, -0.42], f: [0.1, -0.5, -1], n: [0, -1, -0.45] }
+  })));
+  // index fingers in the ears, thumbs behind them
+  POSES.wuduEars = pose(deepMerge(AT_BASIN, {
+    neck: [0.1, 0, 0], head: [0.08, 0, 0],
+    handL: { p: [0.12, 1.55, -0.38], f: [-0.25, 1, -0.05], n: [-1, 0.2, 0] },
+    handR: { p: [-0.12, 1.55, -0.38], f: [0.25, 1, -0.05], n: [1, 0.2, 0] },
+    elbowL: [1, -0.4, 0.1], elbowR: [-1, -0.4, 0.1], fingersL: 'pointing', fingersR: 'pointing'
+  }));
+  // seated on the stool, the right foot in the low basin, washed by both hands
+  var STOOL_SIT = {
+    pelvis: { p: [0, 0.42, -0.8], r: [0.8, -0.2, 0] },
+    spine: [[0.3, -0.1, 0], [0.28, -0.1, 0]], neck: [0.0, 0, 0], head: [0.3, 0, 0],
+    footL: { b: [0.16, FLOOR + 0.012, -0.4], r: [0, 0.15, 0], toe: 0 },
+    footR: { b: [-0.33, FLOOR + 0.04, -0.4], r: [0.1, -0.35, 0], toe: 0 },
+    kneeL: [0.2, 0.3, 1], kneeR: [-0.4, 0.4, 1]
+  };
+  POSES.wuduSit = pose(deepMerge(STOOL_SIT, {
+    pelvis: { r: [0.15, 0, 0] }, spine: [[0.05, 0, 0], [0.03, 0, 0]], head: [0.1, 0, 0],
+    handL: { p: [0.17, 0.5, -0.5], f: [-0.1, -0.1, 1], n: [0, -1, 0] },
+    handR: { p: [-0.17, 0.5, -0.5], f: [0.1, -0.1, 1], n: [0, -1, 0] },
+    elbowL: [0.4, -0.4, -1], elbowR: [-0.4, -0.4, -1]
+  }));
+  POSES.wuduFeetA = pose(deepMerge(STOOL_SIT, {
+    handL: { p: [-0.22, 0.2, -0.5], f: [-0.8, -0.3, 0.5], n: [0, -1, 0] },
+    handR: { p: [-0.38, 0.16, -0.47], f: [0.4, -0.5, 0.8], n: [1, -0.2, 0] },
+    elbowL: [1, 0.3, -0.2], elbowR: [-1, 0.3, -0.2], fingersL: 'relaxed', fingersR: 'flat'
+  }));
+  POSES.wuduFeetB = pose(deepMerge(STOOL_SIT, {
+    handL: { p: [-0.24, 0.13, -0.4], f: [-0.8, -0.4, 0.5], n: [0, -1, 0] },
+    handR: { p: [-0.38, 0.12, -0.38], f: [0.4, -0.5, 0.8], n: [1, -0.2, 0] },
+    elbowL: [1, 0.3, -0.2], elbowR: [-1, 0.3, -0.2], fingersL: 'relaxed', fingersR: 'flat'
+  }));
+  POSES.wuduFinish = pose(deepMerge(AT_BASIN, { pelvis: { p: [0, 0.95, -0.5] }, neck: [-0.06, 0, 0], head: [-0.1, 0, 0] }));
+
   function compile(p) {
     var fl = p.footL, fr = p.footR;
     return {
@@ -1002,7 +1119,18 @@ import * as THREE from 'three';
     { id: 'jalsa', title: 'Джальса' },
     { id: 'sujud2', title: 'Суджуд' },
     { id: 'tashahhud', title: 'Ташаххуд' },
-    { id: 'salam', title: 'Салям' }
+    { id: 'salam', title: 'Салям' },
+    { id: 'qunut', title: 'Кунут' },
+    { id: 'tawarruk', title: 'Таваррук' },
+    { id: 'wudu-start', title: 'Вуду: намерение' },
+    { id: 'wudu-hands', title: 'Вуду: кисти' },
+    { id: 'wudu-mouth-nose', title: 'Вуду: рот и нос' },
+    { id: 'wudu-face', title: 'Вуду: лицо' },
+    { id: 'wudu-arms', title: 'Вуду: руки до локтей' },
+    { id: 'wudu-head', title: 'Вуду: голова' },
+    { id: 'wudu-ears', title: 'Вуду: уши' },
+    { id: 'wudu-feet', title: 'Вуду: ноги' },
+    { id: 'wudu-finish', title: 'Вуду: после омовения' }
   ];
   // [pose, transition seconds, hold seconds, step index, blend options]
   var MAIN = [
@@ -1037,8 +1165,42 @@ import * as THREE from 'three';
     ['sitRise', 1.0, 0.0, 8],
     ['kneel', 0.8, 0.0, 8],
     ['descend', 0.9, 0.0, 8],
-    ['stand', 1.1, 0.2, 0]
+    ['stand', 1.1, 0.2, 0],
+    // the other illustrations, after the cycle: each block starts with a lead-in key of no step
+    // of its own, so its first movement begins from a natural pose. Keys of wudu poses show the
+    // washbasin instead of the rug; { water: 1 } runs the tap.
+    ['qiyam', 0, 0.6, 9],
+    ['qunut', 1.1, 2.4, 9],
+    ['sujud', 0, 0.6, 10],
+    ['handsDown', 0.8, 0.0, 10],
+    ['sitRise', 0.6, 0.0, 10],
+    ['tawarruk', 1.0, 2.4, 10],
+    ['wuduFinish', 0, 0.6, 11],
+    ['wuduStand', 1.0, 1.4, 11],
+    ['wuduHandsA', 1.0, 0.1, 12, { water: 1 }],
+    ['wuduHandsB', 0.45, 0.0, 12, { water: 1 }],
+    ['wuduHandsA', 0.45, 0.0, 12, { water: 1 }],
+    ['wuduHandsB', 0.45, 0.0, 12, { water: 1 }],
+    ['wuduHandsA', 0.45, 0.8, 12, { water: 1 }],
+    ['wuduTakeR', 0.9, 0.4, 13, { water: 1 }],
+    ['wuduMouth', 0.9, 1.4, 13],
+    ['wuduTake2', 1.0, 0.4, 14, { water: 1 }],
+    ['wuduFaceUp', 0.9, 0.2, 14],
+    ['wuduFaceDown', 0.9, 1.0, 14],
+    ['wuduArmA', 1.0, 0.3, 15, { water: 1 }],
+    ['wuduArmB', 1.1, 0.8, 15, { water: 1 }],
+    ['wuduHeadFront', 1.0, 0.2, 16],
+    ['wuduHeadBack', 0.9, 0.1, 16],
+    ['wuduHeadFront', 0.9, 0.8, 16],
+    ['wuduEars', 1.0, 1.6, 17],
+    ['wuduSit', 1.2, 0.1, 18],
+    ['wuduFeetA', 1.0, 0.2, 18],
+    ['wuduFeetB', 0.7, 0.1, 18],
+    ['wuduFeetA', 0.7, 0.8, 18],
+    ['wuduSit', 1.0, 0.0, 19],
+    ['wuduFinish', 1.2, 2.0, 19]
   ];
+  var CYCLE_KEYS = 32; // MAIN[0..31] is the prayer cycle played when no step is chosen
   var HAND = [
     ['tash', 0, 1.3, 7],
     ['tashPoint', 0.5, 1.3, 7],
@@ -1049,7 +1211,10 @@ import * as THREE from 'three';
   // seconds of the previous pose before it, and held on its last frame.
   var SEGMENTS = {
     qiyam: [2, 2], takbir: [1, 1], ruku: [3, 4], itidal: [5, 6], sujud: [7, 10],
-    jalsa: [11, 13], sujud2: [14, 16], tashahhud: [17, 23, 22], salam: [24, 27, 24]
+    jalsa: [11, 13], sujud2: [14, 16], tashahhud: [17, 23, 22], salam: [24, 27, 24],
+    qunut: [33, 33], tawarruk: [35, 37], 'wudu-start': [39, 39], 'wudu-hands': [40, 44],
+    'wudu-mouth-nose': [45, 46], 'wudu-face': [47, 49], 'wudu-arms': [50, 51], 'wudu-head': [52, 54],
+    'wudu-ears': [55, 55], 'wudu-feet': [56, 59], 'wudu-finish': [60, 61]
   };
   var LEAD_IN = 0.6;
 
@@ -1107,10 +1272,11 @@ import * as THREE from 'three';
   }
 
   function Timeline(keys, rig) {
-    this.keys = keys.map(function (k) { return { pose: getPose(k[0], rig), name: k[0], tr: k[1], hold: k[2], step: k[3], opt: k[4] || null }; });
+    this.keys = keys.map(function (k) { return { pose: getPose(k[0], rig), name: k[0], tr: k[1], hold: k[2], step: k[3], opt: k[4] || null, wudu: k[0].indexOf('wudu') === 0 }; });
     var t = 0;
     this.keys.forEach(function (k) { k.t0 = t; t += k.tr; k.t1 = t; t += k.hold; k.t2 = t; });
     this.dur = t;
+    this.cycle = keys === MAIN ? this.keys[CYCLE_KEYS - 1].t2 : t; // the loop without a chosen step
     this.out = makeBlank();
   }
   Timeline.prototype.sample = function (time) {
@@ -1132,6 +1298,47 @@ import * as THREE from 'three';
       }
     }
   };
+
+  // ---------------------------------------------------------------- wudu props
+  // a pedestal washbasin with a tap and its stream, a stool behind the figure and a low basin
+  // for the feet, in the same pencil materials; shown instead of the rug on the wudu steps
+  function wuduProps() {
+    var group = new THREE.Group();
+    var porcelain = hatchMat('#f4f2ec', { hatch: 0.9, rim: 0.3, side: THREE.DoubleSide });
+    var metal = hatchMat('#c8c7c1', { hatch: 1.0, rim: 0.4 });
+    var wood = hatchMat('#cdb68f', { hatch: 1.0, rim: 0.3 });
+    var waterMat = hatchMat('#cfe0e8', { hatch: 0.25, rim: 0.5, flat: 0.5 });
+    var thick = outlineMat(0.0055, 0.8, 2.6), thin = outlineMat(0.003, 0.6, 1.8);
+    function add(g, mat, o, x, y, z, rx) {
+      var m = new THREE.Mesh(g, mat); m.position.set(x, y, z); if (rx) m.rotation.x = rx; group.add(m);
+      if (o) { var mo = new THREE.Mesh(g, o); mo.position.copy(m.position); mo.rotation.copy(m.rotation); group.add(mo); }
+      return m;
+    }
+    var BZ = 0.03, TOP = 0.84;
+    add(new THREE.CylinderGeometry(0.06, 0.1, TOP - 0.1, 28), porcelain, thick, 0, (TOP - 0.1) / 2, BZ + 0.06);
+    var bowl = new THREE.SphereGeometry(1, 40, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2); bowl.scale(0.25, 0.15, 0.19);
+    add(bowl, porcelain, thick, 0, TOP, BZ);
+    var rim = new THREE.TorusGeometry(1, 0.075, 10, 48); rim.scale(0.25, 0.19, 0.25);
+    add(rim, porcelain, thin, 0, TOP, BZ, Math.PI / 2);
+    // tap at the back of the basin, its spout over the middle
+    add(new THREE.CylinderGeometry(0.014, 0.018, 0.14, 16), metal, thin, 0, TOP + 0.07, BZ + 0.16);
+    var spout = new THREE.CylinderGeometry(0.011, 0.011, 0.15, 14); spout.rotateX(Math.PI / 2);
+    add(spout, metal, thin, 0, TOP + 0.135, BZ + 0.085);
+    add(new THREE.CylinderGeometry(0.012, 0.012, 0.025, 14), metal, thin, 0, TOP + 0.12, BZ + 0.012);
+    add(new THREE.BoxGeometry(0.012, 0.012, 0.06), metal, thin, 0, TOP + 0.15, BZ + 0.18);
+    var water = add(new THREE.CylinderGeometry(0.0065, 0.009, 0.2, 10), waterMat, null, 0, TOP + 0.06, BZ + 0.012);
+    // stool behind the figure
+    var SZ = -0.82, SH = 0.32;
+    add(new THREE.BoxGeometry(0.34, 0.035, 0.28), wood, thick, 0, SH, SZ);
+    [[0.14, 0.11], [-0.14, 0.11], [0.14, -0.11], [-0.14, -0.11]].forEach(function (l) {
+      add(new THREE.CylinderGeometry(0.014, 0.017, SH, 10), wood, thin, l[0], SH / 2, SZ + l[1]);
+    });
+    // low basin for the feet
+    var tub = new THREE.CylinderGeometry(0.17, 0.13, 0.08, 32, 1, true);
+    add(tub, porcelain, thick, -0.34, 0.04, -0.42);
+    add(new THREE.CircleGeometry(0.13, 32), porcelain, null, -0.34, 0.004, -0.42, -Math.PI / 2);
+    return { group: group, water: water };
+  }
 
   // ---------------------------------------------------------------- scene
   function mount(canvas, opts) {
@@ -1193,6 +1400,13 @@ import * as THREE from 'three';
     var rug = new THREE.Mesh(rugGeo, rugMat); rug.position.set(0, FLOOR / 2, 0.17);
     var rugO = new THREE.Mesh(rugGeo, outlineMat(0.004, 0.8, 2.0)); rugO.position.copy(rug.position);
     scene.add(rug); scene.add(rugO);
+    var wudu = wuduProps(); wudu.group.visible = false; scene.add(wudu.group);
+    // the basin scene sits further back than the rug, so it is moved toward the camera's centre
+    var WUDU_SHIFT = 0.4;
+    function showProps(atBasin, water) {
+      rug.visible = rugO.visible = !atBasin; wudu.group.visible = atBasin; wudu.water.visible = water;
+      rig.root.position.z = wudu.group.position.z = shadowRoot.position.z = atBasin ? WUDU_SHIFT : 0;
+    }
 
     // contact shadows
     var radTex = radialTexture();
@@ -1390,6 +1604,7 @@ import * as THREE from 'three';
       var dt = clock.last ? Math.min(0.05, (now - clock.last) / 1000) : 0;
       clock.last = now;
       if (!frozen) clock.t += dt * (opts.speed || 1);
+      if (!range && clock.t >= tl.cycle) clock.t %= tl.cycle;
       if (range && !frozen && clock.t >= range[1]) {
         // the step's last frame: at range[1] itself the next key (and step) begins
         clock.t = range[1] - 1e-3; frozen = ended = true;
@@ -1400,7 +1615,8 @@ import * as THREE from 'three';
     }
     function renderOnce() {
       resize();
-      var s = tl.sample(clock.t);
+      var s = tl.sample(clock.t), key = tl.keys[s.key];
+      showProps(key.wudu, !!(key.opt && key.opt.water));
       var breath = s.hold ? Math.sin(clock.t * 1.6) : 0;
       rig.apply(s.pose, breath * 0.6);
       updateShadows();
@@ -1413,7 +1629,7 @@ import * as THREE from 'three';
       SHARED.uLight2.value.copy(light2W).transformDirection(camera.matrixWorldInverse);
       draw();
       if (s.step !== lastStep) { lastStep = s.step; if (opts.onStep) try { opts.onStep(s.step, STEPS[s.step]); } catch (e) { } }
-      if (opts.onProgress) try { opts.onProgress(clock.t % tl.dur / tl.dur); } catch (e) { }
+      if (opts.onProgress) try { opts.onProgress(clock.t % tl.cycle / tl.cycle); } catch (e) { }
     }
     function kick() { if (!raf && !disposed) { clock.last = 0; raf = requestAnimationFrame(frame); } }
     function onVis() { if (!document.hidden) kick(); }
@@ -1422,7 +1638,7 @@ import * as THREE from 'three';
 
     return {
       steps: STEPS,
-      duration: tl.dur,
+      duration: tl.cycle,
       setTime: function (t) { clock.t = t; frozen = true; applyTrack(true); renderOnce(); applyTrack(true); renderOnce(); },
       setStep: setStep,
       play: function () { if (!ended) { frozen = false; kick(); } }, // an ended step waits for replay()
@@ -1432,7 +1648,7 @@ import * as THREE from 'three';
       setSpeed: function (v) { opts.speed = +v || 1; },
       resetCamera: function () { onDbl(); },
       setCamera: function (o) { manualUntil = Infinity; for (var k in o) { CAM[k] = o[k]; cur[k] = o[k]; } curT.copy(CAM.target); renderOnce(); },
-      renderPose: function (name) { frozen = true; rig.apply(getPose(name, rig)); updateShadows(); placeCamera(); SHARED.uLight.value.copy(lightW).transformDirection(camera.matrixWorldInverse); draw(); return rig.J; },
+      renderPose: function (name) { frozen = true; showProps(name.indexOf('wudu') === 0, /^wudu(Hands|Take|Arm)/.test(name)); rig.apply(getPose(name, rig)); updateShadows(); placeCamera(); SHARED.uLight.value.copy(lightW).transformDirection(camera.matrixWorldInverse); draw(); return rig.J; },
       joints: rig.J,
       dispose: function () {
         disposed = true; if (raf) cancelAnimationFrame(raf);

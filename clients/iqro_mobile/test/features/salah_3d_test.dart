@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/salah/salah_3d.dart';
@@ -38,6 +41,8 @@ void main() {
       picture('position-hand', still('tashahhud', 'hand')),
       picture('position-newer', still('prostration-on-a-chair')),
       picture('position-broken', <String, Object?>{'pose': 'ruku'}),
+      picture('position-tawarruk', still('tawarruk')),
+      picture('wudu-feet', still('wudu-feet')),
     ];
     final steps = <SalahStep>[
       step('intention', 'position-qiyam'),
@@ -50,6 +55,8 @@ void main() {
       step('newer', 'position-newer'),
       step('broken', 'position-broken'),
       step('taslim', 'position-taslim'),
+      step('tawarruk', 'position-tawarruk'),
+      step('feet', 'wudu-feet'),
       step('intro'),
     ];
     final document = SalahCourseDocument.fromJson(salahFixture());
@@ -74,6 +81,8 @@ void main() {
       null,
       null,
       const SalahMediaScene(pose: 'salam'),
+      const SalahMediaScene(pose: 'tawarruk'),
+      const SalahMediaScene(pose: 'wudu-feet'),
       null,
     ]);
   });
@@ -158,5 +167,31 @@ void main() {
       await rootBundle.loadString('assets/salah3d/LICENSE-three.txt'),
       contains('MIT'),
     );
+  });
+
+  test('this build knows every pose the course asks for, and the scene has '
+      'each of them', () async {
+    final snapshot =
+        jsonDecode(
+              File(
+                '../../services/backend/src/quran_backend/modules/salah/data/hanbali-umdah-v1.json',
+              ).readAsStringSync(),
+            )
+            as Map<String, Object?>;
+    final asked = <String>{
+      for (final asset in (snapshot['media']! as List).cast<Map>())
+        if (asset['scene'] case {'pose': final String pose}) pose,
+    };
+    // Every illustration of the course is a still of the scene.
+    expect(asked, hasLength(19));
+    expect(salahScenePoses.containsAll(asked), isTrue);
+    final scene = await rootBundle.loadString('assets/salah3d/salah-scene.js');
+    for (final pose in salahScenePoses) {
+      expect(
+        scene,
+        matches(RegExp("[{ ]'?$pose'?: \\[\\d+, \\d+")),
+        reason: pose,
+      );
+    }
   });
 }
