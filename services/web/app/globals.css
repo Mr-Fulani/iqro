@@ -3516,9 +3516,11 @@ input:focus, select:focus, textarea:focus {
   display: grid;
   grid-template-rows: repeat(15, minmax(0, 1fr));
   width: 100%;
-  aspect-ratio: 900 / 1380;
+  /* A 900 × 1380 page plus 50.7px more paper above and below it for the
+     page's own labels (see .qf-mushaf-page-header). */
+  aspect-ratio: 900 / 1481.4;
   box-sizing: border-box;
-  padding: 8% 6% 7%;
+  padding: 13.633333% 6% 12.633333%;
   overflow: hidden;
   border: 1px solid #ded4c3;
   border-radius: var(--radius-sm);
@@ -3584,8 +3586,9 @@ input:focus, select:focus, textarea:focus {
 }
 
 .qf-mushaf-sheet.has-qul-layout {
-  /* Same 6% side / 3.5% height inset as the native page canvas. */
-  padding: 5.366667% 6%;
+  /* The native page canvas keeps a 6% side / 3.5% height inset; the
+     surah, juz and page number get 5.633333% of the width more paper. */
+  padding: 11% 6%;
 }
 
 .has-qul-layout .qf-mushaf-line-content,
@@ -3935,33 +3938,33 @@ input:focus, select:focus, textarea:focus {
   overflow: hidden;
 }
 
+/* The page's labels sit centred in its top and bottom margins, as in a
+   printed Mushaf. 6.683% of the height is the QUL margin (11% of the width),
+   the narrowest of the sheet's paddings. The type grows with the sheet. */
+.qf-mushaf-page-header,
 .qf-mushaf-page-number {
   position: absolute;
-  bottom: 2.5%;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #786b57;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-/* Centred in the top margin: 3.5% of the height is the QUL inset, the
-   narrowest of the sheet's paddings. */
-.qf-mushaf-page-header {
-  position: absolute;
-  top: 0;
   inset-inline: 6%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  height: 3.5%;
+  height: 6.683%;
   color: #786b57;
-  font-size: 11px;
+  font-size: clamp(16px, 2.6cqw, 24px);
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.qf-mushaf-page-header {
+  top: 0;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.qf-mushaf-page-number {
+  bottom: 0;
+  justify-content: center;
 }
 
 .qf-mushaf-attribution {

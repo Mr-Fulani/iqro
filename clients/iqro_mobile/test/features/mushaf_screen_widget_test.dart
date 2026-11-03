@@ -351,6 +351,11 @@ void main() {
     expect(label('mushaf-page-header', 'الجزء ٧'), findsWidgets);
     expect(label('mushaf-page-footer', '١٢٢'), findsOneWidget);
     expect(label('mushaf-page-header', 'Аль-Маида'), findsNothing);
+    // As large as the site's labels on a phone, not the 14 px body text.
+    for (final text in <String>['سورة المائدة', 'الجزء ٧', '١٢٢']) {
+      final size = tester.widget<Text>(find.text(text).first).style?.fontSize;
+      expect(size, 16, reason: text);
+    }
   });
 }
 

@@ -1,4 +1,4 @@
-import { devices, expect, Page, test as base } from "@playwright/test";
+import { devices, expect, type Locator, Page, test as base } from "@playwright/test";
 import { swipe, unroll } from "./swipe";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -1158,21 +1158,36 @@ test("Quran review deep link opens and highlights its first ayah", async ({ page
   await expect(linkedAyah.last()).toHaveClass(/is-selected/);
 });
 
-test("Mushaf page labels are Arabic in a Russian interface", async ({ page }) => {
+test("Mushaf page labels are Arabic, readable and clear of the lines", async ({ page }) => {
   const sheet = page.locator(".qf-mushaf-sheet");
   const header = sheet.locator(".qf-mushaf-page-header");
+  const pageNumber = sheet.locator(".qf-mushaf-page-number");
   for (const viewport of [{ width: 1280, height: 720 }, { width: 375, height: 812 }]) {
     await page.setViewportSize(viewport);
     await page.goto("/ru/quran?surah=6");
 
     await expect(header).toHaveText("سورة الأنعامالجزء ١");
-    await expect(sheet.locator(".qf-mushaf-page-number")).toHaveText("١٢٨");
-    // The surah sits on the right, as the Mushaf reads, and clears the first line.
-    const [surah, juzLabel] = await header.locator("span").evaluateAll((spans) =>
-      spans.map((span) => span.getBoundingClientRect()).map(({ left, bottom }) => ({ left, bottom })));
+    await expect(pageNumber).toHaveText("١٢٨");
+    for (const label of [header, pageNumber]) {
+      const size = await label.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+      expect(size).toBeGreaterThanOrEqual(16);
+      expect(size).toBeLessThanOrEqual(24);
+    }
+    // Text boxes, not the margin bands that hold them.
+    const textBoxes = (labels: Locator) => labels.evaluateAll((elements) => elements.map((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const { left, top, bottom } = range.getBoundingClientRect();
+      return { left, top, bottom };
+    }));
+    const [surah, juzLabel] = await textBoxes(header.locator("span"));
+    const [number] = await textBoxes(pageNumber);
+    // The surah sits on the right, as the Mushaf reads; both labels keep their distance.
     expect(surah.left).toBeGreaterThan(juzLabel.left);
-    const lineTop = await sheet.locator(".qf-mushaf-line").first().evaluate((element) => element.getBoundingClientRect().top);
-    expect(Math.max(surah.bottom, juzLabel.bottom)).toBeLessThanOrEqual(lineTop);
+    const lines = await sheet.locator(".qf-mushaf-line").evaluateAll((rows) =>
+      rows.map((row) => row.getBoundingClientRect()).filter((row) => row.height > 0));
+    expect(Math.min(...lines.map((row) => row.top)) - Math.max(surah.bottom, juzLabel.bottom)).toBeGreaterThanOrEqual(8);
+    expect(number.top - Math.max(...lines.map((row) => row.bottom))).toBeGreaterThanOrEqual(8);
   }
 });
 

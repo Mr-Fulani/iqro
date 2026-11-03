@@ -298,6 +298,13 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
   Widget _buildPage(MushafPageData pageData) {
     final viewport = MediaQuery.sizeOf(context);
     final portrait = viewport.height >= viewport.width;
+    // The surah, juz and page number grow with the page as on the site:
+    // 2.6% of its width, 16 to 24 px.
+    final labelStyle = TextStyle(
+      color: mushafInkColor,
+      fontSize: (viewport.width * .026).clamp(16, 24).toDouble(),
+      fontWeight: FontWeight.w600,
+    );
     final tajweed = _tajweed(pageData);
     final surahNumber = pageData.firstAyahReference?.surah;
     final surah = widget.surahs
@@ -326,10 +333,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                       textDirection: TextDirection.rtl,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: mushafInkColor,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: labelStyle,
                     ),
                   ),
                   Flexible(
@@ -338,10 +342,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                       textDirection: TextDirection.rtl,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: mushafInkColor,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: labelStyle,
                     ),
                   ),
                 ],
@@ -402,16 +403,10 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                       const Icon(
                         Icons.bookmark_border_rounded,
                         color: mushafAccentColor,
-                        size: 14,
+                        size: 16,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        arabicIndicDigits(widget.page),
-                        style: const TextStyle(
-                          color: mushafInkColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      Text(arabicIndicDigits(widget.page), style: labelStyle),
                     ],
                   ),
                 ),
