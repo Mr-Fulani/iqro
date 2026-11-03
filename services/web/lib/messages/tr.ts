@@ -801,6 +801,8 @@ const tr: Messages = {
   "player.openFull": "Oynatıcıyı aç",
   "player.hideBar": "Oynatıcı çubuğunu gizle",
   "player.showBar": "Oynatıcı çubuğunu göster",
+  "player.foldDock": "Oynatıcıyı düğmeye küçült",
+  "player.unfoldDock": "Oynatıcıyı göster",
   "player.previousSurah": "Önceki sure",
   "player.nextSurah": "Sonraki sure",
   "player.surahUnavailable": "Bu kayıtta bu sure yok",

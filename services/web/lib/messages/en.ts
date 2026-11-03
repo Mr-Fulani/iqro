@@ -801,6 +801,8 @@ const en: Messages = {
   "player.openFull": "Open the player",
   "player.hideBar": "Hide the player bar",
   "player.showBar": "Show the player bar",
+  "player.foldDock": "Fold the player into a button",
+  "player.unfoldDock": "Show the player",
   "player.previousSurah": "Previous surah",
   "player.nextSurah": "Next surah",
   "player.surahUnavailable": "This recording has no such surah",

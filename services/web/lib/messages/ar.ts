@@ -801,6 +801,8 @@ const ar: Messages = {
   "player.openFull": "فتح المشغل",
   "player.hideBar": "إخفاء شريط المشغل",
   "player.showBar": "إظهار شريط المشغل",
+  "player.foldDock": "طي المشغل إلى زر",
+  "player.unfoldDock": "إظهار المشغل",
   "player.previousSurah": "السورة السابقة",
   "player.nextSurah": "السورة التالية",
   "player.surahUnavailable": "هذه السورة غير متوفرة في هذا التسجيل",
