@@ -26,7 +26,9 @@
 | `wudu-feet` | `wudu-feet`: садится на табурет и моет правую стопу в тазике | `full` |
 | `wudu-finish` | `wudu-finish`: встаёт и стоит, взгляд чуть поднят | `full` |
 
-Снимки: все иллюстрации до и после версии `2026-11-03` — [screenshots/illustrations-before-after.webp](screenshots/illustrations-before-after.webp), новые позы с разных сторон — [screenshots/new-poses-turned.webp](screenshots/new-poses-turned.webp).
+Снимки: все иллюстрации до и после версии `2026-11-03` — [screenshots/illustrations-before-after.webp](screenshots/illustrations-before-after.webp), новые позы с разных сторон — [screenshots/new-poses-turned.webp](screenshots/new-poses-turned.webp). В приложении на Redmi (таваррук, он же повёрнутый пальцем, вуду: кисти и ноги) — [screenshots/app-redmi-tawarruk-wudu.webp](screenshots/app-redmi-tawarruk-wudu.webp).
+
+До публикации версии `2026-11-03` сайт и приложения показывают опубликованную `2026-10-21`, где кунут, таваррук и вуду ещё рисунки. После публикации сборки приложения без этих поз в списке (1.0.4 и раньше) покажут на их месте новые кадры сцены, без вращения; вращение — со сборки, в которую вошла эта версия сцены.
 
 Шаги вуду идут в сцене подряд, как в уроке: каждый начинается с конца предыдущего. На шагах вуду вместо коврика — раковина на ножке с краном (струя видна, пока руки под водой), табурет за спиной и низкий тазик для ног, в тех же карандашных материалах; вся эта сцена сдвинута к центру кадра.
 
