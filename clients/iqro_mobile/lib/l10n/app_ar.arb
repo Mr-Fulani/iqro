@@ -1016,5 +1016,22 @@
   "appUpdateInstall": "تحديث",
   "appUpdateReadyTitle": "تم تنزيل التحديث",
   "appUpdateReadyText": "أعِد التشغيل للتحديث. سيُغلق التطبيق لبضع ثوانٍ.",
-  "appUpdateRestart": "إعادة التشغيل"
+  "appUpdateRestart": "إعادة التشغيل",
+  "listenWord": "استمع إلى الكلمة",
+  "selectWords": "تحديد الكلمات",
+  "listenSelection": "استمع إلى المحدد",
+  "wordAt": "{ayah}، الكلمة {position}",
+  "@wordAt": {"placeholders": {"ayah": {"type": "String"}, "position": {"type": "int"}}},
+  "wordNumberOf": "الكلمة {number} من {count}",
+  "@wordNumberOf": {"placeholders": {"number": {"type": "int"}, "count": {"type": "int"}}},
+  "repeatRound": "التكرار {round} من {total}",
+  "@repeatRound": {"placeholders": {"round": {"type": "int"}, "total": {"type": "int"}}},
+  "clearSelection": "إلغاء التحديد",
+  "repeatOnce": "مرة",
+  "repeatThreeTimes": "3 مرات",
+  "repeatForever": "بلا توقف",
+  "wordRangeHint": "اسحب المقبضين لتغيير التحديد",
+  "wordRangeError": "تعذّر تشغيل المحدد.",
+  "wordTimingsUnavailable": "لا يوجد لهذا القارئ توقيت للكلمات، فلا تُسمع منه إلا آيات كاملة. هذا التوقيت ليس متاحًا لكل القرّاء.",
+  "wordTimingsChooseReciter": "اختر قارئًا آخر في الأسفل."
 }

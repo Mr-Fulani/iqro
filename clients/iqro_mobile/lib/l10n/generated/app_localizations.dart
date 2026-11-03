@@ -5975,6 +5975,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restart'**
   String get appUpdateRestart;
+
+  /// No description provided for @listenWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen to the word'**
+  String get listenWord;
+
+  /// No description provided for @selectWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Select words'**
+  String get selectWords;
+
+  /// No description provided for @listenSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen to the selection'**
+  String get listenSelection;
+
+  /// No description provided for @wordAt.
+  ///
+  /// In en, this message translates to:
+  /// **'{ayah}, word {position}'**
+  String wordAt(String ayah, int position);
+
+  /// No description provided for @wordNumberOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Word {number} of {count}'**
+  String wordNumberOf(int number, int count);
+
+  /// No description provided for @repeatRound.
+  ///
+  /// In en, this message translates to:
+  /// **'repeat {round} of {total}'**
+  String repeatRound(int round, int total);
+
+  /// No description provided for @clearSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get clearSelection;
+
+  /// No description provided for @repeatOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'Once'**
+  String get repeatOnce;
+
+  /// No description provided for @repeatThreeTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'3 times'**
+  String get repeatThreeTimes;
+
+  /// No description provided for @repeatForever.
+  ///
+  /// In en, this message translates to:
+  /// **'Endless'**
+  String get repeatForever;
+
+  /// No description provided for @wordRangeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the handles to change the selection'**
+  String get wordRangeHint;
+
+  /// No description provided for @wordRangeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not play the selection.'**
+  String get wordRangeError;
+
+  /// No description provided for @wordTimingsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This reciter has no word-by-word timing, so it plays only whole ayahs. Not every reciter has it.'**
+  String get wordTimingsUnavailable;
+
+  /// No description provided for @wordTimingsChooseReciter.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose another reciter below.'**
+  String get wordTimingsChooseReciter;
 }
 
 class _AppLocalizationsDelegate

@@ -3352,4 +3352,53 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get appUpdateRestart => 'إعادة التشغيل';
+
+  @override
+  String get listenWord => 'استمع إلى الكلمة';
+
+  @override
+  String get selectWords => 'تحديد الكلمات';
+
+  @override
+  String get listenSelection => 'استمع إلى المحدد';
+
+  @override
+  String wordAt(String ayah, int position) {
+    return '$ayah، الكلمة $position';
+  }
+
+  @override
+  String wordNumberOf(int number, int count) {
+    return 'الكلمة $number من $count';
+  }
+
+  @override
+  String repeatRound(int round, int total) {
+    return 'التكرار $round من $total';
+  }
+
+  @override
+  String get clearSelection => 'إلغاء التحديد';
+
+  @override
+  String get repeatOnce => 'مرة';
+
+  @override
+  String get repeatThreeTimes => '3 مرات';
+
+  @override
+  String get repeatForever => 'بلا توقف';
+
+  @override
+  String get wordRangeHint => 'اسحب المقبضين لتغيير التحديد';
+
+  @override
+  String get wordRangeError => 'تعذّر تشغيل المحدد.';
+
+  @override
+  String get wordTimingsUnavailable =>
+      'لا يوجد لهذا القارئ توقيت للكلمات، فلا تُسمع منه إلا آيات كاملة. هذا التوقيت ليس متاحًا لكل القرّاء.';
+
+  @override
+  String get wordTimingsChooseReciter => 'اختر قارئًا آخر في الأسفل.';
 }

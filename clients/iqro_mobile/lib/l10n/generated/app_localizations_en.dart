@@ -3381,4 +3381,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appUpdateRestart => 'Restart';
+
+  @override
+  String get listenWord => 'Listen to the word';
+
+  @override
+  String get selectWords => 'Select words';
+
+  @override
+  String get listenSelection => 'Listen to the selection';
+
+  @override
+  String wordAt(String ayah, int position) {
+    return '$ayah, word $position';
+  }
+
+  @override
+  String wordNumberOf(int number, int count) {
+    return 'Word $number of $count';
+  }
+
+  @override
+  String repeatRound(int round, int total) {
+    return 'repeat $round of $total';
+  }
+
+  @override
+  String get clearSelection => 'Clear selection';
+
+  @override
+  String get repeatOnce => 'Once';
+
+  @override
+  String get repeatThreeTimes => '3 times';
+
+  @override
+  String get repeatForever => 'Endless';
+
+  @override
+  String get wordRangeHint => 'Drag the handles to change the selection';
+
+  @override
+  String get wordRangeError => 'Could not play the selection.';
+
+  @override
+  String get wordTimingsUnavailable =>
+      'This reciter has no word-by-word timing, so it plays only whole ayahs. Not every reciter has it.';
+
+  @override
+  String get wordTimingsChooseReciter => 'Choose another reciter below.';
 }

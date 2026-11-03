@@ -1016,5 +1016,22 @@
   "appUpdateInstall": "Güncelle",
   "appUpdateReadyTitle": "Güncelleme indirildi",
   "appUpdateReadyText": "Güncellemek için yeniden başlatın. Uygulama birkaç saniyeliğine kapanacak.",
-  "appUpdateRestart": "Yeniden başlat"
+  "appUpdateRestart": "Yeniden başlat",
+  "listenWord": "Kelimeyi dinle",
+  "selectWords": "Kelimeleri seç",
+  "listenSelection": "Seçimi dinle",
+  "wordAt": "{ayah}, {position}. kelime",
+  "@wordAt": {"placeholders": {"ayah": {"type": "String"}, "position": {"type": "int"}}},
+  "wordNumberOf": "Kelime {number}/{count}",
+  "@wordNumberOf": {"placeholders": {"number": {"type": "int"}, "count": {"type": "int"}}},
+  "repeatRound": "tekrar {round}/{total}",
+  "@repeatRound": {"placeholders": {"round": {"type": "int"}, "total": {"type": "int"}}},
+  "clearSelection": "Seçimi kaldır",
+  "repeatOnce": "1 kez",
+  "repeatThreeTimes": "3 kez",
+  "repeatForever": "Sürekli",
+  "wordRangeHint": "Seçimi değiştirmek için tutamaçları sürükleyin",
+  "wordRangeError": "Seçim çalınamadı.",
+  "wordTimingsUnavailable": "Bu kârinin kelime kelime zamanlaması yok; yalnızca tam ayetler dinlenebilir. Bu zamanlama her kâride yok.",
+  "wordTimingsChooseReciter": "Aşağıdan başka bir kâri seçin."
 }

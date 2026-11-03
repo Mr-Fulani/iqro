@@ -16,6 +16,7 @@ import 'mushaf_paper.dart';
 import 'quran_models.dart';
 import 'surah_name_art.dart';
 import 'truetype_glyph.dart';
+import 'word_range.dart';
 
 final _fontLoads = <String, Future<void>>{};
 
@@ -142,6 +143,10 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
     required this.onOpen,
     required this.onBackgroundTap,
     this.onSelectWord,
+    this.wordRange,
+    this.playingWord,
+    this.onWordRange,
+    this.onOpenWord,
     this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
@@ -155,6 +160,14 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
   final ValueChanged<QuranAyahReference> onOpen;
   final VoidCallback onBackgroundTap;
   final FoundationWordTap? onSelectWord;
+  final QuranWordRange? wordRange;
+  final QuranWord? playingWord;
+
+  /// Long press and drag selects words; null keeps the long press to [onOpen].
+  final FoundationWordRangeChanged? onWordRange;
+
+  /// A long press released on a word, where [onWordRange] is set.
+  final FoundationWordTap? onOpenWord;
   final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
@@ -245,6 +258,10 @@ class _FoundationContentState
         onOpen: widget.onOpen,
         onBackgroundTap: widget.onBackgroundTap,
         onSelectWord: widget.onSelectWord,
+        wordRange: widget.wordRange,
+        playingWord: widget.playingWord,
+        onWordRange: widget.onWordRange,
+        onOpenWord: widget.onOpenWord,
         surahs: widget.surahs,
         excerpt: widget.excerpt,
       );
@@ -297,6 +314,10 @@ TextSpan foundationWordSpan(Map<String, Object?> word, TextStyle style) {
 typedef FoundationWordTap =
     bool Function(QuranAyahReference ayah, int position);
 
+/// The words selected on a page, and how many of them there are.
+typedef FoundationWordRangeChanged =
+    void Function(QuranWordRange range, int wordCount);
+
 /// Text is shaped by Flutter with the provider font. The painted word boxes
 /// also define hit testing, so zoom, selection and audio use the same geometry.
 class FoundationPageCanvas extends StatefulWidget {
@@ -309,6 +330,10 @@ class FoundationPageCanvas extends StatefulWidget {
     required this.onOpen,
     required this.onBackgroundTap,
     this.onSelectWord,
+    this.wordRange,
+    this.playingWord,
+    this.onWordRange,
+    this.onOpenWord,
     this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
@@ -322,6 +347,10 @@ class FoundationPageCanvas extends StatefulWidget {
   final ValueChanged<QuranAyahReference> onOpen;
   final VoidCallback onBackgroundTap;
   final FoundationWordTap? onSelectWord;
+  final QuranWordRange? wordRange;
+  final QuranWord? playingWord;
+  final FoundationWordRangeChanged? onWordRange;
+  final FoundationWordTap? onOpenWord;
   final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
@@ -331,6 +360,99 @@ class FoundationPageCanvas extends StatefulWidget {
 
 class _FoundationCanvasState extends State<FoundationPageCanvas> {
   FoundationPageLayout? _layout;
+
+  /// The word a long press began on, and whether it has become a drag.
+  _WordPaint? _pressed;
+  var _ranging = false;
+
+  /// Where the finger pulls the selection, for the magnifier above it.
+  Offset? _loupe;
+
+  static QuranWord? _wordOf(_WordPaint? paint) {
+    final position = paint?.position;
+    if (paint == null || position == null) return null;
+    return QuranWord(paint.reference.surah, paint.reference.ayah, position);
+  }
+
+  /// The word under [point], else the nearest one, preferring its line.
+  _WordPaint? _nearest(FoundationPageLayout layout, Offset point) {
+    _WordPaint? best;
+    var distance = double.infinity;
+    for (final word in layout.words) {
+      if (word.position == null) continue;
+      if (word.cell.contains(point)) return word;
+      final dy = point.dy < word.cell.top
+          ? word.cell.top - point.dy
+          : math.max(0.0, point.dy - word.cell.bottom);
+      final dx = point.dx < word.rect.left
+          ? word.rect.left - point.dx
+          : math.max(0.0, point.dx - word.rect.right);
+      final value = dy * 4 + dx;
+      if (value < distance) {
+        best = word;
+        distance = value;
+      }
+    }
+    return best;
+  }
+
+  void _extend(FoundationPageLayout layout, QuranWord anchor, Offset point) {
+    final word = _wordOf(_nearest(layout, point));
+    final range = word == null ? null : QuranWordRange.between(anchor, word);
+    if (range == null || range == widget.wordRange) return;
+    final count = layout.words
+        .map(_wordOf)
+        .where((item) => item != null && range.contains(item))
+        .length;
+    widget.onWordRange!(range, count);
+  }
+
+  void _dragHandle(
+    FoundationPageLayout layout,
+    QuranWord anchor,
+    Offset global,
+  ) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached) return;
+    final local = box.globalToLocal(global);
+    setState(() => _loupe = local);
+    _extend(layout, anchor, local);
+  }
+
+  List<Widget> _handles(FoundationPageLayout layout) {
+    final range = widget.wordRange;
+    if (range == null || widget.onWordRange == null) return const [];
+    final first = layout.words.where((w) => _wordOf(w) == range.start);
+    final last = layout.words.where((w) => _wordOf(w) == range.end);
+    void done() => setState(() => _loupe = null);
+    return <Widget>[
+      if (first.firstOrNull case final word?)
+        Positioned(
+          key: const ValueKey('word-range-start-handle'),
+          left: word.rect.right - WordRangeHandle.width / 2,
+          top: word.rect.top,
+          child: WordRangeHandle(
+            start: true,
+            lineHeight: word.rect.height,
+            onDrag: (point) => _dragHandle(layout, range.end, point),
+            onEnd: done,
+          ),
+        ),
+      if (last.firstOrNull case final word?)
+        Positioned(
+          key: const ValueKey('word-range-end-handle'),
+          left: word.rect.left - WordRangeHandle.width / 2,
+          top: word.rect.top,
+          child: WordRangeHandle(
+            start: false,
+            lineHeight: word.rect.height,
+            onDrag: (point) => _dragHandle(layout, range.start, point),
+            onEnd: done,
+          ),
+        ),
+    ];
+  }
+
   @override
   void didUpdateWidget(covariant FoundationPageCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -397,6 +519,11 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapUp: (details) {
+          // A tap beside selected words only clears them, as with text.
+          if (widget.wordRange != null && widget.onWordRange != null) {
+            widget.onBackgroundTap();
+            return;
+          }
           final word = at(details.localPosition);
           final position = word?.position;
           if (word == null) {
@@ -407,17 +534,90 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
           }
         },
         onLongPressStart: (details) {
-          final ayah = at(details.localPosition)?.reference;
-          if (ayah != null) widget.onOpen(ayah);
+          final word = at(details.localPosition);
+          if (widget.onWordRange == null) {
+            if (word != null) widget.onOpen(word.reference);
+            return;
+          }
+          _pressed = word;
+          _ranging = false;
         },
-        child: CustomPaint(
-          size: size,
-          painter: FoundationPagePainter(
-            layout,
-            widget.selected,
-            widget.playing,
-            highlightColors: widget.highlightColors,
-          ),
+        // With word selection the menu opens when the finger lifts without
+        // moving; moving it to another word selects the words between.
+        onLongPressMoveUpdate: widget.onWordRange == null
+            ? null
+            : (details) {
+                final anchor = _wordOf(_pressed);
+                if (anchor == null) return;
+                if (!_ranging) {
+                  if (_wordOf(_nearest(layout, details.localPosition)) ==
+                      anchor) {
+                    return;
+                  }
+                  _ranging = true;
+                  unawaited(HapticFeedback.selectionClick());
+                }
+                setState(() => _loupe = details.localPosition);
+                _extend(layout, anchor, details.localPosition);
+              },
+        onLongPressEnd: widget.onWordRange == null
+            ? null
+            : (_) {
+                final pressed = _pressed;
+                _pressed = null;
+                if (_loupe != null) setState(() => _loupe = null);
+                if (_ranging) {
+                  _ranging = false;
+                  return;
+                }
+                if (pressed == null) return;
+                final position = pressed.position;
+                if (position == null ||
+                    widget.onOpenWord?.call(pressed.reference, position) !=
+                        true) {
+                  widget.onOpen(pressed.reference);
+                }
+              },
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            CustomPaint(
+              size: size,
+              painter: FoundationPagePainter(
+                layout,
+                widget.selected,
+                widget.playing,
+                highlightColors: widget.highlightColors,
+                wordRange: widget.wordRange,
+                playingWord: widget.playingWord,
+              ),
+            ),
+            ..._handles(layout),
+            if (_loupe case final point?)
+              Positioned(
+                left: point.dx - 64,
+                top: point.dy - 112,
+                child: const IgnorePointer(
+                  child: RawMagnifier(
+                    size: Size(128, 60),
+                    magnificationScale: 1.6,
+                    focalPointOffset: Offset(0, 82),
+                    decoration: MagnifierDecoration(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(30)),
+                      ),
+                      shadows: <BoxShadow>[
+                        BoxShadow(
+                          color: Color(0x40000000),
+                          blurRadius: 14,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       );
     },
@@ -708,6 +908,8 @@ class FoundationPagePainter extends CustomPainter {
     this.highlightColors = const <QuranAyahReference, String>{},
     this.onlyAyah,
     this.top = 0,
+    this.wordRange,
+    this.playingWord,
   });
   final FoundationPageLayout layout;
   final QuranAyahReference? selected;
@@ -715,6 +917,8 @@ class FoundationPagePainter extends CustomPainter {
   final Map<QuranAyahReference, String> highlightColors;
   final QuranAyahReference? onlyAyah;
   final double top;
+  final QuranWordRange? wordRange;
+  final QuranWord? playingWord;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
@@ -756,6 +960,28 @@ class FoundationPagePainter extends CustomPainter {
               ..strokeWidth = 1,
           );
         }
+      }
+    }
+    if (wordRange case final range?) {
+      final selection = Paint()..color = wordRangeSelectionColor;
+      final sounding = Paint()..color = wordRangePlayingColor;
+      for (final word in layout.words) {
+        final ayah = word.reference;
+        final position = word.position;
+        final item = position == null
+            ? null
+            : QuranWord(ayah.surah, ayah.ayah, position);
+        final selected = item == null
+            ? range.spansAyahEnd(ayah.surah, ayah.ayah)
+            : range.contains(item);
+        if (!selected) continue;
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            word.rect.inflate(2.5),
+            const Radius.circular(4),
+          ),
+          item != null && item == playingWord ? sounding : selection,
+        );
       }
     }
     for (final word in layout.words) {
@@ -804,5 +1030,7 @@ class FoundationPagePainter extends CustomPainter {
       playing != oldDelegate.playing ||
       !mapEquals(oldDelegate.highlightColors, highlightColors) ||
       onlyAyah != oldDelegate.onlyAyah ||
-      top != oldDelegate.top;
+      top != oldDelegate.top ||
+      wordRange != oldDelegate.wordRange ||
+      playingWord != oldDelegate.playingWord;
 }

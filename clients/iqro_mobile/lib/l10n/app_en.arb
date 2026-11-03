@@ -1160,5 +1160,22 @@
   "appUpdateInstall": "Update",
   "appUpdateReadyTitle": "Update downloaded",
   "appUpdateReadyText": "Restart to update. The app will close for a few seconds.",
-  "appUpdateRestart": "Restart"
+  "appUpdateRestart": "Restart",
+  "listenWord": "Listen to the word",
+  "selectWords": "Select words",
+  "listenSelection": "Listen to the selection",
+  "wordAt": "{ayah}, word {position}",
+  "@wordAt": {"placeholders": {"ayah": {"type": "String"}, "position": {"type": "int"}}},
+  "wordNumberOf": "Word {number} of {count}",
+  "@wordNumberOf": {"placeholders": {"number": {"type": "int"}, "count": {"type": "int"}}},
+  "repeatRound": "repeat {round} of {total}",
+  "@repeatRound": {"placeholders": {"round": {"type": "int"}, "total": {"type": "int"}}},
+  "clearSelection": "Clear selection",
+  "repeatOnce": "Once",
+  "repeatThreeTimes": "3 times",
+  "repeatForever": "Endless",
+  "wordRangeHint": "Drag the handles to change the selection",
+  "wordRangeError": "Could not play the selection.",
+  "wordTimingsUnavailable": "This reciter has no word-by-word timing, so it plays only whole ayahs. Not every reciter has it.",
+  "wordTimingsChooseReciter": "Choose another reciter below."
 }

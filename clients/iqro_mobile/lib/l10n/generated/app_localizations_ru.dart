@@ -3407,4 +3407,53 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get appUpdateRestart => 'Перезапустить';
+
+  @override
+  String get listenWord => 'Прослушать слово';
+
+  @override
+  String get selectWords => 'Выделить слова';
+
+  @override
+  String get listenSelection => 'Прослушать выделенное';
+
+  @override
+  String wordAt(String ayah, int position) {
+    return '$ayah, слово $position';
+  }
+
+  @override
+  String wordNumberOf(int number, int count) {
+    return 'Слово $number из $count';
+  }
+
+  @override
+  String repeatRound(int round, int total) {
+    return 'повтор $round из $total';
+  }
+
+  @override
+  String get clearSelection => 'Снять выделение';
+
+  @override
+  String get repeatOnce => '1 раз';
+
+  @override
+  String get repeatThreeTimes => '3 раза';
+
+  @override
+  String get repeatForever => 'Без конца';
+
+  @override
+  String get wordRangeHint => 'Тяните ручки, чтобы изменить выделение';
+
+  @override
+  String get wordRangeError => 'Не удалось воспроизвести выделенное.';
+
+  @override
+  String get wordTimingsUnavailable =>
+      'У этого чтеца нет разметки по словам: его можно слушать только аятами. Разметка по словам есть не у всех чтецов.';
+
+  @override
+  String get wordTimingsChooseReciter => 'Выберите другого чтеца ниже.';
 }

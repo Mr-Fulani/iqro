@@ -18,6 +18,7 @@ import 'mushaf_paper.dart';
 import 'mushaf_raster.dart';
 import 'mushaf_raster_layout.dart';
 import 'quran_models.dart';
+import 'word_range.dart';
 import 'foundation_mushaf_page.dart';
 
 /// The tajweed of a QF Mushaf 19 page with its rule reference.
@@ -85,6 +86,10 @@ class NativeMushafPage extends ConsumerStatefulWidget {
     this.showPageLabels = true,
     this.onTajweedWord,
     this.tajweedRecitation,
+    this.wordRange,
+    this.playingWord,
+    this.onWordRange,
+    this.onOpenWord,
     this.onPainted,
     super.key,
   });
@@ -113,6 +118,15 @@ class NativeMushafPage extends ConsumerStatefulWidget {
 
   /// The reciter whose timings play a word from a tajweed card.
   final TajweedRecitation? tajweedRecitation;
+
+  /// The selected words and the one sounding, on QCF pages.
+  final QuranWordRange? wordRange;
+  final QuranWord? playingWord;
+
+  /// Long press and drag selects words on QCF pages; a long press released
+  /// on a word goes to [onOpenWord] when it returns true.
+  final FoundationWordRangeChanged? onWordRange;
+  final FoundationWordTap? onOpenWord;
 
   /// Called after the frame that first paints the page itself (its text or
   /// picture), never its loading or error state.
@@ -531,6 +545,10 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                                 ? null
                                 : (ayah, position) =>
                                       _openTajweedWord(tajweed, ayah, position),
+                            wordRange: widget.wordRange,
+                            playingWord: widget.playingWord,
+                            onWordRange: widget.onWordRange,
+                            onOpenWord: widget.onOpenWord,
                             surahs: widget.surahs,
                             onPainted: widget.onPainted,
                           ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +27,8 @@ import '../../core/analytics/analytics.dart';
 import '../../core/share/content_share.dart';
 import '../../core/text/arabic_digits.dart';
 import 'surah_open_reporter.dart';
+import 'reader_words.dart';
+import 'word_range.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({
@@ -51,6 +54,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   final _scrollController = ScrollController();
   final _viewportKey = GlobalKey();
   final _ayahKeys = <int, GlobalKey>{};
+  final _wordRegistry = ReaderWordRegistry();
+  late final WordRangeController _words;
   var _showTranslation = true;
   var _showTafsir = false;
   var _selectedAyah = 1;
@@ -77,6 +82,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _words = WordRangeController(ref)..addListener(_onWords);
     _selectedAyah = widget.initialAyah;
     _initialAccountScope = ref.read(localDatabaseProvider).accountScope.current;
     _accountKey = _initialAccountScope == null
@@ -93,10 +99,52 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   @override
   void dispose() {
     _audioRequest += 1;
+    _words
+      ..removeListener(_onWords)
+      ..dispose();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_readingSession?.finish());
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onWords() {
+    if (mounted) setState(() {});
+  }
+
+  void _selectWords(List<QuranAyah> items, QuranWordRange range) {
+    var count = 0;
+    for (final ayah in items) {
+      if (ayah.number < range.start.ayah || ayah.number > range.end.ayah) {
+        continue;
+      }
+      final words = ayahWords(ayah).length;
+      final from = ayah.number == range.start.ayah ? range.start.position : 1;
+      final to = ayah.number == range.end.ayah ? range.end.position : words;
+      count += math.max(0, to - from + 1);
+    }
+    _words.select(range, wordCount: count);
+  }
+
+  /// Scrolls the list while the finger pulls a selection near its edge.
+  void _followWordDrag(Offset global) {
+    final box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached || !_scrollController.hasClients) return;
+    final local = box.globalToLocal(global);
+    const edge = 56.0;
+    final step = local.dy < edge
+        ? -(edge - local.dy) / 2
+        : local.dy > box.size.height - edge
+        ? (local.dy - box.size.height + edge) / 2
+        : 0.0;
+    if (step == 0) return;
+    final position = _scrollController.position;
+    _scrollController.jumpTo(
+      (position.pixels + step).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      ),
+    );
   }
 
   @override
@@ -262,13 +310,26 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                 ),
               ),
             Expanded(
-              child: _readerList(
-                items,
-                surah,
-                title,
-                audio,
-                highlightColors,
-                presentation,
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: _readerList(
+                      items,
+                      surah,
+                      title,
+                      audio,
+                      highlightColors,
+                      presentation,
+                    ),
+                  ),
+                  if (_words.range != null)
+                    PositionedDirectional(
+                      start: 12,
+                      end: 12,
+                      bottom: 12 + MediaQuery.paddingOf(context).bottom,
+                      child: WordRangePanel(controller: _words),
+                    ),
+                ],
               ),
             ),
           ],
@@ -310,7 +371,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       child: ListView.builder(
         key: _viewportKey,
         controller: _scrollController,
-        padding: const EdgeInsetsDirectional.fromSTEB(14, 8, 14, 100),
+        padding: EdgeInsetsDirectional.fromSTEB(
+          14,
+          8,
+          14,
+          _words.range == null ? 100 : 280,
+        ),
         itemCount: items.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
@@ -342,7 +408,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
               ayahCount: surah?.ayahCount ?? items.length,
               repeatEnabled: audioActive && audio.repeat,
               speed: audioActive ? audio.speed : 1,
-              onSelected: () => _select(ayah),
+              onSelected: () =>
+                  _words.range != null ? _words.clear() : _select(ayah),
+              wordRegistry: _wordRegistry,
+              wordRange: _words.range,
+              playingWord: _words.playingWord,
+              onWordRange: (range) => _selectWords(items, range),
+              onWordDrag: _followWordDrag,
               onBookmark: () => _toggleBookmark(ayah),
               onPlay: () => audioActive
                   ? ref.read(audioControllerProvider.notifier).toggle()
@@ -1151,6 +1223,11 @@ class ReaderAyahCard extends StatelessWidget {
     required this.onToggleRepeat,
     required this.onCycleSpeed,
     required this.onShare,
+    this.wordRegistry,
+    this.wordRange,
+    this.playingWord,
+    this.onWordRange,
+    this.onWordDrag,
   });
   final QuranAyah ayah;
   final bool selected;
@@ -1177,6 +1254,13 @@ class ReaderAyahCard extends StatelessWidget {
   final VoidCallback? onToggleRepeat;
   final VoidCallback? onCycleSpeed;
   final ValueChanged<Rect?> onShare;
+
+  /// Turns on word selection: a long press on the Arabic text selects words.
+  final ReaderWordRegistry? wordRegistry;
+  final QuranWordRange? wordRange;
+  final QuranWord? playingWord;
+  final ValueChanged<QuranWordRange>? onWordRange;
+  final ValueChanged<Offset>? onWordDrag;
 
   @override
   Widget build(BuildContext context) {
@@ -1214,22 +1298,50 @@ class ReaderAyahCard extends StatelessWidget {
           children: <Widget>[
             for (final (index, part) in parts.indexed) ...<Widget>[
               if (index > 0) const SizedBox(height: 10),
-              Text(
-                part == parts.last
-                    ? '${part.text}  ﴿${arabicIndicDigits(ayah.number)}﴾'
-                    : part.text,
-                key: part == parts.last
-                    ? ValueKey('reader-ayah-${ayah.number}')
-                    : null,
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-                style: part.opening
-                    ? arabicStyle?.copyWith(
-                        fontSize: arabicFontSize * .8,
-                        color: scheme.primary,
-                      )
-                    : arabicStyle,
-              ),
+              if (wordRegistry != null && onWordRange != null && !part.opening)
+                ReaderAyahWords(
+                  key: part == parts.last
+                      ? ValueKey('reader-ayah-${ayah.number}')
+                      : null,
+                  surah: ayah.surahNumber,
+                  ayah: ayah.number,
+                  words: quranWords(part.text),
+                  firstPosition:
+                      1 +
+                      parts
+                          .take(index)
+                          .where((item) => !item.opening)
+                          .fold(
+                            0,
+                            (sum, item) => sum + quranWords(item.text).length,
+                          ),
+                  marker: part == parts.last
+                      ? '  ﴿${arabicIndicDigits(ayah.number)}﴾'
+                      : '',
+                  style: arabicStyle,
+                  registry: wordRegistry!,
+                  range: wordRange,
+                  playingWord: playingWord,
+                  onRange: onWordRange!,
+                  onDrag: onWordDrag,
+                )
+              else
+                Text(
+                  part == parts.last
+                      ? '${part.text}  ﴿${arabicIndicDigits(ayah.number)}﴾'
+                      : part.text,
+                  key: part == parts.last
+                      ? ValueKey('reader-ayah-${ayah.number}')
+                      : null,
+                  textAlign: TextAlign.center,
+                  textDirection: TextDirection.rtl,
+                  style: part.opening
+                      ? arabicStyle?.copyWith(
+                          fontSize: arabicFontSize * .8,
+                          color: scheme.primary,
+                        )
+                      : arabicStyle,
+                ),
             ],
             if (showTranslation) ...<Widget>[
               const SizedBox(height: 16),
