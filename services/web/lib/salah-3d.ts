@@ -18,6 +18,17 @@ export const SALAH_SCENE_POSES: readonly SalahSceneStepId[] = [
   "sujud2",
   "tashahhud",
   "salam",
+  "qunut",
+  "tawarruk",
+  "wudu-start",
+  "wudu-hands",
+  "wudu-mouth-nose",
+  "wudu-face",
+  "wudu-arms",
+  "wudu-head",
+  "wudu-ears",
+  "wudu-feet",
+  "wudu-finish",
 ];
 
 export type SalahStepScene = { pose: SalahSceneStepId; view: SalahSceneView };

@@ -392,7 +392,7 @@ curl --fail https://example.org/ru/audio/reciters
 сайт и приложение показывают на их месте саму сцену. После правки сцены
 (`services/web/lib/salah3d/salah-scene.js`) из `services/web`:
 `npm run salah3d:app-assets` (копия для приложения), затем `node scripts/salah3d-frames.ts`
-(кадры в `media/`) и новая `course.version`.
+(кадры в `media/`; с ключами картинок в аргументах — только эти кадры, остальные не меняются) и новая `course.version`.
 
 Тексты, заметки «?» и «!» и записи владелец правит сам, в редакторе курса в админке
 ([`salah/admin-editor.md`](salah/admin-editor.md)): «Версии курса» → версия → «Создать черновик
