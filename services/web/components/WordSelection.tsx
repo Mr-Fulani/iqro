@@ -14,6 +14,31 @@ import {
 
 const LONG_PRESS_MS = 450;
 
+/** How far, in screen pixels, a finger may land beside a handle's line and under its knob. */
+const HANDLE_REACH_X = 24;
+const HANDLE_REACH_BELOW = 32;
+
+/**
+ * The selection handle near a point. Found by its box, not by the touch's
+ * target: a Mushaf line is scaled into a layer of its own, so the next line
+ * covers the knob hanging under this one, and the touch lands on its word.
+ */
+function handleNear(element: HTMLElement, x: number, y: number): HTMLElement | null {
+  let best: HTMLElement | null = null;
+  let distance = Infinity;
+  for (const handle of element.querySelectorAll<HTMLElement>(".word-range-handle")) {
+    const box = handle.getBoundingClientRect();
+    if (x < box.left - HANDLE_REACH_X || x > box.right + HANDLE_REACH_X) continue;
+    if (y < box.top || y > box.bottom + HANDLE_REACH_BELOW) continue;
+    const away = Math.abs(x - (box.left + box.right) / 2);
+    if (away < distance) {
+      best = handle;
+      distance = away;
+    }
+  }
+  return best;
+}
+
 function setSelectingFlag(on: boolean) {
   // MushafGestureSurface reads it: a finger pulling a selection turns no page.
   if (on) document.documentElement.dataset.wordSelecting = "true";
@@ -49,7 +74,14 @@ export function useWordSelection(
     let suppressClickUntil = 0;
     let handle: { id: number; anchor: QuranWord; grabY: number } | null = null;
 
-    const wordAt = (x: number, y: number) => wordOfTarget(document.elementFromPoint(x, y), element);
+    // The word under the finger, even under the selection bar or a handle above it.
+    const wordAt = (x: number, y: number) => {
+      for (const target of document.elementsFromPoint(x, y)) {
+        const word = wordOfTarget(target, element);
+        if (word) return word;
+      }
+      return null;
+    };
     const extend = (from: QuranWord, to: QuranWord) => {
       const next = wordRangeBetween(from, to);
       if (next && !sameWordRange(next, latest.current.range)) latest.current.onRange(next);
@@ -62,10 +94,10 @@ export function useWordSelection(
     const touchStart = (event: TouchEvent) => {
       clearTimer();
       if (event.touches.length !== 1 || handle) return;
-      if (event.target instanceof Element && event.target.closest(".word-range-handle")) return;
+      const touch = event.touches[0];
+      if (latest.current.range && handleNear(element, touch.clientX, touch.clientY)) return;
       const word = wordOfTarget(event.target, element);
       if (!word) return;
-      const touch = event.touches[0];
       start = { x: touch.clientX, y: touch.clientY };
       timer = window.setTimeout(() => {
         timer = 0;
@@ -79,6 +111,11 @@ export function useWordSelection(
     const touchMove = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
+      // A finger on a handle pulls it: the page neither scrolls nor turns.
+      if (handle) {
+        if (event.cancelable) event.preventDefault();
+        return;
+      }
       if (!anchor) {
         if (timer && Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > 10) clearTimer();
         return;
@@ -129,9 +166,11 @@ export function useWordSelection(
       latest.current.onRange({ start: word, end: word });
     };
     const pointerDown = (event: PointerEvent) => {
-      const target = event.target instanceof Element ? event.target.closest<HTMLElement>(".word-range-handle") : null;
       const current = latest.current.range;
-      if (!target || !current) return;
+      if (!current) return;
+      const target = (event.target instanceof Element ? event.target.closest<HTMLElement>(".word-range-handle") : null)
+        ?? handleNear(element, event.clientX, event.clientY);
+      if (!target) return;
       event.preventDefault();
       event.stopPropagation();
       clearTimer();

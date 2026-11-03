@@ -1412,7 +1412,7 @@ const en: Messages = {
   "wordRange.repeatOnce": "Once",
   "wordRange.repeatThree": "3 times",
   "wordRange.repeatForever": "Endless",
-  "wordRange.unavailable": "This reciter has no word-by-word timing, so it plays only whole ayahs. Not every reciter has it.",
+  "wordRange.unavailable": "There is no word-by-word timing here for this reciter, so this ayah plays only as a whole. Not every reciter has it, and some not in every ayah.",
   "wordRange.error": "Could not play the selection.",
   "wordRange.hintPointer": "Double-click a word · Shift+click to extend · drag the handles · Space to play · Esc to clear",
   "wordRange.hintTouch": "Hold a word and drag to select more · drag the handles · tap elsewhere to clear",

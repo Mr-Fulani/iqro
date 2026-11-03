@@ -3461,7 +3461,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get wordTimingsUnavailable =>
-      'У этого чтеца нет разметки по словам: его можно слушать только аятами. Разметка по словам есть не у всех чтецов.';
+      'Здесь у этого чтеца нет разметки по словам: этот аят можно слушать только целиком. Разметка есть не у всех чтецов, а у некоторых — не во всех аятах.';
 
   @override
   String get wordTimingsChooseReciter => 'Выберите другого чтеца ниже.';

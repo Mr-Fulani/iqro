@@ -1603,6 +1603,74 @@ test.describe("word selection on a phone", () => {
     await expect(page).toHaveURL(/surah=6/);
     await expect(view.locator(".qf-mushaf-page-number")).toHaveText("١٢٨");
   });
+
+  // A finger moves in many small steps; one jump hides a gesture that a real
+  // move loses to the page swipe or the scroll.
+  async function finger(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, holdMs = 0) {
+    const session = await page.context().newCDPSession(page);
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [from] });
+    if (holdMs) await page.waitForTimeout(holdMs);
+    for (let step = 1; step <= 12; step += 1) {
+      const point = { x: from.x + (to.x - from.x) * step / 12, y: from.y + (to.y - from.y) * step / 12 };
+      await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [point] });
+      await page.waitForTimeout(16);
+    }
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await session.detach();
+  }
+  const centre = async (locator: Locator) => {
+    const box = (await locator.boundingBox())!;
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  // The knob hangs under the handle's line; the touch target is around it.
+  const knob = async (locator: Locator) => {
+    const box = (await locator.boundingBox())!;
+    return { x: box.x + box.width / 2, y: box.y + box.height + 8 };
+  };
+  // Pulls a handle by its knob until the knob sits under `word`, as a finger does.
+  const pullHandle = async (page: Page, handle: Locator, word: Locator) => {
+    const from = await knob(handle);
+    const line = (await handle.boundingBox())!;
+    const target = await centre(word);
+    await finger(page, from, { x: target.x, y: target.y + from.y - (line.y + line.height / 2) });
+  };
+
+  test("a finger grows the selection, then pulls its handles, in the Mushaf and the text", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const bar = page.getByTestId("word-range-bar");
+
+    await finger(page, await centre(view.locator('[data-word-key="6:2:3"]')),
+      await centre(view.locator('[data-word-key="6:2:4"]')), 700);
+    await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 3 — 6:2, слово 4");
+
+    // The start handle, pulled by its knob from line 3 down to a word of line 4.
+    const start = view.locator('[data-word-key="6:2:3"] .word-range-handle.is-start');
+    await pullHandle(page, start, view.locator('[data-word-key="6:2:1"]'));
+    await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 1 — 6:2, слово 4");
+    await expect(view.locator(".qf-mushaf-page-number")).toHaveText("١٢٨");
+
+    await bar.getByRole("button", { name: "Снять выделение" }).click();
+
+    await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
+    await page.getByRole("button", { name: /Текст/ }).click();
+    const text = page.locator(".quran-content-surface");
+    await expect(text.locator('.quran-word[data-word-key="6:2:1"]')).toBeVisible();
+    await text.locator('.quran-word[data-word-key="6:1:1"]').evaluate((word) => word.scrollIntoView({ block: "center" }));
+    // From the first ayah into the second, then the end handle back by one word.
+    await finger(page, await centre(text.locator('.quran-word[data-word-key="6:1:1"]')),
+      await centre(text.locator('.quran-word[data-word-key="6:2:2"]')), 700);
+    await expect(bar.getByTestId("word-range-title")).toHaveText("6:1, слово 1 — 6:2, слово 2");
+    // The bar covers the bottom of the screen: the handle is brought above it first.
+    await text.locator('.quran-word[data-word-key="6:2:2"]').evaluate((word) => word.scrollIntoView({ block: "center" }));
+    const scrolled = await page.evaluate(() => window.scrollY);
+    const textEnd = text.locator('.quran-word[data-word-key="6:2:2"] .word-range-handle.is-end');
+    await pullHandle(page, textEnd, text.locator('.quran-word[data-word-key="6:2:3"]'));
+    await expect(bar.getByTestId("word-range-title")).toHaveText("6:1, слово 1 — 6:2, слово 3");
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  });
 });
 
 // The media stubs above never leave `paused`; these tests follow it through play and pause.

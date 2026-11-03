@@ -555,6 +555,7 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
                     return;
                   }
                   _ranging = true;
+                  wordRangePulling.value = true;
                   unawaited(HapticFeedback.selectionClick());
                 }
                 setState(() => _loupe = details.localPosition);
@@ -568,6 +569,7 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
                 if (_loupe != null) setState(() => _loupe = null);
                 if (_ranging) {
                   _ranging = false;
+                  wordRangePulling.value = false;
                   return;
                 }
                 if (pressed == null) return;

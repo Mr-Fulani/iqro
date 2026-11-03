@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -126,7 +127,7 @@ void main() {
         ),
       );
       final handle = find.byKey(const ValueKey('word-range-end-handle'));
-      final knob = tester.getBottomLeft(handle) + const Offset(22, -8);
+      final knob = _knobCenter(tester, handle);
       final gesture = await tester.startGesture(knob);
       await gesture.moveBy(const Offset(-4, 0));
       await tester.pump();
@@ -141,6 +142,49 @@ void main() {
       expect(harness.ranges.last.range.start, const QuranWord(112, 4, 1));
       expect(harness.ranges.last.range.end.position, greaterThanOrEqualTo(3));
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('QCF page among the reader pages', () {
+    for (final (name, offset) in <(String, Offset)>[
+      ('sideways', Offset(-90, 0)),
+      ('down to the next line', Offset(20, 40)),
+    ]) {
+      testWidgets('a finger pulls a handle $name, the page stays', (
+        tester,
+      ) async {
+        final harness = await _pumpPage(
+          tester,
+          inPageView: true,
+          initial: QuranWordRange.between(
+            const QuranWord(112, 4, 1),
+            const QuranWord(112, 4, 2),
+          ),
+        );
+        final handle = find.byKey(const ValueKey('word-range-end-handle'));
+        final knob = _knobCenter(tester, handle);
+        await _fingerDrag(tester, knob, knob + offset);
+
+        expect(harness.ranges, isNotEmpty);
+        expect(harness.ranges.last.range.start, const QuranWord(112, 4, 1));
+        expect(harness.ranges.last.range.end.position, greaterThanOrEqualTo(3));
+        expect(find.byType(NativeMushafPage), findsOneWidget);
+      });
+    }
+
+    testWidgets('a long press and a drag still select words', (tester) async {
+      final harness = await _pumpPage(tester, inPageView: true);
+      final gesture = await tester.startGesture(_wordCenter(tester, 1));
+      await tester.pump(const Duration(milliseconds: 600));
+      final from = _wordCenter(tester, 1);
+      final to = _wordCenter(tester, 3);
+      for (var step = 1; step <= 10; step++) {
+        await gesture.moveTo(Offset.lerp(from, to, step / 10)!);
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await tester.pump();
+      expect(harness.ranges.last.range.end, const QuranWord(112, 4, 3));
     });
   });
 
@@ -275,6 +319,68 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('a finger pulls a handle down into the next ayah', (
+      tester,
+    ) async {
+      // A list scrolls once a finger moves past the device's touch slop.
+      tester.view.gestureSettings = const ui.GestureSettings(
+        physicalTouchSlop: 8,
+      );
+      addTearDown(tester.view.resetGestureSettings);
+      var range = const QuranWordRange.single(QuranWord(1, 5, 1));
+      final registry = ReaderWordRegistry();
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ru'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) => ListView(
+                controller: scroll,
+                children: <Widget>[
+                  for (final (ayah, text) in <(int, String)>[
+                    (5, 'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ'),
+                    (6, 'ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ'),
+                  ])
+                    // The translation under each ayah in the reader.
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 60),
+                      child: ReaderAyahWords(
+                        key: ValueKey('ayah-$ayah'),
+                        surah: 1,
+                        ayah: ayah,
+                        words: quranWords(text),
+                        style: const TextStyle(fontSize: 28),
+                        registry: registry,
+                        range: range,
+                        onRange: (value) => setState(() => range = value),
+                      ),
+                    ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      final handle = find.byKey(const ValueKey('word-range-end-handle'));
+      final knob = _knobCenter(tester, handle);
+      final second = tester.getRect(find.byKey(const ValueKey('ayah-6')));
+      await _fingerDrag(
+        tester,
+        knob,
+        Offset(second.center.dx, second.center.dy) +
+            (knob - tester.getTopLeft(handle)) -
+            const Offset(22, 0),
+      );
+
+      expect(range.end.ayah, 6);
+      expect(scroll.offset, 0);
+    });
   });
 }
 
@@ -288,11 +394,20 @@ typedef _PageHarness = ({
 Future<_PageHarness> _pumpPage(
   WidgetTester tester, {
   QuranWordRange? initial,
+  bool inPageView = false,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(400, 900);
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
+  if (inPageView) {
+    // Android phones report a touch slop under the 18 px default: the page
+    // swipe then claims a moving finger before an 18 px recognizer would.
+    tester.view.gestureSettings = const ui.GestureSettings(
+      physicalTouchSlop: 8,
+    );
+    addTearDown(tester.view.resetGestureSettings);
+  }
   final page = MushafPageData.fromFoundation(_pageJson);
   await tester.runAsync(
     () => loadFoundationPageResources(page.foundation!, _asset),
@@ -316,24 +431,27 @@ Future<_PageHarness> _pumpPage(
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: StatefulBuilder(
-            builder: (context, setState) => NativeMushafPage(
-              page: 604,
-              controller: NativeMushafPageController(),
-              selectedAyah: null,
-              playingAyah: null,
-              onSelectAyah: (ayah) => selected.add(ayah.key),
-              onOpenAyah: (ayah) => opened.add(ayah.key),
-              onBackgroundTap: () => backgroundTaps.add(1),
-              onScale: (_) {},
-              wordRange: range,
-              onWordRange: (value, count) {
-                ranges.add((range: value, count: count));
-                setState(() => range = value);
-              },
-              onOpenWord: (ayah, position) {
-                opened.add('${ayah.key}:$position');
-                return true;
-              },
+            builder: (context, setState) => _MaybePageView(
+              inPageView: inPageView,
+              child: NativeMushafPage(
+                page: 604,
+                controller: NativeMushafPageController(),
+                selectedAyah: null,
+                playingAyah: null,
+                onSelectAyah: (ayah) => selected.add(ayah.key),
+                onOpenAyah: (ayah) => opened.add(ayah.key),
+                onBackgroundTap: () => backgroundTaps.add(1),
+                onScale: (_) {},
+                wordRange: range,
+                onWordRange: (value, count) {
+                  ranges.add((range: value, count: count));
+                  setState(() => range = value);
+                },
+                onOpenWord: (ayah, position) {
+                  opened.add('${ayah.key}:$position');
+                  return true;
+                },
+              ),
             ),
           ),
         ),
@@ -347,6 +465,45 @@ Future<_PageHarness> _pumpPage(
     selected: selected,
     backgroundTaps: backgroundTaps,
   );
+}
+
+/// The reader's pages, as in MushafScreen: a drag on a handle competes
+/// with the page swipe.
+class _MaybePageView extends StatelessWidget {
+  const _MaybePageView({required this.inPageView, required this.child});
+
+  final bool inPageView;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => !inPageView
+      ? child
+      : PageView(
+          controller: PageController(initialPage: 1),
+          reverse: true,
+          children: <Widget>[const SizedBox(), child, const SizedBox()],
+        );
+}
+
+/// The middle of a handle's knob: the handle is its line plus
+/// [WordRangeHandle.extra], and the knob starts 4 px under the line.
+Offset _knobCenter(WidgetTester tester, Finder handle) {
+  final rect = tester.getRect(handle);
+  final line = rect.height - WordRangeHandle.extra;
+  return rect.topLeft +
+      Offset(rect.width / 2, line + 4 + WordRangeHandle.knob / 2);
+}
+
+/// Moves a finger like a person does: many small steps, never a jump.
+Future<void> _fingerDrag(WidgetTester tester, Offset from, Offset to) async {
+  final gesture = await tester.startGesture(from);
+  const steps = 12;
+  for (var step = 1; step <= steps; step++) {
+    await gesture.moveTo(Offset.lerp(from, to, step / steps)!);
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  await gesture.up();
+  await tester.pump();
 }
 
 typedef _PanelHarness = ({

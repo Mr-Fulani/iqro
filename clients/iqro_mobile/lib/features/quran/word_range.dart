@@ -114,6 +114,10 @@ List<String> ayahWords(QuranAyah ayah) {
 
 enum WordRepeat { once, three, forever }
 
+/// True while a finger pulls a selection, by a long press or a handle: the
+/// panel fades then, so the words under it show.
+final wordRangePulling = ValueNotifier<bool>(false);
+
 const wordRangeSelectionColor = Color(0x380B6B57);
 const wordRangePlayingColor = Color(0x8CC49647);
 const wordRangeHandleColor = Color(0xFF0B6B57);
@@ -471,143 +475,163 @@ class WordRangePanel extends StatelessWidget {
               ?reciter,
             ].join(' · ');
       final title = wordRangeLabel(context, range);
-      return Material(
-        key: const ValueKey('word-range-panel'),
-        color: scheme.surface,
-        elevation: 6,
-        shadowColor: Colors.black38,
-        borderRadius: BorderRadius.circular(22),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(title, style: theme.textTheme.titleSmall),
-                        const SizedBox(height: 2),
-                        Text(
-                          controller.repeat == WordRepeat.three &&
-                                  controller.playing
-                              ? '$subtitle · ${context.l10n.repeatRound(controller.round, 3)}'
-                              : subtitle,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton.filledTonal(
-                    key: const ValueKey('word-range-clear'),
-                    tooltip: context.l10n.clearSelection,
-                    onPressed: controller.clear,
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (unavailable) ...<Widget>[
+      return ValueListenableBuilder<bool>(
+        valueListenable: wordRangePulling,
+        builder: (context, pulling, panel) => IgnorePointer(
+          ignoring: pulling,
+          child: AnimatedOpacity(
+            opacity: pulling ? .15 : 1,
+            duration: const Duration(milliseconds: 120),
+            child: panel,
+          ),
+        ),
+        child: Material(
+          key: const ValueKey('word-range-panel'),
+          color: scheme.surface,
+          elevation: 6,
+          shadowColor: Colors.black38,
+          borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Icon(Icons.info_outline, size: 18, color: scheme.secondary),
-                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        context.l10n.wordTimingsUnavailable,
-                        key: const ValueKey('word-range-unavailable'),
-                        style: theme.textTheme.bodySmall,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(title, style: theme.textTheme.titleSmall),
+                          const SizedBox(height: 2),
+                          Text(
+                            controller.repeat == WordRepeat.three &&
+                                    controller.playing
+                                ? '$subtitle · ${context.l10n.repeatRound(controller.round, 3)}'
+                                : subtitle,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    IconButton.filledTonal(
+                      key: const ValueKey('word-range-clear'),
+                      tooltip: context.l10n.clearSelection,
+                      onPressed: controller.clear,
+                      icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-              ],
-              if (controller.failed) ...<Widget>[
-                Text(
-                  context.l10n.wordRangeError,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.error,
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              FilledButton.icon(
-                key: const ValueKey('word-range-play'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                onPressed: unavailable || controller.available == null
-                    ? null
-                    : () => controller.toggle(
-                        title: '${context.l10n.ayah} $title',
+                if (unavailable) ...<Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: scheme.secondary,
                       ),
-                icon: controller.loading || controller.available == null
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(controller.playing ? Icons.pause : Icons.play_arrow),
-                label: Text(
-                  controller.playing
-                      ? context.l10n.pause
-                      : range.single
-                      ? context.l10n.listenWord
-                      : context.l10n.listenSelection,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.repeat_rounded,
-                    size: 18,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(context.l10n.repeat, style: theme.textTheme.bodyMedium),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SegmentedButton<WordRepeat>(
-                      key: const ValueKey('word-range-repeat'),
-                      showSelectedIcon: false,
-                      style: ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                        padding: const WidgetStatePropertyAll(
-                          EdgeInsets.symmetric(horizontal: 4),
-                        ),
-                        textStyle: WidgetStatePropertyAll(
-                          theme.textTheme.labelMedium,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context.l10n.wordTimingsUnavailable,
+                          key: const ValueKey('word-range-unavailable'),
+                          style: theme.textTheme.bodySmall,
                         ),
                       ),
-                      segments: <ButtonSegment<WordRepeat>>[
-                        ButtonSegment(
-                          value: WordRepeat.once,
-                          label: Text(context.l10n.repeatOnce),
-                        ),
-                        ButtonSegment(
-                          value: WordRepeat.three,
-                          label: Text(context.l10n.repeatThreeTimes),
-                        ),
-                        ButtonSegment(
-                          value: WordRepeat.forever,
-                          label: Text(context.l10n.repeatForever),
-                        ),
-                      ],
-                      selected: <WordRepeat>{controller.repeat},
-                      onSelectionChanged: (value) =>
-                          controller.setRepeat(value.single),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (controller.failed) ...<Widget>[
+                  Text(
+                    context.l10n.wordRangeError,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.error,
                     ),
                   ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-            ],
+                FilledButton.icon(
+                  key: const ValueKey('word-range-play'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  onPressed: unavailable || controller.available == null
+                      ? null
+                      : () => controller.toggle(
+                          title: '${context.l10n.ayah} $title',
+                        ),
+                  icon: controller.loading || controller.available == null
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          controller.playing ? Icons.pause : Icons.play_arrow,
+                        ),
+                  label: Text(
+                    controller.playing
+                        ? context.l10n.pause
+                        : range.single
+                        ? context.l10n.listenWord
+                        : context.l10n.listenSelection,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: <Widget>[
+                    Icon(
+                      Icons.repeat_rounded,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      context.l10n.repeat,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: SegmentedButton<WordRepeat>(
+                        key: const ValueKey('word-range-repeat'),
+                        showSelectedIcon: false,
+                        style: ButtonStyle(
+                          visualDensity: VisualDensity.compact,
+                          padding: const WidgetStatePropertyAll(
+                            EdgeInsets.symmetric(horizontal: 4),
+                          ),
+                          textStyle: WidgetStatePropertyAll(
+                            theme.textTheme.labelMedium,
+                          ),
+                        ),
+                        segments: <ButtonSegment<WordRepeat>>[
+                          ButtonSegment(
+                            value: WordRepeat.once,
+                            label: Text(context.l10n.repeatOnce),
+                          ),
+                          ButtonSegment(
+                            value: WordRepeat.three,
+                            label: Text(context.l10n.repeatThreeTimes),
+                          ),
+                          ButtonSegment(
+                            value: WordRepeat.forever,
+                            label: Text(context.l10n.repeatForever),
+                          ),
+                        ],
+                        selected: <WordRepeat>{controller.repeat},
+                        onSelectionChanged: (value) =>
+                            controller.setRepeat(value.single),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -646,23 +670,24 @@ class WordRangeHandle extends StatelessWidget {
     child: RawGestureDetector(
       behavior: HitTestBehavior.opaque,
       gestures: <Type, GestureRecognizerFactory>{
-        ImmediateMultiDragGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<
-              ImmediateMultiDragGestureRecognizer
-            >(ImmediateMultiDragGestureRecognizer.new, (recognizer) {
-              recognizer.onStart = (pointer) {
-                final box = context.findRenderObject() as RenderBox?;
-                final anchor = box?.localToGlobal(
-                  Offset(width / 2, lineHeight / 2),
-                );
-                return _HandleDrag(
-                  pointer: pointer,
-                  grab: anchor == null ? Offset.zero : pointer - anchor,
-                  onDrag: onDrag,
-                  onEnd: onEnd,
-                );
-              };
-            }),
+        _HandleDragRecognizer:
+            GestureRecognizerFactoryWithHandlers<_HandleDragRecognizer>(
+              _HandleDragRecognizer.new,
+              (recognizer) {
+                recognizer.onStart = (pointer) {
+                  final box = context.findRenderObject() as RenderBox?;
+                  final anchor = box?.localToGlobal(
+                    Offset(width / 2, lineHeight / 2),
+                  );
+                  return _HandleDrag(
+                    pointer: pointer,
+                    grab: anchor == null ? Offset.zero : pointer - anchor,
+                    onDrag: onDrag,
+                    onEnd: onEnd,
+                  );
+                };
+              },
+            ),
       },
       child: CustomPaint(
         size: Size(width, lineHeight + extra),
@@ -672,13 +697,51 @@ class WordRangeHandle extends StatelessWidget {
   );
 }
 
+/// Takes the finger the moment it touches a handle. A drag recognizer that
+/// waits for its slop loses a moving finger to the page swipe or the list
+/// scroll: they use the device's touch slop, which on Android phones is
+/// smaller than the 18 px default of a recognizer without gesture settings.
+class _HandleDragRecognizer extends MultiDragGestureRecognizer {
+  _HandleDragRecognizer() : super(debugOwner: null);
+
+  _HandlePointerState? _added;
+
+  @override
+  MultiDragPointerState createNewPointerState(PointerDownEvent event) =>
+      _added = _HandlePointerState(event.position, event.kind, gestureSettings);
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    // The arena entry exists only now: claim it before anything can move.
+    _added?.claim();
+    _added = null;
+  }
+
+  @override
+  String get debugDescription => 'word range handle';
+}
+
+class _HandlePointerState extends MultiDragPointerState {
+  _HandlePointerState(super.initialPosition, super.kind, super.gestureSettings);
+
+  void claim() => resolve(GestureDisposition.accepted);
+
+  @override
+  void accepted(GestureMultiDragStartCallback starter) {
+    starter(initialPosition);
+  }
+}
+
 class _HandleDrag extends Drag {
   _HandleDrag({
     required Offset pointer,
     required this.grab,
     required this.onDrag,
     this.onEnd,
-  }) : _pointer = pointer;
+  }) : _pointer = pointer {
+    wordRangePulling.value = true;
+  }
 
   final Offset grab;
   final ValueChanged<Offset> onDrag;
@@ -695,10 +758,15 @@ class _HandleDrag extends Drag {
   }
 
   @override
-  void end(DragEndDetails details) => onEnd?.call();
+  void end(DragEndDetails details) => _done();
 
   @override
-  void cancel() => onEnd?.call();
+  void cancel() => _done();
+
+  void _done() {
+    wordRangePulling.value = false;
+    onEnd?.call();
+  }
 }
 
 class _HandlePainter extends CustomPainter {

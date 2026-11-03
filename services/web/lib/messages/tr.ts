@@ -1412,7 +1412,7 @@ const tr: Messages = {
   "wordRange.repeatOnce": "1 kez",
   "wordRange.repeatThree": "3 kez",
   "wordRange.repeatForever": "Sürekli",
-  "wordRange.unavailable": "Bu kârinin kelime kelime zamanlaması yok; yalnızca tam ayetler dinlenebilir. Bu zamanlama her kâride yok.",
+  "wordRange.unavailable": "Bu kârinin burada kelime kelime zamanlaması yok; bu ayet yalnızca tamamen dinlenebilir. Bu zamanlama her kâride yok, bazılarında da her ayette yok.",
   "wordRange.error": "Seçim çalınamadı.",
   "wordRange.hintPointer": "Kelime için çift tıklayın · uzatmak için Shift+tıklama · tutamaçları sürükleyin · çalmak için Boşluk · kaldırmak için Esc",
   "wordRange.hintTouch": "Daha fazlası için bir kelimeye basılı tutup sürükleyin · tutamaçları sürükleyin · kaldırmak için boşluğa dokunun",
