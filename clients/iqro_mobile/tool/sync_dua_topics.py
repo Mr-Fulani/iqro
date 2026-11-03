@@ -36,6 +36,8 @@ for topic in json.loads(catalog.read_text())["topics"]:
     }
     if "entry_numbers" in topic:
         fields["entryNumbers"] = topic["entry_numbers"]
+    if "time_of_day" in topic:
+        fields["timeOfDay"] = topic["time_of_day"]
     rows.append("  DuaTopic(\n" + "".join(
         f"    {key}: {dart(value)},\n" for key, value in fields.items()
     ) + "  ),")

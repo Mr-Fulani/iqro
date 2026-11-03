@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
+from typing import Any, cast
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -33,6 +34,7 @@ from quran_backend.modules.dua.models import (
     DuaCollection,
     DuaCollectionVersion,
     DuaEntry,
+    DuaEntryTimeVariant,
     DuaEntryTranslation,
     DuaEvidence,
     DuaFavorite,
@@ -111,6 +113,88 @@ def test_seeded_dua_catalog_is_public_and_localized(api_client: APIClient) -> No
         HTTP_IF_NONE_MATCH=catalog["ETag"],
     )
     assert cached.status_code == 304
+
+
+def _hisn_entry(api_client: APIClient, source_number: int, language: str) -> dict[str, Any]:
+    response = api_client.get(
+        "/api/v1/dua/entries/resolve",
+        {"collection": "hisn-al-muslim", "source_number": str(source_number), "language": language},
+    )
+    assert response.status_code == 200
+    return cast(dict[str, Any], response.json())
+
+
+@pytest.mark.django_db
+def test_morning_and_evening_cards_get_their_own_reading_without_the_other_time(
+    api_client: APIClient,
+) -> None:
+    """Chapter 27 keeps the book's notes; each adhkar card gets a reading without them."""
+
+    # The source keeps both readings and the note about the evening.
+    source = _hisn_entry(api_client, 77, "ru")
+    assert "Это читается вечером" in source["translation"]["meaning_text"]
+    assert "وإذا أمسى" in source["arabic_text"]
+
+    morning = source["time_variants"]["morning"]
+    evening = source["time_variants"]["evening"]
+    assert "вечер" not in morning["meaning_text"]
+    assert "в эту ночь" not in morning["meaning_text"]
+    assert "утр" not in evening["meaning_text"]
+    assert evening["meaning_text"].startswith("Мы дожили до вечера")
+    assert "أمسى" not in morning["arabic_text"]
+    assert "[" not in morning["arabic_text"]
+    assert "[" not in evening["arabic_text"]
+    assert evening["transliteration"].startswith("Амсайна")
+
+    english = _hisn_entry(api_client, 89, "en")["time_variants"]
+    assert "evening" not in english["morning"]["meaning_text"]
+    assert "morning" not in english["evening"]["meaning_text"]
+    assert english["evening"]["transliteration"].startswith("(Amsayna")
+
+    turkish = _hisn_entry(api_client, 90, "tr")["time_variants"]
+    assert turkish["morning"]["meaning_text"].endswith("sabahlad\u0131k.")
+    assert turkish["evening"]["meaning_text"].endswith("ak\u015famlad\u0131k.")
+
+    # Arabic shows the du'a itself as its meaning.
+    arabic = _hisn_entry(api_client, 78, "ar")["time_variants"]["evening"]
+    assert arabic["meaning_text"] == arabic["arabic_text"]
+    assert "الْمَصِيرُ" in arabic["arabic_text"]
+
+    # Only a Russian note changes: the other languages keep the source text.
+    russian_only = _hisn_entry(api_client, 86, "ru")
+    assert russian_only["time_variants"]["morning"]["meaning_text"].endswith("утром. )")
+    assert russian_only["time_variants"]["evening"]["meaning_text"].endswith("вечером. )")
+    english_86 = _hisn_entry(api_client, 86, "en")
+    assert english_86["time_variants"]["morning"] == {
+        "arabic_text": english_86["arabic_text"],
+        "meaning_text": english_86["translation"]["meaning_text"],
+        "transliteration": english_86["translation"]["transliteration"],
+    }
+
+    # A morning-only entry has only a morning reading; others have none.
+    assert set(_hisn_entry(api_client, 93, "ru")["time_variants"]) == {"morning"}
+    assert _hisn_entry(api_client, 79, "ru")["time_variants"] == {}
+    assert _hisn_entry(api_client, 1, "ru")["time_variants"] == {}
+
+
+@pytest.mark.django_db
+def test_no_morning_or_evening_reading_mentions_the_other_time(api_client: APIClient) -> None:
+    other_time = {
+        "morning": ("вечер", "в эту ночь", "evening", "night", "akşam", "أمسى", "أمسي"),
+        "evening": ("утр", "этот день", "morning", "this day", "sabahla", "أصبح"),
+    }
+    # The du'a 78 itself says «by You we reach the morning and the evening».
+    own_words = {78}
+    for language in ("ru", "en", "tr", "ar"):
+        for source_number in range(75, 99):
+            if source_number in own_words:
+                continue
+            variants = _hisn_entry(api_client, source_number, language)["time_variants"]
+            for time_of_day, variant in variants.items():
+                text = " ".join(variant.values())
+                plain = re.sub("[\u064b-\u065f\u0670]", "", text)
+                for word in other_time[time_of_day]:
+                    assert word not in plain.lower(), (source_number, language, time_of_day, word)
 
 
 @pytest.mark.django_db
@@ -618,9 +702,11 @@ def test_dua_admin_freezes_published_catalog_and_allows_new_draft_version() -> N
     category_translation = DuaCategoryTranslation.objects.filter(category=category).first()
     entry_translation = DuaEntryTranslation.objects.filter(entry=entry).first()
     evidence = DuaEvidence.objects.filter(entry=entry).first()
+    time_variant = DuaEntryTimeVariant.objects.filter(entry__collection_version=version).first()
     assert category_translation is not None
     assert entry_translation is not None
     assert evidence is not None
+    assert time_variant is not None
 
     published_objects = (
         collection,
@@ -631,6 +717,7 @@ def test_dua_admin_freezes_published_catalog_and_allows_new_draft_version() -> N
         entry,
         entry_translation,
         evidence,
+        time_variant,
     )
     for obj in published_objects:
         model_admin = admin.site._registry[type(obj)]
@@ -684,6 +771,7 @@ def test_dua_admin_freezes_published_catalog_and_allows_new_draft_version() -> N
         (DuaCategoryTranslation, "category", draft_category.id, category.id),
         (DuaEntryTranslation, "entry", draft_entry.id, entry.id),
         (DuaEvidence, "entry", draft_entry.id, entry.id),
+        (DuaEntryTimeVariant, "entry", draft_entry.id, entry.id),
     )
     for model, parent_field, draft_parent_id, published_parent_id in draft_parent_choices:
         form = admin.site._registry[model].get_form(request)

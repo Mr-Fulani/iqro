@@ -71,8 +71,9 @@ export default async function DuaThematicPage({ params }: { params: Promise<Para
     getPublishedDuaCategoryData(locale, category.slug, topic.collection)));
   const entries = topicEntries(topic, published.flatMap((chapter) => chapter.entries));
   // One chapter: its own title, as in the book; a part of one or several
-  // chapters: what the topic gathers.
-  const banner = chapters.length === 1
+  // chapters: what the topic gathers. The morning and evening cards name only
+  // their own time, not the book's «morning and evening».
+  const banner = chapters.length === 1 && !topic.time_of_day
     ? duaDisplayTitle(chapters[0].title, locale)
     : topic.description[locale];
   return (

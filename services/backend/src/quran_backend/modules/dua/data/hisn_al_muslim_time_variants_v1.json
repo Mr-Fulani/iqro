@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "collection": "hisn-al-muslim",
+  "version": "hisn-full-2026-08-28",
+  "entries": [
+    {
+      "source_number": 77,
+      "morning": {
+        "arabic_text": "((أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَهَ إلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ، رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَذَا الْيَوْمِ وَخَيرَ مَا بَعْدَهُ ، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِي هَذَا الْيَوْمِ وَشَرِّ مَا بَعْدَهُ، رَبِّ أَعُوذُ بِكَ مِنَ الْكَسَلِ وَسُوءِ الْكِبَرِ، رَبِّ أَعُوذُ بِكَ مِنْ عَذَابٍ فِي النَّارِ وَعَذَابٍ فِي الْقَبْرِ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "Мы дожили до утра, и этим утром владычество принадлежит Аллаху ( В комментариях ан-Навави указывается, что эти слова поясняют собой состояние произносящего их человека, убедившегося в том, что и этим утром владычество принадлежит Аллаху, как принадлежит оно Ему всегда.) и хвала Аллаху, нет бога, кроме одного лишь Аллаха, у которого нет сотоварища. Ему принадлежит владычество, Ему хвала, Он всё может. Господь мой, прошу Тебя о благе того, что будет в этот день, и благе того, что за ним последует, и прибегаю к Тебе от зла того, что будет в этот день, и зла того, что за ним последует. Господь мой, прибегаю к Тебе от нерадения и старческой дряхлости, Господь мой, прибегаю к Тебе от мучений в огне и мучений в могиле!",
+            "transliteration": "Асбахна ва асбаха-ль-мульку ли-Лляхи ва-ль-хамду ли-Лляхи, ля иляха илля Ллаху вахда-ху ля шарикя ля-ху, ля-ху-ль-мульку ва ля-ху-ль-хамду ва хуа 'аля кулли шайин кадирун. Рабби, ас'алю-кя хайра ма фи хаза-ль-йауми ва хайра ма ба'да-ху ва а'узу би-кя мин шарри ма фи хаза-ль-йауми ва шарри ма ба'да-ху! Рабби, а'узу би-кя мин аль-кясали ва суи-ль-кибари, Рабби, а'узу би-кя мин 'азабин фи-н-нари ва 'азабин фи-ль-кабри!"
+          },
+          "en": {
+            "meaning_text": "We have reached the morning and at this very time unto Allaah, belongs all sovereignty , and all praise is for Allaah. None has the right to be worshipped except Allaah, alone, without any partner, to Him belong all sovereignty and praise and He is over all things omnipotent. My Lord, I ask You for the good of this day and the good of what follows it and I take refuge in You from the evil of this day and the evil of what follows it . My Lord, I take refuge in You from laziness and senility. My Lord, I take refuge in You from torment in the Fire and punishment in the grave.",
+            "transliteration": "Asbahna wa-asbahal-mulku lillah walhamdu lillah la ilaha illal-lah, wahdahu la shareeka lah, lahul-mulku walahul-hamd, wahuwa AAala kulli shayin qadeer, rabbi as-aluka khayra ma fee hathal-yawm, wakhayra ma baAAdah, wa-aAAoothu bika min sharri ma fee hathal-yawm, washarri ma baAAdah, rabbi aAAoothu bika minal-kasal, wasoo-il kibar, rabbi aAAoothu bika min AAathabin fin-nar, waAAathabin fil-qabr."
+          }
+        }
+      },
+      "evening": {
+        "arabic_text": "((أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَهَ إلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ، رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَذِهِ اللَّيْلَةِ وَخَيْرَ مَا بَعْدَهَا ، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِي هَذِهِ اللَّيْلَةِ وَشَرِّ مَا بَعْدَهَا، رَبِّ أَعُوذُ بِكَ مِنَ الْكَسَلِ وَسُوءِ الْكِبَرِ، رَبِّ أَعُوذُ بِكَ مِنْ عَذَابٍ فِي النَّارِ وَعَذَابٍ فِي الْقَبْرِ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "Мы дожили до вечера, и этим вечером владычество принадлежит Аллаху (В комментариях ан-Навави указывается, что эти слова поясняют собой состояние произносящего их человека, убедившегося в том, что и этим вечером владычество принадлежит Аллаху, как принадлежит оно Ему всегда.) и хвала Аллаху, нет бога, кроме одного лишь Аллаха, у которого нет сотоварища. Ему принадлежит владычество, Ему хвала, Он всё может. Господь мой, прошу Тебя о благе того, что будет в эту ночь, и благе того, что за ней последует, и прибегаю к Тебе от зла того, что будет в эту ночь, и зла того, что за ней последует. Господь мой, прибегаю к Тебе от нерадения и старческой дряхлости, Господь мой, прибегаю к Тебе от мучений в огне и мучений в могиле!",
+            "transliteration": "Амсайна ва амса-ль-мульку ли-Лляхи ва-ль-хамду ли-Лляхи, ля иляха илля Ллаху вахда-ху ля шарикя ля-ху, ля-ху-ль-мульку ва ля-ху-ль-хамду ва хуа 'аля кулли шайин кадирун. Рабби, ас'алю-кя хайра ма фи хазихи-ль-лейляти ва хайра ма ба'да-ха ва а'узу би-кя мин шарри ма фи хазихи-ль-лейляти ва шарри ма ба'да-ха! Рабби, а'узу би-кя мин аль-кясали ва суи-ль-кибари, Рабби, а'узу би-кя мин 'азабин фи-н-нари ва 'азабин фи-ль-кабри!"
+          },
+          "en": {
+            "meaning_text": "We have reached the evening and at this very time unto Allah belongs all sovereignty, and all praise is for Allah. None has the right to be worshipped except Allah, alone, without any partner, to Him belong all sovereignty and praise and He is over all things omnipotent. My Lord, I ask You for the good of this night and the good of what follows it and I take refuge in You from the evil of this night and the evil of what follows it. My Lord, I take refuge in You from laziness and senility. My Lord, I take refuge in You from torment in the Fire and punishment in the grave.",
+            "transliteration": "Amsayna wa-amsal-mulku lillah walhamdu lillah la ilaha illal-lah, wahdahu la shareeka lah, lahul-mulku walahul-hamd, wahuwa AAala kulli shayin qadeer, rabbi as-aluka khayra ma fee hathihil-laylah, wakhayra ma baAAdaha, wa-aAAoothu bika min sharri ma fee hathihil-laylah, washarri ma baAAdaha, rabbi aAAoothu bika minal-kasal, wasoo-il kibar, rabbi aAAoothu bika min AAathabin fin-nar, waAAathabin fil-qabr."
+          },
+          "tr": {
+            "meaning_text": "Mülk, devamlı Allah’a âit bir halde akşamladık. Hamd Allah’adır. Allah’tan başka hak ilah yoktur. O, tektir ve ortağı yoktur. Mülk O’nundur. Hamd da O’nadır. O, her şeye gücü yetendir. Rabbim! Senden bu gecede ve bu geceden sonra iyiliklerini isterim; bu gecenin şerrinden ve bu geceden sonra (meydana gelecek olan) şerden de sana sığınırım. Rabbim! Tembellikten ve (aklını yitirmek ve bunamak gibi) kötü yaşlılıktan sana sığınırım. Rabbim! Cehennem ve kabir azabından sana sığınırım."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 78,
+      "morning": {
+        "arabic_text": "((اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا ، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "О Аллах, благодаря Тебе мы дожили до утра и благодаря Тебе мы дожили до вечера, Ты даёшь нам жизнь, и Ты лишаешь нас её и Ты воскресишь нас для отчета.",
+            "transliteration": "Аллахумма, би-кя асбахна, ва би-кя амсайна, ва би-кя нахйа, ва би-кя наму-ту ва иляй-кя-н-нушуру."
+          },
+          "en": {
+            "meaning_text": "(O Allah, by your leave we have reached the morning and by Your leave we have reached the evening, by Your leave we live and die and unto You is our resurrection.)",
+            "transliteration": "(Allahumma bika asbahna wabika amsayna, wabika nahya ,wabika namootu wa-ilaykan-nushoor.)"
+          }
+        }
+      },
+      "evening": {
+        "arabic_text": "((اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا ، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ الْمَصِيرُ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "О Аллах, благодаря Тебе мы дожили до вечера и благодаря Тебе мы дожили до утра. Ты даёшь нам жизнь, и Ты лишаешь нас её и Ты воскресишь нас для отчета.",
+            "transliteration": "Аллахумма, би-кя амсайна, ва би-кя асбахна, ва би-кя нахйа, ва би-кя намуту ва иляй-кя-ль-масыру."
+          },
+          "en": {
+            "meaning_text": "(O Allah, by Your leave we have reached the evening and by Your leave we have reached the morning, by Your leave we live and die and unto You is our return.)",
+            "transliteration": "(Allahumma bika amsayna, wabika asbahna, wabika nahya wabika namootu wa-ilaykal-maseer.)"
+          },
+          "tr": {
+            "meaning_text": "Allahım! Senin (nimetin, koruman ve zikrin) ile akşamlarız ve senin (nimetin, koruman ve zikrin) ile sabahlarız. Senin yardımınla yaşar ve senin yardımınla ölürüz. Ve (kıyâmet günü) dönüş, yalnızca sanadır."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 80,
+      "morning": {
+        "arabic_text": "((اللَّهُمَّ إِنِّي أَصْبَحْتُ أُشْهِدُكَ، وَأُشْهِدُ حَمَلَةَ عَرْشِكَ، وَمَلاَئِكَتِكَ، وَجَمِيعَ خَلْقِكَ، أَنَّكَ أَنْتَ اللَّهُ لَا إِلَهَ إِلاَّ أَنْتَ وَحْدَكَ لاَ شَرِيكَ لَكَ، وَأَنَّ مُحَمَّداً عَبْدُكَ وَرَسُولُكَ)) (أربعَ مَرَّاتٍ).",
+        "translations": {
+          "ru": {
+            "meaning_text": "О Аллах, поистине, этим утром я призываю Тебя, и тех, кто несёт Твой трон, и Твоих ангелов и всех тех, кого Ты создал, засвидетельствовать, что Ты - Аллах, и нет бога, кроме одного лишь Тебя, и нет у Тебя сотоварища, и что Мухаммад - Твой раб и Твой посланник. (Эти слова следует повторять по четыре раза. Того, кто станет делать это утром, Аллах избавит от огня.)",
+            "transliteration": "Аллахумма, инни асбахту ушхиду-кя ва ушхиду хамалята 'арши-кя, ва маляикята-кя ва джами'а хальки-кя анна-кя Анта Ллаху ля иляха илля Анта вахда-кя ля шарикя ля-кя, ва анна Мухаммадан 'абду-кя ва расулю-кя."
+          },
+          "en": {
+            "meaning_text": "(O Allah, verily I have reached the morning and call on You, the bearers of Your throne, Your angles, and all of Your creation to witness that You are Allah, none has the right to be worshipped except You, alone, without partner and that Muhammad is Your Servant and Messenger.) (four times)",
+            "transliteration": "(Allahumma innee asbahtu oshhiduk, wa-oshhidu hamalata AAarshik, wamala-ikatak, wajameeAAa khalqik, annaka antal-lahu la ilaha illa ant, wahdaka la shareeka lak, wa-anna Muhammadan AAabduka warasooluk .) (four times)"
+          }
+        }
+      },
+      "evening": {
+        "arabic_text": "((اللَّهُمَّ إِنِّي أَمْسَيْتُ أُشْهِدُكَ، وَأُشْهِدُ حَمَلَةَ عَرْشِكَ، وَمَلاَئِكَتِكَ، وَجَمِيعَ خَلْقِكَ، أَنَّكَ أَنْتَ اللَّهُ لَا إِلَهَ إِلاَّ أَنْتَ وَحْدَكَ لاَ شَرِيكَ لَكَ، وَأَنَّ مُحَمَّداً عَبْدُكَ وَرَسُولُكَ)) (أربعَ مَرَّاتٍ).",
+        "translations": {
+          "ru": {
+            "meaning_text": "О Аллах, поистине, этим вечером я призываю Тебя, и тех, кто несёт Твой трон, и Твоих ангелов и всех тех, кого Ты создал, засвидетельствовать, что Ты - Аллах, и нет бога, кроме одного лишь Тебя, и нет у Тебя сотоварища, и что Мухаммад - Твой раб и Твой посланник. (Эти слова следует повторять по четыре раза. Того, кто станет делать это вечером, Аллах избавит от огня.)",
+            "transliteration": "Аллахумма, инни амсайту ушхиду-кя ва ушхиду хамалята 'арши-кя, ва маляикята-кя ва джами'а хальки-кя анна-кя Анта Ллаху ля иляха илля Анта вахда-кя ля шарикя ля-кя, ва анна Мухаммадан 'абду-кя ва расулю-кя."
+          },
+          "en": {
+            "meaning_text": "(O Allah, verily I have reached the evening and call on You, the bearers of Your throne, Your angles, and all of Your creation to witness that You are Allah, none has the right to be worshipped except You, alone, without partner and that Muhammad is Your Servant and Messenger.) (four times)",
+            "transliteration": "(Allahumma innee amsaytu oshhiduk, wa-oshhidu hamalata AAarshik, wamala-ikatak, wajameeAAa khalqik, annaka antal-lahu la ilaha illa ant, wahdaka la shareeka lak, wa-anna Muhammadan AAabduka warasooluk .) (four times)"
+          },
+          "tr": {
+            "meaning_text": "Dört kere: \"Allahım! Senin, senden başka hak ilah olmayan Allah olduğuna ve Muhammed -sallallahu aleyhi ve sellem-‘in de senin kulun ve elçin olduğuna; Seni, senin arşını taşıyanları, meleklerini ve bütün yarattıklarını şahit tutarak akşamladım."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 81,
+      "morning": {
+        "arabic_text": "((اللَّهُمَّ مَا أَصْبَحَ بِي مِنْ نِعْمَةٍ أَوْ بِأَحَدٍ مِنْ خَلْقِكَ فَمِنْكَ وَحْدَكَ لاَ شَرِيكَ لَكَ، فَلَكَ الْحَمْدُ وَلَكَ الشُّكْرُ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "О Аллах, милости, оказанные этим утром мне или кому-либо иному из Твоих созданий, исходят только от Тебя, и нет у Тебя сотоварища! Тебе хвала и Тебе благодарность!",
+            "transliteration": "Аллахумма, ма асбаха би мин ни'матин ау би-ахадин мин халь-кы-кя фа-мин-кя вахда-кя ля шарикя ля-кя, фа-ля-кя-ль-хамду ва ля-кя-ш-шукру!"
+          },
+          "en": {
+            "meaning_text": "(O Allah, what blessing I or any of Your creation have risen upon, is from You alone, without partner, so for You is all praise and unto You all thanks.)(…whoever says this in the morning has indeed offered his day’s thanks.)",
+            "transliteration": "(Allahumma ma asbaha bee min niAAmatin, aw bi-ahadin min khalqik, faminka wahdaka la shareeka lak, falakal-hamdu walakash-shukr.)"
+          }
+        }
+      },
+      "evening": {
+        "arabic_text": "((اللَّهُمَّ مَا أَمْسَى بِي مِنْ نِعْمَةٍ أَوْ بِأَحَدٍ مِنْ خَلْقِكَ فَمِنْكَ وَحْدَكَ لاَ شَرِيكَ لَكَ، فَلَكَ الْحَمْدُ وَلَكَ الشُّكْرُ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "О Аллах, милости, оказанные этим вечером мне или кому-либо иному из Твоих созданий, исходят только от Тебя, и нет у Тебя сотоварища! Тебе хвала и Тебе благодарность!",
+            "transliteration": "Аллахумма, ма амса би мин ни'матин ау би-ахадин мин халь-кы-кя фа-мин-кя вахда-кя ля шарикя ля-кя, фа-ля-кя-ль-хамду ва ля-кя-ш-шукру!"
+          },
+          "en": {
+            "meaning_text": "(O Allah, what blessing I or any of Your creation have reached the evening with, is from You alone, without partner, so for You is all praise and unto You all thanks.)(…whoever says this in the evening has indeed offered his night’s thanks.)",
+            "transliteration": "(Allahumma ma amsa bee min niAAmatin, aw bi-ahadin min khalqik, faminka wahdaka la shareeka lak, falakal-hamdu walakash-shukr.)"
+          },
+          "tr": {
+            "meaning_text": "Allahım! Benim veya kullarından birisinin yanında akşama çıkan her nimet, yalnızca sendendir.Senin ortağın yoktur. Hamd, yalnızca sanadır. Şükür de sanadır."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 86,
+      "morning": {
+        "translations": {
+          "ru": {
+            "meaning_text": "С именем Аллаха, с именем которого ничто не причинит вред ни на земле, ни на небе, ведь Он - Слышащий, Знающий!\" ( Эти слова следует повторять трижды. Ничто не повредит тому, кто станет повторять их по три раза утром. )"
+          }
+        }
+      },
+      "evening": {
+        "translations": {
+          "ru": {
+            "meaning_text": "С именем Аллаха, с именем которого ничто не причинит вред ни на земле, ни на небе, ведь Он - Слышащий, Знающий!\" ( Эти слова следует повторять трижды. Ничто не повредит тому, кто станет повторять их по три раза вечером. )"
+          }
+        }
+      }
+    },
+    {
+      "source_number": 87,
+      "morning": {
+        "translations": {
+          "ru": {
+            "meaning_text": "Доволен я Аллахом как Господом, исламом - как религией и Мухаммадом, - как пророком! (Эти слова следует повторять трижды. В день Воскресения Аллах обязательно проявит Своё благоволение по отношению к тем, кто станет делать это.)"
+          }
+        }
+      },
+      "evening": {
+        "translations": {
+          "ru": {
+            "meaning_text": "Доволен я Аллахом как Господом, исламом - как религией и Мухаммадом, - как пророком! (Эти слова следует повторять трижды. В день Воскресения Аллах обязательно проявит Своё благоволение по отношению к тем, кто станет делать это.)"
+          }
+        }
+      }
+    },
+    {
+      "source_number": 89,
+      "morning": {
+        "arabic_text": "((أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ رَبِّ الْعَالَمِينَ، اللَّهُـمَّ إِنِّي أَسْأَلُكَ خَيْرَ هَذَا الْيَوْمِ:فَتْحَهُ، وَنَصْرَهُ، وَنورَهُ، وَبَرَكَتَهُ، وَهُدَاهُ، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِيهِ وَشَرِّ مَا بَعْدَهُ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "Мы дожили до утра, и этим утром владычество принадлежит Аллаху, Господу миров. О Аллах, поистине, я прошу Тебя о благе этого дня: о помощи и победе, о свете, благословении и руководстве в этот день, и я прибегаю к Тебе от зла того, что случится этим днем, и зла того, что за ним последует.",
+            "transliteration": "Асбахна ва асбаха-ль-мульку ли-Лляхи, Рабби-ль-'Алямина. Аллахумма, инни ас'алю-кя хайра хаза-ль-йауми: фатха-ху, ва насра-ху, ва нура-ху, ва баракята-ху ва худа-ху, ва а'узу би-кя мин шарри ма фи-хи ва шарри ма ба'да-ху."
+          },
+          "en": {
+            "meaning_text": "(We have reached the morning and at this very time all sovereignty belongs to Allah, Lord of the worlds. O Allah, I ask You for the good of this day, its triumphs and its victories, its light and its blessings and its guidance, and I take refuge in You from the evil of this day and the evil that follows it.)",
+            "transliteration": "(Asbahna wa-asbahal-mulku lillahi rabbil-AAalameen, allahumma innee as-aluka khayra hathal-yawm, fat-hahu, wanasrahu, wanoorahu, wabarakatahu, wahudahu, wa-aAAoothu bika min sharri ma feehi, washarri ma baAAdah.)"
+          }
+        }
+      },
+      "evening": {
+        "arabic_text": "((أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ رَبِّ الْعَالَمِينَ، اللَّهُـمَّ إِنِّي أَسْأَلُكَ خَيْرَ هَذِهِ اللَّيْلَةِ: فَتْحَهَا، وَنَصْرَهَا، وَنُورَهَا، وَبَرَكَتَهَا، وَهُدَاهَا، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِيهَا وَشَرِّ مَا بَعْدَهَا)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "Мы дожили до вечера, и этим вечером владычество принадлежит Аллаху, Господу миров. О Аллах, поистине, я прошу Тебя о благе этой ночи: о помощи и победе, о свете, благословении и руководстве в эту ночь, и я прибегаю к Тебе от зла того, что случится этой ночью, и зла того, что за ней последует.",
+            "transliteration": "Амсайна ва амса-ль-мульку ли-Лляхи, Рабби-ль-'Алямина. Аллахумма, инни ас'алю-кя хайра хазихи-ль-лейляти: фатха-ха, ва насра-ха, ва нура-ха, ва баракята-ха ва худа-ха, ва а'узу би-кя мин шарри ма фи-ха ва шарри ма ба'да-ха."
+          },
+          "en": {
+            "meaning_text": "(We have reached the evening and at this very time all sovereignty belongs to Allah, Lord of the worlds. O Allah, I ask You for the good of tonight, its triumphs and its victories, its light and its blessings and its guidance, and I take refuge in You from the evil of tonight and the evil that follows it.)",
+            "transliteration": "(Amsayna wa-amsal-mulku lillahi rabbil-AAalameen, allahumma innee as-aluka khayra hathihil-laylah, fat-haha, wanasraha, wanooraha, wabarakataha, wahudaha, wa-aAAoothu bika min sharri ma feeha washarri ma baAAdaha.)"
+          },
+          "tr": {
+            "meaning_text": "Mülk, Âlemlerin Rabbi Allah’a devamlı âit bir halde akşamladık. Allahım! Senden bu gecenin iyiliğini, zaferini, (ilim ve amelde muvaffak olmak sûretiyle) nûrunu, (kolay helal rızık kazanmak sûretiyle) bereketini ve hidâyetini dilerim. Onda ve sonrasındaki şerden de sana sığınırım."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 90,
+      "morning": {
+        "arabic_text": "((أَصْبَحْنا عَلَى فِطْرَةِ الْإِسْلاَمِ، وَعَلَى كَلِمَةِ الْإِخْلاَصِ، وَعَلَى دِينِ نَبِيِّنَا مُحَمَّدٍ صلى الله عليه وسلم، وَعَلَى مِلَّةِ أَبِينَا إِبْرَاهِيمَ، حَنِيفاً مُسْلِماً وَمَا كَانَ مِنَ الْمُشرِكِينَ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "Мы дожили до утра в лоне ислама согласно слову искренности, исповедуя религию нашего пророка Мухаммада, салляллаху ‘алейхи уа саллям, и религию нашего отца Ибрахима, который был ханифом и мусульманином и не относился к многобожникам.",
+            "transliteration": "Асбахна 'аля фитрати-ль-ислами ва 'аля кялимати-ль-ихляси ва 'аля дини набийй-на Мухаммадин, салля Ллаху 'аляй-хи ва салляма, ва 'аля мил-ляти аби-на Ибрахима ханифан муслиман ва ма кяна мин аль-мушрикина."
+          },
+          "en": {
+            "meaning_text": "(We rise upon the fitrah of Islam, and the word of pure faith, and upon the religion of our Prophet Muhammad and the religion of our forefather Ibraheem, who was a Muslim and of true faith and was not of those who associate others with Allah.)(fitrah: the religion of Islam, the way of Ibraheem u.)",
+            "transliteration": "(Asbahna AAala fitratil-islam, waAAala kalimatil-ikhlas, waAAala deeni nabiyyina Muhammad waAAala millati abeena Ibraheem, haneefan musliman wama kana minal-mushrikeen.)"
+          }
+        }
+      },
+      "evening": {
+        "arabic_text": "((أَمْسَيْنَا عَلَى فِطْرَةِ الْإِسْلاَمِ، وَعَلَى كَلِمَةِ الْإِخْلاَصِ، وَعَلَى دِينِ نَبِيِّنَا مُحَمَّدٍ صلى الله عليه وسلم، وَعَلَى مِلَّةِ أَبِينَا إِبْرَاهِيمَ، حَنِيفاً مُسْلِماً وَمَا كَانَ مِنَ الْمُشرِكِينَ)).",
+        "translations": {
+          "ru": {
+            "meaning_text": "Мы дожили до вечера в лоне ислама согласно слову искренности, исповедуя религию нашего пророка Мухаммада, салляллаху ‘алейхи уа саллям, и религию нашего отца Ибрахима, который был ханифом и мусульманином и не относился к многобожникам.",
+            "transliteration": "Амсайна 'аля фитрати-ль-ислами ва 'аля кялимати-ль-ихляси ва 'аля дини набийй-на Мухаммадин, салля Ллаху 'аляй-хи ва салляма, ва 'аля мил-ляти аби-на Ибрахима ханифан муслиман ва ма кяна мин аль-мушрикина."
+          },
+          "en": {
+            "meaning_text": "(We have reached the evening upon the fitrah of Islam, and the word of pure faith, and upon the religion of our Prophet Muhammad and the religion of our forefather Ibraheem, who was a Muslim and of true faith and was not of those who associate others with Allah.)(fitrah: the religion of Islam, the way of Ibraheem u.)",
+            "transliteration": "(Amsayna AAala fitratil-islam, waAAala kalimatil-ikhlas, waAAala deeni nabiyyina Muhammad waAAala millati abeena Ibraheem, haneefan musliman wama kana minal-mushrikeen.)"
+          },
+          "tr": {
+            "meaning_text": "İslâm fıtratı (hak dîni), ihlas kelimesi (kelime-i şehâdet) ve Nebimiz Muhammed -sallallahu aleyhi ve sellem-’in dini üzere; hanif ve müslüman olan, müşriklerden olmayan babamız İbrahim’in milleti üzere akşamladık."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 91,
+      "morning": {
+        "translations": {
+          "ru": {
+            "meaning_text": "Слава Аллаху и хвала Ему (Если человек станет повторять эти слова по сто раз, то в день Воскресения нечто более достойное сможет принести с собой лишь тот, кто повторял их столько же или больше)."
+          }
+        }
+      },
+      "evening": {
+        "translations": {
+          "ru": {
+            "meaning_text": "Слава Аллаху и хвала Ему (Если человек станет повторять эти слова по сто раз, то в день Воскресения нечто более достойное сможет принести с собой лишь тот, кто повторял их столько же или больше)."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 93,
+      "morning": {
+        "translations": {
+          "ru": {
+            "meaning_text": "Нет бога, кроме одного лишь Аллаха, у которого нет сотоварища, Ему принадлежит владычество, Ему хвала, Он всё может\" (Эти слова следует повторять по сто раз ежеутренне. Произнёсший их сто раз в течение дня равен освободившему десять рабов, ему будет записано совершение ста благих дел, а записи о ста его дурных делах будут стёрты. Эти слова послужат ему защитой от шайтана в течение всего этого дня, и никто не сможет совершить ничего более достойного, если не считать тех, кто повторит их большее число раз)."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 96,
+      "morning": {
+        "translations": {
+          "ru": {
+            "meaning_text": "Прошу прощения у Аллаха и приношу Ему своё покаяние. (Эти слова следует произносить по сто раз в день)."
+          }
+        }
+      },
+      "evening": {
+        "translations": {
+          "ru": {
+            "meaning_text": "Прошу прощения у Аллаха и приношу Ему своё покаяние. (Эти слова следует произносить по сто раз в день)."
+          }
+        }
+      }
+    },
+    {
+      "source_number": 98,
+      "morning": {
+        "translations": {
+          "ru": {
+            "meaning_text": "О Аллах, благослови нашего пророка Мухаммада и приветствуй его! (Эти слова следует произносить десять раз). Сообщается, что посланник Аллаха, (салляллаху ‘алейхи уа саллям), сказал: Тот, кто станет возносить за меня по десять молитв, в День воскресения будет под моим заступничеством\"."
+          }
+        }
+      },
+      "evening": {
+        "translations": {
+          "ru": {
+            "meaning_text": "О Аллах, благослови нашего пророка Мухаммада и приветствуй его! (Эти слова следует произносить десять раз). Сообщается, что посланник Аллаха, (салляллаху ‘алейхи уа саллям), сказал: Тот, кто станет возносить за меня по десять молитв, в День воскресения будет под моим заступничеством\"."
+          }
+        }
+      }
+    }
+  ]
+}

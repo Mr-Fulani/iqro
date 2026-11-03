@@ -4,6 +4,7 @@
     {
       "id": "morning",
       "collection": "hisn-al-muslim",
+      "time_of_day": "morning",
       "chapter_numbers": [
         27
       ],
@@ -48,6 +49,7 @@
     {
       "id": "evening",
       "collection": "hisn-al-muslim",
+      "time_of_day": "evening",
       "chapter_numbers": [
         27
       ],

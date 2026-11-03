@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { DuaCategory, DuaEntry } from "./api.ts";
-import { duaTopics, topicCategories, topicEntries } from "./dua-topics.ts";
+import { duaEntryForTime, duaTopics, topicCategories, topicEntries } from "./dua-topics.ts";
 
 function category(number: number, collection = "hisn-al-muslim"): DuaCategory {
   return { id: `${collection}-${number}`, source_number: number, collection,
@@ -49,4 +49,34 @@ test("source-based morning and evening subsets retain the full chapter between t
     assert.equal(pm.includes(number), false);
   }
   assert.ok(am.includes(96) && pm.includes(96));
+});
+
+test("morning and evening cards read their own text; other topics keep the book", () => {
+  const morning = duaTopics.find((topic) => topic.id === "morning")!;
+  const evening = duaTopics.find((topic) => topic.id === "evening")!;
+  const sleep = duaTopics.find((topic) => topic.id === "sleep")!;
+  assert.equal(morning.time_of_day, "morning");
+  assert.equal(evening.time_of_day, "evening");
+  assert.equal(sleep.time_of_day, undefined);
+  const book = {
+    source_number: 77, collection: "hisn-al-muslim", category: { source_number: 27 },
+    arabic_text: "أصبحنا [وإذا أمسى قال: أمسينا]",
+    translation: { language_code: "ru", meaning_text: "утром (вечером)", transliteration: "Асбахна (амсайна)" },
+    time_variants: {
+      morning: { arabic_text: "أصبحنا", meaning_text: "утром", transliteration: "Асбахна" },
+      evening: { arabic_text: "أمسينا", meaning_text: "вечером", transliteration: "Амсайна" },
+    },
+  } as DuaEntry;
+  const [am] = topicEntries(morning, [book]);
+  const [pm] = topicEntries(evening, [book]);
+  assert.equal(am.arabic_text, "أصبحنا");
+  assert.equal(am.translation?.meaning_text, "утром");
+  assert.equal(pm.arabic_text, "أمسينا");
+  assert.equal(pm.translation?.transliteration, "Амсайна");
+  assert.equal(pm.translation?.language_code, "ru");
+  assert.equal(book.translation?.meaning_text, "утром (вечером)");
+  // An entry said at one time only, or a response without variants, stays as it is.
+  const plain = { ...book, time_variants: {} } as DuaEntry;
+  assert.equal(topicEntries(morning, [plain])[0], plain);
+  assert.equal(duaEntryForTime(book, undefined), book);
 });

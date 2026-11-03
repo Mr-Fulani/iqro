@@ -214,6 +214,30 @@ class DuaEvidence {
   };
 }
 
+class DuaTimeVariant {
+  const DuaTimeVariant({
+    required this.arabicText,
+    required this.meaning,
+    required this.transliteration,
+  });
+
+  factory DuaTimeVariant.fromJson(Map<String, Object?> json) => DuaTimeVariant(
+    arabicText: json['arabic_text']?.toString() ?? '',
+    meaning: json['meaning_text']?.toString() ?? '',
+    transliteration: json['transliteration']?.toString() ?? '',
+  );
+
+  final String arabicText;
+  final String meaning;
+  final String transliteration;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'arabic_text': arabicText,
+    'meaning_text': meaning,
+    'transliteration': transliteration,
+  };
+}
+
 class DuaEntry {
   const DuaEntry({
     required this.id,
@@ -231,6 +255,8 @@ class DuaEntry {
     this.source,
     this.evidence = const <DuaEvidence>[],
     this.audio = const <DuaAudioAsset>[],
+    this.timeVariants = const <String, DuaTimeVariant>{},
+    this.bookReading,
     this.catalogVersionVerified = true,
     this.available = true,
   });
@@ -251,6 +277,8 @@ class DuaEntry {
        source = null,
        evidence = const <DuaEvidence>[],
        audio = const <DuaAudioAsset>[],
+       timeVariants = const <String, DuaTimeVariant>{},
+       bookReading = null,
        catalogVersionVerified = false,
        available = false;
 
@@ -303,6 +331,14 @@ class DuaEntry {
       source: sourceEdition,
       evidence: _modelList(json['evidence'], DuaEvidence.fromJson),
       audio: _modelList(json['audio'], DuaAudioAsset.fromJson),
+      timeVariants: <String, DuaTimeVariant>{
+        if (json['time_variants'] case final Map<Object?, Object?> variants)
+          for (final MapEntry(:key, :value) in variants.entries)
+            if (value is Map)
+              key.toString(): DuaTimeVariant.fromJson(
+                Map<String, Object?>.from(value),
+              ),
+      },
       sourceLabel: sourceLabel,
       available: json['_favorite_available'] != false,
     );
@@ -323,6 +359,14 @@ class DuaEntry {
   final DuaSourceEdition? source;
   final List<DuaEvidence> evidence;
   final List<DuaAudioAsset> audio;
+
+  /// The morning and evening adhkar cards' own reading of this entry, by
+  /// time of day; empty for entries said at one time only.
+  final Map<String, DuaTimeVariant> timeVariants;
+
+  /// The entry as the book has it, when this is a card's own reading. Saved
+  /// copies keep the book's text, as the server returns it.
+  final DuaEntry? bookReading;
   final bool catalogVersionVerified;
   final bool available;
 
@@ -356,33 +400,74 @@ class DuaEntry {
     source: source,
     evidence: evidence,
     audio: audio,
+    timeVariants: timeVariants,
+    bookReading: bookReading,
     catalogVersionVerified: false,
     available: available,
   );
 
-  Map<String, Object?> toJson() => <String, Object?>{
-    'id': id,
-    'source_number': sourceNumber,
-    'collection': collection,
-    'collection_version': collectionVersion,
-    'category_title': categoryTitle,
-    'category_slug': categorySlug,
-    'category': <String, Object?>{'slug': categorySlug, 'title': categoryTitle},
-    'arabic_text': arabicText,
-    'meaning': meaning,
-    'transliteration': transliteration,
-    'translation': <String, Object?>{
-      'meaning_text': meaning,
-      'transliteration': transliteration,
-    },
-    'repetitions': repetitions,
-    'repetition_label': repetitionLabel,
-    'source_label': sourceLabel,
-    'source': source?.toJson(),
-    'evidence': evidence.map((item) => item.toJson()).toList(growable: false),
-    'audio': audio.map((item) => item.toJson()).toList(growable: false),
-    '_favorite_available': available,
-  };
+  /// This entry as the card for [timeOfDay] reads it: the source keeps both
+  /// readings with notes such as «in the evening say…», each card only its own.
+  DuaEntry forTimeOfDay(String? timeOfDay) {
+    final variant = timeVariants[timeOfDay];
+    if (variant == null) return this;
+    return DuaEntry(
+      id: id,
+      sourceNumber: sourceNumber,
+      collection: collection,
+      collectionVersion: collectionVersion,
+      categoryTitle: categoryTitle,
+      categorySlug: categorySlug,
+      arabicText: variant.arabicText,
+      meaning: variant.meaning,
+      transliteration: variant.transliteration,
+      repetitions: repetitions,
+      sourceLabel: sourceLabel,
+      repetitionLabel: repetitionLabel,
+      source: source,
+      evidence: evidence,
+      audio: audio,
+      timeVariants: timeVariants,
+      bookReading: this,
+      catalogVersionVerified: catalogVersionVerified,
+      available: available,
+    );
+  }
+
+  Map<String, Object?> toJson() =>
+      bookReading?.toJson() ??
+      <String, Object?>{
+        'id': id,
+        'source_number': sourceNumber,
+        'collection': collection,
+        'collection_version': collectionVersion,
+        'category_title': categoryTitle,
+        'category_slug': categorySlug,
+        'category': <String, Object?>{
+          'slug': categorySlug,
+          'title': categoryTitle,
+        },
+        'arabic_text': arabicText,
+        'meaning': meaning,
+        'transliteration': transliteration,
+        'translation': <String, Object?>{
+          'meaning_text': meaning,
+          'transliteration': transliteration,
+        },
+        'repetitions': repetitions,
+        'repetition_label': repetitionLabel,
+        'source_label': sourceLabel,
+        'source': source?.toJson(),
+        'evidence': evidence
+            .map((item) => item.toJson())
+            .toList(growable: false),
+        'audio': audio.map((item) => item.toJson()).toList(growable: false),
+        'time_variants': <String, Object?>{
+          for (final MapEntry(:key, :value) in timeVariants.entries)
+            key: value.toJson(),
+        },
+        '_favorite_available': available,
+      };
 
   factory DuaEntry.fromFavorite(Map<String, Object?> json) =>
       DuaEntry.fromJson(json);

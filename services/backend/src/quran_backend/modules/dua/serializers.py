@@ -195,6 +195,7 @@ class DuaCategorySerializer(serializers.ModelSerializer[DuaCategory]):
 class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
     category = serializers.SerializerMethodField()
     translation = serializers.SerializerMethodField()
+    time_variants = serializers.SerializerMethodField()
     evidence = DuaEvidenceSerializer(many=True, read_only=True)
     source = serializers.SerializerMethodField()  # type: ignore[assignment]
     audio = serializers.SerializerMethodField()
@@ -220,6 +221,7 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
             "repetitions",
             "repetition_label",
             "translation",
+            "time_variants",
             "evidence",
             "source",
             "audio",
@@ -241,6 +243,17 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
             "language_code": translation.language_code,
             "meaning_text": translation.meaning_text,
             "transliteration": translation.transliteration,
+        }
+
+    def get_time_variants(self, obj: DuaEntry) -> dict[str, dict[str, str]]:
+        """The morning and evening adhkar cards' own reading, keyed by time of day."""
+        return {
+            variant.time_of_day: {
+                "arabic_text": variant.arabic_text,
+                "meaning_text": variant.meaning_text,
+                "transliteration": variant.transliteration,
+            }
+            for variant in getattr(obj, "localized_time_variants", ())
         }
 
     def get_source(self, obj: DuaEntry) -> dict[str, Any] | None:

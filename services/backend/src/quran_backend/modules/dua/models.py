@@ -312,6 +312,43 @@ class DuaEntryTranslation(BaseModel):
         return f"{self.entry}:{self.language_code}"
 
 
+class DuaTimeOfDay(models.TextChoices):
+    MORNING = "morning", "Morning"
+    EVENING = "evening", "Evening"
+
+
+class DuaEntryTimeVariant(BaseModel):
+    """The text a morning or evening adhkar card shows for an entry said at both times.
+
+    The source keeps both readings in one entry with notes such as «in the evening
+    say…»; each card shows its own reading without the note about the other time.
+    """
+
+    entry = models.ForeignKey(
+        DuaEntry,
+        on_delete=models.CASCADE,
+        related_name="time_variants",
+    )
+    time_of_day = models.CharField(max_length=8, choices=DuaTimeOfDay)
+    language_code = models.CharField(max_length=8)
+    arabic_text = models.TextField()
+    meaning_text = models.TextField()
+    transliteration = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "dua_entry_time_variant"
+        ordering = ("time_of_day", "language_code")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("entry", "time_of_day", "language_code"),
+                name="dua_entry_time_variant_unique",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.entry}:{self.time_of_day}:{self.language_code}"
+
+
 class DuaEvidence(BaseModel):
     entry = models.ForeignKey(
         DuaEntry,

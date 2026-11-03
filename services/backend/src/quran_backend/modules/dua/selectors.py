@@ -10,6 +10,7 @@ from quran_backend.modules.dua.models import (
     DuaCategoryTranslation,
     DuaCollection,
     DuaEntry,
+    DuaEntryTimeVariant,
     DuaEntryTranslation,
     DuaEvidence,
     DuaPublicationStatus,
@@ -132,6 +133,11 @@ def published_dua_entries(
                 "translations",
                 queryset=localized_entries,
                 to_attr="localized_entry_translations",
+            ),
+            Prefetch(
+                "time_variants",
+                queryset=DuaEntryTimeVariant.objects.filter(language_code=language),
+                to_attr="localized_time_variants",
             ),
             Prefetch(
                 "category__translations",

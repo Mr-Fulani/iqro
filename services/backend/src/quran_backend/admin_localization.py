@@ -170,6 +170,10 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "dua.DuaCategoryTranslation": ("перевод раздела ду’а", "переводы разделов ду’а"),
     "dua.DuaEntry": ("ду’а", "ду’а"),
     "dua.DuaEntryTranslation": ("перевод ду’а", "переводы ду’а"),
+    "dua.DuaEntryTimeVariant": (
+        "утренний или вечерний текст ду’а",
+        "утренние и вечерние тексты ду’а",
+    ),
     "dua.DuaEvidence": ("ссылка на источник ду’а", "ссылки на источники ду’а"),
     "dua.DuaAudioAsset": ("аудиозапись ду’а", "аудиозаписи ду’а"),
     "dua.DuaFavorite": ("избранная ду’а", "избранные ду’а"),
@@ -590,6 +594,7 @@ FIELD_LABELS: dict[str, str] = {
     "text_uthmani": "Текст Усмани",
     "display_name": "Название аккаунта",
     "ticket": "Обращение",
+    "time_of_day": "Время суток",
     "timezone": "Часовой пояс",
     "timezone_database_version": "Версия базы часовых поясов",
     "timezone_mode": "Режим часового пояса",

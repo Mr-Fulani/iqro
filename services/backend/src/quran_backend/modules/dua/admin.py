@@ -12,6 +12,7 @@ from quran_backend.modules.dua.models import (
     DuaCollection,
     DuaCollectionVersion,
     DuaEntry,
+    DuaEntryTimeVariant,
     DuaEntryTranslation,
     DuaEvidence,
     DuaFavorite,
@@ -190,6 +191,17 @@ class DuaEntryTranslationAdmin(DuaVersionBoundAdmin):
     list_display = ("entry", "language_code")
     list_filter = ("language_code",)
     search_fields = ("meaning_text", "transliteration")
+    list_select_related = ("entry", "entry__collection_version")
+
+
+@admin.register(DuaEntryTimeVariant)
+class DuaEntryTimeVariantAdmin(DuaVersionBoundAdmin):
+    version_path = "entry__collection_version"
+    draft_parent_field = "entry"
+    draft_parent_status_lookup = "collection_version__status"
+    list_display = ("entry", "time_of_day", "language_code")
+    list_filter = ("time_of_day", "language_code")
+    search_fields = ("arabic_text", "meaning_text", "transliteration")
     list_select_related = ("entry", "entry__collection_version")
 
 
