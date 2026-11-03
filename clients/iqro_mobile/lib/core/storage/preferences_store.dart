@@ -46,6 +46,8 @@ class AppPreferences {
     this.readerAyahSpacing = defaultReaderAyahSpacing,
     this.readerFocusMode = false,
     this.readerHaptics = true,
+    this.duaShowTransliteration = true,
+    this.duaShowTranslation = true,
     this.hijriAdjustment = 0,
     this.preferredTranslationSourceId,
     this.preferredTafsirSourceId,
@@ -75,6 +77,8 @@ class AppPreferences {
       readerAyahSpacing = defaultReaderAyahSpacing,
       readerFocusMode = false,
       readerHaptics = true,
+      duaShowTransliteration = true,
+      duaShowTranslation = true,
       hijriAdjustment = 0,
       preferredTranslationSourceId = null,
       preferredTafsirSourceId = null,
@@ -102,6 +106,10 @@ class AppPreferences {
   final double readerAyahSpacing;
   final bool readerFocusMode;
   final bool readerHaptics;
+
+  /// What du'a cards show besides the Arabic, which they always show.
+  final bool duaShowTransliteration;
+  final bool duaShowTranslation;
   final int hijriAdjustment;
   final int? preferredTranslationSourceId;
   final int? preferredTafsirSourceId;
@@ -140,6 +148,8 @@ class AppPreferences {
     double? readerAyahSpacing,
     bool? readerFocusMode,
     bool? readerHaptics,
+    bool? duaShowTransliteration,
+    bool? duaShowTranslation,
     int? hijriAdjustment,
     int? preferredTranslationSourceId,
     int? preferredTafsirSourceId,
@@ -172,6 +182,9 @@ class AppPreferences {
       readerAyahSpacing: readerAyahSpacing ?? this.readerAyahSpacing,
       readerFocusMode: readerFocusMode ?? this.readerFocusMode,
       readerHaptics: readerHaptics ?? this.readerHaptics,
+      duaShowTransliteration:
+          duaShowTransliteration ?? this.duaShowTransliteration,
+      duaShowTranslation: duaShowTranslation ?? this.duaShowTranslation,
       hijriAdjustment: (hijriAdjustment ?? this.hijriAdjustment).clamp(-2, 2),
       preferredTranslationSourceId:
           preferredTranslationSourceId ?? this.preferredTranslationSourceId,
@@ -277,6 +290,9 @@ class PreferencesStore {
       ),
       readerFocusMode: _preferences.getBool('reader_focus_mode') ?? false,
       readerHaptics: _preferences.getBool('reader_haptics') ?? true,
+      duaShowTransliteration:
+          _preferences.getBool('dua_show_transliteration') ?? true,
+      duaShowTranslation: _preferences.getBool('dua_show_translation') ?? true,
       hijriAdjustment: (_preferences.getInt('hijri_adjustment') ?? 0).clamp(
         -2,
         2,
@@ -344,6 +360,11 @@ class PreferencesStore {
       _preferences.setDouble('reader_ayah_spacing', value.readerAyahSpacing),
       _preferences.setBool('reader_focus_mode', value.readerFocusMode),
       _preferences.setBool('reader_haptics', value.readerHaptics),
+      _preferences.setBool(
+        'dua_show_transliteration',
+        value.duaShowTransliteration,
+      ),
+      _preferences.setBool('dua_show_translation', value.duaShowTranslation),
       _preferences.setInt(
         'hijri_adjustment',
         value.hijriAdjustment.clamp(-2, 2),

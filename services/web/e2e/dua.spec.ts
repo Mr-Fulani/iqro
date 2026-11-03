@@ -213,6 +213,49 @@ for (const [name, viewport] of [["phone", phone], ["desktop", desktop]] as const
   });
 }
 
+for (const [name, viewport] of [["phone", phone], ["desktop", desktop]] as const) {
+  test(`«What to show» hides the transliteration and translation, and keeps the choice (${name})`, async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("iqro_analytics_consent_v1", "denied"));
+    await page.setViewportSize(viewport);
+    await page.goto("/ru/dua/hisn-al-muslim/1");
+    const card = page.locator(".dua-card");
+    await expect(card.locator(".dua-transliteration")).toBeVisible();
+    await expect(card.locator(".dua-meaning")).toBeVisible();
+
+    const menuButton = page.getByRole("button", { name: "Что показывать" });
+    await menuButton.click();
+    const transliteration = page.getByRole("menuitemcheckbox", { name: "Транскрипция" });
+    const translation = page.getByRole("menuitemcheckbox", { name: "Перевод" });
+    await expect(transliteration).toHaveAttribute("aria-checked", "true");
+    await transliteration.click();
+    await translation.click();
+    await expect(transliteration).toHaveAttribute("aria-checked", "false");
+    await expect(translation).toHaveAttribute("aria-checked", "false");
+    await expect(card.locator(".dua-transliteration")).toHaveCount(0);
+    await expect(card.locator(".dua-meaning")).toHaveCount(0);
+    // The Arabic always stays.
+    await expect(card.locator(".dua-arabic")).toBeVisible();
+    await noHorizontalScroll(page);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+
+    // Every du'a page and chapter keeps the choice.
+    await page.goto("/ru/dua/hisn-al-muslim/categories/before-sleeping");
+    await expect(page.locator(".dua-card")).toHaveCount(2);
+    await expect(page.locator(".dua-meaning")).toHaveCount(0);
+    await menuButton.click();
+    await translation.click();
+    await expect(page.locator(".dua-meaning")).toHaveCount(2);
+    await expect(page.locator(".dua-transliteration")).toHaveCount(0);
+  });
+}
+
+test("Arabic has no «What to show»: there is nothing to switch", async ({ page }) => {
+  await page.goto("/ar/dua/hisn-al-muslim/1");
+  await expect(page.locator(".dua-card")).toBeVisible();
+  await expect(page.locator(".dua-display")).toHaveCount(0);
+});
+
 test("Arabic pages run right to left and show no repeated meaning", async ({ page }) => {
   await page.setViewportSize(phone);
   await page.goto("/ar/dua");

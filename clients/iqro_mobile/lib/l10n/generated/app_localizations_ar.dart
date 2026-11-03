@@ -1062,6 +1062,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get duaFavoritesSubtitle => 'الأدعية المحفوظة';
 
   @override
+  String get duaDisplayOptions => 'ما يُعرض';
+
+  @override
+  String get duaShowTransliteration => 'النطق';
+
+  @override
+  String get duaShowTranslation => 'المعنى';
+
+  @override
   String duaChapterNumber(int number) {
     return 'الباب $number';
   }

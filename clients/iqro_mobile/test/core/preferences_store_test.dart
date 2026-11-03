@@ -105,6 +105,27 @@ void main() {
   });
 
   test(
+    'du\'a transliteration and translation default on and persist',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final store = PreferencesStore(await SharedPreferences.getInstance());
+      expect(store.read().duaShowTransliteration, isTrue);
+      expect(store.read().duaShowTranslation, isTrue);
+      await store.write(
+        store.read().copyWith(
+          duaShowTransliteration: false,
+          duaShowTranslation: false,
+        ),
+      );
+      expect(store.read().duaShowTransliteration, isFalse);
+      expect(store.read().duaShowTranslation, isFalse);
+      await store.write(store.read().copyWith(duaShowTranslation: true));
+      expect(store.read().duaShowTransliteration, isFalse);
+      expect(store.read().duaShowTranslation, isTrue);
+    },
+  );
+
+  test(
     'supported Mushaf choices persist and unknown choices migrate',
     () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});

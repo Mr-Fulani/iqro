@@ -158,6 +158,7 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
                   onPressed: _goBack,
                   icon: const Icon(Icons.arrow_back),
                 ),
+          actions: const <Widget>[DuaDisplayMenu()],
         ),
         body: IqroPage(
           scrollable: false,
@@ -912,7 +913,10 @@ class DuaEntryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: IqroTopBar(title: context.l10n.dua),
+    appBar: IqroTopBar(
+      title: context.l10n.dua,
+      actions: const <Widget>[DuaDisplayMenu()],
+    ),
     body: IqroPage(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -938,6 +942,54 @@ class DuaEntryScreen extends StatelessWidget {
       ),
     ),
   );
+}
+
+enum _DuaDisplayOption { transliteration, translation }
+
+/// «What to show» on du'a cards besides the Arabic, kept on this device.
+/// Arabic shows neither, so there the menu has nothing to offer.
+class DuaDisplayMenu extends ConsumerWidget {
+  const DuaDisplayMenu({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (Localizations.localeOf(context).languageCode == 'ar') {
+      return const SizedBox.shrink();
+    }
+    final transliteration = ref.watch(
+      appPreferencesProvider.select((value) => value.duaShowTransliteration),
+    );
+    final translation = ref.watch(
+      appPreferencesProvider.select((value) => value.duaShowTranslation),
+    );
+    return PopupMenuButton<_DuaDisplayOption>(
+      key: const ValueKey('dua-display-menu'),
+      tooltip: context.l10n.duaDisplayOptions,
+      icon: const Icon(Icons.tune),
+      onSelected: (option) {
+        final preferences = ref.read(appPreferencesProvider.notifier);
+        unawaited(switch (option) {
+          _DuaDisplayOption.transliteration =>
+            preferences.setDuaShowTransliteration(!transliteration),
+          _DuaDisplayOption.translation => preferences.setDuaShowTranslation(
+            !translation,
+          ),
+        });
+      },
+      itemBuilder: (context) => <PopupMenuEntry<_DuaDisplayOption>>[
+        CheckedPopupMenuItem<_DuaDisplayOption>(
+          value: _DuaDisplayOption.transliteration,
+          checked: transliteration,
+          child: Text(context.l10n.duaShowTransliteration),
+        ),
+        CheckedPopupMenuItem<_DuaDisplayOption>(
+          value: _DuaDisplayOption.translation,
+          checked: translation,
+          child: Text(context.l10n.duaShowTranslation),
+        ),
+      ],
+    );
+  }
 }
 
 /// One du'a as a card: the opening formulas on their own lines, the Arabic,
@@ -1054,10 +1106,15 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
         .map((item) => item.sourceReference.trim())
         .where((item) => item.isNotEmpty)
         .firstOrNull;
-    final meaning = duaMeaning(
-      entry,
-      Localizations.localeOf(context).languageCode,
+    final showTransliteration = ref.watch(
+      appPreferencesProvider.select((value) => value.duaShowTransliteration),
     );
+    final meaning =
+        ref.watch(
+          appPreferencesProvider.select((value) => value.duaShowTranslation),
+        )
+        ? duaMeaning(entry, Localizations.localeOf(context).languageCode)
+        : '';
     final arabicStyle = theme.textTheme.headlineMedium?.copyWith(
       color: IqroTheme.arabicInk(context),
       fontFamily: IqroTheme.arabicFontFamily,
@@ -1095,10 +1152,12 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
               ),
             ),
           ],
-          if (entry.transliteration.isNotEmpty) ...<Widget>[
+          if (showTransliteration &&
+              entry.transliteration.isNotEmpty) ...<Widget>[
             const SizedBox(height: 16),
             Text(
               entry.transliteration,
+              key: const ValueKey('dua-transliteration'),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: scheme.onSurfaceVariant,

@@ -9,6 +9,7 @@ import { advanceRepetitionCount, duaRepetitionTotal } from "../lib/dua-practice"
 import { duaAnchor, duaEntryKey, duaEntryPath } from "../lib/dua-presentation";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
+import { useDuaDisplay } from "./DuaDisplayMenu";
 import { DuaCheckIcon, DuaPlayIcon, DuaRefreshIcon, DuaRepeatIcon } from "./DuaIcons";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
 import { ShareIcon } from "./ShareIcon";
@@ -71,10 +72,11 @@ export function DuaEntryCard({
   onShowSource: () => void;
 }) {
   const { locale, t } = useI18n();
+  const display = useDuaDisplay();
   const total = duaRepetitionTotal(entry.repetition_label, entry.repetitions);
-  const transliteration = entry.translation?.transliteration.trim() ?? "";
+  const transliteration = display.transliteration ? entry.translation?.transliteration.trim() ?? "" : "";
   // Arabic shows no meaning: there it repeats the du'a itself.
-  const meaning = locale === "ar" ? "" : entry.translation?.meaning_text.trim() ?? "";
+  const meaning = locale === "ar" || !display.translation ? "" : entry.translation?.meaning_text.trim() ?? "";
   const sourceLabel = entry.source?.title.trim() || entry.source?.provider.trim() || "";
   const reference = entry.evidence.map((item) => item.source_reference.trim()).find(Boolean)
     || `${sourceLabel} · #${entry.source_number}`;
