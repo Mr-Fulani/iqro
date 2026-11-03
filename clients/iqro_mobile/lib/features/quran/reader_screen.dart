@@ -20,6 +20,7 @@ import 'ayah_action_sheet.dart';
 import 'quran_models.dart';
 import '../../core/audio/playback_speed.dart';
 import 'ayah_share.dart';
+import 'mushaf_edition.dart';
 import '../dua/dua_arabic.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/share/content_share.dart';
@@ -579,10 +580,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   }
 
   Future<void> _share(QuranAyah ayah, String surahName, Rect? origin) async {
-    final edition = _translationEditions
-        .where((item) => item.sourceId == _translationSourceId)
-        .firstOrNull;
     final analytics = ref.read(analyticsProvider.notifier);
+    final glyphs = await ayahShareGlyphs(
+      ref.read(mushafRepositoryProvider(MushafIdentity.defaultEdition)),
+      ayah.surahNumber,
+      ayah.number,
+    );
+    if (!mounted) return;
     final shared = await shareContent(
       context,
       ayahContentShare(
@@ -591,12 +595,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         surah: ayah.surahNumber,
         ayah: ayah.number,
         arabic: ayah.textUthmani,
+        glyphs: glyphs,
         translation: _translations[ayah.number]?.text ?? '',
-        translator: edition == null
-            ? ''
-            : edition.authorName.trim().isEmpty
-            ? edition.name
-            : edition.authorName,
         readInIqro: context.l10n.shareReadInIqro,
       ),
       origin: origin,

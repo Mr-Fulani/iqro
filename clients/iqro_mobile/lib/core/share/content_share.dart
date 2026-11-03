@@ -27,6 +27,7 @@ class ContentShare {
     required this.arabic,
     required this.url,
     required this.readInIqro,
+    this.arabicGlyphs = const [],
     this.translation = '',
     this.note = '',
     this.reference = '',
@@ -35,12 +36,16 @@ class ContentShare {
   /// «Аль-Бакара · 2:255», or the du'a's chapter.
   final String title;
   final String arabic;
+
+  /// The picture's Arabic word by word in a Mushaf's page fonts, such as an
+  /// ayah in the tajweed script; empty draws [arabic].
+  final List<InlineSpan> arabicGlyphs;
   final String translation;
 
   /// A practical line, such as how many times a du'a is said.
   final String note;
 
-  /// Where it comes from: the translation or the du'a's source.
+  /// Where it comes from: the du'a's source, shown under the meaning.
   final String reference;
   final String url;
 
@@ -157,6 +162,11 @@ class ShareCard extends StatelessWidget {
   static const _gold = Color(0xFFE2B665);
   static const _ivory = Color(0xFFF4EDDA);
 
+  // The Mushaf's paper and ink (mushaf_paper.dart): the page fonts' own
+  // colours are made for it.
+  static const _paper = Color(0xFFFFFCF7);
+  static const _ink = Color(0xFF392D20);
+
   // Long du'a get a smaller script so the whole text fits the card.
   double get _arabicSize => switch (share.arabic.length) {
     < 90 => 34,
@@ -165,6 +175,36 @@ class ShareCard extends StatelessWidget {
     < 600 => 19,
     _ => 16,
   };
+
+  // The glyphs lie on the Mushaf's paper, wrap at the card's width and
+  // shrink, never cut, to fit.
+  Widget _glyphs() => LayoutBuilder(
+    builder: (context, constraints) => FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Container(
+        width: constraints.maxWidth,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: _paper,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _gold.withValues(alpha: .7)),
+        ),
+        child: Text.rich(
+          TextSpan(
+            children: <InlineSpan>[
+              for (final (index, glyph) in share.arabicGlyphs.indexed) ...[
+                if (index > 0) const TextSpan(text: ' '),
+                glyph,
+              ],
+            ],
+          ),
+          textAlign: TextAlign.center,
+          textDirection: TextDirection.rtl,
+          style: TextStyle(color: _ink, fontSize: _arabicSize, height: 1.9),
+        ),
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -213,19 +253,21 @@ class ShareCard extends StatelessWidget {
                   ),
                   Expanded(
                     child: Center(
-                      child: Text(
-                        share.arabic,
-                        textAlign: TextAlign.center,
-                        textDirection: TextDirection.rtl,
-                        maxLines: 14,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: _ivory,
-                          fontFamily: IqroTheme.arabicFontFamily,
-                          fontSize: _arabicSize,
-                          height: 1.9,
-                        ),
-                      ),
+                      child: share.arabicGlyphs.isNotEmpty
+                          ? _glyphs()
+                          : Text(
+                              share.arabic,
+                              textAlign: TextAlign.center,
+                              textDirection: TextDirection.rtl,
+                              maxLines: 14,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: _ivory,
+                                fontFamily: IqroTheme.arabicFontFamily,
+                                fontSize: _arabicSize,
+                                height: 1.9,
+                              ),
+                            ),
                     ),
                   ),
                   if (share.translation.isNotEmpty) ...<Widget>[

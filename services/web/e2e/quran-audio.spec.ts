@@ -2406,7 +2406,7 @@ test("text mode ends ayahs with the app's marker and shares an ayah picture thro
   await expect.poll(() => page.evaluate(() => (window as unknown as { sharedAyah?: unknown }).sharedAyah))
     .toEqual({
       title: "Аль-Анам · 6:1",
-      text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nElmir Kuliev\n\nЧитать в IQRO: ${link}`,
+      text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nЧитать в IQRO: ${link}`,
       file: { name: "iqro-6-1.png", type: "image/png", width: 1080, height: 1350 },
     });
   await dialog.getByRole("button", { name: "Закрыть" }).click();
@@ -2463,7 +2463,7 @@ async function captureWebShare(page: Page) {
   return () => page.evaluate(() => (window as unknown as { sharedAyah?: unknown }).sharedAyah);
 }
 
-test("sharing while another translation loads uses that translation and its translator", async ({ page }) => {
+test("sharing while another translation loads uses that translation, without the translator's name", async ({ page }) => {
   const shared = await captureWebShare(page);
   let release = () => {};
   const arrived = new Promise<void>((resolve) => { release = resolve; });
@@ -2481,7 +2481,7 @@ test("sharing while another translation loads uses that translation and its tran
   await expect(dialog.getByRole("img", { name: "Картинка аята 6:1" })).toBeVisible();
   await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
   await expect.poll(shared).toMatchObject({
-    text: expect.stringContaining("«Хвала Аллаху (Абу Адель)»\n\nAbu Adel\n\n"),
+    text: expect.stringContaining("«Хвала Аллаху (Абу Адель)»\n\nЧитать в IQRO: "),
   });
 });
 
@@ -2525,6 +2525,66 @@ test("an ayah picture is drawn again when its font arrives late", async ({ page 
   await expect(picture).not.toHaveAttribute("src", first ?? "", { timeout: 10_000 });
 });
 
+// Records what the share card writes on its canvas, with the font of each run.
+async function recordCardText(page: Page) {
+  await page.addInitScript(() => {
+    const target = window as unknown as { cardText: { text: string; font: string }[] };
+    target.cardText = [];
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (this: CanvasRenderingContext2D, text, ...rest) {
+      target.cardText.push({ text, font: this.font });
+      return fillText.call(this, text, ...rest);
+    };
+  });
+  return () => page.evaluate(() => (window as unknown as { cardText: { text: string; font: string }[] }).cardText);
+}
+
+test("an ayah picture has its tajweed Mushaf glyphs from every page it spans and no translator's name", async ({ page }) => {
+  const cardText = await recordCardText(page);
+  // 6:2 begins on page 128 of Mushaf 19 and ends on page 129.
+  for (const [pageNumber, ids] of [[128, [1, 2, 3, 4]], [129, [5, 6]]] as const) {
+    await page.route(`**/api/v1/quran/foundation/mushafs/19/pages/${pageNumber}`, (route) => {
+      const data = foundationPage(19, pageNumber);
+      route.fulfill({ json: { ...data, words: foundationPage(19, 128).words
+        .filter((word) => (ids as readonly number[]).includes(Number(word.id)))
+        .map((word) => ({ ...word, page_number: pageNumber })) } });
+    });
+  }
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
+  await expect(page.getByRole("dialog", { name: "Поделиться аятом" })
+    .getByRole("img", { name: "Картинка аята 6:2" })).toBeVisible();
+
+  const runs = await cardText();
+  expect(runs.filter((run) => run.font.includes("qf-mushaf-19-page-")).map((run) => [run.text, run.font.match(/page-\d+/)?.[0]]))
+    .toEqual([["ﱃ", "page-128"], ["ﱄ", "page-128"], ["ﱅ", "page-129"], ["ﱆ", "page-129"]]);
+  expect(runs.map((run) => run.text)).not.toContain(ayahs[1].text_uthmani);
+  expect(runs.some((run) => /Elmir Kuliev/.test(run.text))).toBe(false);
+});
+
+test("an ayah picture is drawn in the plain script while the tajweed font is late, then again in it", async ({ page }) => {
+  const cardText = await recordCardText(page);
+  await page.route("https://verses.quran.foundation/fonts/quran/hafs/v4/**", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 6000));
+    await route.fallback();
+  });
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
+  const picture = page.getByRole("dialog", { name: "Поделиться аятом" })
+    .getByRole("img", { name: "Картинка аята 6:1" });
+  await expect(picture).toBeVisible({ timeout: 10_000 });
+  const first = await picture.getAttribute("src");
+  const plain = await cardText();
+  expect(plain.map((run) => run.text)).toContain(ayahs[0].text_uthmani);
+  expect(plain.some((run) => run.font.includes("qf-mushaf-19"))).toBe(false);
+
+  await expect(picture).not.toHaveAttribute("src", first ?? "", { timeout: 10_000 });
+  expect((await cardText()).filter((run) => run.font.includes("qf-mushaf-19-page-128")).map((run) => run.text))
+    .toEqual(["ﱁ", "ﱂ"]);
+});
+
 test("without the share dialog's code an ayah still goes as text, and the next press loads it", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -2538,7 +2598,7 @@ test("without the share dialog's code an ayah still goes as text, and the next p
   const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/1", page.url()).href;
   await expect.poll(shared).toEqual({
     title: "Аль-Анам · 6:1",
-    text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nElmir Kuliev\n\nЧитать в IQRO: ${link}`,
+    text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nЧитать в IQRO: ${link}`,
     files: 0,
   });
   await expect(page.getByRole("dialog")).toHaveCount(0);

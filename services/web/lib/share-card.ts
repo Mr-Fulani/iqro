@@ -3,12 +3,21 @@
 // the Arabic, the meaning, its source and the site. Sizes are the app's logical
 // pixels; the PNG is twice as dense, as in the app.
 
+/** A word in its Mushaf page font, as drawn by the reader. */
+export type ShareCardGlyph = { text: string; fontFamily: string };
+
 export type ShareCardContent = {
   /** «Аль-Бакара · 2:255», or the du'a's chapter and number. */
   title: string;
   arabic: string;
+  /**
+   * The Arabic word by word in a Mushaf's page fonts, loaded: an ayah in the
+   * tajweed script. Until it resolves, and when it is empty or fails, the
+   * card draws `arabic`.
+   */
+  arabicGlyphs?: Promise<ShareCardGlyph[]>;
   translation: string;
-  /** The translator, shown under the meaning. */
+  /** The du'a's sources, shown under the meaning. */
   reference: string;
 };
 
@@ -23,6 +32,10 @@ const HEIGHT = 675;
 const PIXEL_RATIO = 2;
 const GOLD = "#e2b665";
 const IVORY = "#f4edda";
+// The Mushaf's paper and ink, as in the reader: the page fonts' own colours
+// are made for it.
+const PAPER = "#fffcf7";
+const INK = "#392d20";
 const SITE = "www.iqro.forum";
 
 // Long passages get a smaller script so the whole text fits the card.
@@ -63,6 +76,27 @@ function wrap(
     line = word;
   }
   if (line) lines.push(line);
+  return lines;
+}
+
+/**
+ * Greedy wrap of words drawn one by one, each with its own width. Every line
+ * holds at least one word; nothing is cut.
+ */
+export function glyphLines(widths: readonly number[], gap: number, width: number): number[][] {
+  const lines: number[][] = [];
+  let line: number[] = [];
+  let lineWidth = 0;
+  widths.forEach((wordWidth, index) => {
+    if (line.length > 0 && lineWidth + gap + wordWidth > width) {
+      lines.push(line);
+      line = [];
+      lineWidth = 0;
+    }
+    lineWidth += (line.length > 0 ? gap : 0) + wordWidth;
+    line.push(index);
+  });
+  if (line.length > 0) lines.push(line);
   return lines;
 }
 
@@ -165,9 +199,10 @@ export async function renderShareCard(
 ): Promise<void> {
   const size = arabicSize(content.arabic);
   const sample = `${content.title} ${content.translation} ${content.reference} ${SITE}`;
-  const assets: { logo: HTMLImageElement | null } = { logo: null };
+  const assets: { logo: HTMLImageElement | null; glyphs: ShareCardGlyph[] } = { logo: null, glyphs: [] };
   const loaded = Promise.all([
     loadImage(logoUrl).then((logo) => { assets.logo = logo; }),
+    content.arabicGlyphs?.then((glyphs) => { assets.glyphs = glyphs; }, () => {}),
     loadFonts([
       [`${size}px`, fonts.arabic, content.arabic],
       ["600 17px", fonts.text, sample],
@@ -178,10 +213,10 @@ export async function renderShareCard(
     loaded.then(() => true),
     new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ASSET_WAIT_MS)),
   ]);
-  show(await drawCard(content, fonts, size, assets.logo));
+  show(await drawCard(content, fonts, size, assets.logo, assets.glyphs));
   if (inTime) return;
   await loaded;
-  show(await drawCard(content, fonts, size, assets.logo));
+  show(await drawCard(content, fonts, size, assets.logo, assets.glyphs));
 }
 
 function drawCard(
@@ -189,6 +224,7 @@ function drawCard(
   fonts: ShareCardFonts,
   size: number,
   logo: HTMLImageElement | null,
+  glyphs: ShareCardGlyph[],
 ): Promise<Blob> {
   const fontFaces = [
     `${size}px ${fonts.arabic}`,
@@ -269,6 +305,10 @@ function drawCard(
   // smaller script, down to 14 px, and only then is cut.
   const areaTop = top + headerHeight + 8;
   const areaHeight = cursor - 8 - areaTop;
+  if (glyphs.length > 0) {
+    drawGlyphs(context, glyphs, size, left, width, areaTop, areaHeight);
+    return encode(canvas);
+  }
   const arabicBlock = (fontSize: number, maxLines: number) =>
     block(context, content.arabic, `${fontSize}px ${fonts.arabic}`, fontSize * 1.9, width, maxLines);
   let fontSize = size;
@@ -287,7 +327,60 @@ function drawCard(
     areaTop + (areaHeight - arabic.lines.length * arabic.lineHeight) / 2,
     "center",
   );
+  return encode(canvas);
+}
 
+// The page fonts' words on the Mushaf's paper, right to left and centred, as
+// the app's ShareCard lays them out: a passage too long for the space gets a
+// smaller script, never a cut.
+function drawGlyphs(
+  context: CanvasRenderingContext2D,
+  glyphs: ShareCardGlyph[],
+  size: number,
+  left: number,
+  width: number,
+  top: number,
+  height: number,
+) {
+  const padX = 16;
+  const padY = 12;
+  const layout = (fontSize: number) => {
+    const fontsOf = glyphs.map((glyph) => `${fontSize}px "${glyph.fontFamily}"`);
+    const widths = glyphs.map((glyph, index) => {
+      context.font = fontsOf[index];
+      return context.measureText(glyph.text).width;
+    });
+    const gap = fontSize * 0.25;
+    return { fontsOf, widths, gap, lineHeight: fontSize * 1.9, lines: glyphLines(widths, gap, width - padX * 2) };
+  };
+  let fontSize = size;
+  let words = layout(fontSize);
+  while (fontSize > 6 && words.lines.length * words.lineHeight > height - padY * 2) {
+    fontSize -= 1;
+    words = layout(fontSize);
+  }
+  const textHeight = words.lines.length * words.lineHeight;
+  const blockTop = top + (height - textHeight) / 2;
+  context.fillStyle = PAPER;
+  roundedRect(context, left + 0.5, blockTop - padY + 0.5, width - 1, textHeight + padY * 2 - 1, 16);
+  context.fill();
+  context.strokeStyle = "rgba(226, 182, 101, 0.7)";
+  context.stroke();
+  context.fillStyle = INK;
+  context.direction = "rtl";
+  context.textAlign = "right";
+  words.lines.forEach((line, row) => {
+    const lineWidth = line.reduce((sum, index) => sum + words.widths[index], 0) + words.gap * (line.length - 1);
+    let x = left + (width + lineWidth) / 2;
+    for (const index of line) {
+      context.font = words.fontsOf[index];
+      context.fillText(glyphs[index].text, x, blockTop + words.lineHeight * (row + 0.5));
+      x -= words.widths[index] + words.gap;
+    }
+  });
+}
+
+function encode(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((png) => (png ? resolve(png) : reject(new Error("PNG encoding failed"))), "image/png");
   });

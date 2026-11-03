@@ -1,10 +1,14 @@
+import type { ShareCardGlyph } from "./share-card";
+
 /** What an ayah or a du'a shares besides its title, as the app's ContentShare. */
 export type ContentShareText = {
   arabic: string;
+  /** The picture's Arabic in a Mushaf's page fonts, such as an ayah in the tajweed script. */
+  arabicGlyphs?: Promise<ShareCardGlyph[]>;
   translation: string;
   /** A practical line, such as how many times a du'a is said. Only the message has it, as in the app. */
   note?: string;
-  /** Where it comes from: the translator or the du'a's sources. */
+  /** Where it comes from: the du'a's sources. */
   reference: string;
 };
 

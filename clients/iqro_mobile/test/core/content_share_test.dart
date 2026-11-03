@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/share/content_share.dart';
+import 'package:iqro_mobile/features/quran/ayah_share.dart';
 
 void main() {
   const share = ContentShare(
@@ -66,4 +67,56 @@ void main() {
     expect(frame!.image.width, (shareCardSize.width * 2).round());
     expect(frame.image.height, (shareCardSize.height * 2).round());
   });
+
+  testWidgets(
+    'an ayah card has its tajweed glyphs; neither it nor the message names the translator',
+    (tester) async {
+      final ayah = ayahContentShare(
+        locale: 'ru',
+        surahName: 'Аль-Анам',
+        surah: 6,
+        ayah: 2,
+        arabic: 'هُوَ ٱلَّذِى خَلَقَكُم',
+        translation: 'Он — Тот, Кто сотворил вас',
+        glyphs: const [
+          TextSpan(
+            text: 'ﱃ',
+            style: TextStyle(fontFamily: 'qf-page-128'),
+          ),
+          TextSpan(
+            text: 'ﱅ',
+            style: TextStyle(fontFamily: 'qf-page-129'),
+          ),
+        ],
+        readInIqro: 'Читать в IQRO',
+      );
+      expect(
+        contentShareText(ayah),
+        'Аль-Анам · 6:2\n\n'
+        'هُوَ ٱلَّذِى خَلَقَكُم\n\n'
+        '«Он — Тот, Кто сотворил вас»\n\n'
+        'Читать в IQRO: '
+        'https://iqro.forum/ru/quran/madani-hafs/surah/6/ayah/2',
+      );
+
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 4, 4), Paint());
+      final logo = await tester.runAsync(
+        () => recorder.endRecording().toImage(4, 4),
+      );
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: ShareCard(share: ayah, logo: logo!),
+        ),
+      );
+      expect(find.text('Он — Тот, Кто сотворил вас'), findsOneWidget);
+      expect(find.text('هُوَ ٱلَّذِى خَلَقَكُم'), findsNothing);
+      final glyphs = tester
+          .widgetList<RichText>(find.byType(RichText))
+          .map((text) => text.text.toPlainText())
+          .where((text) => text.contains('ﱃ'));
+      expect(glyphs, ['ﱃ ﱅ']);
+    },
+  );
 }

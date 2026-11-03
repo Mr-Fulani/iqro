@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { titleLines } from "./share-card.ts";
+import { glyphLines, titleLines } from "./share-card.ts";
 
 // Every character is 1 px wide.
 const context = { measureText: (text: string) => ({ width: text.length }) as TextMetrics };
@@ -17,4 +17,9 @@ test("a long du'a chapter loses words of its name, never its number", () => {
   assert.ok(lines.every((line) => line.length <= 40), lines.join("|"));
   assert.match(lines.join(" "), /…\s·\s#69$/);
   assert.ok(lines.join(" ").startsWith("Слова поминания, которые следует"));
+});
+
+test("page-font words wrap whole, and a word wider than the line gets a line of its own", () => {
+  assert.deepEqual(glyphLines([30, 30, 30, 120, 10], 5, 100), [[0, 1, 2], [3], [4]]);
+  assert.deepEqual(glyphLines([], 5, 100), []);
 });
