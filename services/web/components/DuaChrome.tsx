@@ -4,6 +4,7 @@ import type { DuaCategory } from "../lib/api";
 import { duaDisplayTitle } from "../lib/dua-share";
 import type { Locale, Translate } from "../lib/i18n";
 import { localizedPath } from "../lib/routing";
+import { DuaDisplayMenu } from "./DuaDisplayMenu";
 import { DuaBackIcon, DuaChevronIcon, DuaCloudOffIcon, DuaMihrabIcon } from "./DuaIcons";
 
 // The frame of the app's du'a screens (dua_screen.dart): the top bar, the
@@ -11,7 +12,7 @@ import { DuaBackIcon, DuaChevronIcon, DuaCloudOffIcon, DuaMihrabIcon } from "./D
 // hooks, so pages render them on the server and the catalog on the client;
 // each side passes its own `t` (translatorFor on the server, useI18n in the client).
 
-/** IqroTopBar: back arrow, title and a one-line subtitle. */
+/** IqroTopBar: back arrow, title, a one-line subtitle and «What to show». */
 export function DuaTopBar({
   locale,
   t,
@@ -40,6 +41,7 @@ export function DuaTopBar({
         <Title className="dua-topbar-title">{title}</Title>
         {subtitle ? <p className="dua-topbar-subtitle">{subtitle}</p> : null}
       </div>
+      <DuaDisplayMenu />
     </header>
   );
 }

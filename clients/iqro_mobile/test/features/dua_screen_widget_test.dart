@@ -10,6 +10,7 @@ import 'package:iqro_mobile/core/design_system/iqro_widgets.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
+import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/dua/dua_presentation.dart';
 import 'package:iqro_mobile/features/dua/dua_repository.dart';
@@ -320,13 +321,58 @@ void main() {
           findsOneWidget,
         );
       }
-      expect(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byType(IconButton),
-        ),
-        findsNothing,
+      for (final tooltip in <String>['Избранное', 'Поделиться ду’а']) {
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.byTooltip(tooltip),
+          ),
+          findsNothing,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('transliteration and translation switch off and stay off', (
+      tester,
+    ) async {
+      final entry = _entry(
+        categoryTitle: 'Слова поминания при пробуждении',
+        arabicText: 'الحمد لله الذي أحيانا',
+        meaning: 'Хвала Аллаху, Который оживил нас',
+        transliteration: 'Аль-хамду ли-Лляхи аллязи ахйа-на',
       );
+      await _pumpDetail(tester, load: (_) async => entry);
+      expect(find.byKey(const ValueKey('dua-transliteration')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dua-meaning')), findsOneWidget);
+
+      for (final option in <String>['Транскрипция', 'Перевод']) {
+        await tester.tap(find.byTooltip('Что показывать'));
+        await tester.pumpAndSettle();
+        await tester.tap(_menuItem(option));
+        await tester.pumpAndSettle();
+      }
+
+      // The Arabic always stays; the choice is saved on the device.
+      expect(find.byKey(const ValueKey('dua-arabic')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dua-transliteration')), findsNothing);
+      expect(find.byKey(const ValueKey('dua-meaning')), findsNothing);
+      final preferences =
+          ProviderScope.containerOf(
+                tester.element(find.byType(DuaEntryScreen)),
+              ).read(appPreferencesProvider.notifier)
+              as _Preferences;
+      expect(preferences.saved, <String>[
+        'transliteration:false',
+        'translation:false',
+      ]);
+
+      await tester.tap(find.byTooltip('Что показывать'));
+      await tester.pumpAndSettle();
+      await tester.tap(_menuItem('Перевод'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('dua-meaning')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dua-transliteration')), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -348,6 +394,8 @@ void main() {
       expect(find.byKey(const ValueKey('dua-arabic')), findsOneWidget);
       expect(find.text(arabic), findsOneWidget);
       expect(find.byKey(const ValueKey('dua-meaning')), findsNothing);
+      // Arabic has neither transliteration nor meaning to switch.
+      expect(find.byTooltip('ما يُعرض'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -732,6 +780,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
+            appPreferencesProvider.overrideWith((ref) => _Preferences()),
             localDatabaseProvider.overrideWithValue(database),
             duaRepositoryProvider.overrideWithValue(repository),
             audioControllerProvider.overrideWith((ref) => controller),
@@ -816,6 +865,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          appPreferencesProvider.overrideWith((ref) => _Preferences()),
           localDatabaseProvider.overrideWithValue(database),
           audioControllerProvider.overrideWith((ref) => controller),
         ],
@@ -856,6 +906,7 @@ Future<void> _pumpCatalog(
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
+        appPreferencesProvider.overrideWith((ref) => _Preferences()),
         localDatabaseProvider.overrideWithValue(database),
         audioControllerProvider.overrideWith(
           (ref) => AudioController(engine: _SilentAudioEngine()),
@@ -894,6 +945,7 @@ Future<void> _pumpDetail(
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
+        appPreferencesProvider.overrideWith((ref) => _Preferences()),
         localDatabaseProvider.overrideWithValue(database),
         duaEntryProvider.overrideWith((ref, id) => load(id)),
         audioControllerProvider.overrideWith(
@@ -958,6 +1010,7 @@ DuaEntry _entry({
   required String categoryTitle,
   required String arabicText,
   required String meaning,
+  String transliteration = '',
   List<DuaAudioAsset> audio = const <DuaAudioAsset>[],
   int repetitions = 1,
 }) => DuaEntry(
@@ -969,7 +1022,7 @@ DuaEntry _entry({
   categorySlug: 'morning',
   arabicText: arabicText,
   meaning: meaning,
-  transliteration: '',
+  transliteration: transliteration,
   repetitions: repetitions,
   sourceLabel: 'Hisn al-Muslim',
   audio: audio,
@@ -1111,4 +1164,31 @@ class _UnusedDuaRemote implements DuaRemoteGateway {
     bool isFavorite, {
     AccountScopeSnapshot? accountScope,
   }) => _unused();
+}
+
+Finder _menuItem(String label) => find.ancestor(
+  of: find.text(label),
+  matching: find.byWidgetPredicate((widget) => widget is CheckedPopupMenuItem),
+);
+
+class _Preferences extends StateNotifier<AppPreferences>
+    implements AppPreferencesController {
+  _Preferences() : super(const AppPreferences.defaults());
+
+  final saved = <String>[];
+
+  @override
+  Future<void> setDuaShowTransliteration(bool enabled) async {
+    saved.add('transliteration:$enabled');
+    state = state.copyWith(duaShowTransliteration: enabled);
+  }
+
+  @override
+  Future<void> setDuaShowTranslation(bool enabled) async {
+    saved.add('translation:$enabled');
+    state = state.copyWith(duaShowTranslation: enabled);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

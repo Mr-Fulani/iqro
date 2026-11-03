@@ -2052,6 +2052,24 @@ abstract class AppLocalizations {
   /// **'Saved duas'**
   String get duaFavoritesSubtitle;
 
+  /// No description provided for @duaDisplayOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'What to show'**
+  String get duaDisplayOptions;
+
+  /// No description provided for @duaShowTransliteration.
+  ///
+  /// In en, this message translates to:
+  /// **'Transliteration'**
+  String get duaShowTransliteration;
+
+  /// No description provided for @duaShowTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get duaShowTranslation;
+
   /// No description provided for @duaChapterNumber.
   ///
   /// In en, this message translates to:

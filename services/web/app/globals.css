@@ -5436,6 +5436,72 @@ input:focus, select:focus, textarea:focus {
   line-height: 1.4;
 }
 
+/* DuaDisplayMenu: «What to show» at the end of the top bar. */
+.dua-display {
+  position: relative;
+  flex: 0 0 auto;
+  margin-inline: auto -10px;
+}
+
+.dua-display-button {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.dua-display-button:hover,
+.dua-display-button:focus-visible,
+.dua-display-button[aria-expanded="true"] {
+  background: var(--bg-subtle);
+}
+
+.dua-display-menu {
+  position: absolute;
+  z-index: 30;
+  inset-inline-end: 0;
+  top: calc(100% + 4px);
+  min-width: 200px;
+  padding: 6px 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 16%);
+}
+
+.dua-display-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding-inline: 14px 18px;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.dua-display-option:hover,
+.dua-display-option:focus-visible {
+  background: var(--bg-subtle);
+}
+
+.dua-display-check {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: var(--primary);
+}
+
 /* Material's search bar: a raised pill. */
 .dua-search {
   display: flex;

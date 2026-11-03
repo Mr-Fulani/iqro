@@ -1076,6 +1076,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Saved duas';
 
   @override
+  String get duaDisplayOptions => 'What to show';
+
+  @override
+  String get duaShowTransliteration => 'Transliteration';
+
+  @override
+  String get duaShowTranslation => 'Translation';
+
+  @override
   String duaChapterNumber(int number) {
     return 'Chapter $number';
   }

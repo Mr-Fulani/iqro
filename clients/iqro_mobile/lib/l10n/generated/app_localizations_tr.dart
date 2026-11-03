@@ -1071,6 +1071,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Kaydedilen dualar';
 
   @override
+  String get duaDisplayOptions => 'Gösterilecekler';
+
+  @override
+  String get duaShowTransliteration => 'Okunuş';
+
+  @override
+  String get duaShowTranslation => 'Meal';
+
+  @override
   String duaChapterNumber(int number) {
     return 'Bölüm $number';
   }

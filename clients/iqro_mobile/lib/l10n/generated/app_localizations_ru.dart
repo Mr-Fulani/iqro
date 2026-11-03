@@ -1081,6 +1081,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get duaFavoritesSubtitle => 'Сохранённые ду’а';
 
   @override
+  String get duaDisplayOptions => 'Что показывать';
+
+  @override
+  String get duaShowTransliteration => 'Транскрипция';
+
+  @override
+  String get duaShowTranslation => 'Перевод';
+
+  @override
   String duaChapterNumber(int number) {
     return 'Глава $number';
   }
