@@ -400,9 +400,19 @@ export type DuaEntry = {
     meaning_text: string;
     transliteration: string;
   } | null;
+  /** The morning and evening adhkar cards' own reading, by time of day. */
+  time_variants?: Partial<Record<DuaTimeOfDay, DuaTimeVariant>>;
   evidence: DuaEvidence[];
   source: DuaSourceEdition | null;
   audio: DuaAudioAsset[];
+};
+
+export type DuaTimeOfDay = "morning" | "evening";
+
+export type DuaTimeVariant = {
+  arabic_text: string;
+  meaning_text: string;
+  transliteration: string;
 };
 
 export type DuaFavorite = {

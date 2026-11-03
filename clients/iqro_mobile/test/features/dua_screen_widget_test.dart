@@ -142,8 +142,24 @@ void main() {
                 id: 'entry-$number',
                 sourceNumber: number,
                 categoryTitle: category.title,
-                meaning: 'Meaning $number',
+                meaning: number == 77
+                    ? 'Утром (вечером) — Это читается вечером'
+                    : 'Meaning $number',
                 arabicText: 'نص $number',
+                timeVariants: number == 77
+                    ? const <String, DuaTimeVariant>{
+                        'morning': DuaTimeVariant(
+                          arabicText: 'أصبحنا',
+                          meaning: 'Утренний текст 77',
+                          transliteration: '',
+                        ),
+                        'evening': DuaTimeVariant(
+                          arabicText: 'أمسينا',
+                          meaning: 'Вечерний текст 77',
+                          transliteration: '',
+                        ),
+                      }
+                    : const <String, DuaTimeVariant>{},
               ),
           ];
         },
@@ -151,13 +167,24 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('dua-topic-morning')));
       await tester.pumpAndSettle();
       expect(find.text('Утренние азкары'), findsWidgets);
+      // The ribbon names the card's own time, not the chapter's «morning and
+      // evening».
+      expect(find.text('Поминание Аллаха утром'), findsOneWidget);
+      expect(find.text('Утром и вечером'), findsNothing);
       expect(find.text('Meaning 75'), findsOneWidget);
+      // Each card reads its own text, without the note about the other time.
+      await tester.scrollUntilVisible(find.text('Утренний текст 77'), 300);
+      expect(find.text('أصبحنا'), findsOneWidget);
+      expect(find.textContaining('Это читается вечером'), findsNothing);
       await tester.tap(find.byTooltip('Назад'));
       await tester.pumpAndSettle();
       expect(find.text('Вечерние азкары'), findsWidgets);
       await tester.tap(find.byKey(const ValueKey('dua-topic-evening')));
       await tester.pumpAndSettle();
       expect(find.text('Вечерние азкары'), findsWidgets);
+      await tester.scrollUntilVisible(find.text('Вечерний текст 77'), 300);
+      expect(find.text('أمسينا'), findsOneWidget);
+      expect(find.textContaining('Это читается вечером'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -960,6 +987,7 @@ DuaEntry _entry({
   required String meaning,
   List<DuaAudioAsset> audio = const <DuaAudioAsset>[],
   int repetitions = 1,
+  Map<String, DuaTimeVariant> timeVariants = const <String, DuaTimeVariant>{},
 }) => DuaEntry(
   id: id,
   sourceNumber: sourceNumber,
@@ -973,6 +1001,7 @@ DuaEntry _entry({
   repetitions: repetitions,
   sourceLabel: 'Hisn al-Muslim',
   audio: audio,
+  timeVariants: timeVariants,
 );
 
 class _SilentAudioEngine implements IqroAudioEngine {

@@ -125,8 +125,9 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
         subtitle = _topic!.description(locale);
       } else {
         // One chapter: its own title, as in the book; a part of one or
-        // several chapters: what the topic gathers.
-        banner = topicChapters.length == 1
+        // several chapters: what the topic gathers. The morning and evening
+        // cards name only their own time, not the book's «morning and evening».
+        banner = topicChapters.length == 1 && _topic!.timeOfDay == null
             ? duaDisplayTitle(topicChapters.single.title, locale)
             : _topic!.description(locale);
       }

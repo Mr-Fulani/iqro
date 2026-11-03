@@ -10,6 +10,7 @@ class DuaTopic {
     required this.titles,
     required this.descriptions,
     this.entryNumbers,
+    this.timeOfDay,
   });
 
   final String id;
@@ -18,6 +19,10 @@ class DuaTopic {
   final Map<String, String> titles;
   final Map<String, String> descriptions;
   final List<int>? entryNumbers;
+
+  /// «morning» or «evening»: the cards read the entries' own reading for
+  /// that time, without the source's notes about the other one.
+  final String? timeOfDay;
 
   String title(String locale) => titles[locale] ?? titles['en']!;
   String description(String locale) =>

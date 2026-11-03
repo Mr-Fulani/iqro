@@ -79,6 +79,57 @@ void main() {
     },
   );
 
+  test(
+    'a morning or evening card reads its own text, saved copies the book',
+    () {
+      final entry = DuaEntry.fromJson(<String, Object?>{
+        'id': 'entry-77',
+        'source_number': 77,
+        'collection': 'hisn-al-muslim',
+        'arabic_text': 'أصبحنا … [وإذا أمسى قال: أمسينا]',
+        'translation': <String, Object?>{
+          'meaning_text': 'утром (вечером: …) (Это читается вечером.)',
+          'transliteration': 'Асбахна (амсайна)',
+        },
+        'time_variants': <String, Object?>{
+          'morning': <String, Object?>{
+            'arabic_text': 'أصبحنا',
+            'meaning_text': 'утром',
+            'transliteration': 'Асбахна',
+          },
+          'evening': <String, Object?>{
+            'arabic_text': 'أمسينا',
+            'meaning_text': 'вечером',
+            'transliteration': 'Амсайна',
+          },
+        },
+      });
+
+      final evening = entry.forTimeOfDay('evening');
+      expect(evening.arabicText, 'أمسينا');
+      expect(evening.meaning, 'вечером');
+      expect(evening.transliteration, 'Амсайна');
+      expect(evening.favoriteKey, entry.favoriteKey);
+      expect(entry.forTimeOfDay('morning').meaning, 'утром');
+      // Other cards, chapters and entries said at one time keep the book.
+      expect(identical(entry.forTimeOfDay(null), entry), isTrue);
+      final plain = DuaEntry.fromJson(_entryPayload(1));
+      expect(identical(plain.forTimeOfDay('morning'), plain), isTrue);
+
+      // Favourites and caches store the book's text with both readings.
+      final saved = DuaEntry.fromJson(evening.toJson());
+      expect(saved.meaning, entry.meaning);
+      expect(saved.arabicText, entry.arabicText);
+      expect(saved.forTimeOfDay('evening').meaning, 'вечером');
+      expect(
+        DuaEntry.fromJson(
+          evening.asUnverifiedCatalogFallback().toJson(),
+        ).meaning,
+        entry.meaning,
+      );
+    },
+  );
+
   test('accepts source audio when the reader is not identified', () async {
     final payload = _entryPayload(8);
     final audio = Map<String, Object?>.from(

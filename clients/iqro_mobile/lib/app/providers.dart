@@ -1004,6 +1004,7 @@ final duaEntriesByTopicProvider = FutureProvider.family<List<DuaEntry>, String>(
     return pages
         .expand((entries) => entries)
         .where(topic.includesEntry)
+        .map((entry) => entry.forTimeOfDay(topic.timeOfDay))
         .toList(growable: false);
   },
 );

@@ -43,6 +43,7 @@ const duaTopics = <DuaTopic>[
       96,
       98,
     ],
+    timeOfDay: "morning",
   ),
   DuaTopic(
     id: "evening",
@@ -83,6 +84,7 @@ const duaTopics = <DuaTopic>[
       97,
       98,
     ],
+    timeOfDay: "evening",
   ),
   DuaTopic(
     id: "after-prayer",
