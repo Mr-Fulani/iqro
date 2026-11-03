@@ -87,7 +87,7 @@ test("the sheet is on screen while open and while it sinks", () => {
   assert.equal(sheetShown("closing"), true);
   assert.equal(sheetShown("bar"), false);
   assert.equal(sheetShown("collapsed"), false);
-  assert.deepEqual(INITIAL_MINI_PLAYER_STATE, at("bar"));
+  assert.deepEqual(INITIAL_MINI_PLAYER_STATE, at("collapsed"));
 });
 
 test("a tap on the body hides the controls and the next one shows them; closing or reopening resets", () => {

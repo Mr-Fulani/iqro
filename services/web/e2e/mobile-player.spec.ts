@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { ConsoleMessage, Locator, Page } from "@playwright/test";
 import { recitation, surahPlayback, tracks } from "./fixtures/audio";
-import { swipe } from "./swipe";
+import { swipe, unroll } from "./swipe";
 
 // The phone player follows the app's mini player (clients/iqro_mobile/lib/features/audio/mini_player.dart):
 // a 66 px bar above the bottom navigation, a 60 px round button when collapsed and a
@@ -98,6 +98,9 @@ for (const phone of PHONES) {
     const navigation = page.locator(".mobile-navigation");
     await expect(bar).toBeVisible();
     await expect(page.getByTestId("global-audio-player")).toHaveCount(0);
+    // As in the app, the player starts as the round button; a tap unrolls the bar.
+    await expectBodyIsTheButton(bar, bar.getByRole("button", { name: "Показать панель плеера", exact: true }));
+    await unroll(bar);
     // As in the app: 66 px tall, 10 px from the edges, a 6 px gap above the navigation.
     const barBox = await box(bar);
     const navigationBox = await box(navigation);
@@ -255,6 +258,7 @@ for (const phone of PHONES) {
       const bar = page.getByTestId("mobile-audio-player");
       const navigation = page.locator(".mobile-navigation");
       await expect(bar).toBeVisible();
+      await unroll(bar);
       const barBox = await box(bar);
       expect(barBox.height).toBe(66);
       expect(barBox.y + barBox.height).toBeLessThanOrEqual((await box(navigation)).y - 5);
@@ -295,6 +299,7 @@ test("ten quick open and close cycles always end with the bar and a reachable pa
   await page.goto("/ru/audio");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
+  await unroll(bar);
   await expect(bar.getByRole("button", { name: "Поставить на паузу", exact: true })).toBeVisible();
 
   for (const pause of [50, 400, 100, 300, 150, 250, 200, 350, 75, 125]) {
@@ -345,6 +350,7 @@ test("a tap on the full player's body hides the controls and the next tap shows 
   await page.goto("/ru/audio");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
+  await unroll(bar);
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
   await expect(full).toBeVisible();
@@ -404,6 +410,7 @@ test("with reduced motion the controls hide and show without a transition", asyn
   await page.goto("/ru/audio");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
+  await unroll(bar);
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
   await expect(full).toBeVisible();
@@ -421,6 +428,7 @@ test("a downward swipe on the header closes the full player; a short one springs
   await page.goto("/ru/audio");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
+  await unroll(bar);
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
   const head = full.locator(".mobile-player-full-head");
@@ -447,6 +455,7 @@ test("the full player seeks, steps ten seconds and moves to the next surah of th
   await page.goto("/ru/audio");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
+  await unroll(bar);
   const audio = bar.locator("audio");
   await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
   await bar.locator(".mobile-player-titles").click();
@@ -509,6 +518,7 @@ test("the Arabic bar mirrors its layout and the full player stays within the scr
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await page.getByRole("button", { name: "الاستماع من هنا", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
+  await unroll(bar);
   await expect(bar.locator("audio")).toHaveAttribute("src", tracks[0].asset.url);
   const artwork = await box(bar.locator(".mobile-player-artwork"));
   const play = await box(bar.getByRole("button", { name: "إيقاف مؤقت", exact: true }));
@@ -547,15 +557,24 @@ test("an open bar folds on another page, and on the home page it shows how it fo
   await page.goto("/ru/audio");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
+  await unroll(bar);
   await expect(bar).toHaveClass(/is-bar/);
+  // The slide aside lasts 280 ms, shorter than an assertion's polling: the page keeps every class the bar wears.
+  await bar.evaluate((element) => {
+    const seen: string[] = [];
+    (window as unknown as { barClasses: string[] }).barClasses = seen;
+    new MutationObserver(() => seen.push(element.className)).observe(element, { attributeFilter: ["class"] });
+  });
+  const woreNudge = () =>
+    page.evaluate(() => (window as unknown as { barClasses: string[] }).barClasses.some((name) => name.includes("is-hint-nudge")));
   // Another page: the open bar folds into the round button.
   await page.locator("header .brand-link").click();
   await expect(page).toHaveURL(/\/ru$/);
   await expect(bar).toHaveClass(/is-(collapsing|collapsed)(\s|$)/);
   // After a pause on Home it opens, slides aside as if swiped and folds again.
   await expect(bar).toHaveClass(/is-bar/, { timeout: 6_000 });
-  await expect(bar).toHaveClass(/is-hint-nudge/, { timeout: 4_000 });
   await expect(bar).toHaveClass(/is-collapsed/, { timeout: 4_000 });
+  expect(await woreNudge()).toBe(true);
   await expect(bar).not.toHaveClass(/is-hint-nudge/);
   const stored = async () =>
     JSON.parse((await page.evaluate(() => window.localStorage.getItem("iqro_player_hint_v2"))) ?? "{}") as { shown?: number };
@@ -582,6 +601,7 @@ test("with reduced motion the bar and the full player switch without transitions
   const bar = page.getByTestId("mobile-audio-player");
   await expect(bar).toHaveCSS("transition-duration", "0s");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
+  await unroll(bar);
   await bar.locator(".mobile-player-titles").click();
   const full = page.getByRole("dialog", { name: "Сейчас играет" });
   await expect(full).toHaveCSS("animation-name", "none");
@@ -602,6 +622,7 @@ test("a tablet shows the bar above its navigation and the desktop keeps the dock
   await page.goto("/ru/audio");
   await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
   const bar = page.getByTestId("mobile-audio-player");
+  await unroll(bar);
   await expect(bar).toBeVisible();
   const barBox = await box(bar);
   expect(barBox.height).toBe(66);

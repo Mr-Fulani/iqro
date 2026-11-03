@@ -1,5 +1,5 @@
 import { devices, expect, Page, test as base } from "@playwright/test";
-import { swipe } from "./swipe";
+import { swipe, unroll } from "./swipe";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
@@ -1083,6 +1083,7 @@ test("persistent player is the app's mini player on phones and tablets and the d
   await expect(bar).toBeVisible();
   await expect(page.getByTestId("global-audio-player")).toHaveCount(0);
   await expect(audio).toHaveAttribute("src", tracks[0].asset.url);
+  await unroll(bar);
   await expect(bar.getByRole("button", { name: "Поставить на паузу", exact: true })).toBeVisible();
   expect((await bar.boundingBox())!.height).toBe(66);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
