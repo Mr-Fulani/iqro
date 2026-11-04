@@ -114,13 +114,13 @@ void main() {
     final harness = await _pumpPlayer(tester);
 
     expect(find.text('Текущий чтец'), findsOneWidget);
-    expect(find.text('Мурратталь'), findsOneWidget);
+    expect(find.text('Муратталь'), findsOneWidget);
 
     await tester.tap(find.text('Текущий чтец'));
     await tester.pumpAndSettle();
 
     final murattal = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, 'Мурратталь'),
+      find.widgetWithText(ChoiceChip, 'Муратталь'),
     );
     expect(murattal.selected, isTrue);
 
@@ -218,7 +218,7 @@ void main() {
     );
     final seeks = harness.engine.seekCalls.length;
 
-    expect(find.text('Вид чтения · Мурратталь'), findsOneWidget);
+    expect(find.text('Вид чтения · Муратталь'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('player-recitation-variant')));
     await tester.pumpAndSettle();
 
@@ -277,7 +277,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Очередь'), findsOneWidget);
-    expect(find.text('Текущий чтец · Мурратталь'), findsOneWidget);
+    expect(find.text('Текущий чтец · Муратталь'), findsOneWidget);
     expect(find.text('есть 3 из 114 сур'), findsOneWidget);
     expect(find.text('Аль-Бакара'), findsWidgets);
     expect(find.text('суры 3–35 не загружены'), findsOneWidget);

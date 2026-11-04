@@ -628,7 +628,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chooseRecitationStyle => 'Выберите стиль чтения';
 
   @override
-  String get styleMurattal => 'Мурратталь';
+  String get styleMurattal => 'Муратталь';
 
   @override
   String get styleMujawwad => 'Муджаввад';
@@ -3488,5 +3488,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String wordRangeTeachingVoice(String reciter) {
     return 'Голос: $reciter, учебное чтение. У выбранного чтеца нет разметки по словам.';
+  }
+
+  @override
+  String wordRangeOtherVoice(String reciter, String style) {
+    return 'Голос: $reciter · $style. У выбранного чтеца здесь нет разметки по словам.';
   }
 }

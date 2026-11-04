@@ -264,6 +264,36 @@ void main() {
     });
   });
 
+  test('stand-in voices: Muallim, Murattal, al-Afasy, other QF, never the '
+      'Mujawwad', () {
+    Recitation recitation(String id, String code) =>
+        Recitation.fromJson(<String, Object?>{
+          'id': id,
+          'code': code,
+          'reciter': {'id': id, 'name_en': id},
+          'rights': {'stream': true},
+          'coverage': {'surah_count': 114},
+          'capabilities': {'listen': true, 'ayah_playback': true},
+        });
+    final voices = wordTimingFallbackRecitations(<Recitation>[
+      recitation('mp3', 'mp3quran-1'),
+      recitation('mujawwad', 'qf-12-mahmoud-khaleel-al-husary-mujawwad'),
+      recitation('sudais', 'qf-3-murattal'),
+      recitation('afasy', 'qf-7-murattal'),
+      recitation('murattal', 'qf-6-murattal'),
+      recitation('muallim', 'qf-12-muallim-01a15bc65dc9'),
+      recitation('ghamdi', 'qf-13-murattal'),
+      recitation('shuraym', 'qf-10-murattal'),
+    ]);
+    expect(voices.map((item) => item.id), <String>[
+      'muallim',
+      'murattal',
+      'afasy',
+      'sudais',
+      'ghamdi',
+    ]);
+  });
+
   group('teaching voice', () {
     testWidgets('words the chosen reciter has no timings of play in the '
         'teaching al-Husary', (tester) async {
@@ -324,6 +354,36 @@ void main() {
         findsNothing,
       );
       expect(harness.repository.requestedBy, isNot(contains('rec-12:1:5')));
+    });
+
+    testWidgets('where the Muallim has no timings his Murattal plays', (
+      tester,
+    ) async {
+      final harness = await _pumpPanel(
+        tester,
+        withTeaching: true,
+        teachingTimed: false,
+        teachingChosen: true,
+        withMurattal: true,
+      );
+      harness.controller().select(
+        const QuranWordRange.single(QuranWord(1, 5, 3)),
+        wordCount: 1,
+      );
+      await _settle(tester);
+
+      expect(harness.controller().recitation?.id, 'rec-6');
+      expect(
+        find.text(
+          'Голос: аль-Хусари · Муратталь. '
+          'У выбранного чтеца здесь нет разметки по словам.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('word-range-unavailable')),
+        findsNothing,
+      );
     });
 
     testWidgets('without the teaching voice either the note stays', (
@@ -611,6 +671,8 @@ Future<_PanelHarness> _pumpPanel(
   bool timed = true,
   bool withTeaching = false,
   bool teachingTimed = true,
+  bool withMurattal = false,
+  bool teachingChosen = false,
 }) async {
   final engine = _Engine();
   final audio = AudioController(engine: engine);
@@ -619,6 +681,8 @@ Future<_PanelHarness> _pumpPanel(
     timed: timed,
     withTeaching: withTeaching,
     teachingTimed: teachingTimed,
+    withMurattal: withMurattal,
+    teachingChosen: teachingChosen,
   );
   final host = GlobalKey<_HostState>();
   await tester.pumpWidget(
@@ -727,6 +791,8 @@ class _AudioRepository implements AudioRepository {
     required this.timed,
     this.withTeaching = false,
     this.teachingTimed = true,
+    this.withMurattal = false,
+    this.teachingChosen = false,
   });
 
   /// Whether the chosen reciter (`rec-1`) has the words' timings.
@@ -735,6 +801,11 @@ class _AudioRepository implements AudioRepository {
   /// Whether the catalog also has al-Husary's Muallim, and whether it has them.
   final bool withTeaching;
   final bool teachingTimed;
+
+  /// al-Husary's Murattal (`rec-6`), with every word timed; and whether the
+  /// Muallim is the catalog's teaching reciter, so the Mushaf plays it.
+  final bool withMurattal;
+  final bool teachingChosen;
   final requested = <String>[];
   final requestedBy = <String>[];
 
@@ -767,11 +838,32 @@ class _AudioRepository implements AudioRepository {
         'offline': false,
       },
     }),
-    if (withTeaching)
+    if (withMurattal)
       Recitation.fromJson(const <String, Object?>{
+        'id': 'rec-6',
+        'code': 'qf-6-murattal-01a15bc65dc9',
+        'style': 'murattal',
+        'reciter': {
+          'id': 'al-husary-6',
+          'name_en': 'al-Husary',
+          'name_ru': 'аль-Хусари',
+        },
+        'rights': {'stream': true},
+        'coverage': {'surah_count': 114},
+        'timings': {'available': true, 'complete': true},
+        'capabilities': {
+          'listen': true,
+          'ayah_playback': true,
+          'memorization': true,
+          'offline': false,
+        },
+      }),
+    if (withTeaching)
+      Recitation.fromJson(<String, Object?>{
         'id': 'rec-12',
         'code': 'qf-12-muallim-01a15bc65dc9',
         'style': 'muallim',
+        'teaching_default': teachingChosen,
         'reciter': {
           'id': 'al-husary',
           'name_en': 'al-Husary',
@@ -797,7 +889,11 @@ class _AudioRepository implements AudioRepository {
   }) async {
     requested.add('$surah:$ayah');
     requestedBy.add('$recitationId:$surah:$ayah');
-    final has = recitationId == 'rec-12' ? teachingTimed : timed;
+    final has = switch (recitationId) {
+      'rec-12' => teachingTimed,
+      'rec-6' => true,
+      _ => timed,
+    };
     return AyahPlayback(
       track: AudioTrack(
         id: 'track-$recitationId',

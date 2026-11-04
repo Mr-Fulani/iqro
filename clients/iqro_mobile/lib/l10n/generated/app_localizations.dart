@@ -6107,6 +6107,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Voice: {reciter}, teaching recitation. The chosen reciter has no word-by-word timing.'**
   String wordRangeTeachingVoice(String reciter);
+
+  /// No description provided for @wordRangeOtherVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice: {reciter} · {style}. The chosen reciter has no word-by-word timing here.'**
+  String wordRangeOtherVoice(String reciter, String style);
 }
 
 class _AppLocalizationsDelegate

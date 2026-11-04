@@ -1422,6 +1422,7 @@ const tr: Messages = {
   "wordRange.handleStart": "Seçimin başı",
   "wordRange.handleEnd": "Seçimin sonu",
   "wordRange.teachingVoice": "Ses: {reciter}, öğretici okuma. Seçilen kârinin kelime kelime zamanlaması yok.",
+  "wordRange.otherVoice": "Ses: {reciter} · {style}. Seçilen kârinin burada kelime kelime zamanlaması yok.",
 };
 
 export default tr;

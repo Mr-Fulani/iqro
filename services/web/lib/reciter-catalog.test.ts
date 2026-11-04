@@ -12,7 +12,7 @@ import {
   recitationsForRole,
   supportsRecitationRole,
   tajweedCourseRecitation,
-  wordTimingFallbackRecitation,
+  wordTimingFallbackRecitations,
 } from "./reciter-catalog.ts";
 
 const reciter: Reciter = {
@@ -238,7 +238,7 @@ test("a person's avatar copy comes with the portrait it was made from", () => {
   }
 });
 
-test("selected words without the reciter's timings play in al-Husary's Muallim, never his Mujawwad", () => {
+test("selected words without the reciter's timings play in al-Husary's Muallim, then his Murattal, never his Mujawwad", () => {
   const withCode = (id: string, code: string, teaching = false): Recitation => ({
     ...recitation(id, "2026-10-01T00:00:00Z", timed.capabilities),
     code,
@@ -246,9 +246,14 @@ test("selected words without the reciter's timings play in al-Husary's Muallim, 
   });
   const mujawwad = withCode("mujawwad", "qf-12-mahmoud-khaleel-al-husary-mujawwad");
   const muallim = withCode("muallim", "qf-12-muallim-01a15bc65dc9");
-  const teaching = withCode("teaching", "qf-6-murattal-01a15bc65dc9", true);
+  const murattal = withCode("murattal", "qf-6-murattal-01a15bc65dc9");
+  const teaching = withCode("teaching", "qf-7-murattal-01a15bc65dc9", true);
+  const ids = (list: Recitation[]) => wordTimingFallbackRecitations(list).map((item) => item.id);
 
-  assert.equal(wordTimingFallbackRecitation([mujawwad, teaching, muallim])?.id, "muallim");
-  assert.equal(wordTimingFallbackRecitation([mujawwad, teaching])?.id, "teaching");
-  assert.equal(wordTimingFallbackRecitation([mujawwad]), undefined);
+  assert.deepEqual(ids([mujawwad, murattal, teaching, muallim]), ["muallim", "murattal", "teaching"]);
+  const others = ["qf-3-murattal", "qf-13-murattal", "qf-10-murattal"].map((code, index) => withCode(`other-${index}`, code));
+  assert.deepEqual(ids([withCode("mp3", "mp3quran-1"), ...others, murattal, muallim, teaching]),
+    ["muallim", "murattal", "teaching", "other-0", "other-1"]);
+  assert.deepEqual(ids([mujawwad, teaching]), ["teaching"]);
+  assert.deepEqual(ids([mujawwad]), []);
 });

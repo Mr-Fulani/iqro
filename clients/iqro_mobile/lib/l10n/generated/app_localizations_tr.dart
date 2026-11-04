@@ -3417,4 +3417,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String wordRangeTeachingVoice(String reciter) {
     return 'Ses: $reciter, öğretici okuma. Seçilen kârinin kelime kelime zamanlaması yok.';
   }
+
+  @override
+  String wordRangeOtherVoice(String reciter, String style) {
+    return 'Ses: $reciter · $style. Seçilen kârinin burada kelime kelime zamanlaması yok.';
+  }
 }

@@ -3463,4 +3463,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String wordRangeTeachingVoice(String reciter) {
     return 'Voice: $reciter, teaching recitation. The chosen reciter has no word-by-word timing.';
   }
+
+  @override
+  String wordRangeOtherVoice(String reciter, String style) {
+    return 'Voice: $reciter · $style. The chosen reciter has no word-by-word timing here.';
+  }
 }

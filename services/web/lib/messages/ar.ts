@@ -1422,6 +1422,7 @@ const ar: Messages = {
   "wordRange.handleStart": "بداية التحديد",
   "wordRange.handleEnd": "نهاية التحديد",
   "wordRange.teachingVoice": "الصوت: {reciter}، قراءة تعليمية. لا يوجد توقيت للكلمات لدى القارئ المختار.",
+  "wordRange.otherVoice": "الصوت: {reciter} · {style}. لا يوجد هنا توقيت للكلمات لدى القارئ المختار.",
 };
 
 export default ar;

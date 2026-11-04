@@ -1422,6 +1422,7 @@ const en: Messages = {
   "wordRange.handleStart": "Start of the selection",
   "wordRange.handleEnd": "End of the selection",
   "wordRange.teachingVoice": "Voice: {reciter}, teaching recitation. The chosen reciter has no word-by-word timing.",
+  "wordRange.otherVoice": "Voice: {reciter} · {style}. The chosen reciter has no word-by-word timing here.",
 };
 
 export default en;

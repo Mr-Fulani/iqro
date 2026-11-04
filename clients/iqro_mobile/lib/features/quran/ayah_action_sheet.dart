@@ -255,10 +255,10 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
     final chosen = details.recitations
         .where((item) => item.id == recitationId)
         .firstOrNull;
-    final fallback = wordTimingFallbackRecitation(details.recitations);
     for (final voice in <Recitation?>[
       chosen,
-      if (fallback?.id != recitationId) fallback,
+      for (final other in wordTimingFallbackRecitations(details.recitations))
+        if (other.id != recitationId) other,
     ]) {
       if (voice == null) continue;
       try {
@@ -384,11 +384,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          context.l10n.wordRangeTeachingVoice(
-                            voice.reciter.nameFor(
-                              Localizations.localeOf(context).languageCode,
-                            ),
-                          ),
+                          wordRangeVoiceNote(context, voice),
                           key: const ValueKey('ayah-word-teaching-voice'),
                           style: theme.textTheme.bodySmall,
                         ),

@@ -1042,5 +1042,7 @@
   "wordTimingsUnavailable": "لا يوجد هنا توقيت للكلمات لهذا القارئ، فلا تُسمع هذه الآية إلا كاملة. هذا التوقيت ليس متاحًا لكل القرّاء، ولا في كل الآيات عند بعضهم.",
   "wordTimingsChooseReciter": "اختر قارئًا آخر في الأسفل.",
   "wordRangeTeachingVoice": "الصوت: {reciter}، قراءة تعليمية. لا يوجد توقيت للكلمات لدى القارئ المختار.",
-  "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}}
+  "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}},
+  "wordRangeOtherVoice": "الصوت: {reciter} · {style}. لا يوجد هنا توقيت للكلمات لدى القارئ المختار.",
+  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}}
 }

@@ -9,6 +9,7 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../audio/audio_models.dart';
 import '../audio/audio_repository.dart';
+import '../audio/recitation_style_label.dart';
 import '../audio/reciter_catalog.dart';
 import '../dua/dua_arabic.dart';
 import 'quran_models.dart';
@@ -112,14 +113,53 @@ List<String> ayahWords(QuranAyah ayah) {
   );
 }
 
-/// The voice that plays words of a reciter without their timings: al-Husary's
-/// Muallim, the teaching recitation, else the catalog's teaching reciter.
-/// The Mujawwad of al-Husary shares the `qf-12-` prefix but has no timings.
-Recitation? wordTimingFallbackRecitation(Iterable<Recitation> recitations) {
-  for (final recitation in recitations) {
-    if (recitation.code.startsWith('qf-12-muallim')) return recitation;
+/// The voices, in order, that play words of a reciter without their timings:
+/// al-Husary's Muallim, the teaching recitation (else the catalog's teaching
+/// reciter); his Murattal (`qf-6-`) for the ayahs the Muallim has no timings
+/// of, where the sheikh repeats words after a pause (2:9, 2:20, 3:7); then
+/// al-Afasy (`qf-7-`) and other Quran Foundation recitations. At most
+/// [wordTimingFallbackLimit]: each costs a request when it is tried. His
+/// Mujawwad shares the `qf-12-` prefix but has no timings at all.
+List<Recitation> wordTimingFallbackRecitations(
+  Iterable<Recitation> recitations,
+) {
+  Recitation? byPrefix(String prefix) {
+    for (final recitation in recitations) {
+      if (recitation.code.startsWith(prefix)) return recitation;
+    }
+    return null;
   }
-  return teachingRecitation(recitations);
+
+  final voices = <Recitation>[];
+  void add(Recitation? voice) {
+    if (voice == null || voices.any((item) => item.id == voice.id)) return;
+    if (voice.code.contains('husary-mujawwad')) return;
+    if (voices.length < wordTimingFallbackLimit) voices.add(voice);
+  }
+
+  add(byPrefix('qf-12-muallim') ?? teachingRecitation(recitations));
+  add(byPrefix('qf-6-'));
+  add(byPrefix('qf-7-'));
+  for (final recitation in recitations) {
+    if (recitation.code.startsWith('qf-')) add(recitation);
+  }
+  return voices;
+}
+
+/// How many stand-in voices a range may try.
+const wordTimingFallbackLimit = 5;
+
+/// Says whose voice plays the words when it is not the chosen reciter's.
+String wordRangeVoiceNote(BuildContext context, Recitation voice) {
+  final name = voice.reciter.nameFor(
+    Localizations.localeOf(context).languageCode,
+  );
+  return voice.code.startsWith('qf-12-muallim') || voice.teachingDefault
+      ? context.l10n.wordRangeTeachingVoice(name)
+      : context.l10n.wordRangeOtherVoice(
+          name,
+          recitationStyleLabel(context, voice.style),
+        );
 }
 
 /// Who plays a range: the reciter, its timings of the first and last words'
@@ -321,10 +361,10 @@ class WordRangeController extends ChangeNotifier {
               : null),
       role: AudioRecitationRole.ayahPlayback,
     );
-    final fallback = wordTimingFallbackRecitation(recitations);
     for (final candidate in <Recitation?>[
       chosen,
-      if (fallback?.id != chosen?.id) fallback,
+      for (final voice in wordTimingFallbackRecitations(recitations))
+        if (voice.id != chosen?.id) voice,
     ]) {
       if (candidate == null) continue;
       final first = await _ayah(
@@ -579,7 +619,7 @@ class WordRangePanel extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          context.l10n.wordRangeTeachingVoice(reciter ?? ''),
+                          wordRangeVoiceNote(context, controller.recitation!),
                           key: const ValueKey('word-range-teaching-voice'),
                           style: theme.textTheme.bodySmall,
                         ),

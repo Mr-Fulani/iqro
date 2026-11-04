@@ -125,7 +125,7 @@ void main() {
       findsNothing,
     );
     final murattal = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, 'Мурратталь'),
+      find.widgetWithText(ChoiceChip, 'Муратталь'),
     );
     expect(murattal.selected, isTrue);
     expect(find.text('Тестовый чтец'), findsOneWidget);

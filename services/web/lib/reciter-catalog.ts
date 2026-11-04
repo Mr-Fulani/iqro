@@ -222,13 +222,29 @@ export function tajweedCourseRecitation(available: Recitation[]): Recitation | u
   return byPrefix("qf-12-") ?? teachingRecitation(available) ?? byPrefix("qf-7-") ?? available[0];
 }
 
+/** How many stand-in voices a range of selected words may try: each costs a request. */
+export const WORD_TIMING_FALLBACK_LIMIT = 5;
+
 /**
- * The voice that plays selected words of a reciter without their timings:
- * al-Husary's Muallim, else the teaching reciter. His Mujawwad shares the
- * `qf-12-` prefix but has no word timings. Port of `wordTimingFallbackRecitation`.
+ * The voices, in order, that play selected words of a reciter without their
+ * timings: al-Husary's Muallim (else the teaching reciter); his Murattal
+ * (`qf-6-`) for the ayahs the Muallim has no timings of, where the sheikh
+ * repeats words after a pause (2:9, 2:20, 3:7); then al-Afasy (`qf-7-`) and
+ * other Quran Foundation recitations. His Mujawwad shares the `qf-12-` prefix
+ * but has no word timings. Port of `wordTimingFallbackRecitations`.
  */
-export function wordTimingFallbackRecitation(available: Recitation[]): Recitation | undefined {
-  return available.find((item) => item.code.startsWith("qf-12-muallim")) ?? teachingRecitation(available);
+export function wordTimingFallbackRecitations(available: Recitation[]): Recitation[] {
+  const byPrefix = (prefix: string) => available.find((item) => item.code.startsWith(prefix));
+  const voices: Recitation[] = [];
+  const add = (voice: Recitation | undefined) => {
+    if (!voice || voices.some((item) => item.id === voice.id) || voice.code.includes("husary-mujawwad")) return;
+    if (voices.length < WORD_TIMING_FALLBACK_LIMIT) voices.push(voice);
+  };
+  add(byPrefix("qf-12-muallim") ?? teachingRecitation(available));
+  add(byPrefix("qf-6-"));
+  add(byPrefix("qf-7-"));
+  for (const recitation of available) if (recitation.code.startsWith("qf-")) add(recitation);
+  return voices;
 }
 
 function publishedTimestamp(recitation: Recitation): number {
