@@ -1,0 +1,7 @@
+11-03 00:00:00.652 I/am_proc_start( 1968): [0,32467,10495,forum.iqro.app,broadcast,{forum.iqro.app/es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver}]
+11-03 02:03:48.545 I/am_create_activity( 1968): [0,139839867,1268,forum.iqro.app/.MainActivity,es.antonborri.home_widget.action.LAUNCH,NULL,iqro://open/plan?homeWidget,268435456]
+11-03 16:10:23.058 I/am_new_intent( 1968): [0,139839867,1268,forum.iqro.app/.MainActivity,es.antonborri.home_widget.action.LAUNCH,NULL,iqro://open/plan?homeWidget,268435456]
+11-03 16:15:15.449 I/am_broadcast_discard_app( 1968): [0,69408662,android.intent.action.MY_PACKAGE_REPLACED,1,ResolveInfo{b5cff04 forum.iqro.app/es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver m=0x108000}]
+11-04 00:00:00.061 I/am_proc_start( 1968): [0,3039,10495,forum.iqro.app,broadcast,{forum.iqro.app/es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver}]
+11-04 08:10:23.369 I/ActivityTaskManager( 1968): START u0 {act=es.antonborri.home_widget.action.LAUNCH dat=iqro://open/plan?homeWidget flg=0x10000000 cmp=forum.iqro.app/.MainActivity} from uid 10495
+11-04 08:10:23.401 I/am_create_activity( 1968): [0,3852917,1326,forum.iqro.app/.MainActivity,es.antonborri.home_widget.action.LAUNCH,NULL,iqro://open/plan?homeWidget,268435456]
