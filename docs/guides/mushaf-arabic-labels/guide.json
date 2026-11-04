@@ -99,7 +99,7 @@
       "title": "На компьютере — так же",
       "shots": [
         {
-          "src": "src/page-desktop.jpg",
+          "src": "../ayah-share/src/ayah-selected-desktop.jpg",
           "frame": "desktop",
           "url": "iqro.forum/ru/quran",
           "crop": [
