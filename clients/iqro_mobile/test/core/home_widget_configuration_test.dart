@@ -27,6 +27,27 @@ void main() {
     expect(kotlin, isNot(contains('Color(0xFFE2B665, textAlign')));
   });
 
+  test('prayer widget bridge names its receiver in full', () {
+    // A suffixed application id (forum.iqro.app.test) keeps the receiver in
+    // forum.iqro.app, so a short androidName resolves to a missing class.
+    final schema = File('home_widget/prayer_times.dart').readAsStringSync();
+    final bridge = File(
+      'lib/core/widgets/prayer_times.home_widget.dart',
+    ).readAsStringSync();
+    final manifest = File(
+      'android/app/src/main/AndroidManifest.xml',
+    ).readAsStringSync();
+    const receiver = 'forum.iqro.app.PrayerTimesHomeWidgetReceiver';
+
+    expect(schema, contains("packageName: 'forum.iqro.app'"));
+    expect(bridge, isNot(contains('androidName:')));
+    expect(
+      "qualifiedAndroidName: '$receiver'".allMatches(bridge),
+      hasLength(4),
+    );
+    expect(manifest, contains('android:name="$receiver"'));
+  });
+
   test('iOS prayer widget target shares only its explicit App Group', () {
     final runnerEntitlements = File(
       'ios/Runner/Runner.entitlements',

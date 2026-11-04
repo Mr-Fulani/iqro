@@ -40,7 +40,7 @@ class PrayerTimesHomeWidget {
         if (_timedTimes.isEmpty) {
           await HomeWidget.saveWidgetData('${_$paramPrefix}.timedData', null, appGroupId: _$appGroupId);
           try {
-            await HomeWidget.cancelScheduledWidgetUpdates(androidName: 'PrayerTimesHomeWidgetReceiver');
+            await HomeWidget.cancelScheduledWidgetUpdates(qualifiedAndroidName: 'forum.iqro.app.PrayerTimesHomeWidgetReceiver');
           } catch (error, stackTrace) {
             // Cancelling is best effort; the data was deleted.
             FlutterError.reportError(
@@ -60,7 +60,7 @@ class PrayerTimesHomeWidget {
         };
         await HomeWidget.saveFile('${_$paramPrefix}.timedData', Uint8List.fromList(utf8.encode(jsonEncode(_timedJson))), extension: 'json', appGroupId: _$appGroupId);
         try {
-          await HomeWidget.scheduleWidgetUpdates(_timedTimes, androidName: 'PrayerTimesHomeWidgetReceiver');
+          await HomeWidget.scheduleWidgetUpdates(_timedTimes, qualifiedAndroidName: 'forum.iqro.app.PrayerTimesHomeWidgetReceiver');
         } catch (error, stackTrace) {
           // Scheduling is best effort; the data was saved.
           FlutterError.reportError(
@@ -99,7 +99,7 @@ class PrayerTimesHomeWidget {
       if (timedData) () async {
         await HomeWidget.saveWidgetData('${_$paramPrefix}.timedData', null, appGroupId: _$appGroupId);
         try {
-          await HomeWidget.cancelScheduledWidgetUpdates(androidName: 'PrayerTimesHomeWidgetReceiver');
+          await HomeWidget.cancelScheduledWidgetUpdates(qualifiedAndroidName: 'forum.iqro.app.PrayerTimesHomeWidgetReceiver');
         } catch (error, stackTrace) {
           // Cancelling is best effort; the data was deleted.
           FlutterError.reportError(
@@ -159,7 +159,7 @@ class PrayerTimesHomeWidget {
 
   static Future<bool?> updateWidget() {
     return HomeWidget.updateWidget(
-      androidName: 'PrayerTimesHomeWidgetReceiver',
+      qualifiedAndroidName: 'forum.iqro.app.PrayerTimesHomeWidgetReceiver',
       iOSName: 'PrayerTimesHomeWidget',
     );
   }
