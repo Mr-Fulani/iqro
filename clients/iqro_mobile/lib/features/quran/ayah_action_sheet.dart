@@ -77,7 +77,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   String? _recitationId;
 
   /// Whether each reciter has the timing of [AyahActionSheet.word].
-  final _wordTimed = <String, Future<bool>>{};
+  final _wordTimed = <String, Future<Recitation?>>{};
   var _dependenciesReady = false;
   var _audioRequest = 0;
   var _loadRequest = 0;
@@ -244,22 +244,37 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
     );
   }
 
-  Future<bool> _wordTiming(String recitationId, int word) =>
-      _wordTimed.putIfAbsent(recitationId, () async {
-        try {
-          final playback = await ref
-              .read(audioRepositoryProvider)
-              .ayahPlayback(
-                recitationId: recitationId,
-                surah: widget.reference.surah,
-                ayah: widget.reference.ayah,
-              );
-          return playback.words[word] != null;
-        } on Object {
-          unawaited(Future<void>(() => _wordTimed.remove(recitationId)));
-          return false;
-        }
-      });
+  /// The voice that plays [word]: the chosen reciter when it has the word's
+  /// timing, else the teaching al-Husary; null when neither has it.
+  Future<Recitation?> _wordTiming(
+    _AyahDetails details,
+    String recitationId,
+    int word,
+  ) => _wordTimed.putIfAbsent(recitationId, () async {
+    final repository = ref.read(audioRepositoryProvider);
+    final chosen = details.recitations
+        .where((item) => item.id == recitationId)
+        .firstOrNull;
+    final fallback = wordTimingFallbackRecitation(details.recitations);
+    for (final voice in <Recitation?>[
+      chosen,
+      if (fallback?.id != recitationId) fallback,
+    ]) {
+      if (voice == null) continue;
+      try {
+        final playback = await repository.ayahPlayback(
+          recitationId: voice.id,
+          surah: widget.reference.surah,
+          ayah: widget.reference.ayah,
+        );
+        if (playback.words[word] != null) return voice;
+      } on Object {
+        continue;
+      }
+    }
+    unawaited(Future<void>(() => _wordTimed.remove(recitationId)));
+    return null;
+  });
 
   /// The long-pressed word: listen to it, or select words from it.
   Widget _wordBlock(_AyahDetails details, int word) {
@@ -269,14 +284,16 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         ? const <String>[]
         : ayahWords(details.ayah!);
     final recitationId = _recitationId;
-    return FutureBuilder<bool>(
+    return FutureBuilder<Recitation?>(
       key: ValueKey('ayah-word-$recitationId'),
       future: recitationId == null
-          ? Future<bool>.value(false)
-          : _wordTiming(recitationId, word),
+          ? Future<Recitation?>.value()
+          : _wordTiming(details, recitationId, word),
       builder: (context, snapshot) {
         final checking = snapshot.connectionState != ConnectionState.done;
-        final timed = snapshot.data == true;
+        final voice = snapshot.data;
+        final timed = voice != null;
+        final teaching = timed && voice.id != recitationId;
         return DecoratedBox(
           key: const ValueKey('ayah-word-block'),
           decoration: BoxDecoration(
@@ -354,6 +371,31 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
                     ),
                   ],
                 ),
+                if (teaching) ...<Widget>[
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Icon(
+                        Icons.record_voice_over_outlined,
+                        size: 18,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context.l10n.wordRangeTeachingVoice(
+                            voice.reciter.nameFor(
+                              Localizations.localeOf(context).languageCode,
+                            ),
+                          ),
+                          key: const ValueKey('ayah-word-teaching-voice'),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 if (!checking && !timed) ...<Widget>[
                   const SizedBox(height: 10),
                   Row(

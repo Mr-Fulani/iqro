@@ -3458,4 +3458,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wordTimingsChooseReciter => 'Choose another reciter below.';
+
+  @override
+  String wordRangeTeachingVoice(String reciter) {
+    return 'Voice: $reciter, teaching recitation. The chosen reciter has no word-by-word timing.';
+  }
 }

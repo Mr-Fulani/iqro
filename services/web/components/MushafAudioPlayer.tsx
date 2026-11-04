@@ -33,6 +33,8 @@ type MushafAudioPlayerProps = {
   onSettingsChange?: (settings: AudioPlaybackSettings) => void;
   /** The reciter the Mushaf plays, e.g. for a tajweed word fragment. */
   onRecitationChange?: (recitationId: string) => void;
+  /** The recitations the Mushaf can play, once loaded. */
+  onRecitationsChange?: (recitations: Recitation[]) => void;
 };
 
 function parseAyahKey(value: string | null): { surah: number; ayah: number } | null {
@@ -54,6 +56,7 @@ export function MushafAudioPlayer({
   onPlayingChange,
   onSettingsChange,
   onRecitationChange,
+  onRecitationsChange,
 }: MushafAudioPlayerProps) {
   const { locale, t } = useI18n();
   const reader = useMushafReader();
@@ -95,6 +98,9 @@ export function MushafAudioPlayer({
   useEffect(() => {
     onRecitationChange?.(selectedRecitationId);
   }, [onRecitationChange, selectedRecitationId]);
+  useEffect(() => {
+    onRecitationsChange?.(recitations);
+  }, [onRecitationsChange, recitations]);
   const recitationLabel = useCallback((recitation: Recitation): string => {
     const style = recitationStyleLabel(recitation.style, t);
     const reciter = reciterName(recitation.reciter, locale);

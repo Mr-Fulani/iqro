@@ -1421,6 +1421,7 @@ const en: Messages = {
   "wordRange.hintTouch": "Hold a word and drag to select more · drag the handles · tap elsewhere to clear",
   "wordRange.handleStart": "Start of the selection",
   "wordRange.handleEnd": "End of the selection",
+  "wordRange.teachingVoice": "Voice: {reciter}, teaching recitation. The chosen reciter has no word-by-word timing.",
 };
 
 export default en;

@@ -3484,4 +3484,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get wordTimingsChooseReciter => 'Выберите другого чтеца ниже.';
+
+  @override
+  String wordRangeTeachingVoice(String reciter) {
+    return 'Голос: $reciter, учебное чтение. У выбранного чтеца нет разметки по словам.';
+  }
 }

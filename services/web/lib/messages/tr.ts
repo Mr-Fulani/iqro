@@ -1421,6 +1421,7 @@ const tr: Messages = {
   "wordRange.hintTouch": "Daha fazlası için bir kelimeye basılı tutup sürükleyin · tutamaçları sürükleyin · kaldırmak için boşluğa dokunun",
   "wordRange.handleStart": "Seçimin başı",
   "wordRange.handleEnd": "Seçimin sonu",
+  "wordRange.teachingVoice": "Ses: {reciter}, öğretici okuma. Seçilen kârinin kelime kelime zamanlaması yok.",
 };
 
 export default tr;

@@ -3428,4 +3428,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get wordTimingsChooseReciter => 'اختر قارئًا آخر في الأسفل.';
+
+  @override
+  String wordRangeTeachingVoice(String reciter) {
+    return 'الصوت: $reciter، قراءة تعليمية. لا يوجد توقيت للكلمات لدى القارئ المختار.';
+  }
 }

@@ -54,7 +54,10 @@ import {
   Surah,
   type AyahTranslation,
   type PrayerReadingPrayer,
+  type Recitation,
 } from "../lib/api";
+import { reciterName } from "../lib/audio-content";
+import { wordTimingFallbackRecitation } from "../lib/reciter-catalog";
 import { indexAyahBookmarks } from "../lib/ayah-bookmarks";
 import {
   indexAyahAnnotations,
@@ -429,6 +432,7 @@ function QuranContent() {
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
   const [playingMushafAyah, setPlayingMushafAyah] = useState<string | null>(null);
   const [mushafRecitationId, setMushafRecitationId] = useState("");
+  const [mushafRecitations, setMushafRecitations] = useState<Recitation[]>([]);
   const [wordRange, setWordRange] = useState<{ range: QuranWordRange; count: number } | null>(null);
   const [playingWord, setPlayingWord] = useState<QuranWord | null>(null);
   const [wordArea, setWordArea] = useState<HTMLElement | null>(null);
@@ -1430,6 +1434,8 @@ function QuranContent() {
     setPlayingWord(null);
   }, []);
   useWordSelection(wordArea, wordRange?.range ?? null, selectWords, clearWords);
+  // Words the chosen reciter has no timings of play in the teaching voice.
+  const wordTimingFallback = useMemo(() => wordTimingFallbackRecitation(mushafRecitations), [mushafRecitations]);
   // Another surah or view starts without a selection.
   useEffect(() => { clearWords(); }, [clearWords, selectedSurah, viewMode]);
 
@@ -2154,6 +2160,7 @@ function QuranContent() {
           onPlayingChange={setIsAudioPlaying}
           onSettingsChange={setAudioSettings}
           onRecitationChange={setMushafRecitationId}
+          onRecitationsChange={setMushafRecitations}
         />
       </MushafReaderPanel>
 
@@ -2660,6 +2667,12 @@ function QuranContent() {
           range={wordRange.range}
           wordCount={wordRange.count}
           recitationId={mushafRecitationId || null}
+          reciterName={(() => {
+            const chosen = mushafRecitations.find((item) => item.id === mushafRecitationId);
+            return chosen ? reciterName(chosen.reciter, locale) : undefined;
+          })()}
+          teachingRecitationId={wordTimingFallback?.id ?? null}
+          teachingReciterName={wordTimingFallback ? reciterName(wordTimingFallback.reciter, locale) : ""}
           onClear={clearWords}
           onPlayingWord={setPlayingWord}
         />

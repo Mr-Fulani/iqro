@@ -222,6 +222,15 @@ export function tajweedCourseRecitation(available: Recitation[]): Recitation | u
   return byPrefix("qf-12-") ?? teachingRecitation(available) ?? byPrefix("qf-7-") ?? available[0];
 }
 
+/**
+ * The voice that plays selected words of a reciter without their timings:
+ * al-Husary's Muallim, else the teaching reciter. His Mujawwad shares the
+ * `qf-12-` prefix but has no word timings. Port of `wordTimingFallbackRecitation`.
+ */
+export function wordTimingFallbackRecitation(available: Recitation[]): Recitation | undefined {
+  return available.find((item) => item.code.startsWith("qf-12-muallim")) ?? teachingRecitation(available);
+}
+
 function publishedTimestamp(recitation: Recitation): number {
   const timestamp = Date.parse(recitation.published_at);
   return Number.isFinite(timestamp) ? timestamp : 0;

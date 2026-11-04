@@ -12,6 +12,7 @@ import {
   recitationsForRole,
   supportsRecitationRole,
   tajweedCourseRecitation,
+  wordTimingFallbackRecitation,
 } from "./reciter-catalog.ts";
 
 const reciter: Reciter = {
@@ -235,4 +236,19 @@ test("a person's avatar copy comes with the portrait it was made from", () => {
     assert.equal(person.portrait_url, "https://cdn/640.webp");
     assert.equal(person.portrait_thumbnail_url, "https://cdn/320.webp");
   }
+});
+
+test("selected words without the reciter's timings play in al-Husary's Muallim, never his Mujawwad", () => {
+  const withCode = (id: string, code: string, teaching = false): Recitation => ({
+    ...recitation(id, "2026-10-01T00:00:00Z", timed.capabilities),
+    code,
+    teaching_default: teaching,
+  });
+  const mujawwad = withCode("mujawwad", "qf-12-mahmoud-khaleel-al-husary-mujawwad");
+  const muallim = withCode("muallim", "qf-12-muallim-01a15bc65dc9");
+  const teaching = withCode("teaching", "qf-6-murattal-01a15bc65dc9", true);
+
+  assert.equal(wordTimingFallbackRecitation([mujawwad, teaching, muallim])?.id, "muallim");
+  assert.equal(wordTimingFallbackRecitation([mujawwad, teaching])?.id, "teaching");
+  assert.equal(wordTimingFallbackRecitation([mujawwad]), undefined);
 });

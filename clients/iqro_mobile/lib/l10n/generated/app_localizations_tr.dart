@@ -3412,4 +3412,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get wordTimingsChooseReciter => 'Aşağıdan başka bir kâri seçin.';
+
+  @override
+  String wordRangeTeachingVoice(String reciter) {
+    return 'Ses: $reciter, öğretici okuma. Seçilen kârinin kelime kelime zamanlaması yok.';
+  }
 }
