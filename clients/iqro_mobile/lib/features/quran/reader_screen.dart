@@ -55,7 +55,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   final _viewportKey = GlobalKey();
   final _ayahKeys = <int, GlobalKey>{};
   final _wordRegistry = ReaderWordRegistry();
-  final _panelKey = GlobalKey();
+  final _stackKey = GlobalKey();
+
+  /// Where the selected words are on screen, for the panel beside them.
+  final _selectionBounds = ValueNotifier<Rect?>(null);
+
+  /// The finger pulling a selection, in the reader's stack, for the loupe.
+  Offset? _loupe;
   late final WordRangeController _words;
   var _showTranslation = true;
   var _showTafsir = false;
@@ -102,6 +108,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   void dispose() {
     _audioRequest += 1;
     wordRangePulling.removeListener(_onWords);
+    _selectionBounds.dispose();
     _words
       ..removeListener(_onWords)
       ..dispose();
@@ -133,34 +140,25 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
 
   void _onWords() {
     if (!mounted) return;
-    setState(() {});
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _keepSelectionAbovePanel(),
-    );
+    setState(() {
+      if (!wordRangePulling.value) _loupe = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reportBounds());
   }
 
-  /// Scrolls the list so the last selected word is above the panel, once
-  /// the finger has let go.
-  void _keepSelectionAbovePanel() {
+  /// Tells the panel where the selected words are, once they are laid out
+  /// and as the list scrolls.
+  void _reportBounds() {
     final range = _words.range;
-    if (!mounted || range == null || wordRangePulling.value) return;
-    final word = _wordRegistry.wordRect(range.end);
-    final panel = _panelKey.currentContext?.findRenderObject() as RenderBox?;
-    if (word == null || panel == null || !panel.attached) return;
-    if (!_scrollController.hasClients) return;
-    final overlap = word.bottom + 16 - panel.localToGlobal(Offset.zero).dy;
-    if (overlap <= 0) return;
-    final position = _scrollController.position;
-    unawaited(
-      _scrollController.animateTo(
-        (position.pixels + overlap).clamp(
-          position.minScrollExtent,
-          position.maxScrollExtent,
-        ),
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      ),
-    );
+    Rect? bounds;
+    if (mounted && range != null) {
+      for (final word in <QuranWord>[range.start, range.end]) {
+        final rect = _wordRegistry.wordRect(word);
+        if (rect == null) continue;
+        bounds = bounds == null ? rect : bounds.expandToInclude(rect);
+      }
+    }
+    if (_selectionBounds.value != bounds) _selectionBounds.value = bounds;
   }
 
   void _selectWords(List<QuranAyah> items, QuranWordRange range) {
@@ -177,8 +175,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     _words.select(range, wordCount: count);
   }
 
-  /// Scrolls the list while the finger pulls a selection near its edge.
+  /// Scrolls the list while the finger pulls a selection near its edge, and
+  /// moves the loupe with it.
   void _followWordDrag(Offset global) {
+    final stack = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    if (stack != null && stack.attached && wordRangePulling.value) {
+      setState(() => _loupe = stack.globalToLocal(global));
+    }
     final box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached || !_scrollController.hasClients) return;
     final local = box.globalToLocal(global);
@@ -343,6 +346,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
             SurahOpenReporter(surah: widget.surah),
             Expanded(
               child: Stack(
+                key: _stackKey,
                 children: <Widget>[
                   Positioned.fill(
                     child: _readerList(
@@ -355,12 +359,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                     ),
                   ),
                   if (_words.range != null)
-                    PositionedDirectional(
-                      start: 12,
-                      end: 12,
-                      bottom: 12 + MediaQuery.paddingOf(context).bottom,
-                      child: WordRangePanel(key: _panelKey, controller: _words),
+                    Positioned.fill(
+                      child: WordRangePanelLayer(
+                        controller: _words,
+                        selection: _selectionBounds,
+                        onMore: () {
+                          final start = _words.range?.start;
+                          final ayah = items
+                              .where((item) => item.number == start?.ayah)
+                              .firstOrNull;
+                          if (ayah != null) unawaited(_select(ayah));
+                        },
+                      ),
                     ),
+                  if (_loupe case final point?) WordRangeLoupe(point: point),
                 ],
               ),
             ),
@@ -394,6 +406,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         if (notification is ScrollStartNotification &&
             notification.dragDetails != null) {
           _readerWasDragged = true;
+        }
+        if (notification is ScrollUpdateNotification && _words.range != null) {
+          _reportBounds();
         }
         if (notification is ScrollEndNotification && !_restoringPosition) {
           unawaited(_persistTopVisibleAyah(items));

@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show mapEquals;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -146,7 +147,6 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
     this.wordRange,
     this.playingWord,
     this.onWordRange,
-    this.onOpenWord,
     this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
@@ -163,11 +163,11 @@ class FoundationMushafPageContent extends ConsumerStatefulWidget {
   final QuranWordRange? wordRange;
   final QuranWord? playingWord;
 
-  /// Long press and drag selects words; null keeps the long press to [onOpen].
+  /// A long press selects its word and a drag from it the words up to the
+  /// finger; a tap on an ayah number then opens its menu. Null keeps the long
+  /// press to [onOpen].
   final FoundationWordRangeChanged? onWordRange;
 
-  /// A long press released on a word, where [onWordRange] is set.
-  final FoundationWordTap? onOpenWord;
   final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
@@ -261,7 +261,6 @@ class _FoundationContentState
         wordRange: widget.wordRange,
         playingWord: widget.playingWord,
         onWordRange: widget.onWordRange,
-        onOpenWord: widget.onOpenWord,
         surahs: widget.surahs,
         excerpt: widget.excerpt,
       );
@@ -333,7 +332,6 @@ class FoundationPageCanvas extends StatefulWidget {
     this.wordRange,
     this.playingWord,
     this.onWordRange,
-    this.onOpenWord,
     this.highlightColors = const <QuranAyahReference, String>{},
     this.surahs = const [],
     this.excerpt = false,
@@ -350,7 +348,6 @@ class FoundationPageCanvas extends StatefulWidget {
   final QuranWordRange? wordRange;
   final QuranWord? playingWord;
   final FoundationWordRangeChanged? onWordRange;
-  final FoundationWordTap? onOpenWord;
   final Map<QuranAyahReference, String> highlightColors;
   final List<Surah> surahs;
   final bool excerpt;
@@ -361,9 +358,8 @@ class FoundationPageCanvas extends StatefulWidget {
 class _FoundationCanvasState extends State<FoundationPageCanvas> {
   FoundationPageLayout? _layout;
 
-  /// The word a long press began on, and whether it has become a drag.
-  _WordPaint? _pressed;
-  var _ranging = false;
+  /// The word a long press selected, which a drag extends the words from.
+  QuranWord? _anchor;
 
   /// Where the finger pulls the selection, for the magnifier above it.
   Offset? _loupe;
@@ -532,70 +528,74 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
       }
       _WordPaint? at(Offset point) =>
           layout.words.where((w) => w.rect.contains(point)).firstOrNull;
-      return GestureDetector(
+      void tapUp(TapUpDetails details) {
+        final selecting = widget.onWordRange != null;
+        final word = at(details.localPosition);
+        final position = word?.position;
+        // An ayah number opens the ayah's menu.
+        if (selecting && word != null && position == null) {
+          widget.onOpen(word.reference);
+          return;
+        }
+        // A tap beside selected words only clears them, as with text.
+        if (selecting && widget.wordRange != null) {
+          widget.onBackgroundTap();
+          return;
+        }
+        if (word == null) {
+          widget.onBackgroundTap();
+        } else if (position == null ||
+            widget.onSelectWord?.call(word.reference, position) != true) {
+          widget.onSelect(word.reference);
+        }
+      }
+
+      void longPressStart(LongPressStartDetails details) {
+        final word = at(details.localPosition);
+        if (word == null) return;
+        final anchor = _wordOf(word);
+        if (widget.onWordRange == null || anchor == null) {
+          widget.onOpen(word.reference);
+          return;
+        }
+        _anchor = anchor;
+        wordRangePulling.value = true;
+        Feedback.forLongPress(context);
+        widget.onWordRange!(QuranWordRange.single(anchor), 1);
+      }
+
+      void longPressMove(LongPressMoveUpdateDetails details) {
+        final anchor = _anchor;
+        if (anchor == null) return;
+        setState(() => _loupe = details.localPosition);
+        _extend(layout, anchor, details.localPosition);
+      }
+
+      void longPressEnd() {
+        if (_anchor == null) return;
+        _anchor = null;
+        wordRangePulling.value = false;
+        if (_loupe != null) setState(() => _loupe = null);
+      }
+
+      return RawGestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTapUp: (details) {
-          // A tap beside selected words only clears them, as with text.
-          if (widget.wordRange != null && widget.onWordRange != null) {
-            widget.onBackgroundTap();
-            return;
-          }
-          final word = at(details.localPosition);
-          final position = word?.position;
-          if (word == null) {
-            widget.onBackgroundTap();
-          } else if (position == null ||
-              widget.onSelectWord?.call(word.reference, position) != true) {
-            widget.onSelect(word.reference);
-          }
+        gestures: <Type, GestureRecognizerFactory>{
+          TapGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+                TapGestureRecognizer.new,
+                (recognizer) => recognizer.onTapUp = tapUp,
+              ),
+          LongPressGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+                () => LongPressGestureRecognizer(duration: wordPressDuration),
+                (recognizer) => recognizer
+                  ..onLongPressStart = longPressStart
+                  ..onLongPressMoveUpdate = longPressMove
+                  ..onLongPressEnd = ((_) => longPressEnd())
+                  ..onLongPressCancel = longPressEnd,
+              ),
         },
-        onLongPressStart: (details) {
-          final word = at(details.localPosition);
-          if (widget.onWordRange == null) {
-            if (word != null) widget.onOpen(word.reference);
-            return;
-          }
-          _pressed = word;
-          _ranging = false;
-        },
-        // With word selection the menu opens when the finger lifts without
-        // moving; moving it to another word selects the words between.
-        onLongPressMoveUpdate: widget.onWordRange == null
-            ? null
-            : (details) {
-                final anchor = _wordOf(_pressed);
-                if (anchor == null) return;
-                if (!_ranging) {
-                  if (_wordOf(_nearest(layout, details.localPosition)) ==
-                      anchor) {
-                    return;
-                  }
-                  _ranging = true;
-                  wordRangePulling.value = true;
-                  unawaited(HapticFeedback.selectionClick());
-                }
-                setState(() => _loupe = details.localPosition);
-                _extend(layout, anchor, details.localPosition);
-              },
-        onLongPressEnd: widget.onWordRange == null
-            ? null
-            : (_) {
-                final pressed = _pressed;
-                _pressed = null;
-                if (_loupe != null) setState(() => _loupe = null);
-                if (_ranging) {
-                  _ranging = false;
-                  wordRangePulling.value = false;
-                  return;
-                }
-                if (pressed == null) return;
-                final position = pressed.position;
-                if (position == null ||
-                    widget.onOpenWord?.call(pressed.reference, position) !=
-                        true) {
-                  widget.onOpen(pressed.reference);
-                }
-              },
         child: Stack(
           clipBehavior: Clip.none,
           children: <Widget>[
@@ -613,30 +613,7 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
             ..._handles(layout),
             if (widget.wordRange != null && widget.onWordRange != null)
               _AfterLayout(() => _reportBounds(layout)),
-            if (_loupe case final point?)
-              Positioned(
-                left: point.dx - 64,
-                top: point.dy - 112,
-                child: const IgnorePointer(
-                  child: RawMagnifier(
-                    size: Size(128, 60),
-                    magnificationScale: 1.6,
-                    focalPointOffset: Offset(0, 82),
-                    decoration: MagnifierDecoration(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(30)),
-                      ),
-                      shadows: <BoxShadow>[
-                        BoxShadow(
-                          color: Color(0x40000000),
-                          blurRadius: 14,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            if (_loupe case final point?) WordRangeLoupe(point: point),
           ],
         ),
       );

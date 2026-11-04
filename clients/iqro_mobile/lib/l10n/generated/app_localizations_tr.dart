@@ -2439,6 +2439,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tajweedAudioError => 'Kelime çalınamadı.';
 
   @override
+  String get tajweedAudioUnavailable =>
+      'Hiçbir kârinin bu kelimeler için zamanlaması yok, tek başına çalınamazlar. Ayetin tamamını dinleyebilirsiniz.';
+
+  @override
   String get tajweedBreakdown => 'Tecvid incelemesi';
 
   @override
@@ -3365,10 +3369,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listenWord => 'Kelimeyi dinle';
 
   @override
-  String get selectWords => 'Kelimeleri seç';
+  String get listenSelection => 'Seçimi dinle';
 
   @override
-  String get listenSelection => 'Seçimi dinle';
+  String get wordRangeWord => 'Kelime';
+
+  @override
+  String get ayahMenu => 'Ayet menüsü';
+
+  @override
+  String get tajweedSelectFrom => 'Buradan seç';
 
   @override
   String wordAt(String ayah, int position) {
@@ -3406,9 +3416,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get wordTimingsUnavailable =>
       'Bu kârinin burada kelime kelime zamanlaması yok; bu ayet yalnızca tamamen dinlenebilir. Bu zamanlama her kâride yok, bazılarında da her ayette yok.';
-
-  @override
-  String get wordTimingsChooseReciter => 'Aşağıdan başka bir kâri seçin.';
 
   @override
   String wordRangeTeachingVoice(String reciter) {

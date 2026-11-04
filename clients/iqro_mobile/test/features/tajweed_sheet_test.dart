@@ -14,6 +14,7 @@ import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/native_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
+import 'package:iqro_mobile/features/quran/word_range.dart';
 import 'package:iqro_mobile/features/tajweed/tajweed_models.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
@@ -159,21 +160,54 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('without the word timing there is no listen button', (
-    tester,
-  ) async {
+  testWidgets('without any voice for the words the button stays and says '
+      'why', (tester) async {
     await _pumpMushaf(tester, timings: const {});
     await tester.tapAt(_wordCenter(tester, 2));
     await _settle(tester);
     expect(find.text('Таджвид в слове'), findsOneWidget);
-    expect(find.byKey(const ValueKey('tajweed-listen')), findsNothing);
-    expect(find.text('Послушать фрагмент'), findsNothing);
+    final listen = find.byKey(const ValueKey('tajweed-listen'));
+    expect(listen, findsOneWidget);
+    expect(tester.widget<FilledButton>(listen).onPressed, isNull);
+    expect(
+      find.byKey(const ValueKey('tajweed-audio-unavailable')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('listen plays exactly the word, slower when 0.75× is on', (
+  testWidgets('every coloured word of the page has a listen button', (
     tester,
   ) async {
+    await _pumpMushaf(tester, timings: _allTimings);
+    final page = TajweedPage.fromJson(tajweedPage604Json, 604);
+    final words = <TajweedWord>[
+      for (final ayah in page.ayahs)
+        for (final word in ayah.words)
+          if (word.rules.isNotEmpty) word,
+    ];
+    // Within a word (qalqala, madd) and across two words (idgham).
+    expect(
+      words.expand((word) => word.rules.map((rule) => rule.code)).toSet(),
+      page.rules.toSet(),
+    );
+    for (final word in words) {
+      await tester.tapAt(_wordCenter(tester, word.position));
+      await _settle(tester);
+      final listen = find.byKey(const ValueKey('tajweed-listen'));
+      expect(listen, findsOneWidget, reason: 'word ${word.position}');
+      expect(
+        tester.widget<FilledButton>(listen).onPressed,
+        isNotNull,
+        reason: 'word ${word.position}',
+      );
+      await tester.tap(find.byTooltip('Закрыть'));
+      await _settle(tester);
+    }
+  });
+
+  testWidgets('listen plays the word with the one its idgham joins, slower '
+      'when 0.75× is on', (tester) async {
     final harness = await _pumpMushaf(tester);
     await harness.audio.loadStandalone(
       id: 'dua:1',
@@ -183,7 +217,7 @@ void main() {
     await tester.tapAt(_wordCenter(tester, 2));
     await _settle(tester);
 
-    expect(find.text('Послушать фрагмент'), findsOneWidget);
+    expect(find.text('Прослушать фрагмент'), findsOneWidget);
     final slow = find.byKey(const ValueKey('tajweed-slow'));
     expect(tester.widget<FilterChip>(slow).selected, isFalse);
     await tester.tap(slow);
@@ -201,20 +235,66 @@ void main() {
     final source = harness.engine.sources.last as ClippingAudioSource;
     expect(source.child.uri, Uri.parse('https://cdn.example/112.mp3'));
     expect(source.start, const Duration(milliseconds: 9600));
-    expect(source.end, const Duration(milliseconds: 10100));
+    // The idgham of word 2 continues into word 3: both words sound.
+    expect(source.end, const Duration(milliseconds: 10600));
     expect(harness.engine.speed, .75);
     expect(harness.engine.stopCalls, greaterThan(stopsBefore));
     expect(harness.repository.requested, ('recitation-1', 112, 4));
     expect(
       harness.audio.state.standalone?.mediaItem.id,
-      'tajweed:recitation-1:112:4:2',
+      'tajweed:recitation-1:112:4:2-3',
     );
     expect(find.text('Остановить'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('tajweed-listen')));
     await _settle(tester);
     expect(harness.audio.state.standalone, isNull);
-    expect(find.text('Послушать фрагмент'), findsOneWidget);
+    expect(find.text('Прослушать фрагмент'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('listen and «Select from here» come first on the card', (
+    tester,
+  ) async {
+    final harness = await _pumpMushaf(tester, selectsWords: true);
+    await tester.tapAt(_wordCenter(tester, 2));
+    await _settle(tester);
+
+    final listen = find.byKey(const ValueKey('tajweed-listen'));
+    final selectFrom = find.byKey(const ValueKey('tajweed-select-from'));
+    expect(listen, findsOneWidget);
+    expect(selectFrom, findsOneWidget);
+    expect(
+      tester.getRect(listen).bottom,
+      lessThan(tester.getRect(find.text('Почему здесь').first).top),
+    );
+
+    await tester.tap(selectFrom);
+    await _settle(tester);
+    expect(harness.ranges, [const QuranWordRange.single(QuranWord(112, 4, 2))]);
+    expect(find.text('Таджвид в слове'), findsNothing);
+  });
+
+  testWidgets('without the chosen reciter\'s timing a stand-in voice plays', (
+    tester,
+  ) async {
+    final harness = await _pumpMushaf(
+      tester,
+      timings: const {},
+      standIns: {'qf-6-murattal': _defaultTimings},
+    );
+    await tester.tapAt(_wordCenter(tester, 2));
+    await _settle(tester);
+
+    expect(find.byKey(const ValueKey('tajweed-voice')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('tajweed-listen')));
+    await _settle(tester);
+    expect(
+      harness.audio.state.standalone?.mediaItem.id,
+      'tajweed:qf-6-murattal:112:4:2-3',
+    );
+    final source = harness.engine.sources.last as ClippingAudioSource;
+    expect(source.start, const Duration(milliseconds: 9600));
     expect(tester.takeException(), isNull);
   });
 
@@ -261,7 +341,7 @@ void main() {
             .toPlainText(),
         'يَكُن لَّهُۥ',
       );
-      expect(find.text('Послушать фрагмент'), findsOneWidget);
+      expect(find.text('Прослушать фрагмент'), findsOneWidget);
       await tester.tap(find.byTooltip('Закрыть'));
       await _settle(tester);
 
@@ -314,6 +394,19 @@ final _defaultTimings = {
     start: const Duration(milliseconds: 9600),
     end: const Duration(milliseconds: 10100),
   ),
+  3: (
+    start: const Duration(milliseconds: 10100),
+    end: const Duration(milliseconds: 10600),
+  ),
+};
+
+/// Timings of every word of 112:4.
+final _allTimings = {
+  for (var position = 1; position <= 6; position++)
+    position: (
+      start: Duration(milliseconds: 9000 + position * 500),
+      end: Duration(milliseconds: 9500 + position * 500),
+    ),
 };
 
 typedef _Harness = ({
@@ -322,6 +415,7 @@ typedef _Harness = ({
   AudioController audio,
   _Engine engine,
   _AudioRepository repository,
+  List<QuranWordRange> ranges,
 });
 
 Future<_Harness> _pumpMushaf(
@@ -329,6 +423,8 @@ Future<_Harness> _pumpMushaf(
   bool tajweed = true,
   int mushafId = 19,
   Map<int, ({Duration start, Duration end})>? timings,
+  Map<String, Map<int, ({Duration start, Duration end})>> standIns = const {},
+  bool selectsWords = false,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(400, 900);
@@ -345,7 +441,11 @@ Future<_Harness> _pumpMushaf(
   final engine = _Engine();
   final audio = AudioController(engine: engine);
   addTearDown(audio.dispose);
-  final repository = _AudioRepository(timings ?? _defaultTimings);
+  final repository = _AudioRepository(
+    timings ?? _defaultTimings,
+    standIns: standIns,
+  );
+  final ranges = <QuranWordRange>[];
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -378,6 +478,7 @@ Future<_Harness> _pumpMushaf(
             onScale: (_) {},
             onTajweedWord: tajweedWords.add,
             tajweedRecitation: () async => 'recitation-1',
+            onWordRange: selectsWords ? (range, _) => ranges.add(range) : null,
           ),
         ),
       ),
@@ -390,6 +491,7 @@ Future<_Harness> _pumpMushaf(
     audio: audio,
     engine: engine,
     repository: repository,
+    ranges: ranges,
   );
 }
 
@@ -492,9 +594,29 @@ class _Quran implements QuranRepository {
 }
 
 class _AudioRepository implements AudioRepository {
-  _AudioRepository(this.timings);
+  _AudioRepository(this.timings, {this.standIns = const {}});
   final Map<int, ({Duration start, Duration end})> timings;
+
+  /// The timings of other recitations, by code (also their id).
+  final Map<String, Map<int, ({Duration start, Duration end})>> standIns;
   (String, int, int)? requested;
+
+  @override
+  Future<List<Recitation>> recitationsForRole(
+    AudioRecitationRole role, {
+    bool forceRefresh = false,
+  }) async => <Recitation>[
+    for (final code in standIns.keys)
+      Recitation.fromJson(<String, Object?>{
+        'id': code,
+        'code': code,
+        'style': 'murattal',
+        'reciter': {'id': code, 'name_en': 'al-Husary'},
+        'rights': {'stream': true},
+        'coverage': {'surah_count': 114},
+        'capabilities': {'listen': true, 'ayah_playback': true},
+      }),
+  ];
 
   @override
   Future<AyahPlayback> ayahPlayback({
@@ -512,7 +634,7 @@ class _AudioRepository implements AudioRepository {
         duration: const Duration(minutes: 1),
         offlineDownloadAllowed: false,
       ),
-      words: timings,
+      words: standIns[recitationId] ?? timings,
     );
   }
 

@@ -88,3 +88,33 @@ export function wordRangeCount(range: QuranWordRange, wordsInAyah: (ayah: number
   }
   return count;
 }
+
+type Box = { top: number; bottom: number; left: number; right: number };
+
+/** How far a handle's knob and its touch target reach under the selection. */
+export const WORD_RANGE_HANDLE_REACH = 32;
+const BAR_MARGIN = 12;
+const BAR_GAP = 10;
+
+/**
+ * Where the selection bar's top-left corner goes in a viewport of `size`:
+ * above `selection`, else under it and its handles, else at the bottom.
+ * Centred on the selection and kept off the sides, as in the app.
+ */
+export function wordRangeBarPlace(
+  selection: Box | null,
+  size: { width: number; height: number },
+  bar: { width: number; height: number },
+  insets: { top: number; bottom: number } = { top: 0, bottom: 0 },
+): { x: number; y: number } {
+  const bottom = size.height - insets.bottom - BAR_MARGIN - bar.height;
+  const visible = selection !== null && selection.bottom > 0 && selection.top < size.height;
+  const centre = visible ? (selection.left + selection.right) / 2 : size.width / 2;
+  const x = Math.min(Math.max(centre - bar.width / 2, BAR_MARGIN), Math.max(BAR_MARGIN, size.width - BAR_MARGIN - bar.width));
+  if (!visible) return { x, y: bottom };
+  const above = selection.top - BAR_GAP - bar.height;
+  if (above >= insets.top + BAR_MARGIN) return { x, y: above };
+  const below = selection.bottom + WORD_RANGE_HANDLE_REACH + BAR_GAP;
+  if (below <= bottom) return { x, y: below };
+  return { x, y: bottom };
+}

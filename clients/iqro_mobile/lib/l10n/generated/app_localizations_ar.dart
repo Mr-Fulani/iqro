@@ -2453,6 +2453,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tajweedAudioError => 'تعذّر تشغيل الكلمة.';
 
   @override
+  String get tajweedAudioUnavailable =>
+      'لا توجد لدى أي قارئ توقيتات هذه الكلمات، فلا يمكن تشغيلها وحدها. يمكنك الاستماع إلى الآية كاملة.';
+
+  @override
   String get tajweedBreakdown => 'شرح التجويد';
 
   @override
@@ -3381,10 +3385,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listenWord => 'استمع إلى الكلمة';
 
   @override
-  String get selectWords => 'تحديد الكلمات';
+  String get listenSelection => 'استمع إلى المحدد';
 
   @override
-  String get listenSelection => 'استمع إلى المحدد';
+  String get wordRangeWord => 'الكلمة';
+
+  @override
+  String get ayahMenu => 'قائمة الآية';
+
+  @override
+  String get tajweedSelectFrom => 'التحديد من هنا';
 
   @override
   String wordAt(String ayah, int position) {
@@ -3422,9 +3432,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get wordTimingsUnavailable =>
       'لا يوجد هنا توقيت للكلمات لهذا القارئ، فلا تُسمع هذه الآية إلا كاملة. هذا التوقيت ليس متاحًا لكل القرّاء، ولا في كل الآيات عند بعضهم.';
-
-  @override
-  String get wordTimingsChooseReciter => 'اختر قارئًا آخر في الأسفل.';
 
   @override
   String wordRangeTeachingVoice(String reciter) {

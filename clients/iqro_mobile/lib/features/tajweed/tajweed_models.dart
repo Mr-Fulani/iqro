@@ -312,6 +312,20 @@ List<TajweedPart> tajweedJoinedParts(
   ];
 }
 
+/// The words a word card plays, by `position_in_verse`: [word] and the
+/// neighbours its rules continue into (an idgham or ikhfa across two words).
+({int first, int last}) tajweedWordSpan(TajweedAyah ayah, TajweedWord word) {
+  var first = word.position;
+  var last = word.position;
+  for (final fragment in word.rules) {
+    for (final part in tajweedJoinedParts(ayah, word, fragment)) {
+      if (part.word.position < first) first = part.word.position;
+      if (part.word.position > last) last = part.word.position;
+    }
+  }
+  return (first: first, last: last);
+}
+
 /// Every place [code] occurs; a rule spanning two words is one occurrence.
 List<List<TajweedPart>> tajweedOccurrences(
   Iterable<TajweedAyah> ayahs,

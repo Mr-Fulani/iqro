@@ -10,7 +10,6 @@ import '../../core/analytics/analytics.dart';
 import '../../core/audio/audio_controller.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
-import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
 import '../audio/recitation_style_label.dart';
 import '../audio/audio_repository.dart';
@@ -21,7 +20,6 @@ import 'mushaf_paper.dart';
 import 'mushaf_ayah_excerpt.dart';
 import 'mushaf_edition.dart';
 import 'quran_models.dart';
-import 'word_range.dart';
 import 'quran_repository.dart';
 import '../../core/share/content_share.dart';
 import 'ayah_share.dart';
@@ -34,21 +32,11 @@ class AyahActionSheet extends ConsumerStatefulWidget {
     required this.page,
     this.onTajweedBreakdown,
     this.onMemorize,
-    this.word,
-    this.onListenWord,
-    this.onSelectWords,
     super.key,
   });
 
   final QuranAyahReference reference;
   final int page;
-
-  /// The `position_in_verse` of the long-pressed word the menu opened on.
-  final int? word;
-
-  /// Play [word], or start a selection of words from it; both close the menu.
-  final VoidCallback? onListenWord;
-  final VoidCallback? onSelectWords;
 
   /// Opens the ayah's tajweed breakdown; null where the page has no tajweed.
   final VoidCallback? onTajweedBreakdown;
@@ -76,8 +64,6 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   int? _tafsirSourceId;
   String? _recitationId;
 
-  /// Whether each reciter has the timing of [AyahActionSheet.word].
-  final _wordTimed = <String, Future<Recitation?>>{};
   var _dependenciesReady = false;
   var _audioRequest = 0;
   var _loadRequest = 0;
@@ -220,10 +206,6 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
                 MushafAyahExcerpt(ayah: details.ayah!, page: widget.page)
               else
                 const MushafAyahText(text: ''),
-              if (widget.word case final word?) ...<Widget>[
-                const SizedBox(height: 12),
-                _wordBlock(details, word),
-              ],
               const SizedBox(height: 12),
               _actionRow(playingThis, loadedThis),
               const SizedBox(height: 12),
@@ -241,184 +223,6 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           ),
         ),
       ],
-    );
-  }
-
-  /// The voice that plays [word]: the chosen reciter when it has the word's
-  /// timing, else the teaching al-Husary; null when neither has it.
-  Future<Recitation?> _wordTiming(
-    _AyahDetails details,
-    String recitationId,
-    int word,
-  ) => _wordTimed.putIfAbsent(recitationId, () async {
-    final repository = ref.read(audioRepositoryProvider);
-    final chosen = details.recitations
-        .where((item) => item.id == recitationId)
-        .firstOrNull;
-    for (final voice in <Recitation?>[
-      chosen,
-      for (final other in wordTimingFallbackRecitations(details.recitations))
-        if (other.id != recitationId) other,
-    ]) {
-      if (voice == null) continue;
-      try {
-        final playback = await repository.ayahPlayback(
-          recitationId: voice.id,
-          surah: widget.reference.surah,
-          ayah: widget.reference.ayah,
-        );
-        if (playback.words[word] != null) return voice;
-      } on Object {
-        continue;
-      }
-    }
-    unawaited(Future<void>(() => _wordTimed.remove(recitationId)));
-    return null;
-  });
-
-  /// The long-pressed word: listen to it, or select words from it.
-  Widget _wordBlock(_AyahDetails details, int word) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final words = details.ayah == null
-        ? const <String>[]
-        : ayahWords(details.ayah!);
-    final recitationId = _recitationId;
-    return FutureBuilder<Recitation?>(
-      key: ValueKey('ayah-word-$recitationId'),
-      future: recitationId == null
-          ? Future<Recitation?>.value()
-          : _wordTiming(details, recitationId, word),
-      builder: (context, snapshot) {
-        final checking = snapshot.connectionState != ConnectionState.done;
-        final voice = snapshot.data;
-        final timed = voice != null;
-        final teaching = timed && voice.id != recitationId;
-        return DecoratedBox(
-          key: const ValueKey('ayah-word-block'),
-          decoration: BoxDecoration(
-            color: timed || checking
-                ? scheme.primaryContainer.withValues(alpha: .45)
-                : scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: timed ? scheme.primary : theme.dividerColor,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Text(
-                      context.l10n.wordNumberOf(word, words.length),
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: timed ? scheme.primary : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        word <= words.length ? words[word - 1] : '',
-                        textAlign: TextAlign.end,
-                        textDirection: TextDirection.rtl,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontFamily: IqroTheme.arabicFontFamily,
-                          color: IqroTheme.arabicInk(context),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: FilledButton.icon(
-                        key: const ValueKey('ayah-listen-word'),
-                        onPressed: timed && widget.onListenWord != null
-                            ? () {
-                                Navigator.pop(context);
-                                widget.onListenWord!();
-                              }
-                            : null,
-                        icon: checking
-                            ? const SizedBox.square(
-                                dimension: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.play_arrow),
-                        label: Text(context.l10n.listenWord),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        key: const ValueKey('ayah-select-words'),
-                        onPressed: timed && widget.onSelectWords != null
-                            ? () {
-                                Navigator.pop(context);
-                                widget.onSelectWords!();
-                              }
-                            : null,
-                        icon: const Icon(Icons.format_list_numbered_rtl),
-                        label: Text(context.l10n.selectWords),
-                      ),
-                    ),
-                  ],
-                ),
-                if (teaching) ...<Widget>[
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Icon(
-                        Icons.record_voice_over_outlined,
-                        size: 18,
-                        color: scheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          wordRangeVoiceNote(context, voice),
-                          key: const ValueKey('ayah-word-teaching-voice'),
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                if (!checking && !timed) ...<Widget>[
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: scheme.secondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${context.l10n.wordTimingsUnavailable} '
-                          '${context.l10n.wordTimingsChooseReciter}',
-                          key: const ValueKey('ayah-word-unavailable'),
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 

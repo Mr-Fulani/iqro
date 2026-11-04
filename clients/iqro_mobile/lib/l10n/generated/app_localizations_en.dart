@@ -2476,6 +2476,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tajweedAudioError => 'Could not play this word.';
 
   @override
+  String get tajweedAudioUnavailable =>
+      'No reciter has timings for these words, so they cannot play alone. You can listen to the whole ayah.';
+
+  @override
   String get tajweedBreakdown => 'Tajweed breakdown';
 
   @override
@@ -3411,10 +3415,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listenWord => 'Listen to the word';
 
   @override
-  String get selectWords => 'Select words';
+  String get listenSelection => 'Listen to the selection';
 
   @override
-  String get listenSelection => 'Listen to the selection';
+  String get wordRangeWord => 'Word';
+
+  @override
+  String get ayahMenu => 'Ayah menu';
+
+  @override
+  String get tajweedSelectFrom => 'Select from here';
 
   @override
   String wordAt(String ayah, int position) {
@@ -3452,9 +3462,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wordTimingsUnavailable =>
       'There is no word-by-word timing here for this reciter, so this ayah plays only as a whole. Not every reciter has it, and some not in every ayah.';
-
-  @override
-  String get wordTimingsChooseReciter => 'Choose another reciter below.';
 
   @override
   String wordRangeTeachingVoice(String reciter) {

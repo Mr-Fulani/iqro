@@ -1,8 +1,7 @@
-import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'word_range.dart';
 
@@ -267,24 +266,33 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
       return Semantics(
         label: widget.words.join(' '),
         textDirection: TextDirection.rtl,
-        child: GestureDetector(
-          onLongPressStart: (details) {
-            final found = _nearest(details.globalPosition);
-            if (found == null) return;
-            _anchor = found.word;
-            wordRangePulling.value = true;
-            unawaited(HapticFeedback.selectionClick());
-            widget.onRange(QuranWordRange.single(found.word));
+        child: RawGestureDetector(
+          gestures: <Type, GestureRecognizerFactory>{
+            LongPressGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                  LongPressGestureRecognizer
+                >(
+                  () => LongPressGestureRecognizer(duration: wordPressDuration),
+                  (recognizer) => recognizer
+                    ..onLongPressStart = (details) {
+                      final found = _nearest(details.globalPosition);
+                      if (found == null) return;
+                      _anchor = found.word;
+                      wordRangePulling.value = true;
+                      Feedback.forLongPress(context);
+                      widget.onRange(QuranWordRange.single(found.word));
+                    }
+                    ..onLongPressMoveUpdate = (details) {
+                      final anchor = _anchor;
+                      if (anchor != null) _pull(details.globalPosition, anchor);
+                    }
+                    ..onLongPressEnd = (_) {
+                      _anchor = null;
+                      wordRangePulling.value = false;
+                    }
+                    ..onLongPressCancel = () => wordRangePulling.value = false,
+                ),
           },
-          onLongPressMoveUpdate: (details) {
-            final anchor = _anchor;
-            if (anchor != null) _pull(details.globalPosition, anchor);
-          },
-          onLongPressEnd: (_) {
-            _anchor = null;
-            wordRangePulling.value = false;
-          },
-          onLongPressCancel: () => wordRangePulling.value = false,
           child: Stack(
             clipBehavior: Clip.none,
             children: <Widget>[

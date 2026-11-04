@@ -91,7 +91,7 @@ void main() {
 
     await _next(tester);
     expect(harness.audio.state.standalone, isNull);
-    expect(find.text('Послушать фрагмент'), findsOneWidget);
+    expect(find.text('Прослушать фрагмент'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('tajweed-listen')));
     await _settle(tester);

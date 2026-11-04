@@ -4,6 +4,7 @@ import type { TajweedAyah, TajweedReference } from "./api.ts";
 import {
   highlightRuns,
   joinedParts,
+  wordSpan,
   joinedRuns,
   arabicParts,
   presentRules,
@@ -60,6 +61,13 @@ test("idgham crossing a word boundary shows both words in reading order", () => 
   assert.deepEqual(fromFirst.map((part) => part.word.text), ["يَكُن", "لَّهُۥ"]);
   assert.deepEqual(fromSecond.map((part) => part.word.text), ["يَكُن", "لَّهُۥ"]);
   assert.deepEqual(fromSecond.map((part) => part.fragment.start), [3, 0]);
+});
+
+test("a word card plays the words its rules join, else the word alone", () => {
+  const [first, second, third] = IKHLAS_4.words;
+  assert.deepEqual(wordSpan(IKHLAS_4, first), { first: first.position, last: second.position });
+  assert.deepEqual(wordSpan(IKHLAS_4, second), { first: first.position, last: second.position });
+  if (third) assert.deepEqual(wordSpan(IKHLAS_4, third), { first: third.position, last: third.position });
 });
 
 test("occurrences count a joined rule once and keep ayah order", () => {

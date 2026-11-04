@@ -99,7 +99,7 @@ test("the tajweed course plays its examples with al-Husary's Muallim, whatever t
   await page.keyboard.press("ArrowRight");
   await expect(page.getByTestId("tajweed-lesson-counter")).toHaveText("Шаг 3 из 6: Пример 1 из 3");
   const step = lesson.locator(".tajweed-lesson-step:not([hidden])");
-  await step.getByRole("button", { name: "Послушать фрагмент" }).click();
+  await step.getByRole("button", { name: "Прослушать фрагмент" }).click();
 
   await expect.poll(() => timingRequests.length).toBeGreaterThan(0);
   expect(timingRequests[0]).toContain(`/api/v1/recitations/${muallim.id}/ayahs/`);

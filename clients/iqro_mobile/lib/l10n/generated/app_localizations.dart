@@ -4452,6 +4452,12 @@ abstract class AppLocalizations {
   /// **'Could not play this word.'**
   String get tajweedAudioError;
 
+  /// No description provided for @tajweedAudioUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No reciter has timings for these words, so they cannot play alone. You can listen to the whole ayah.'**
+  String get tajweedAudioUnavailable;
+
   /// No description provided for @tajweedBreakdown.
   ///
   /// In en, this message translates to:
@@ -6018,17 +6024,29 @@ abstract class AppLocalizations {
   /// **'Listen to the word'**
   String get listenWord;
 
-  /// No description provided for @selectWords.
-  ///
-  /// In en, this message translates to:
-  /// **'Select words'**
-  String get selectWords;
-
   /// No description provided for @listenSelection.
   ///
   /// In en, this message translates to:
   /// **'Listen to the selection'**
   String get listenSelection;
+
+  /// No description provided for @wordRangeWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Word'**
+  String get wordRangeWord;
+
+  /// No description provided for @ayahMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Ayah menu'**
+  String get ayahMenu;
+
+  /// No description provided for @tajweedSelectFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Select from here'**
+  String get tajweedSelectFrom;
 
   /// No description provided for @wordAt.
   ///
@@ -6089,12 +6107,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There is no word-by-word timing here for this reciter, so this ayah plays only as a whole. Not every reciter has it, and some not in every ayah.'**
   String get wordTimingsUnavailable;
-
-  /// No description provided for @wordTimingsChooseReciter.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose another reciter below.'**
-  String get wordTimingsChooseReciter;
 
   /// No description provided for @wordRangeTeachingVoice.
   ///
