@@ -123,47 +123,11 @@ void main() {
     testWidgets('daily cards open source-based subsets and return to topics', (
       tester,
     ) async {
-      const category = DuaCategory(
-        id: 'daily',
-        slug: '027-words-of-remembrance-for-morning-and-evening',
-        title: 'Утром и вечером',
-        entryCount: 24,
-        collection: 'hisn-al-muslim',
-        sourceNumber: 27,
-      );
       await _pumpCatalog(
         tester,
         locale: const Locale('ru'),
-        categories: () async => [category],
-        entries: (identity) async {
-          expect(identity, category.identity);
-          return [
-            for (var number = 75; number <= 98; number++)
-              _entry(
-                id: 'entry-$number',
-                sourceNumber: number,
-                categoryTitle: category.title,
-                meaning: number == 77
-                    ? 'Утром (вечером) — Это читается вечером'
-                    : 'Meaning $number',
-                arabicText: 'نص $number',
-                timeVariants: number == 77
-                    ? const <String, DuaTimeVariant>{
-                        'morning': DuaTimeVariant(
-                          arabicText: 'أصبحنا',
-                          meaning: 'Утренний текст 77',
-                          transliteration: '',
-                        ),
-                        'evening': DuaTimeVariant(
-                          arabicText: 'أمسينا',
-                          meaning: 'Вечерний текст 77',
-                          transliteration: '',
-                        ),
-                      }
-                    : const <String, DuaTimeVariant>{},
-              ),
-          ];
-        },
+        categories: () async => [_dailyChapter],
+        entries: _dailyChapterEntries,
       );
       await tester.tap(find.byKey(const ValueKey('dua-topic-morning')));
       await tester.pumpAndSettle();
@@ -186,6 +150,43 @@ void main() {
       await tester.scrollUntilVisible(find.text('Вечерний текст 77'), 300);
       expect(find.text('أمسينا'), findsOneWidget);
       expect(find.textContaining('Это читается вечером'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a site topic link opens that card\'s feed', (tester) async {
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        home: const DuaScreen(initialTopic: 'morning'),
+        categories: () async => [_dailyChapter],
+        entries: _dailyChapterEntries,
+      );
+
+      expect(find.text('Утренние азкары'), findsWidgets);
+      expect(find.text('Поминание Аллаха утром'), findsOneWidget);
+      expect(find.text('Это ду’а недоступно'), findsNothing);
+      expect(find.text('Meaning 75'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Утренний текст 77'), 300);
+      expect(find.textContaining('Это читается вечером'), findsNothing);
+      // Back leads to the catalog, as from a tapped card.
+      await tester.tap(find.byTooltip('Назад'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('dua-topic-evening')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('an unknown topic link opens the catalog', (tester) async {
+      await _pumpCatalog(
+        tester,
+        locale: const Locale('ru'),
+        home: const DuaScreen(initialTopic: 'no-such-topic'),
+        categories: () async => [_dailyChapter],
+        entries: _dailyChapterEntries,
+      );
+
+      expect(find.byKey(const ValueKey('dua-topic-morning')), findsOneWidget);
+      expect(find.byTooltip('Назад'), findsNothing);
+      expect(find.text('Это ду’а недоступно'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -930,6 +931,48 @@ Future<void> _useNarrowLargeTextView(WidgetTester tester) async {
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+// Chapter 27 of Hisn al-Muslim, behind the morning and evening cards.
+const _dailyChapter = DuaCategory(
+  id: 'daily',
+  slug: '027-words-of-remembrance-for-morning-and-evening',
+  title: 'Утром и вечером',
+  entryCount: 24,
+  collection: 'hisn-al-muslim',
+  sourceNumber: 27,
+);
+
+Future<List<DuaEntry>> _dailyChapterEntries(
+  DuaCategoryIdentity identity,
+) async {
+  expect(identity, _dailyChapter.identity);
+  return [
+    for (var number = 75; number <= 98; number++)
+      _entry(
+        id: 'entry-$number',
+        sourceNumber: number,
+        categoryTitle: _dailyChapter.title,
+        meaning: number == 77
+            ? 'Утром (вечером) — Это читается вечером'
+            : 'Meaning $number',
+        arabicText: 'نص $number',
+        timeVariants: number == 77
+            ? const <String, DuaTimeVariant>{
+                'morning': DuaTimeVariant(
+                  arabicText: 'أصبحنا',
+                  meaning: 'Утренний текст 77',
+                  transliteration: '',
+                ),
+                'evening': DuaTimeVariant(
+                  arabicText: 'أمسينا',
+                  meaning: 'Вечерний текст 77',
+                  transliteration: '',
+                ),
+              }
+            : const <String, DuaTimeVariant>{},
+      ),
+  ];
 }
 
 Future<void> _pumpCatalog(

@@ -23,10 +23,19 @@ import 'dua_topics.dart';
 import 'dua_thematic_icon.dart';
 
 class DuaScreen extends ConsumerStatefulWidget {
-  const DuaScreen({this.initialCollection, this.initialCategory, super.key});
+  const DuaScreen({
+    this.initialCollection,
+    this.initialCategory,
+    this.initialTopic,
+    super.key,
+  });
 
   final String? initialCollection;
   final String? initialCategory;
+
+  /// A topic card's id, as in the site's `/dua/topics/{topic}`; an unknown
+  /// one opens the catalog.
+  final String? initialTopic;
 
   @override
   ConsumerState<DuaScreen> createState() => _DuaScreenState();
@@ -52,6 +61,9 @@ class _DuaScreenState extends ConsumerState<DuaScreen> {
     } else if (category.isNotEmpty) {
       _legacyCategorySlug = category;
     }
+    _topic = duaTopics
+        .where((topic) => topic.id == widget.initialTopic)
+        .firstOrNull;
   }
 
   @override
