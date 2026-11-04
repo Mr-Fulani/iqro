@@ -104,6 +104,8 @@ Production Compose без hot reload и bind-mount исходников опис
 реализации — в [плане и roadmap](docs/roadmap.md).
 Технические доказательства, внешние sign-off и rollback для Quran dataset фиксируются в
 [Quran content acceptance record](docs/quran-content-acceptance.md).
+Картинки-инструкции для пользователей («как пользоваться» каждой функцией) собраны в
+[docs/guides](docs/guides/README.md).
 
 ## Полный локальный стек
 
