@@ -18,6 +18,9 @@ import 'package:home_widget_generator/home_widget_generator.dart';
     },
   ),
   android: HomeWidgetAndroidConfiguration(
+    // The receiver keeps this package when the build adds an application id
+    // suffix (forum.iqro.app.test), so the bridge names it in full.
+    packageName: 'forum.iqro.app',
     // 4×2 cells on launchers before Android 12 (70 × cells − 30 dp); newer
     // ones read targetCellWidth/Height. 140 dp made the widget 3 rows tall.
     minWidth: 250,
