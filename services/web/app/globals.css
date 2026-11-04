@@ -8915,6 +8915,12 @@ svg.track-surah-name-ar {
   box-shadow: var(--shadow-lg);
 }
 
+/* A selection low on a page that cannot scroll gets the bar at the top. */
+.word-range-bar.is-top {
+  top: calc(12px + env(safe-area-inset-top));
+  bottom: auto;
+}
+
 /* While a finger pulls the selection the bar fades, so the words under it show. */
 html[data-word-selecting] .word-range-bar {
   opacity: 0.15;

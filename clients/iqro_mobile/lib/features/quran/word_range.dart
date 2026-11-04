@@ -177,6 +177,25 @@ enum WordRepeat { once, three, forever }
 /// panel fades then, so the words under it show.
 final wordRangePulling = ValueNotifier<bool>(false);
 
+/// Where the selected words are on screen, in global coordinates: a Mushaf
+/// page reports them, so the panel moves up when it would cover them.
+final wordRangeBounds = ValueNotifier<Rect?>(null);
+
+/// Whether the panel goes to the top of [screen]: when at the bottom it
+/// would cover [selection] and there is room for it above the selection.
+bool wordRangePanelOnTop({
+  required Rect? selection,
+  required Size screen,
+  required EdgeInsets padding,
+  required double panelHeight,
+}) {
+  if (selection == null) return false;
+  const margin = 12.0;
+  final bottomTop = screen.height - padding.bottom - margin - panelHeight;
+  if (selection.bottom <= bottomTop - 8) return false;
+  return selection.top >= padding.top + margin + panelHeight + 8;
+}
+
 const wordRangeSelectionColor = Color(0x380B6B57);
 const wordRangePlayingColor = Color(0x8CC49647);
 const wordRangeHandleColor = Color(0xFF0B6B57);
@@ -245,6 +264,7 @@ class WordRangeController extends ChangeNotifier {
   }
 
   void clear() {
+    wordRangeBounds.value = null;
     if (_range == null && !active) return;
     _generation++;
     _range = null;

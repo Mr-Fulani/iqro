@@ -399,9 +399,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get read => 'اقرأ';
 
   @override
-  String get savedAutomatically => 'تم حفظ موضعك تلقائيًا';
-
-  @override
   String get nextPrayer => 'الصلاة التالية';
 
   @override

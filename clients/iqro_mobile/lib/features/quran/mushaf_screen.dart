@@ -96,6 +96,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   late final QuranRepository _quranRepository;
   late final LatestAsyncWorkQueue<_PendingPositionSave> _positionSaves;
   late final WordRangeController _words;
+  final _panelKey = GlobalKey();
 
   @override
   void initState() {
@@ -491,11 +492,38 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
               ),
             ),
             if (_words.range != null && !_controlsVisible)
-              PositionedDirectional(
-                start: 12,
-                end: 12,
-                bottom: 12 + MediaQuery.paddingOf(context).bottom,
-                child: WordRangePanel(controller: _words),
+              Positioned.fill(
+                child: ValueListenableBuilder<Rect?>(
+                  valueListenable: wordRangeBounds,
+                  builder: (context, bounds, panel) {
+                    final media = MediaQuery.of(context);
+                    final size =
+                        (_panelKey.currentContext?.findRenderObject()
+                                as RenderBox?)
+                            ?.size;
+                    // The page does not scroll: a selection low on it gets
+                    // the panel at the top instead.
+                    final top = wordRangePanelOnTop(
+                      selection: bounds,
+                      screen: media.size,
+                      padding: media.padding,
+                      panelHeight: size?.height ?? 240,
+                    );
+                    return Stack(
+                      children: <Widget>[
+                        PositionedDirectional(
+                          key: const ValueKey('word-range-panel-place'),
+                          start: 12,
+                          end: 12,
+                          top: top ? 12 + media.padding.top : null,
+                          bottom: top ? null : 12 + media.padding.bottom,
+                          child: panel!,
+                        ),
+                      ],
+                    );
+                  },
+                  child: WordRangePanel(key: _panelKey, controller: _words),
+                ),
               ),
             PositionedDirectional(
               start: 12,

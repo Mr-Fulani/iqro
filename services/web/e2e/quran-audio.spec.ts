@@ -1711,6 +1711,24 @@ test.describe("word selection on a phone", () => {
     await finger(page, from, { x: target.x, y: target.y + from.y - (line.y + line.height / 2) });
   };
 
+  test("the bar never covers the selected words: the text scrolls them above it", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    await expect(page.locator('.qf-mushaf-view[data-mushaf-id="19"]')).toHaveAttribute("data-font-status", "ready");
+    await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
+    await page.getByRole("button", { name: /Текст/ }).click();
+    const word = page.locator('.quran-content-surface .quran-word[data-word-key="6:2:3"]');
+    // The word sits at the bottom of the screen, where the bar will be.
+    await word.evaluate((element) => element.scrollIntoView({ block: "end" }));
+    await word.dblclick();
+    const bar = page.getByTestId("word-range-bar");
+    await expect(bar).toBeVisible();
+    await expect.poll(async () => {
+      const [wordBox, barBox] = await Promise.all([word.boundingBox(), bar.boundingBox()]);
+      return wordBox!.y + wordBox!.height <= barBox!.y;
+    }).toBe(true);
+  });
+
   test("a finger grows the selection, then pulls its handles, in the Mushaf and the text", async ({ page }) => {
     await installTajweedMocks(page);
     await page.goto("/ru/quran?surah=6");

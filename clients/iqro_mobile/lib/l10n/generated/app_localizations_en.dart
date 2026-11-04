@@ -407,9 +407,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get read => 'Read';
 
   @override
-  String get savedAutomatically => 'Position saved automatically';
-
-  @override
   String get nextPrayer => 'Next prayer';
 
   @override

@@ -786,12 +786,6 @@ abstract class AppLocalizations {
   /// **'Read'**
   String get read;
 
-  /// No description provided for @savedAutomatically.
-  ///
-  /// In en, this message translates to:
-  /// **'Position saved automatically'**
-  String get savedAutomatically;
-
   /// No description provided for @nextPrayer.
   ///
   /// In en, this message translates to:
