@@ -1467,6 +1467,19 @@ function QuranContent() {
     });
   }, [ayahs, currentPage, queueReadingPlace]);
 
+  // The text of the place the Mushaf shows.
+  const openText = () => {
+    const target = currentAyahKey;
+    lastMushafLocation.current = { sourceId: selectedFoundationMushafId, ayah: target, page: currentPage };
+    pendingTextAyah.current = target;
+    textReadingAyah.current = target;
+    textScrollIntent.current = false;
+    setSelectedMushafAyah(target);
+    if (target) setSelectedSurah(Number(target.split(":")[0]));
+    if (canonicalPage !== null) setCurrentPage(canonicalPage);
+    setViewMode("text");
+  };
+
   // The ayah's menu, from an ayah number or «⋯» on the selection bar: the
   // actions under the Mushaf, a sheet over the full-screen reader, the card's
   // own buttons in the text.
@@ -1745,6 +1758,7 @@ function QuranContent() {
       hasNotes={translationEnabled || tafsirEnabled}
       hasSession={prayerReadingConfig !== null}
       onImmersiveChange={setIsImmersiveReader}
+      onOpenText={localPositionReady ? openText : undefined}
     >
       <MushafReaderPanel name="session" label={t("quran.readerSession")}>
         {prayerReadingConfig === null ? (
@@ -1799,17 +1813,7 @@ function QuranContent() {
             <button
               className={`btn ${viewMode === "text" ? "btn-primary" : "btn-secondary"}`}
               disabled={!localPositionReady}
-              onClick={() => {
-                const target = currentAyahKey;
-                lastMushafLocation.current = { sourceId: selectedFoundationMushafId, ayah: target, page: currentPage };
-                pendingTextAyah.current = target;
-                textReadingAyah.current = target;
-                textScrollIntent.current = false;
-                setSelectedMushafAyah(target);
-                if (target) setSelectedSurah(Number(target.split(":")[0]));
-                if (canonicalPage !== null) setCurrentPage(canonicalPage);
-                setViewMode("text");
-              }}
+              onClick={openText}
             >
               {t("quran.textView")}
             </button>

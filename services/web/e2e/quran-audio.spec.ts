@@ -1775,6 +1775,19 @@ test.describe("word selection on a phone", () => {
     await expect.poll(() => clear(word)).toBe(true);
   });
 
+  test("the full-screen Mushaf opens the text of the same ayah", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first().click();
+    await page.getByRole("toolbar").getByTestId("reader-open-text").click();
+    const text = page.locator(".quran-content-surface");
+    await expect(text.locator('.quran-word[data-word-key="6:2:1"]')).toBeVisible();
+    await expect(page.locator("#quran-ayah-6-2")).toHaveClass(/is-navigation-target/);
+    await expect(page.locator(".is-reader-immersive")).toHaveCount(0);
+  });
+
   test("an ayah number, or «⋯» on the bar, opens the ayah's actions over the full-screen Mushaf", async ({ page }) => {
     await installTajweedMocks(page);
     await page.goto("/ru/quran?surah=6");

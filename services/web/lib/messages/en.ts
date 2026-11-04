@@ -866,6 +866,7 @@ const en: Messages = {
   "quran.deep.editionDescription": "All published surahs in the {edition} edition: {count} surahs with links to every ayah.",
   "quran.ayahsMeta": "Ayahs: {count} · {revelation} · page {page}",
   "quran.textView": "📜 Text",
+  "quran.openText": "Open the text",
   "quran.mushafView": "📖 Mushaf (p. {page})",
   "quran.edition": "Quran edition",
   "quran.translationToggle": "Translation of meanings",

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
+import 'package:iqro_mobile/core/auth/auth_session.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/core/platform/reader_haptics.dart';
@@ -31,17 +32,11 @@ import 'tajweed_test_data.dart';
 
 void main() {
   testWidgets(
-    'reader menu opens bookmarks and jumps to the mapped Mushaf page',
+    'the ayah menu opens bookmarks and jumps to the mapped Mushaf page',
     (tester) async {
       final harness = await _pump(tester, bookmarks: {'5:84'});
       await _tapAyah(tester, .35);
-      await tester.tap(find.byIcon(Icons.more_horiz));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Заметки'), findsOneWidget);
-      await tester.tap(find.text('Закладки'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await _openBookmarks(tester);
       expect(find.byKey(const ValueKey('bookmark-5-84')), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('bookmark-5-84')));
       await tester.pump();
@@ -55,6 +50,26 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('the bottom left opens the text, the ayah menu holds the rest of '
+      'the old reader menu', (tester) async {
+    await _pump(tester);
+    await _tapAyah(tester, .35);
+    expect(find.byIcon(Icons.more_horiz), findsNothing);
+    expect(find.byKey(const ValueKey('mushaf-open-text')), findsOneWidget);
+    expect(find.byTooltip('Текст'), findsOneWidget);
+    await _openAyahMenu(tester);
+    for (final key in <String>[
+      'mushaf-zoom',
+      'mushaf-bookmarks',
+      'mushaf-notes',
+      'mushaf-now-playing',
+    ]) {
+      await tester.ensureVisible(find.byKey(ValueKey(key)));
+      expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('a swipe reuses the data of the ±2 page window', (tester) async {
     final pageBuilds = <int, int>{};
@@ -109,12 +124,7 @@ void main() {
   testWidgets('empty bookmarks explain how to save an ayah', (tester) async {
     await _pump(tester);
     await _tapAyah(tester, .35);
-    await tester.tap(find.byIcon(Icons.more_horiz));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.text('Закладки'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await _openBookmarks(tester);
     expect(find.textContaining('Пока нет закладок.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -123,12 +133,7 @@ void main() {
     final harness = await _pump(tester, bookmarks: {'5:85'});
     harness.quran.failBookmarkRead = true;
     await _tapAyah(tester, .35);
-    await tester.tap(find.byIcon(Icons.more_horiz));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.text('Закладки'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await _openBookmarks(tester);
     expect(find.text('Не удалось загрузить закладки'), findsOneWidget);
     harness.quran.failBookmarkRead = false;
     await tester.tap(find.byIcon(Icons.refresh_rounded));
@@ -359,6 +364,50 @@ void main() {
   });
 }
 
+/// The ayah menu, from a long press on the ayah (also the button at the
+/// bottom right, while the controls show).
+Future<void> _openAyahMenu(WidgetTester tester) async {
+  // The menu hides the system bars first; the test has no platform for it.
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    SystemChannels.platform,
+    (call) async => null,
+  );
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      null,
+    ),
+  );
+  final detector = find
+      .byWidgetPredicate(
+        (w) => w is GestureDetector && w.onLongPressStart != null,
+      )
+      .first;
+  final box = tester.renderObject<RenderBox>(detector);
+  final layout = MushafRasterLayout.page(
+    page: _page(122),
+    size: box.size,
+    portrait: true,
+  );
+  await tester.longPressAt(
+    box.localToGlobal(layout.displayPoint(const Offset(.5, .35))),
+  );
+  for (var frame = 0; frame < 4; frame++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+}
+
+/// Bookmarks, from the ayah menu: the old reader menu is gone.
+Future<void> _openBookmarks(WidgetTester tester) async {
+  await _openAyahMenu(tester);
+  final bookmarks = find.byKey(const ValueKey('mushaf-bookmarks'));
+  await tester.ensureVisible(bookmarks);
+  await tester.pump();
+  await tester.tap(bookmarks);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+}
+
 Future<void> _tapAyah(WidgetTester tester, double y) async {
   final detector = find
       .byWidgetPredicate(
@@ -476,6 +525,7 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
             }, page),
           ),
         ],
+        sessionProvider.overrideWith((ref) => _SignedOut()),
         localDatabaseProvider.overrideWithValue(database),
         activeAccountScopeKeyProvider.overrideWith(
           (ref) => accountScopeKey(database.accountScope.current!),
@@ -791,6 +841,13 @@ class _Engine implements IqroAudioEngine {
   Stream<PlayerException> get errorStream => const Stream.empty();
   @override
   Future<void> dispose() async {}
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _SignedOut extends StateNotifier<AsyncValue<AuthSession?>>
+    implements SessionController {
+  _SignedOut() : super(const AsyncData(null));
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

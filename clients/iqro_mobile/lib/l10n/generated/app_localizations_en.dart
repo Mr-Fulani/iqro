@@ -602,9 +602,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listenPage => 'Listen to this page';
 
   @override
-  String get tapAyahForDetails => 'Hold an ayah for translation and tafsir';
-
-  @override
   String get audioTitle => 'Listen to the Quran';
 
   @override

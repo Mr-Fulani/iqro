@@ -866,6 +866,7 @@ const ar: Messages = {
   "quran.deep.editionDescription": "جميع السور المنشورة في طبعة {edition}: {count} سورة مع روابط إلى كل آية.",
   "quran.ayahsMeta": "الآيات: {count} · {revelation} · الصفحة {page}",
   "quran.textView": "📜 النص",
+  "quran.openText": "الانتقال إلى النص",
   "quran.mushafView": "📖 المصحف (ص {page})",
   "quran.edition": "طبعة القرآن",
   "quran.translationToggle": "ترجمة المعاني",

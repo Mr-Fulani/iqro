@@ -866,6 +866,7 @@ const tr: Messages = {
   "quran.deep.editionDescription": "{edition} baskısındaki tüm yayımlanmış sureler: her ayete bağlantıyla {count} sure.",
   "quran.ayahsMeta": "Ayet: {count} · {revelation} · sayfa {page}",
   "quran.textView": "📜 Metin",
+  "quran.openText": "Metne geç",
   "quran.mushafView": "📖 Mushaf (s. {page})",
   "quran.edition": "Kur'an baskısı",
   "quran.translationToggle": "Meal",
