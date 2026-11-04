@@ -2070,6 +2070,24 @@ abstract class AppLocalizations {
   /// **'Translation'**
   String get duaShowTranslation;
 
+  /// No description provided for @duaReferenceHisn.
+  ///
+  /// In en, this message translates to:
+  /// **'Hisn al-Muslim, No. {number}'**
+  String duaReferenceHisn(int number);
+
+  /// No description provided for @duaReferenceQuran.
+  ///
+  /// In en, this message translates to:
+  /// **'Quran {reference}'**
+  String duaReferenceQuran(String reference);
+
+  /// No description provided for @duaReferenceEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'{source}, No. {number}'**
+  String duaReferenceEntry(String source, int number);
+
   /// No description provided for @duaChapterNumber.
   ///
   /// In en, this message translates to:

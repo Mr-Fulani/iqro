@@ -219,22 +219,26 @@ class DuaTimeVariant {
     required this.arabicText,
     required this.meaning,
     required this.transliteration,
+    this.note = '',
   });
 
   factory DuaTimeVariant.fromJson(Map<String, Object?> json) => DuaTimeVariant(
     arabicText: json['arabic_text']?.toString() ?? '',
     meaning: json['meaning_text']?.toString() ?? '',
     transliteration: json['transliteration']?.toString() ?? '',
+    note: json['note']?.toString() ?? '',
   );
 
   final String arabicText;
   final String meaning;
   final String transliteration;
+  final String note;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'arabic_text': arabicText,
     'meaning_text': meaning,
     'transliteration': transliteration,
+    'note': note,
   };
 }
 
@@ -249,6 +253,7 @@ class DuaEntry {
     required this.arabicText,
     required this.meaning,
     required this.transliteration,
+    this.note = '',
     required this.repetitions,
     required this.sourceLabel,
     this.repetitionLabel = '',
@@ -271,6 +276,7 @@ class DuaEntry {
        arabicText = '',
        meaning = '',
        transliteration = '',
+       note = '',
        repetitions = 1,
        repetitionLabel = '',
        sourceLabel = '',
@@ -326,6 +332,7 @@ class DuaEntry {
           translation['transliteration']?.toString() ??
           json['transliteration']?.toString() ??
           '',
+      note: translation['note']?.toString() ?? '',
       repetitions: repetitions > 0 ? repetitions : 1,
       repetitionLabel: json['repetition_label']?.toString() ?? '',
       source: sourceEdition,
@@ -353,6 +360,10 @@ class DuaEntry {
   final String arabicText;
   final String meaning;
   final String transliteration;
+
+  /// Commentary the source printed in brackets inside the text, shown under
+  /// the translation.
+  final String note;
   final int repetitions;
   final String repetitionLabel;
   final String sourceLabel;
@@ -394,6 +405,7 @@ class DuaEntry {
     arabicText: arabicText,
     meaning: meaning,
     transliteration: transliteration,
+    note: note,
     repetitions: repetitions,
     sourceLabel: sourceLabel,
     repetitionLabel: repetitionLabel,
@@ -421,6 +433,7 @@ class DuaEntry {
       arabicText: variant.arabicText,
       meaning: variant.meaning,
       transliteration: variant.transliteration,
+      note: variant.note,
       repetitions: repetitions,
       sourceLabel: sourceLabel,
       repetitionLabel: repetitionLabel,
@@ -453,6 +466,7 @@ class DuaEntry {
         'translation': <String, Object?>{
           'meaning_text': meaning,
           'transliteration': transliteration,
+          'note': note,
         },
         'repetitions': repetitions,
         'repetition_label': repetitionLabel,
@@ -625,7 +639,8 @@ class DuaRepository {
   static const _featuredEntryCount = 20;
   static const _maxEntryPages = 50;
   static const _categoryCacheVersion = 'v2';
-  static const _entryCacheVersion = 'v4';
+  // v5: texts without brackets, with the note under the translation.
+  static const _entryCacheVersion = 'v5';
 
   final DuaRemoteGateway _remote;
   final LocalDatabase _database;

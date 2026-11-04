@@ -243,6 +243,7 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
             "language_code": translation.language_code,
             "meaning_text": translation.meaning_text,
             "transliteration": translation.transliteration,
+            "note": translation.note,
         }
 
     def get_time_variants(self, obj: DuaEntry) -> dict[str, dict[str, str]]:
@@ -252,6 +253,7 @@ class DuaEntrySerializer(serializers.ModelSerializer[DuaEntry]):
                 "arabic_text": variant.arabic_text,
                 "meaning_text": variant.meaning_text,
                 "transliteration": variant.transliteration,
+                "note": variant.note,
             }
             for variant in getattr(obj, "localized_time_variants", ())
         }

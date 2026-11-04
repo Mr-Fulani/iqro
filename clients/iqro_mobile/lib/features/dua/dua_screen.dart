@@ -1103,19 +1103,19 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
         ? standalone
         : null;
     final owned = current != null && _ownedAudioId == audioId;
-    final reference = entry.evidence
-        .map((item) => item.sourceReference.trim())
-        .where((item) => item.isNotEmpty)
-        .firstOrNull;
     final showTransliteration = ref.watch(
       appPreferencesProvider.select((value) => value.duaShowTransliteration),
     );
-    final meaning =
-        ref.watch(
-          appPreferencesProvider.select((value) => value.duaShowTranslation),
-        )
+    final showTranslation = ref.watch(
+      appPreferencesProvider.select((value) => value.duaShowTranslation),
+    );
+    final arabicLocale = Localizations.localeOf(context).languageCode == 'ar';
+    final meaning = showTranslation
         ? duaMeaning(entry, Localizations.localeOf(context).languageCode)
         : '';
+    // Commentary the source printed in brackets; it belongs to the
+    // translation, except in Arabic, where there is no translation to hide.
+    final note = arabicLocale || showTranslation ? entry.note.trim() : '';
     final arabicStyle = theme.textTheme.headlineMedium?.copyWith(
       color: IqroTheme.arabicInk(context),
       fontFamily: IqroTheme.arabicFontFamily,
@@ -1179,6 +1179,18 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
               ),
             ),
           ],
+          if (note.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              note,
+              key: const ValueKey('dua-note'),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           // The source sits under the text it backs; the full record opens
           // from it.
@@ -1189,7 +1201,7 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text(
-                '[${reference ?? '${entry.sourceLabel} · #${entry.sourceNumber}'}]',
+                duaReference(entry, context.l10n),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: scheme.onSurfaceVariant,

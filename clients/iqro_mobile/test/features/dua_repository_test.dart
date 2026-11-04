@@ -317,7 +317,7 @@ void main() {
 
       final cacheRow = (await sqlDatabase.query('cache_entries')).single;
       expect(cacheRow['cache_key'], startsWith('dua:https%3A'));
-      expect(cacheRow['cache_key'], endsWith(':entries:v4:ru:all:sleep'));
+      expect(cacheRow['cache_key'], endsWith(':entries:v5:ru:all:sleep'));
       final cachedPayload = jsonDecode(cacheRow['payload']! as String) as Map;
       expect(cachedPayload['count'], 24);
       expect(cachedPayload['next'], isNull);
@@ -361,7 +361,7 @@ void main() {
     expect(remote.entryCalls, hasLength(1));
     expect(
       (await sqlDatabase.query('cache_entries')).single['cache_key'],
-      endsWith(':featured:v4:ru'),
+      endsWith(':featured:v5:ru'),
     );
   });
 

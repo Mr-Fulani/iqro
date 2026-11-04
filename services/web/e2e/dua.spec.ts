@@ -114,10 +114,11 @@ test("a topic of several chapters lists them, and a chapter is a feed of du'a ca
   await expect(counter).toHaveAccessibleName("Осталось: 3");
 
   // The source opens the sheet with the edition and the checked reference.
-  await first.getByRole("button", { name: "[Al-Bukhari 5017.]" }).click();
+  await first.getByRole("button", { name: "Крепость мусульманина, № 100" }).click();
   const sheet = page.getByRole("dialog", { name: "Источник и проверка" });
   await expect(sheet).toBeVisible();
   await expect(sheet).toContainText("Проверено редакцией");
+  await expect(sheet).toContainText("Al-Bukhari 5017.");
   await sheet.getByText("Источник и проверка").click();
   await expect(sheet.getByText("Молитвы из Корана и Сунны")).toBeVisible();
   await expect(sheet.getByText("Саид ибн Али ибн Вахб аль-Кахтани")).toBeVisible();
@@ -221,6 +222,10 @@ for (const [name, viewport] of [["phone", phone], ["desktop", desktop]] as const
     const card = page.locator(".dua-card");
     await expect(card.locator(".dua-transliteration")).toBeVisible();
     await expect(card.locator(".dua-meaning")).toBeVisible();
+    // Commentary sits under the translation, and the source reads in Russian,
+    // without brackets.
+    await expect(card.locator(".dua-note")).toHaveText("То есть послал нам сон, являющийся братом смерти.");
+    await expect(card.locator(".dua-source-link")).toHaveText("Крепость мусульманина, № 1");
 
     const menuButton = page.getByRole("button", { name: "Что показывать" });
     await menuButton.click();
@@ -233,6 +238,7 @@ for (const [name, viewport] of [["phone", phone], ["desktop", desktop]] as const
     await expect(translation).toHaveAttribute("aria-checked", "false");
     await expect(card.locator(".dua-transliteration")).toHaveCount(0);
     await expect(card.locator(".dua-meaning")).toHaveCount(0);
+    await expect(card.locator(".dua-note")).toHaveCount(0);
     // The Arabic always stays.
     await expect(card.locator(".dua-arabic")).toBeVisible();
     await noHorizontalScroll(page);
@@ -265,11 +271,11 @@ test("Arabic pages run right to left and show no repeated meaning", async ({ pag
   await page.goto("/ar/dua/hisn-al-muslim/categories/before-sleeping");
   await expect(page.locator(".dua-topbar-title")).toHaveText("الباب 28");
   await expect(page.locator(".dua-meaning")).toHaveCount(0);
-  // Arrows point the way the page reads; the Latin reference keeps its order.
+  // Arrows point the way the page reads; the source reads in Arabic.
   expect(await page.locator(".dua-back .dua-flip").evaluate(
     (element) => getComputedStyle(element).transform,
   )).toBe("matrix(-1, 0, 0, 1, 0, 0)");
-  await expect(page.locator(".dua-source-link bdi").first()).toHaveText("Al-Bukhari 5017.");
+  await expect(page.locator(".dua-source-link bdi").first()).toHaveText("حصن المسلم، رقم 100");
   const back = (await page.locator(".dua-back").boundingBox())!;
   expect(back.x).toBeGreaterThan(phone.width / 2);
   await noHorizontalScroll(page);

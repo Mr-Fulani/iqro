@@ -1071,6 +1071,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get duaShowTranslation => 'المعنى';
 
   @override
+  String duaReferenceHisn(int number) {
+    return 'حصن المسلم، رقم $number';
+  }
+
+  @override
+  String duaReferenceQuran(String reference) {
+    return 'القرآن، $reference';
+  }
+
+  @override
+  String duaReferenceEntry(String source, int number) {
+    return '$source، رقم $number';
+  }
+
+  @override
   String duaChapterNumber(int number) {
     return 'الباب $number';
   }
