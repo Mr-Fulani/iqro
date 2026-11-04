@@ -112,6 +112,25 @@ List<String> ayahWords(QuranAyah ayah) {
   );
 }
 
+/// The voice that plays words of a reciter without their timings: al-Husary's
+/// Muallim, the teaching recitation, else the catalog's teaching reciter.
+/// The Mujawwad of al-Husary shares the `qf-12-` prefix but has no timings.
+Recitation? wordTimingFallbackRecitation(Iterable<Recitation> recitations) {
+  for (final recitation in recitations) {
+    if (recitation.code.startsWith('qf-12-muallim')) return recitation;
+  }
+  return teachingRecitation(recitations);
+}
+
+/// Who plays a range: the reciter, its timings of the first and last words'
+/// ayahs, and whether the teaching voice stands in for the chosen reciter.
+typedef WordRangeVoice = ({
+  Recitation recitation,
+  AyahPlayback first,
+  AyahPlayback last,
+  bool teaching,
+});
+
 enum WordRepeat { once, three, forever }
 
 /// True while a finger pulls a selection, by a long press or a handle: the
@@ -152,7 +171,11 @@ class WordRangeController extends ChangeNotifier {
   bool playing = false;
   int round = 1;
   QuranWord? playingWord;
+
+  /// The voice of the range: the Mushaf reciter, or the teaching al-Husary
+  /// when [teachingVoice] (the chosen one has no timings of these words).
   Recitation? recitation;
+  bool teachingVoice = false;
 
   final _requests = <String, Future<AyahPlayback?>>{};
   final _timings = <String, AyahPlayback>{};
@@ -174,10 +197,10 @@ class WordRangeController extends ChangeNotifier {
         _range?.start.ayah == range.start.ayah;
     _range = range;
     if (active) _stopClip();
-    if (!sameStartAyah || available != true) {
-      available = null;
-      unawaited(_checkAvailability());
-    }
+    // Within the same first ayah the answer stays on screen while the new
+    // ends are checked: the voice may change with the last word.
+    if (!sameStartAyah || available != true) available = null;
+    unawaited(_checkAvailability());
     notifyListeners();
   }
 
@@ -226,27 +249,16 @@ class WordRangeController extends ChangeNotifier {
     failed = false;
     notifyListeners();
     try {
-      final recitation = await _recitation();
+      final voice = await _voice(range);
       if (!_current(generation, range)) return;
-      this.recitation = recitation;
-      final first = recitation == null
-          ? null
-          : await _ayah(recitation.id, range.start.surah, range.start.ayah);
-      final last = recitation == null
-          ? null
-          : await _ayah(recitation.id, range.end.surah, range.end.ayah);
-      if (!_current(generation, range)) return;
-      final from = first?.words[range.start.position]?.start;
-      final to = last?.words[range.end.position]?.end;
-      if (recitation == null ||
-          first == null ||
-          from == null ||
-          to == null ||
-          to <= from) {
+      if (voice == null) {
         available = false;
         return;
       }
       available = true;
+      final (:recitation, :first, :last, teaching: _) = voice;
+      final from = first.words[range.start.position]!.start;
+      final to = last.words[range.end.position]!.end;
       for (
         var ayah = range.start.ayah + 1;
         ayah < range.end.ayah && ayah <= range.start.ayah + 40;
@@ -292,13 +304,60 @@ class WordRangeController extends ChangeNotifier {
     }
   }
 
-  /// Whether [word]'s reciter has its timing: the Mushaf menu asks this.
-  Future<bool> wordAvailable(QuranWord word) async {
-    final recitation = await _recitation();
-    if (recitation == null) return false;
-    final ayah = await _ayah(recitation.id, word.surah, word.ayah);
-    return ayah?.words[word.position] != null;
+  /// The voice that plays [range]: the Mushaf reciter when it has the timings
+  /// of its first and last words, else the teaching al-Husary; null when
+  /// neither has them (or they did not load).
+  Future<WordRangeVoice?> _voice(QuranWordRange range) async {
+    final recitations = await _repository.recitationsForRole(
+      AudioRecitationRole.ayahPlayback,
+    );
+    final current = _ref.read(audioControllerProvider);
+    final chosen = preferredRecitation(
+      recitations,
+      preferredId:
+          _ref.read(appPreferencesProvider).mushafRecitationId ??
+          (current.channel == AudioPlaybackChannel.mushaf
+              ? current.track?.recitationId
+              : null),
+      role: AudioRecitationRole.ayahPlayback,
+    );
+    final fallback = wordTimingFallbackRecitation(recitations);
+    for (final candidate in <Recitation?>[
+      chosen,
+      if (fallback?.id != chosen?.id) fallback,
+    ]) {
+      if (candidate == null) continue;
+      final first = await _ayah(
+        candidate.id,
+        range.start.surah,
+        range.start.ayah,
+      );
+      final last = await _ayah(candidate.id, range.end.surah, range.end.ayah);
+      final from = first?.words[range.start.position]?.start;
+      final to = last?.words[range.end.position]?.end;
+      if (first == null || last == null || from == null || to == null) {
+        continue;
+      }
+      if (to <= from) continue;
+      final teaching = candidate.id != chosen?.id;
+      recitation = candidate;
+      teachingVoice = teaching;
+      return (
+        recitation: candidate,
+        first: first,
+        last: last,
+        teaching: teaching,
+      );
+    }
+    recitation = chosen;
+    teachingVoice = false;
+    return null;
   }
+
+  /// Whether [word] can be played, in the reciter's voice or the teaching
+  /// one: the Mushaf menu asks this.
+  Future<bool> wordAvailable(QuranWord word) async =>
+      await _voice(QuranWordRange.single(word)) != null;
 
   bool _current(int generation, QuranWordRange range) =>
       !_disposed && generation == _generation && range == _range;
@@ -309,31 +368,13 @@ class WordRangeController extends ChangeNotifier {
     final generation = _generation;
     bool result;
     try {
-      result = await wordAvailable(range.start);
+      result = await _voice(range) != null;
     } on Object {
       result = false;
     }
     if (_disposed || generation != _generation || range != _range) return;
     available = result;
     notifyListeners();
-  }
-
-  Future<Recitation?> _recitation() async {
-    final recitations = await _repository.recitationsForRole(
-      AudioRecitationRole.ayahPlayback,
-    );
-    final current = _ref.read(audioControllerProvider);
-    final found = preferredRecitation(
-      recitations,
-      preferredId:
-          _ref.read(appPreferencesProvider).mushafRecitationId ??
-          (current.channel == AudioPlaybackChannel.mushaf
-              ? current.track?.recitationId
-              : null),
-      role: AudioRecitationRole.ayahPlayback,
-    );
-    recitation = found;
-    return found;
   }
 
   Future<AyahPlayback?> _ayah(String recitationId, int surah, int ayah) {
@@ -526,6 +567,27 @@ class WordRangePanel extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (controller.teachingVoice && !unavailable) ...<Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Icon(
+                        Icons.record_voice_over_outlined,
+                        size: 18,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context.l10n.wordRangeTeachingVoice(reciter ?? ''),
+                          key: const ValueKey('word-range-teaching-voice'),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (unavailable) ...<Widget>[
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

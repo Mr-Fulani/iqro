@@ -1580,6 +1580,46 @@ test("word selection plays the selected words of the Mushaf and of the text", as
   await expect(bar).toContainText("Слов: 3");
 });
 
+test("words the chosen reciter has no timings of play in the teaching al-Husary", async ({ page }) => {
+  await installTajweedMocks(page);
+  // The catalog also holds al-Husary's Muallim; only it has the words of 6:2.
+  const teaching = { ...alternateRecitation, id: "00000000-0000-7000-8000-000000001012", code: "qf-12-muallim-01a15bc65dc9", style: "muallim" };
+  await page.route("**/api/v1/recitations?**", (route) => route.fulfill({
+    json: paginated([...recitationsMatching(new URL(route.request().url()).searchParams), teaching]),
+  }));
+  await page.route(`**/api/v1/recitations/${recitation.id}/ayahs/6/2`, (route) => route.fulfill({
+    json: { track: tracks[5], segment: { ayah_id: ayahs[1].id, surah_number: 6, ayah_number: 2, start_ms: 1_000, end_ms: 2_000, words: [] } },
+  }));
+  await page.route(`**/api/v1/recitations/${teaching.id}/ayahs/6/2`, (route) => route.fulfill({
+    json: {
+      track: alternateTracks[5],
+      segment: { ayah_id: ayahs[1].id, surah_number: 6, ayah_number: 2, start_ms: 3_000, end_ms: 5_000, words: [[3, 3_000, 3_600], [4, 3_600, 4_400]] },
+    },
+  }));
+  // The visitor picked the reciter without word timings for the Mushaf.
+  await page.addInitScript(({ recitationId, reciterId }) => localStorage.setItem(
+    "quran_reciter_preference_v2:mushaf",
+    JSON.stringify({ personKey: "chosen", reciterId, recitationId, style: "murattal" }),
+  ), { recitationId: recitation.id, reciterId: recitation.reciter.id });
+  await page.goto("/ru/quran?surah=6");
+  const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+  await expect(view).toHaveAttribute("data-font-status", "ready");
+
+  await view.locator('[data-word-key="6:2:3"]').dblclick();
+  await view.locator('[data-word-key="6:2:4"]').click({ modifiers: ["Shift"] });
+  const bar = page.getByTestId("word-range-bar");
+  await expect(bar.getByTestId("word-range-teaching-voice")).toHaveText(
+    /^Голос: .+, учебное чтение\. У выбранного чтеца нет разметки по словам\.$/,
+  );
+  await expect(bar.getByTestId("word-range-unavailable")).toHaveCount(0);
+  await bar.getByTestId("word-range-play").click();
+  // The clip is the teaching voice's surah track, from its first word.
+  expect(await bar.locator("audio").evaluate((audio: HTMLAudioElement) => ({
+    start: audio.currentTime,
+    src: audio.getAttribute("src"),
+  }))).toEqual({ start: 3, src: alternateTracks[5].asset.url });
+});
+
 test.describe("word selection on a phone", () => {
   test.use({ viewport: devices["Pixel 7"].viewport, userAgent: devices["Pixel 7"].userAgent,
     deviceScaleFactor: devices["Pixel 7"].deviceScaleFactor, isMobile: true, hasTouch: true });

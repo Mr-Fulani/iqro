@@ -1424,6 +1424,7 @@ const ru = {
   "wordRange.hintTouch": "Удержите слово и ведите палец, чтобы взять больше · тяните ручки · касание мимо — снять",
   "wordRange.handleStart": "Начало выделения",
   "wordRange.handleEnd": "Конец выделения",
+  "wordRange.teachingVoice": "Голос: {reciter}, учебное чтение. У выбранного чтеца нет разметки по словам.",
 };
 
 export default ru;

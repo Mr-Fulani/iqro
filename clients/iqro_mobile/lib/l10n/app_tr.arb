@@ -1039,5 +1039,7 @@
   "wordRangeHint": "Seçimi değiştirmek için tutamaçları sürükleyin",
   "wordRangeError": "Seçim çalınamadı.",
   "wordTimingsUnavailable": "Bu kârinin burada kelime kelime zamanlaması yok; bu ayet yalnızca tamamen dinlenebilir. Bu zamanlama her kâride yok, bazılarında da her ayette yok.",
-  "wordTimingsChooseReciter": "Aşağıdan başka bir kâri seçin."
+  "wordTimingsChooseReciter": "Aşağıdan başka bir kâri seçin.",
+  "wordRangeTeachingVoice": "Ses: {reciter}, öğretici okuma. Seçilen kârinin kelime kelime zamanlaması yok.",
+  "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}}
 }

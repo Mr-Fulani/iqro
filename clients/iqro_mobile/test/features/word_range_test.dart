@@ -264,6 +264,94 @@ void main() {
     });
   });
 
+  group('teaching voice', () {
+    testWidgets('words the chosen reciter has no timings of play in the '
+        'teaching al-Husary', (tester) async {
+      final harness = await _pumpPanel(
+        tester,
+        timed: false,
+        withTeaching: true,
+      );
+      harness.controller().select(
+        QuranWordRange.between(
+          const QuranWord(1, 5, 3),
+          const QuranWord(1, 6, 2),
+        )!,
+        wordCount: 4,
+      );
+      await _settle(tester);
+
+      expect(
+        find.byKey(const ValueKey('word-range-unavailable')),
+        findsNothing,
+      );
+      expect(
+        find.text(
+          'Голос: аль-Хусари, учебное чтение. '
+          'У выбранного чтеца нет разметки по словам.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('word-range-play')));
+      await _settle(tester);
+
+      final source = harness.engine.sources.single as ClippingAudioSource;
+      expect(source.start, const Duration(milliseconds: 21300));
+      expect(source.end, const Duration(milliseconds: 25600));
+      expect(harness.repository.requestedBy, contains('rec-12:1:5'));
+      expect(harness.controller().recitation?.id, 'rec-12');
+      expect(harness.controller().teachingVoice, isTrue);
+      // The words light up by the teaching voice's timings.
+      expect(
+        harness.controller().playingWordAt(const Duration(milliseconds: 23500)),
+        const QuranWord(1, 6, 1),
+      );
+    });
+
+    testWidgets('the chosen reciter plays when it has the timings', (
+      tester,
+    ) async {
+      final harness = await _pumpPanel(tester, withTeaching: true);
+      harness.controller().select(
+        const QuranWordRange.single(QuranWord(1, 5, 3)),
+        wordCount: 1,
+      );
+      await _settle(tester);
+
+      expect(harness.controller().recitation?.id, 'rec-1');
+      expect(
+        find.byKey(const ValueKey('word-range-teaching-voice')),
+        findsNothing,
+      );
+      expect(harness.repository.requestedBy, isNot(contains('rec-12:1:5')));
+    });
+
+    testWidgets('without the teaching voice either the note stays', (
+      tester,
+    ) async {
+      final harness = await _pumpPanel(
+        tester,
+        timed: false,
+        withTeaching: true,
+        teachingTimed: false,
+      );
+      harness.controller().select(
+        const QuranWordRange.single(QuranWord(1, 5, 3)),
+        wordCount: 1,
+      );
+      await _settle(tester);
+
+      expect(
+        find.byKey(const ValueKey('word-range-unavailable')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('word-range-teaching-voice')),
+        findsNothing,
+      );
+    });
+  });
+
   group('text reader', () {
     testWidgets('a long press selects a word and a drag the next ayah', (
       tester,
@@ -521,11 +609,17 @@ _PanelHarness? _lastPanel;
 Future<_PanelHarness> _pumpPanel(
   WidgetTester tester, {
   bool timed = true,
+  bool withTeaching = false,
+  bool teachingTimed = true,
 }) async {
   final engine = _Engine();
   final audio = AudioController(engine: engine);
   addTearDown(audio.dispose);
-  final repository = _AudioRepository(timed: timed);
+  final repository = _AudioRepository(
+    timed: timed,
+    withTeaching: withTeaching,
+    teachingTimed: teachingTimed,
+  );
   final host = GlobalKey<_HostState>();
   await tester.pumpWidget(
     ProviderScope(
@@ -629,10 +723,20 @@ class _Quran implements QuranRepository {
     (start: Duration(milliseconds: start), end: Duration(milliseconds: end));
 
 class _AudioRepository implements AudioRepository {
-  _AudioRepository({required this.timed});
+  _AudioRepository({
+    required this.timed,
+    this.withTeaching = false,
+    this.teachingTimed = true,
+  });
 
+  /// Whether the chosen reciter (`rec-1`) has the words' timings.
   final bool timed;
+
+  /// Whether the catalog also has al-Husary's Muallim, and whether it has them.
+  final bool withTeaching;
+  final bool teachingTimed;
   final requested = <String>[];
+  final requestedBy = <String>[];
 
   static final _words = <int, Map<int, ({Duration start, Duration end})>>{
     5: {
@@ -663,6 +767,26 @@ class _AudioRepository implements AudioRepository {
         'offline': false,
       },
     }),
+    if (withTeaching)
+      Recitation.fromJson(const <String, Object?>{
+        'id': 'rec-12',
+        'code': 'qf-12-muallim-01a15bc65dc9',
+        'style': 'muallim',
+        'reciter': {
+          'id': 'al-husary',
+          'name_en': 'al-Husary',
+          'name_ru': 'аль-Хусари',
+        },
+        'rights': {'stream': true},
+        'coverage': {'surah_count': 114},
+        'timings': {'available': true, 'complete': true},
+        'capabilities': {
+          'listen': true,
+          'ayah_playback': true,
+          'memorization': true,
+          'offline': false,
+        },
+      }),
   ];
 
   @override
@@ -672,16 +796,18 @@ class _AudioRepository implements AudioRepository {
     required int ayah,
   }) async {
     requested.add('$surah:$ayah');
+    requestedBy.add('$recitationId:$surah:$ayah');
+    final has = recitationId == 'rec-12' ? teachingTimed : timed;
     return AyahPlayback(
       track: AudioTrack(
-        id: 'track-1',
+        id: 'track-$recitationId',
         recitationId: recitationId,
         surah: surah,
-        url: 'https://cdn.example/001.mp3',
+        url: 'https://cdn.example/$recitationId/001.mp3',
         duration: const Duration(minutes: 1),
         offlineDownloadAllowed: false,
       ),
-      words: timed ? _words[ayah] ?? const {} : const {},
+      words: has ? _words[ayah] ?? const {} : const {},
     );
   }
 

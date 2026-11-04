@@ -6095,6 +6095,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose another reciter below.'**
   String get wordTimingsChooseReciter;
+
+  /// No description provided for @wordRangeTeachingVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice: {reciter}, teaching recitation. The chosen reciter has no word-by-word timing.'**
+  String wordRangeTeachingVoice(String reciter);
 }
 
 class _AppLocalizationsDelegate

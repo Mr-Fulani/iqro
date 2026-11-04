@@ -1043,5 +1043,7 @@
   "wordRangeHint": "Тяните ручки, чтобы изменить выделение",
   "wordRangeError": "Не удалось воспроизвести выделенное.",
   "wordTimingsUnavailable": "Здесь у этого чтеца нет разметки по словам: этот аят можно слушать только целиком. Разметка есть не у всех чтецов, а у некоторых — не во всех аятах.",
-  "wordTimingsChooseReciter": "Выберите другого чтеца ниже."
+  "wordTimingsChooseReciter": "Выберите другого чтеца ниже.",
+  "wordRangeTeachingVoice": "Голос: {reciter}, учебное чтение. У выбранного чтеца нет разметки по словам.",
+  "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}}
 }

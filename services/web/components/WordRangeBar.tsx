@@ -18,6 +18,8 @@ export default function WordRangeBar({
   wordCount,
   recitationId,
   reciterName,
+  teachingRecitationId = null,
+  teachingReciterName = "",
   onClear,
   onPlayingWord,
 }: {
@@ -25,11 +27,16 @@ export default function WordRangeBar({
   wordCount: number;
   recitationId: string | null;
   reciterName?: string;
+  /** The voice for words the chosen reciter has no timings of: al-Husary's Muallim. */
+  teachingRecitationId?: string | null;
+  teachingReciterName?: string;
   onClear: () => void;
   onPlayingWord: (word: QuranWord | null) => void;
 }) {
   const { t } = useI18n();
   const [available, setAvailable] = useState<boolean | null>(null);
+  /** Whether the teaching voice stands in for the chosen reciter. */
+  const [teaching, setTeaching] = useState(false);
   const [repeat, setRepeat] = useState<Repeat>("once");
   const [round, setRound] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -96,37 +103,53 @@ export default function WordRangeBar({
     stop();
   }, [rangeKey, recitationId, stop]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setAvailable(null);
-    if (!recitationId) {
-      setAvailable(false);
-      return;
-    }
-    void loadAyahAudio(recitationId, startKey).then((audio) => {
-      if (!cancelled) setAvailable(Boolean(audio && wordTiming(audio.words, range.start.position)));
-    });
-    return () => { cancelled = true; };
-  }, [recitationId, startKey, range.start.position]);
-
-  const start = useCallback(async () => {
-    if (!recitationId || loading) return;
-    setLoading(true);
-    try {
-      const surah = range.start.surah;
+  // The voice of the range: the chosen reciter when it has the timings of the
+  // first and last words, else the teaching al-Husary; null when neither has them.
+  const resolveVoice = useCallback(async () => {
+    const surah = range.start.surah;
+    const candidates = [recitationId, teachingRecitationId !== recitationId ? teachingRecitationId : null];
+    for (const id of candidates) {
+      if (!id) continue;
       const [first, last] = await Promise.all([
-        loadAyahAudio(recitationId, `${surah}:${range.start.ayah}`),
-        loadAyahAudio(recitationId, `${surah}:${range.end.ayah}`),
+        loadAyahAudio(id, `${surah}:${range.start.ayah}`),
+        loadAyahAudio(id, `${surah}:${range.end.ayah}`),
       ]);
       const from = first ? wordTiming(first.words, range.start.position) : null;
       const to = last ? wordTiming(last.words, range.end.position) : null;
-      if (!first || !last || !from || !to || to.endMs <= from.startMs) {
+      if (first && last && from && to && to.endMs > from.startMs) {
+        return { id, first, last, from, to, teaching: id !== recitationId };
+      }
+    }
+    return null;
+  }, [range, recitationId, teachingRecitationId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Moving the last word keeps the answer on screen while the voice is checked again.
+    void resolveVoice().then((voice) => {
+      if (cancelled) return;
+      setAvailable(Boolean(voice));
+      setTeaching(Boolean(voice?.teaching));
+    });
+    return () => { cancelled = true; };
+  }, [resolveVoice]);
+  useEffect(() => { setAvailable(null); }, [recitationId, startKey]);
+
+  const start = useCallback(async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const voice = await resolveVoice();
+      if (!voice) {
         setAvailable(false);
         return;
       }
+      setTeaching(voice.teaching);
+      const { id, first, last, from, to } = voice;
+      const surah = range.start.surah;
       timings.current = new Map([[range.start.ayah, first], [range.end.ayah, last]]);
       for (let ayah = range.start.ayah + 1; ayah < range.end.ayah && ayah <= range.start.ayah + 40; ayah += 1) {
-        void loadAyahAudio(recitationId, `${surah}:${ayah}`).then((audio) => {
+        void loadAyahAudio(id, `${surah}:${ayah}`).then((audio) => {
           if (audio) timings.current.set(ayah, audio);
         });
       }
@@ -137,7 +160,7 @@ export default function WordRangeBar({
     } finally {
       setLoading(false);
     }
-  }, [loading, play, range, recitationId]);
+  }, [loading, play, range, resolveVoice]);
 
   const toggle = useCallback(() => {
     if (playing) stop();
@@ -165,7 +188,7 @@ export default function WordRangeBar({
   const shownOrdinal = playing ? ordinal : null;
   const subtitle = [
     shownOrdinal ? t("wordRange.progress", { number: shownOrdinal, count: wordCount }) : t("wordRange.count", { count: wordCount }),
-    !shownOrdinal && reciterName ? reciterName : null,
+    !shownOrdinal ? (teaching ? teachingReciterName : reciterName) || null : null,
     playing && repeat === "three" ? t("wordRange.round", { round, total: 3 }) : null,
   ].filter(Boolean).join(" · ");
 
@@ -181,6 +204,11 @@ export default function WordRangeBar({
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </div>
+      {available && teaching && (
+        <p className="word-range-bar-note is-teaching" data-testid="word-range-teaching-voice">
+          {t("wordRange.teachingVoice", { reciter: teachingReciterName })}
+        </p>
+      )}
       {available === false && (
         <p className="word-range-bar-note" data-testid="word-range-unavailable">{t("wordRange.unavailable")}</p>
       )}
