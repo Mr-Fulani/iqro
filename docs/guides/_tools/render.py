@@ -53,7 +53,8 @@ h1 { font-size: 46px; line-height: 1.12; font-weight: 800; margin-top: 26px; let
 .shot img.scr { display: block; width: 100%%; height: 100%%; object-fit: cover; object-position: top; }
 .phone { border-radius: 38px; padding: 10px; background: #1e293b; box-shadow: 0 18px 44px rgba(15,23,42,.22); }
 .phone .inner { position: relative; width: 100%%; height: 100%%; border-radius: 29px; overflow: hidden; background: #fff; }
-.desk { border-radius: 14px; background: #fff; box-shadow: 0 18px 44px rgba(15,23,42,.2); overflow: hidden; border: 1px solid #cbd5e1; }
+.desk { position: relative; border-radius: 14px; background: #fff; box-shadow: 0 18px 44px rgba(15,23,42,.2); border: 1px solid #cbd5e1; }
+.desk .inner { border-radius: 0 0 13px 13px; }
 .desk .bar { height: 30px; background: #e2e8f0; display: flex; align-items: center; gap: 7px; padding: 0 12px; }
 .desk .bar i { width: 11px; height: 11px; border-radius: 50%%; background: #cbd5e1; display: block; }
 .desk .bar span { margin-left: 14px; font-size: 14px; color: #64748b; background: #fff; border-radius: 6px; padding: 2px 12px; }
@@ -129,7 +130,7 @@ def shot_html(folder, s, max_h, max_w):
     left, right = s.get("cropx", (0, 100))  # and of its width
     vis_w, vis_h = iw * (right - left) / 100, ih * (bottom - top) / 100
     kind = s.get("frame", "phone")
-    pad_w, pad_h = (20, 20) if kind == "phone" else (0, 30)
+    pad_w, pad_h = {"phone": (20, 20), "desktop": (0, 30)}.get(kind, (0, 0))
     scale = min((max_h - pad_h) / vis_h, (max_w - pad_w) / vis_w)
     if not s.get("exact"):
         # a width-bound shot shows more of the screenshot instead of leaving the stage empty
@@ -150,6 +151,11 @@ def shot_html(folder, s, max_h, max_w):
         return (
             f'<div class="shot phone" style="width:{w + 20}px;height:{h + 20}px">{label}'
             f'<div class="inner">{img}</div></div>'
+        )
+    if kind == "plain":  # a picture, not a screen: no device chrome
+        return (
+            f'<div class="shot desk" style="width:{w}px;height:{h}px">{label}'
+            f'<div class="inner" style="width:{w}px;height:{h}px">{img}</div></div>'
         )
     url = html.escape(s.get("url", "iqro.forum"))
     return (
