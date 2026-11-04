@@ -607,9 +607,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listenPage => 'Прослушать текущую страницу';
 
   @override
-  String get tapAyahForDetails => 'Удерживайте аят для перевода и тафсира';
-
-  @override
   String get audioTitle => 'Слушайте Коран';
 
   @override

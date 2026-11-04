@@ -869,6 +869,7 @@ const ru = {
   "quran.deep.editionDescription": "Все опубликованные суры издания {edition}: {count} сур с переходом к тексту каждого аята.",
   "quran.ayahsMeta": "Аятов: {count} · {revelation} · страница {page}",
   "quran.textView": "📜 Текст",
+  "quran.openText": "Перейти к тексту",
   "quran.mushafView": "📖 Мусхаф (стр. {page})",
   "quran.edition": "Издание Корана",
   "quran.translationToggle": "Смысловой перевод",

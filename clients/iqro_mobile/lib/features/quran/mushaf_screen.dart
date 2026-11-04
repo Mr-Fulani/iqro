@@ -15,7 +15,6 @@ import '../../core/storage/preferences_store.dart';
 import '../../core/utils/latest_async_work_queue.dart';
 import '../audio/mini_player.dart';
 import '../audio/audio_models.dart';
-import '../audio/recitation_style_label.dart';
 import '../audio/reciter_catalog.dart';
 import '../audio/reciter_portraits.dart';
 import '../memorization/memorize_ayah_sheet.dart';
@@ -580,10 +579,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                         ),
                       Row(
                         children: <Widget>[
+                          // The text of the same place, as the Mushaf button
+                          // in the text reader's bar.
                           MushafCircleButton(
-                            icon: Icons.more_horiz,
-                            tooltip: context.l10n.readerSettings,
-                            onPressed: _showReaderOptions,
+                            key: const ValueKey('mushaf-open-text'),
+                            icon: Icons.subject_rounded,
+                            tooltip: context.l10n.textMode,
+                            onPressed: _switchToText,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -763,61 +765,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     )?.id;
   }
 
-  /// The Mushaf keeps its own reciter, separate from the Audio tab's, and
-  /// offers only recitations timed ayah by ayah.
-  Future<void> _chooseMushafReciter() async {
-    List<Recitation> recitations;
-    try {
-      recitations = await ref
-          .read(audioRepositoryProvider)
-          .recitationsForRole(AudioRecitationRole.ayahPlayback);
-    } on Object {
-      recitations = const <Recitation>[];
-    }
-    if (!mounted) return;
-    if (recitations.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
-      return;
-    }
-    final locale = Localizations.localeOf(context).languageCode;
-    final currentId = ref.read(appPreferencesProvider).mushafRecitationId;
-    final picked = await showModalBottomSheet<Recitation>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => FractionallySizedBox(
-        heightFactor: .7,
-        child: ListView(
-          children: <Widget>[
-            ListTile(
-              title: Text(
-                context.l10n.chooseReciter,
-                style: Theme.of(sheetContext).textTheme.titleLarge,
-              ),
-            ),
-            for (final recitation in recitations)
-              ListTile(
-                title: Text(recitation.reciter.nameFor(locale)),
-                subtitle: Text(
-                  recitationStyleLabel(sheetContext, recitation.style),
-                ),
-                trailing: recitation.id == currentId
-                    ? const Icon(Icons.check_rounded)
-                    : null,
-                onTap: () => Navigator.pop(sheetContext, recitation),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (picked == null || !mounted) return;
-    await ref
-        .read(appPreferencesProvider.notifier)
-        .setMushafRecitation(picked.id);
-  }
-
   Future<void> _bookmarkSelected() async {
     final reference = _selectedAyah ?? _pageReference;
     final scope = _database.accountScope.current;
@@ -889,95 +836,31 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     }
   }
 
-  Future<void> _showReaderOptions() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (sheetContext, update) => SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    context.l10n.readerSettings,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  Row(
-                    children: <Widget>[
-                      const Icon(Icons.zoom_out_rounded),
-                      Expanded(
-                        child: Slider(
-                          value: _zoom.clamp(1, 3),
-                          min: 1,
-                          max: 3,
-                          onChanged: (value) {
-                            _zoomControllers[_currentPage]?.setZoom(value);
-                            setState(() => _zoom = value);
-                            update(() {});
-                          },
-                        ),
-                      ),
-                      Text('${(_zoom * 100).round()}%'),
-                    ],
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.bookmarks_rounded),
-                    title: Text(context.l10n.bookmarks),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      unawaited(_showBookmarks());
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.note_alt_outlined),
-                    title: Text(context.l10n.notes),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      context.push('/notes');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.headphones_rounded),
-                    title: Text(context.l10n.nowPlaying),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      context.push('/app?tab=3');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.record_voice_over_rounded),
-                    title: Text(context.l10n.chooseReciter),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      unawaited(_chooseMushafReciter());
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.format_list_bulleted_rounded),
-                    title: Text(context.l10n.textMode),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      unawaited(_switchToText());
-                    },
-                  ),
-                  Text(
-                    context.l10n.tapAyahForDetails,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+  /// The page zoom in the ayah menu, beside pinching the page.
+  Widget _zoomSlider() => StatefulBuilder(
+    builder: (context, update) => Padding(
+      key: const ValueKey('mushaf-zoom'),
+      padding: const EdgeInsetsDirectional.fromSTEB(14, 4, 16, 4),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.zoom_out_rounded),
+          Expanded(
+            child: Slider(
+              value: _zoom.clamp(1, 3),
+              min: 1,
+              max: 3,
+              onChanged: (value) {
+                _zoomControllers[_currentPage]?.setZoom(value);
+                setState(() => _zoom = value);
+                update(() {});
+              },
             ),
           ),
-        ),
+          Text('${(_zoom * 100).round()}%'),
+        ],
       ),
-    );
-  }
+    ),
+  );
 
   Future<void> _showBookmarks() async {
     final scope = _database.accountScope.current;
@@ -1386,6 +1269,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       final tajweed = _tajweedAyah(reference, page);
       var breakdown = false;
       var memorize = false;
+      VoidCallback? leave;
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -1396,8 +1280,30 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           page: page,
           onTajweedBreakdown: tajweed == null ? null : () => breakdown = true,
           onMemorize: () => memorize = true,
+          readerZoom: _zoomSlider(),
+          readerActions: <AyahSheetReaderAction>[
+            (
+              key: const ValueKey('mushaf-bookmarks'),
+              icon: Icons.bookmarks_rounded,
+              title: context.l10n.bookmarks,
+              onTap: () => leave = () => unawaited(_showBookmarks()),
+            ),
+            (
+              key: const ValueKey('mushaf-notes'),
+              icon: Icons.note_alt_outlined,
+              title: context.l10n.notes,
+              onTap: () => leave = () => context.push('/notes'),
+            ),
+            (
+              key: const ValueKey('mushaf-now-playing'),
+              icon: Icons.headphones_rounded,
+              title: context.l10n.nowPlaying,
+              onTap: () => leave = () => context.push('/app?tab=3'),
+            ),
+          ],
         ),
       );
+      if (leave != null && mounted) leave!();
       if (memorize && mounted) {
         await showMemorizeAyahSheet(
           context,

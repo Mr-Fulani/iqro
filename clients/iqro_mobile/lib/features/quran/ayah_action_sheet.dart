@@ -26,12 +26,22 @@ import 'ayah_share.dart';
 
 enum _CopyAyahFeedback { idle, copying, copied, failed }
 
+/// An action of the reader the menu opened from, beside the ayah's own.
+typedef AyahSheetReaderAction = ({
+  Key key,
+  IconData icon,
+  String title,
+  VoidCallback onTap,
+});
+
 class AyahActionSheet extends ConsumerStatefulWidget {
   const AyahActionSheet({
     required this.reference,
     required this.page,
     this.onTajweedBreakdown,
     this.onMemorize,
+    this.readerZoom,
+    this.readerActions = const <AyahSheetReaderAction>[],
     super.key,
   });
 
@@ -43,6 +53,12 @@ class AyahActionSheet extends ConsumerStatefulWidget {
 
   /// Adds the ayah to the memorization list; null outside the Mushaf.
   final VoidCallback? onMemorize;
+
+  /// The Mushaf's own controls, which once had a menu of their own: its zoom
+  /// and the actions that leave the page (bookmarks, notes, what plays).
+  /// Each action closes the menu first.
+  final Widget? readerZoom;
+  final List<AyahSheetReaderAction> readerActions;
 
   @override
   ConsumerState<AyahActionSheet> createState() => _AyahActionSheetState();
@@ -152,10 +168,8 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           clipBehavior: Clip.antiAlias,
-          child: _loading
-              ? const IqroLoading()
-              : _error != null
-              ? IqroAsyncError(title: context.l10n.networkError, onRetry: _load)
+          child: _loading || _error != null
+              ? _waiting()
               : _content(
                   playingThis,
                   loadedThis,
@@ -213,6 +227,11 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
                 repeatEnabled: repeatEnabled,
                 canCopyOrShare: details.ayah != null,
               ),
+              if (widget.readerZoom != null ||
+                  widget.readerActions.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 12),
+                _readerSection(),
+              ],
               const SizedBox(height: 20),
               _reciterSelector(details),
               const SizedBox(height: 22),
@@ -256,6 +275,51 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
       ],
     );
   }
+
+  /// While the ayah loads, or when it could not: the reader's own controls
+  /// stay at hand, they need nothing from the network.
+  Widget _waiting() {
+    final state = _loading
+        ? const IqroLoading()
+        : IqroAsyncError(title: context.l10n.networkError, onRetry: _load);
+    if (widget.readerZoom == null && widget.readerActions.isEmpty) {
+      return state;
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 24, 18, 28),
+      children: <Widget>[
+        SizedBox(height: 200, child: state),
+        const SizedBox(height: 12),
+        _readerSection(),
+      ],
+    );
+  }
+
+  Widget _readerSection() => DecoratedBox(
+    key: const ValueKey('ayah-reader-section'),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Theme.of(context).dividerColor),
+    ),
+    child: Column(
+      children: <Widget>[
+        ?widget.readerZoom,
+        for (final (index, action) in widget.readerActions.indexed) ...<Widget>[
+          if (index > 0 || widget.readerZoom != null) const Divider(height: 1),
+          _ActionTile(
+            key: action.key,
+            icon: action.icon,
+            title: action.title,
+            onTap: () {
+              Navigator.pop(context);
+              action.onTap();
+            },
+          ),
+        ],
+      ],
+    ),
+  );
 
   Widget _quickActions({
     required bool repeatEnabled,

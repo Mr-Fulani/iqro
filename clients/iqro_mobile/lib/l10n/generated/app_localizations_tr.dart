@@ -597,9 +597,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listenPage => 'Bu sayfayı dinle';
 
   @override
-  String get tapAyahForDetails => 'Meal ve tefsir için ayete basılı tutun';
-
-  @override
   String get audioTitle => 'Kur\'an\'ı dinleyin';
 
   @override

@@ -1164,12 +1164,6 @@ abstract class AppLocalizations {
   /// **'Listen to this page'**
   String get listenPage;
 
-  /// No description provided for @tapAyahForDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'Hold an ayah for translation and tafsir'**
-  String get tapAyahForDetails;
-
   /// No description provided for @audioTitle.
   ///
   /// In en, this message translates to:

@@ -28,7 +28,7 @@ function useMediaQuery(query: string): boolean {
   );
 }
 
-function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | "expand" | "menu" | "close" | "session" | "fold" }) {
+function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | "expand" | "menu" | "close" | "session" | "fold" | "text" }) {
   const paths: Record<typeof name, ReactNode> = {
     exit: <><path d="M10 4H4v16h6M8 12h13m-4-4 4 4-4 4" /></>,
     settings: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="9" cy="18" r="2" /></>,
@@ -39,12 +39,13 @@ function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | 
     close: <path d="m6 6 12 12M6 18 18 6" />,
     fold: <path d="m5 9 7 7 7-7" />,
     session: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+    text: <path d="M5 6h14M5 10h14M5 14h14M10 18h9" />,
   };
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
 /** Viewport and overlays only. Reader data and all existing controls stay mounted. */
-export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, children }: {
+export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, onOpenText, children }: {
   active: boolean;
   page: number;
   count: number;
@@ -52,6 +53,8 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   hasNotes: boolean;
   hasSession: boolean;
   onImmersiveChange?: (immersive: boolean) => void;
+  /** The text of the same place, as the Mushaf button of the app's text reader. */
+  onOpenText?: () => void;
   children: ReactNode;
 }) {
   const { t, formatNumber } = useI18n();
@@ -229,6 +232,21 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
                   <div className="reader-audio-slot" ref={setAudioSlot} />
                   <div className="reader-action-buttons">
                   <button type="button" onClick={leaveReader} aria-label={t("quran.exitReader")} title={t("quran.exitReader")}><ReaderIcon name="exit" /></button>
+                  {onOpenText && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPanel(null);
+                        if (document.fullscreenElement === root.current) void document.exitFullscreen().catch(() => {});
+                        onOpenText();
+                      }}
+                      aria-label={t("quran.openText")}
+                      title={t("quran.openText")}
+                      data-testid="reader-open-text"
+                    >
+                      <ReaderIcon name="text" />
+                    </button>
+                  )}
                   <span className="reader-page-label" dir="ltr" aria-label={t("quran.pageOf", { page, count })}>{formatNumber(page)} / {formatNumber(count)}</span>
                   <button type="button" onClick={() => showSettings("settings")} aria-label={t("quran.readerSettings")} title={t("quran.readerSettings")}><ReaderIcon name="settings" /></button>
                   {hasNotes && <button type="button" onClick={(event) => openPanel("notes", event.currentTarget)} aria-label={t("quran.readerNotes")} title={t("quran.readerNotes")}><ReaderIcon name="notes" /></button>}

@@ -592,9 +592,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listenPage => 'استمع إلى الصفحة الحالية';
 
   @override
-  String get tapAyahForDetails => 'اضغط مطولًا على الآية للترجمة والتفسير';
-
-  @override
   String get audioTitle => 'استمع إلى القرآن';
 
   @override
