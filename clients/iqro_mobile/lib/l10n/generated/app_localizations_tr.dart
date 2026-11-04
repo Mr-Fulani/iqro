@@ -401,9 +401,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get read => 'Oku';
 
   @override
-  String get savedAutomatically => 'Konum otomatik kaydedildi';
-
-  @override
   String get nextPrayer => 'Sonraki namaz';
 
   @override

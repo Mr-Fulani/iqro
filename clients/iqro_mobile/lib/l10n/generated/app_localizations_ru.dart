@@ -410,9 +410,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get read => 'Читать';
 
   @override
-  String get savedAutomatically => 'Место сохранено автоматически';
-
-  @override
   String get nextPrayer => 'Следующая молитва';
 
   @override

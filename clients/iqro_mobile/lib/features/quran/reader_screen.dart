@@ -55,6 +55,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   final _viewportKey = GlobalKey();
   final _ayahKeys = <int, GlobalKey>{};
   final _wordRegistry = ReaderWordRegistry();
+  final _panelKey = GlobalKey();
   late final WordRangeController _words;
   var _showTranslation = true;
   var _showTafsir = false;
@@ -83,6 +84,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _words = WordRangeController(ref)..addListener(_onWords);
+    wordRangePulling.addListener(_onWords);
     _selectedAyah = widget.initialAyah;
     _initialAccountScope = ref.read(localDatabaseProvider).accountScope.current;
     _accountKey = _initialAccountScope == null
@@ -99,6 +101,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   @override
   void dispose() {
     _audioRequest += 1;
+    wordRangePulling.removeListener(_onWords);
     _words
       ..removeListener(_onWords)
       ..dispose();
@@ -108,8 +111,56 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     super.dispose();
   }
 
+  Future<void> _openMushaf(Surah? surah) async {
+    final items = ref.read(ayahsProvider(widget.surah)).valueOrNull;
+    final page =
+        items
+            ?.where((item) => item.number == _selectedAyah)
+            .firstOrNull
+            ?.pages
+            .firstOrNull ??
+        surah?.firstPage ??
+        1;
+    await ref
+        .read(appPreferencesProvider.notifier)
+        .setReaderMode(ReaderMode.mushaf);
+    if (!mounted) return;
+    context.push(
+      '/mushaf?page=$page&surah=${widget.surah}&ayah=$_selectedAyah'
+      '${widget.savesReadingPlace ? '' : '&from=bookmark'}',
+    );
+  }
+
   void _onWords() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _keepSelectionAbovePanel(),
+    );
+  }
+
+  /// Scrolls the list so the last selected word is above the panel, once
+  /// the finger has let go.
+  void _keepSelectionAbovePanel() {
+    final range = _words.range;
+    if (!mounted || range == null || wordRangePulling.value) return;
+    final word = _wordRegistry.wordRect(range.end);
+    final panel = _panelKey.currentContext?.findRenderObject() as RenderBox?;
+    if (word == null || panel == null || !panel.attached) return;
+    if (!_scrollController.hasClients) return;
+    final overlap = word.bottom + 16 - panel.localToGlobal(Offset.zero).dy;
+    if (overlap <= 0) return;
+    final position = _scrollController.position;
+    unawaited(
+      _scrollController.animateTo(
+        (position.pixels + overlap).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      ),
+    );
   }
 
   void _selectWords(List<QuranAyah> items, QuranWordRange range) {
@@ -256,6 +307,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
               subtitle:
                   '${context.l10n.surah} ${widget.surah} · ${surah?.ayahCount ?? ''} ${context.l10n.ayahs}',
               actions: <Widget>[
+                // The place is saved silently; the Mushaf switch the old
+                // «saved automatically» banner carried lives here.
+                IconButton(
+                  key: const ValueKey('reader-open-mushaf'),
+                  tooltip: context.l10n.mushafMode,
+                  onPressed: () => _openMushaf(surah),
+                  icon: const Icon(Icons.menu_book_outlined),
+                ),
                 IconButton(
                   tooltip: context.l10n.readerSettings,
                   onPressed: _showSettings,
@@ -282,33 +341,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         data: (items) => Column(
           children: <Widget>[
             SurahOpenReporter(surah: widget.surah),
-            if (!presentation.focusMode)
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 14, 8),
-                child: IqroStatusBanner(
-                  icon: Icons.sync,
-                  title: context.l10n.savedAutomatically,
-                  actionLabel: context.l10n.mushafMode,
-                  onAction: () async {
-                    final page =
-                        items
-                            .where((item) => item.number == _selectedAyah)
-                            .firstOrNull
-                            ?.pages
-                            .firstOrNull ??
-                        surah?.firstPage ??
-                        1;
-                    await ref
-                        .read(appPreferencesProvider.notifier)
-                        .setReaderMode(ReaderMode.mushaf);
-                    if (!context.mounted) return;
-                    context.push(
-                      '/mushaf?page=$page&surah=${widget.surah}&ayah=$_selectedAyah'
-                      '${widget.savesReadingPlace ? '' : '&from=bookmark'}',
-                    );
-                  },
-                ),
-              ),
             Expanded(
               child: Stack(
                 children: <Widget>[
@@ -327,7 +359,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                       start: 12,
                       end: 12,
                       bottom: 12 + MediaQuery.paddingOf(context).bottom,
-                      child: WordRangePanel(controller: _words),
+                      child: WordRangePanel(key: _panelKey, controller: _words),
                     ),
                 ],
               ),

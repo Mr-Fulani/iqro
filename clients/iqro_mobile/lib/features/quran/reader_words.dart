@@ -11,6 +11,9 @@ import 'word_range.dart';
 class ReaderWordRegistry {
   final _ayahs = <int, _ReaderAyahWordsState>{};
 
+  /// Where [word] is on screen, in global coordinates, if its ayah is built.
+  Rect? wordRect(QuranWord word) => _ayahs[word.ayah]?._globalRect(word);
+
   /// The word at [global], else the nearest word of the nearest ayah.
   QuranWord? wordAt(Offset global) {
     QuranWord? best;
@@ -176,6 +179,16 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     if (widget.marker.isNotEmpty) children.add(TextSpan(text: widget.marker));
     _offsets = offsets;
     return TextSpan(style: widget.style, children: children);
+  }
+
+  Rect? _globalRect(QuranWord word) {
+    if (word.surah != widget.surah || word.ayah != widget.ayah) return null;
+    final index = word.position - widget.firstPosition;
+    if (index < 0 || index >= widget.words.length) return null;
+    final box = context.findRenderObject() as RenderBox?;
+    final local = _wordBox(index);
+    if (box == null || !box.attached || local == null) return null;
+    return local.shift(box.localToGlobal(Offset.zero));
   }
 
   Rect? _wordBox(int index) {

@@ -93,6 +93,42 @@ export default function WordRangeBar({
   const startKey = `${range.start.surah}:${range.start.ayah}`;
   const rangeKey = `${startKey}:${range.start.position}-${range.end.ayah}:${range.end.position}`;
 
+  // The bar never covers the selected words: the page scrolls them above it,
+  // and where it cannot (the phone's full-screen Mushaf) the bar goes up.
+  const barRef = useRef<HTMLElement>(null);
+  const [onTop, setOnTop] = useState(false);
+  useEffect(() => {
+    const place = () => {
+      if (document.documentElement.dataset.wordSelecting) return;
+      const bar = barRef.current;
+      const words = [...document.querySelectorAll<HTMLElement>(".is-word-selected[data-word-key]")];
+      if (!bar || words.length === 0) return;
+      const bounds = () => words.map((word) => word.getBoundingClientRect());
+      const barHeight = bar.getBoundingClientRect().height;
+      const bottomTop = window.innerHeight - 12 - barHeight;
+      const overlap = Math.max(...bounds().map((box) => box.bottom)) + 12 - bottomTop;
+      if (overlap <= 0) {
+        setOnTop(false);
+        return;
+      }
+      const before = window.scrollY;
+      window.scrollBy({ top: overlap, behavior: "instant" });
+      if (window.scrollY - before >= overlap - 1) {
+        setOnTop(false);
+        return;
+      }
+      setOnTop(Math.min(...bounds().map((box) => box.top)) > 12 + barHeight + 8);
+    };
+    const timer = window.setTimeout(place);
+    // A finger that lets go of the selection places the bar again.
+    const observer = new MutationObserver(place);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-word-selecting"] });
+    return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [rangeKey]);
+
   // Another selection stops this one.
   useEffect(() => {
     clip.current = null;
@@ -194,7 +230,12 @@ export default function WordRangeBar({
   ].filter(Boolean).join(" · ");
 
   return (
-    <section className="word-range-bar" aria-label={t("wordRange.label")} data-testid="word-range-bar">
+    <section
+      ref={barRef}
+      className={`word-range-bar${onTop ? " is-top" : ""}`}
+      aria-label={t("wordRange.label")}
+      data-testid="word-range-bar"
+    >
       <audio ref={attach} preload="none" onEnded={() => { stop(); replay.current(); }} />
       <div className="word-range-bar-head">
         <div className="word-range-bar-title">

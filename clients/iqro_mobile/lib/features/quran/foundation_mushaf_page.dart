@@ -419,6 +419,22 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
     _extend(layout, anchor, local);
   }
 
+  /// Tells the panel where the selected words of this page are on screen.
+  void _reportBounds(FoundationPageLayout layout) {
+    final range = widget.wordRange;
+    final box = context.findRenderObject() as RenderBox?;
+    if (range == null || box == null || !box.attached) return;
+    Rect? bounds;
+    for (final word in layout.words) {
+      final item = _wordOf(word);
+      if (item == null || !range.contains(item)) continue;
+      bounds = bounds == null ? word.rect : bounds.expandToInclude(word.rect);
+    }
+    if (bounds == null) return;
+    final global = MatrixUtils.transformRect(box.getTransformTo(null), bounds);
+    if (wordRangeBounds.value != global) wordRangeBounds.value = global;
+  }
+
   List<Widget> _handles(FoundationPageLayout layout) {
     final range = widget.wordRange;
     if (range == null || widget.onWordRange == null) return const [];
@@ -595,6 +611,8 @@ class _FoundationCanvasState extends State<FoundationPageCanvas> {
               ),
             ),
             ..._handles(layout),
+            if (widget.wordRange != null && widget.onWordRange != null)
+              _AfterLayout(() => _reportBounds(layout)),
             if (_loupe case final point?)
               Positioned(
                 left: point.dx - 64,
@@ -1035,4 +1053,19 @@ class FoundationPagePainter extends CustomPainter {
       top != oldDelegate.top ||
       wordRange != oldDelegate.wordRange ||
       playingWord != oldDelegate.playingWord;
+}
+
+/// Calls [action] after each layout of the page, once its words are placed.
+class _AfterLayout extends StatelessWidget {
+  const _AfterLayout(this.action);
+
+  final VoidCallback action;
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) action();
+    });
+    return const SizedBox.shrink();
+  }
 }

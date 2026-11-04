@@ -58,6 +58,47 @@ void main() {
     });
   });
 
+  group('panel place', () {
+    const screen = Size(400, 900);
+    const padding = EdgeInsets.only(top: 24, bottom: 16);
+
+    test('stays at the bottom while the words are above it', () {
+      expect(
+        wordRangePanelOnTop(
+          selection: const Rect.fromLTRB(20, 100, 380, 160),
+          screen: screen,
+          padding: padding,
+          panelHeight: 240,
+        ),
+        isFalse,
+      );
+    });
+
+    test('goes to the top when it would cover the words', () {
+      expect(
+        wordRangePanelOnTop(
+          selection: const Rect.fromLTRB(20, 700, 380, 760),
+          screen: screen,
+          padding: padding,
+          panelHeight: 240,
+        ),
+        isTrue,
+      );
+    });
+
+    test('stays at the bottom when the words fill the page', () {
+      expect(
+        wordRangePanelOnTop(
+          selection: const Rect.fromLTRB(20, 120, 380, 860),
+          screen: screen,
+          padding: padding,
+          panelHeight: 240,
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('QCF page', () {
     testWidgets('a long press and a drag select the words between', (
       tester,
@@ -76,6 +117,9 @@ void main() {
       expect(harness.ranges.last.range.end, const QuranWord(112, 4, 3));
       expect(harness.ranges.last.count, 3);
       expect(harness.opened, isEmpty);
+      // The page tells the panel where the words are, to keep clear of them.
+      await tester.pump();
+      expect(wordRangeBounds.value?.contains(_wordCenter(tester, 2)), isTrue);
       expect(
         find.byKey(const ValueKey('word-range-start-handle')),
         findsOneWidget,
@@ -462,6 +506,11 @@ void main() {
 
       expect(ranges.last.start, const QuranWord(1, 5, 1));
       expect(ranges.last.end, const QuranWord(1, 6, 3));
+      // The reader scrolls the last word above the panel by its rect.
+      final rect = registry.wordRect(const QuranWord(1, 6, 3));
+      expect(rect, isNotNull);
+      expect(second.overlaps(rect!), isTrue);
+      expect(rect.right, lessThan(second.center.dx));
       expect(
         find.byKey(const ValueKey('word-range-end-handle')),
         findsOneWidget,
