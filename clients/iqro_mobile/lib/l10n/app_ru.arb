@@ -134,6 +134,8 @@
   "alFatiha": "Аль-Фатиха",
   "textMode": "Текст",
   "mushafMode": "Мусхаф",
+  "readerPlainText": "Арабский текст",
+  "readerPlainTextPlace": "Аят {ayah} · стр. {page}",
   "selectedMushaf": "Выбранный Мусхаф",
   "chooseMushaf": "Выберите Мусхаф",
   "mushafCatalogEmpty": "Мусхафы ещё не загружены",

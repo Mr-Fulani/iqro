@@ -876,6 +876,18 @@ abstract class AppLocalizations {
   /// **'Mushaf'**
   String get mushafMode;
 
+  /// No description provided for @readerPlainText.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic text'**
+  String get readerPlainText;
+
+  /// No description provided for @readerPlainTextPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Ayah {ayah} · p. {page}'**
+  String readerPlainTextPlace(String ayah, String page);
+
   /// No description provided for @selectedMushaf.
   ///
   /// In en, this message translates to:

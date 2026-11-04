@@ -444,6 +444,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mushafMode => 'المصحف';
 
   @override
+  String get readerPlainText => 'النص العربي';
+
+  @override
+  String readerPlainTextPlace(String ayah, String page) {
+    return 'الآية $ayah · ص $page';
+  }
+
+  @override
   String get selectedMushaf => 'المصحف المختار';
 
   @override

@@ -134,6 +134,8 @@
   "alFatiha": "الفاتحة",
   "textMode": "النص",
   "mushafMode": "المصحف",
+  "readerPlainText": "النص العربي",
+  "readerPlainTextPlace": "الآية {ayah} · ص {page}",
   "selectedMushaf": "المصحف المختار",
   "chooseMushaf": "اختر المصحف",
   "mushafCatalogEmpty": "لم يتم تحميل المصاحف بعد",

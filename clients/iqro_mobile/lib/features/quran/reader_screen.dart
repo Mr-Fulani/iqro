@@ -27,6 +27,8 @@ import '../../core/analytics/analytics.dart';
 import '../../core/share/content_share.dart';
 import '../../core/text/arabic_digits.dart';
 import 'surah_open_reporter.dart';
+import 'reader_flow_screen.dart';
+import 'reader_page_turn.dart';
 import 'reader_words.dart';
 import 'word_range.dart';
 
@@ -118,11 +120,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     super.dispose();
   }
 
-  Future<void> _openMushaf(Surah? surah) async {
+  /// The Mushaf page of [ayah], else of the selected ayah. A swipe sends
+  /// [turn]: the page then turns in.
+  Future<void> _openMushaf(Surah? surah, {int? ayah, bool turn = false}) async {
+    final target = ayah ?? _selectedAyah;
     final items = ref.read(ayahsProvider(widget.surah)).valueOrNull;
     final page =
         items
-            ?.where((item) => item.number == _selectedAyah)
+            ?.where((item) => item.number == target)
             .firstOrNull
             ?.pages
             .firstOrNull ??
@@ -133,9 +138,76 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         .setReaderMode(ReaderMode.mushaf);
     if (!mounted) return;
     context.push(
-      '/mushaf?page=$page&surah=${widget.surah}&ayah=$_selectedAyah'
+      '/mushaf?page=$page&surah=${widget.surah}&ayah=$target'
       '${widget.savesReadingPlace ? '' : '&from=bookmark'}',
+      extra: turn ? ReaderPageTurn.routeExtra : null,
     );
+  }
+
+  /// The surah as plain Arabic text from [ayah]; back here, the ayah the
+  /// reader stopped at comes to the top.
+  Future<void> _openPlainText(List<QuranAyah> items, int ayah) async {
+    final stopped = await Navigator.of(
+      context,
+    ).push<int>(ReaderFlowScreen.route(surah: widget.surah, ayah: ayah));
+    if (stopped == null || !mounted) return;
+    setState(() => _selectedAyah = stopped);
+    await _showAyah(items, stopped);
+  }
+
+  void _onSwipe(
+    List<QuranAyah> items,
+    Surah? surah,
+    ReaderSwipeDirection direction,
+    Offset start,
+  ) {
+    final ayah = _ayahAt(items, start) ?? _selectedAyah;
+    switch (direction) {
+      case ReaderSwipeDirection.right:
+        unawaited(_openPlainText(items, ayah));
+      case ReaderSwipeDirection.left:
+        unawaited(_openMushaf(surah, ayah: ayah, turn: true));
+    }
+  }
+
+  /// The ayah whose card is under [global], else the first one on screen.
+  int? _ayahAt(List<QuranAyah> items, Offset global) {
+    final viewport = _viewportKey.currentContext?.findRenderObject();
+    final viewportTop = viewport is RenderBox && viewport.attached
+        ? viewport.localToGlobal(Offset.zero).dy
+        : 0.0;
+    int? top;
+    for (final ayah in items) {
+      final box = _ayahKeys[ayah.number]?.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      if (rect.top <= global.dy && global.dy <= rect.bottom) return ayah.number;
+      if (top == null && rect.bottom > viewportTop) top = ayah.number;
+    }
+    return top;
+  }
+
+  /// Scrolls [number]'s card to the top and keeps the place there.
+  Future<void> _showAyah(List<QuranAyah> items, int number) async {
+    final target = items.where((item) => item.number == number).firstOrNull;
+    if (target == null) return;
+    for (var attempt = 0; attempt < 4 && mounted; attempt++) {
+      final targetContext = _ayahKeys[number]?.currentContext;
+      if (targetContext != null && targetContext.mounted) {
+        await Scrollable.ensureVisible(targetContext, alignment: .03);
+        break;
+      }
+      if (!_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      _scrollController.jumpTo(
+        (position.maxScrollExtent * (number - 1) / items.length).clamp(
+          0,
+          position.maxScrollExtent,
+        ),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (mounted) await _persistPosition(target);
   }
 
   void _onWords() {
@@ -345,35 +417,48 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           children: <Widget>[
             SurahOpenReporter(surah: widget.surah),
             Expanded(
-              child: Stack(
-                key: _stackKey,
-                children: <Widget>[
-                  Positioned.fill(
-                    child: _readerList(
-                      items,
-                      surah,
-                      title,
-                      audio,
-                      highlightColors,
-                      presentation,
-                    ),
-                  ),
-                  if (_words.range != null)
+              child: ReaderSwipeArea(
+                enabled: _words.range == null && !wordRangePulling.value,
+                right: ReaderSwipeTarget(
+                  icon: Icons.text_fields_rounded,
+                  label: context.l10n.readerPlainText,
+                ),
+                left: ReaderSwipeTarget(
+                  icon: Icons.menu_book_outlined,
+                  label: context.l10n.mushafMode,
+                ),
+                onSwipe: (direction, start) =>
+                    _onSwipe(items, surah, direction, start),
+                child: Stack(
+                  key: _stackKey,
+                  children: <Widget>[
                     Positioned.fill(
-                      child: WordRangePanelLayer(
-                        controller: _words,
-                        selection: _selectionBounds,
-                        onMore: () {
-                          final start = _words.range?.start;
-                          final ayah = items
-                              .where((item) => item.number == start?.ayah)
-                              .firstOrNull;
-                          if (ayah != null) unawaited(_select(ayah));
-                        },
+                      child: _readerList(
+                        items,
+                        surah,
+                        title,
+                        audio,
+                        highlightColors,
+                        presentation,
                       ),
                     ),
-                  if (_loupe case final point?) WordRangeLoupe(point: point),
-                ],
+                    if (_words.range != null)
+                      Positioned.fill(
+                        child: WordRangePanelLayer(
+                          controller: _words,
+                          selection: _selectionBounds,
+                          onMore: () {
+                            final start = _words.range?.start;
+                            final ayah = items
+                                .where((item) => item.number == start?.ayah)
+                                .firstOrNull;
+                            if (ayah != null) unawaited(_select(ayah));
+                          },
+                        ),
+                      ),
+                    if (_loupe case final point?) WordRangeLoupe(point: point),
+                  ],
+                ),
               ),
             ),
           ],

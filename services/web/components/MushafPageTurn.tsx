@@ -10,13 +10,24 @@ type PageFrame = { id: string; content: ReactNode };
 export function MushafPageTurn({
   pageId,
   direction,
+  fromText = false,
   children,
 }: {
   pageId: string;
   direction: "next" | "previous";
+  /** A swipe on the text opened the Mushaf: the page turns in over it. */
+  fromText?: boolean;
   children: ReactNode;
 }) {
   const immersive = useMushafReader()?.immersive ?? false;
+  // The first sheet a swipe brought turns in once; turning on, it is a page.
+  const [entry, setEntry] = useState(() => (fromText ? pageId : null));
+  useEffect(() => {
+    if (fromText) setEntry((current) => current ?? pageId);
+  }, [fromText, pageId]);
+  useEffect(() => {
+    if (entry !== null && entry !== pageId) setEntry(null);
+  }, [entry, pageId]);
   const lastFrame = useRef<PageFrame | null>(null);
   const [outgoing, setOutgoing] = useState<PageFrame | null>(null);
 
@@ -46,7 +57,7 @@ export function MushafPageTurn({
         </div>
       )}
       <div
-        className={`mushaf-page-turn is-${direction}`}
+        className={`mushaf-page-turn is-${entry === pageId ? "from-text" : direction}`}
         data-page-turn={direction}
         key={pageId}
         onAnimationEnd={(event) => {

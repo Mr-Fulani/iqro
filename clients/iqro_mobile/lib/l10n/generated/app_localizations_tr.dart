@@ -446,6 +446,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get mushafMode => 'Mushaf';
 
   @override
+  String get readerPlainText => 'Arapça metin';
+
+  @override
+  String readerPlainTextPlace(String ayah, String page) {
+    return 'Ayet $ayah · s. $page';
+  }
+
+  @override
   String get selectedMushaf => 'Seçili Mushaf';
 
   @override

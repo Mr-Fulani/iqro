@@ -275,6 +275,14 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> setReaderFocusMode(bool enabled) =>
       _set(state.copyWith(readerFocusMode: enabled));
 
+  Future<void> setReaderFlowFontSize(double size) => _set(
+    state.copyWith(
+      readerFlowFontSize: size
+          .clamp(minReaderFlowFontSize, maxReaderFlowFontSize)
+          .toDouble(),
+    ),
+  );
+
   Future<void> setReaderHaptics(bool enabled) =>
       _set(state.copyWith(readerHaptics: enabled));
 

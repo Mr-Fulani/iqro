@@ -13,6 +13,11 @@ class ReaderWordRegistry {
   /// Where [word] is on screen, in global coordinates, if its ayah is built.
   Rect? wordRect(QuranWord word) => _ayahs[word.ayah]?._globalRect(word);
 
+  /// Where [word] is in [ancestor]: true while a page turning in tilts the
+  /// screen, which global coordinates are not.
+  Rect? wordRectIn(QuranWord word, RenderObject ancestor) =>
+      _ayahs[word.ayah]?._rectIn(word, ancestor);
+
   /// The word at [global], else the nearest word of the nearest ayah.
   QuranWord? wordAt(Offset global) {
     QuranWord? best;
@@ -27,6 +32,25 @@ class ReaderWordRegistry {
     }
     return best;
   }
+}
+
+/// One ayah's words in a [ReaderAyahWords.flow] paragraph.
+class ReaderAyahText {
+  const ReaderAyahText({
+    required this.ayah,
+    required this.words,
+    this.firstPosition = 1,
+    this.marker = '',
+  });
+
+  final int ayah;
+
+  /// The words in order; the first is at [firstPosition].
+  final List<String> words;
+  final int firstPosition;
+
+  /// Text after the last word: the ayah's end marker.
+  final String marker;
 }
 
 /// The Arabic text of one ayah in the reader, word by word. A long press
@@ -46,7 +70,28 @@ class ReaderAyahWords extends StatefulWidget {
     this.playingWord,
     this.onDrag,
     super.key,
-  });
+  }) : flowAyahs = null,
+       textAlign = TextAlign.center,
+       marked = null;
+
+  /// Several ayahs running on in one paragraph, as on a Mushaf page.
+  ReaderAyahWords.flow({
+    required this.surah,
+    required List<ReaderAyahText> ayahs,
+    required this.style,
+    required this.registry,
+    required this.onRange,
+    this.textAlign = TextAlign.justify,
+    this.range,
+    this.marked,
+    this.playingWord,
+    this.onDrag,
+    super.key,
+  }) : flowAyahs = ayahs,
+       ayah = ayahs.first.ayah,
+       words = const <String>[],
+       firstPosition = 1,
+       marker = '';
 
   final int surah;
   final int ayah;
@@ -57,6 +102,13 @@ class ReaderAyahWords extends StatefulWidget {
 
   /// Text after the last word: the ayah's end marker.
   final String marker;
+
+  /// Set by [ReaderAyahWords.flow]: the ayahs in place of the one above.
+  final List<ReaderAyahText>? flowAyahs;
+  final TextAlign textAlign;
+
+  /// Words shown for a moment in a soft tint: the place a reader came to.
+  final QuranWordRange? marked;
   final TextStyle? style;
   final ReaderWordRegistry registry;
   final QuranWordRange? range;
@@ -73,6 +125,9 @@ class ReaderAyahWords extends StatefulWidget {
 class _ReaderAyahWordsState extends State<ReaderAyahWords> {
   TextPainter? _painter;
 
+  /// Every word of the paragraph in order, with its text.
+  var _words = const <({QuranWord word, String text})>[];
+
   /// The text offset where each word starts, and the end of the last.
   var _offsets = const <int>[];
   QuranWord? _anchor;
@@ -80,35 +135,58 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
   /// The handle a finger pulls, and where it was taken.
   ({bool start, Rect box})? _held;
 
+  static List<ReaderAyahText> _texts(ReaderAyahWords widget) =>
+      widget.flowAyahs ??
+      <ReaderAyahText>[
+        ReaderAyahText(
+          ayah: widget.ayah,
+          words: widget.words,
+          firstPosition: widget.firstPosition,
+          marker: widget.marker,
+        ),
+      ];
+
+  void _register(ReaderAyahWords widget) {
+    for (final text in _texts(widget)) {
+      widget.registry._ayahs[text.ayah] = this;
+    }
+  }
+
+  void _unregister(ReaderAyahWords widget) {
+    for (final text in _texts(widget)) {
+      if (identical(widget.registry._ayahs[text.ayah], this)) {
+        widget.registry._ayahs.remove(text.ayah);
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    widget.registry._ayahs[widget.ayah] = this;
+    _register(widget);
   }
 
   @override
   void didUpdateWidget(covariant ReaderAyahWords oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.ayah != widget.ayah ||
-        oldWidget.registry != widget.registry) {
-      if (identical(oldWidget.registry._ayahs[oldWidget.ayah], this)) {
-        oldWidget.registry._ayahs.remove(oldWidget.ayah);
-      }
-      widget.registry._ayahs[widget.ayah] = this;
-    }
+    _unregister(oldWidget);
+    _register(widget);
   }
 
   @override
   void dispose() {
-    if (identical(widget.registry._ayahs[widget.ayah], this)) {
-      widget.registry._ayahs.remove(widget.ayah);
-    }
+    _unregister(widget);
     _painter?.dispose();
     super.dispose();
   }
 
-  QuranWord _word(int index) =>
-      QuranWord(widget.surah, widget.ayah, widget.firstPosition + index);
+  QuranWord _word(int index) => _words[index].word;
+
+  int? _indexOf(QuranWord word) {
+    if (word.surah != widget.surah) return null;
+    final index = _words.indexWhere((item) => item.word == word);
+    return index < 0 ? null : index;
+  }
 
   ({QuranWord word, double distance})? _nearest(Offset global) {
     final painter = _painter;
@@ -126,7 +204,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     );
     final offset = painter.getPositionForOffset(point).offset;
     var index = 0;
-    while (index < widget.words.length - 1 && offset >= _offsets[index + 1]) {
+    while (index < _words.length - 1 && offset >= _offsets[index + 1]) {
       index++;
     }
     return (word: _word(index), distance: dy);
@@ -141,53 +219,79 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
 
   TextSpan _span() {
     final range = widget.range;
+    final marked = widget.marked;
     final children = <InlineSpan>[];
+    final words = <({QuranWord word, String text})>[];
     final offsets = <int>[];
+    final texts = _texts(widget);
     var length = 0;
-    for (final (index, text) in widget.words.indexed) {
-      final word = _word(index);
-      final selected = range?.contains(word) ?? false;
-      if (index > 0) {
-        final joined = selected && range!.contains(_word(index - 1));
+    for (final ayah in texts) {
+      for (final (index, text) in ayah.words.indexed) {
+        final word = QuranWord(
+          widget.surah,
+          ayah.ayah,
+          ayah.firstPosition + index,
+        );
+        final selected = range?.contains(word) ?? false;
+        if (words.isNotEmpty) {
+          final joined = selected && range!.contains(words.last.word);
+          children.add(
+            TextSpan(
+              text: ' ',
+              style: joined
+                  ? const TextStyle(backgroundColor: wordRangeSelectionColor)
+                  : null,
+            ),
+          );
+          length += 1;
+        }
+        offsets.add(length);
+        words.add((word: word, text: text));
         children.add(
           TextSpan(
-            text: ' ',
-            style: joined
-                ? const TextStyle(backgroundColor: wordRangeSelectionColor)
+            text: text,
+            style: selected
+                ? TextStyle(
+                    backgroundColor: word == widget.playingWord
+                        ? wordRangePlayingColor
+                        : wordRangeSelectionColor,
+                  )
+                : marked?.contains(word) ?? false
+                ? const TextStyle(backgroundColor: _markedColor)
                 : null,
           ),
         );
-        length += 1;
+        length += text.length;
       }
-      offsets.add(length);
-      children.add(
-        TextSpan(
-          text: text,
-          style: selected
-              ? TextStyle(
-                  backgroundColor: word == widget.playingWord
-                      ? wordRangePlayingColor
-                      : wordRangeSelectionColor,
-                )
-              : null,
-        ),
-      );
-      length += text.length;
+      if (ayah.marker.isNotEmpty) {
+        // The end of the last word: the marker belongs to no word.
+        if (identical(ayah, texts.last)) offsets.add(length);
+        children.add(TextSpan(text: ayah.marker));
+        length += ayah.marker.length;
+      }
     }
-    offsets.add(length);
-    if (widget.marker.isNotEmpty) children.add(TextSpan(text: widget.marker));
+    if (offsets.length == words.length) offsets.add(length);
+    _words = words;
     _offsets = offsets;
     return TextSpan(style: widget.style, children: children);
   }
 
   Rect? _globalRect(QuranWord word) {
-    if (word.surah != widget.surah || word.ayah != widget.ayah) return null;
-    final index = word.position - widget.firstPosition;
-    if (index < 0 || index >= widget.words.length) return null;
+    final index = _indexOf(word);
+    if (index == null) return null;
     final box = context.findRenderObject() as RenderBox?;
     final local = _wordBox(index);
     if (box == null || !box.attached || local == null) return null;
     return local.shift(box.localToGlobal(Offset.zero));
+  }
+
+  Rect? _rectIn(QuranWord word, RenderObject ancestor) {
+    final index = _indexOf(word);
+    if (index == null) return null;
+    final box = context.findRenderObject() as RenderBox?;
+    final local = _wordBox(index);
+    if (box == null || !box.attached || local == null) return null;
+    return local.shift(box.localToGlobal(Offset.zero, ancestor: ancestor));
   }
 
   Rect? _wordBox(int index) {
@@ -196,7 +300,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     final boxes = painter.getBoxesForSelection(
       TextSelection(
         baseOffset: _offsets[index],
-        extentOffset: _offsets[index] + widget.words[index].length,
+        extentOffset: _offsets[index] + _words[index].text.length,
       ),
     );
     if (boxes.isEmpty) return null;
@@ -208,16 +312,10 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
   List<Widget> _handles() {
     final range = widget.range;
     if (range == null) return const [];
-    int? indexOf(QuranWord word) =>
-        word.surah == widget.surah && word.ayah == widget.ayah
-        ? word.position - widget.firstPosition
-        : null;
-    final start = indexOf(range.start);
-    final end = indexOf(range.end);
+    final start = _indexOf(range.start);
+    final end = _indexOf(range.end);
     Widget? handle(int? index, {required bool start}) {
-      final box = index == null || index < 0 || index >= widget.words.length
-          ? null
-          : _wordBox(index);
+      final box = index == null ? null : _wordBox(index);
       // A handle pulled into another ayah stays here, unseen, until the
       // finger lifts: its gesture lives in this card.
       final held = _held?.start == start ? _held!.box : null;
@@ -257,14 +355,14 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
       _painter?.dispose();
       final painter = TextPainter(
         text: _span(),
-        textAlign: TextAlign.center,
+        textAlign: widget.textAlign,
         textDirection: TextDirection.rtl,
         textScaler: MediaQuery.textScalerOf(context),
       )..layout(minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth);
       _painter = painter;
       final handles = _handles();
       return Semantics(
-        label: widget.words.join(' '),
+        label: _words.map((item) => item.text).join(' '),
         textDirection: TextDirection.rtl,
         child: RawGestureDetector(
           gestures: <Type, GestureRecognizerFactory>{
@@ -313,6 +411,9 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     },
   );
 }
+
+/// The soft tint of [ReaderAyahWords.marked]: the app's gold, faint.
+const _markedColor = Color(0x38C49647);
 
 /// How far a handle's knob reaches under the line it marks.
 const _knobRoom = WordRangeHandle.knob + 6;

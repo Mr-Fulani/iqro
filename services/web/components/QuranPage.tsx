@@ -89,6 +89,8 @@ import {
 } from "../lib/word-range";
 import { holdInView } from "../lib/hold-in-view";
 import { WordRangeHandles, useWordSelection } from "./WordSelection";
+import { QuranPlainText } from "./QuranPlainText";
+import { ReaderSwipeReveal, useReaderSwipe, type ReaderSwipeDirection } from "./ReaderSwipe";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
 const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
@@ -437,6 +439,11 @@ function QuranContent() {
   const [wordRange, setWordRange] = useState<{ range: QuranWordRange; count: number } | null>(null);
   const [playingWord, setPlayingWord] = useState<QuranWord | null>(null);
   const [wordArea, setWordArea] = useState<HTMLElement | null>(null);
+  // The surah as plain Arabic text, opened by a swipe at this ayah.
+  const [plainTextAyah, setPlainTextAyah] = useState<number | null>(null);
+  const [plainWordArea, setPlainWordArea] = useState<HTMLElement | null>(null);
+  const [textSurface, setTextSurface] = useState<HTMLElement | null>(null);
+  const [mushafFromText, setMushafFromText] = useState(false);
   const [tajweedSelection, setTajweedSelection] = useState<TajweedSelection | null>(null);
   const [breakdownAyah, setBreakdownAyah] = useState<string | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -1440,7 +1447,7 @@ function QuranContent() {
     setWordRange(null);
     setPlayingWord(null);
   }, []);
-  useWordSelection(wordArea, wordRange?.range ?? null, selectWords, clearWords);
+  useWordSelection(plainTextAyah === null ? wordArea : plainWordArea, wordRange?.range ?? null, selectWords, clearWords);
   // Words the chosen reciter has no timings of play in the teaching voice.
   const wordTimingFallback = useMemo(() => wordTimingFallbackRecitations(mushafRecitations).map((voice) => {
     const name = reciterName(voice.reciter, locale);
@@ -1486,6 +1493,56 @@ function QuranContent() {
     if (canonicalPage !== null) setCurrentPage(canonicalPage);
     setViewMode("text");
   };
+
+  // The Mushaf page of the ayah: from the switch, or turned in by a swipe.
+  const openMushaf = (target: string | null, swiped = false) => {
+    const previous = lastMushafLocation.current;
+    if (previous?.sourceId === selectedFoundationMushafId && previous?.ayah === target) {
+      setCurrentPage(previous.page);
+    }
+    pendingMushafAyah.current = target;
+    setSelectedMushafAyah(target);
+    textScrollIntent.current = false;
+    setMushafFromText(swiped);
+    setViewMode("mushaf");
+  };
+  useEffect(() => {
+    if (!mushafFromText) return;
+    const timer = window.setTimeout(() => setMushafFromText(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [mushafFromText]);
+
+  // Back from the plain text: its top ayah comes to the top of the cards.
+  const leavePlainText = useCallback((ayahNumber: number) => {
+    setPlainTextAyah(null);
+    const key = `${selectedSurah}:${ayahNumber}`;
+    textReadingAyah.current = key;
+    setSelectedMushafAyah(key);
+    const ayah = ayahs.find((item) => item.number === ayahNumber);
+    queueReadingPlace({ pageNumber: ayah?.pages[0] ?? currentPage, surahNumber: selectedSurah, ayahNumber });
+    window.requestAnimationFrame(() => {
+      document.getElementById(`quran-ayah-${selectedSurah}-${ayahNumber}`)?.scrollIntoView({ block: "start" });
+    });
+  }, [ayahs, currentPage, queueReadingPlace, selectedSurah]);
+
+  // A swipe across the text on a phone or a tablet: to the right the plain
+  // Arabic text, to the left the Mushaf, at the ayah under the finger.
+  const textSwipe = useReaderSwipe(textSurface, {
+    enabled: viewMode === "text" && !wordRange && plainTextAyah === null,
+    right: true,
+    left: true,
+    onSwipe: (direction: ReaderSwipeDirection, target) => {
+      const card = target instanceof Element ? target.closest<HTMLElement>("article.ayah-card") : null;
+      const fromCard = card?.id.match(/^quran-ayah-(\d+)-(\d+)$/);
+      const key = fromCard ? `${fromCard[1]}:${fromCard[2]}` : textReadingAyah.current ?? selectedMushafAyah ?? `${selectedSurah}:1`;
+      if (direction === "left") {
+        openMushaf(key, true);
+        return;
+      }
+      clearWords();
+      setPlainTextAyah(Number(key.split(":")[1]) || 1);
+    },
+  });
 
   // The ayah's menu, from an ayah number or «⋯» on the selection bar: the
   // actions under the Mushaf, a sheet over the full-screen reader, the card's
@@ -1826,17 +1883,7 @@ function QuranContent() {
             </button>
             <button
               className={`btn ${viewMode === "mushaf" ? "btn-primary" : "btn-secondary"}`}
-              onClick={() => {
-                const target = textReadingAyah.current ?? selectedMushafAyah;
-                const previous = lastMushafLocation.current;
-                if (previous?.sourceId === selectedFoundationMushafId && previous?.ayah === target) {
-                  setCurrentPage(previous.page);
-                }
-                pendingMushafAyah.current = target;
-                setSelectedMushafAyah(target);
-                textScrollIntent.current = false;
-                setViewMode("mushaf");
-              }}
+              onClick={() => openMushaf(textReadingAyah.current ?? selectedMushafAyah)}
             >
               {t("quran.mushafView", { page: currentPage })}
             </button>
@@ -2208,7 +2255,17 @@ function QuranContent() {
 
       {/* Content Area */}
       {viewMode === "text" ? (
-        <section className="surface quran-content-surface">
+        <>
+        <ReaderSwipeReveal
+          offset={textSwipe}
+          right={{ icon: <span className="reader-swipe-glyph" aria-hidden="true">ع</span>, label: t("quran.plainText") }}
+          left={{ icon: <span aria-hidden="true">📖</span>, label: t("quran.plainTextMushaf") }}
+        />
+        <section
+          ref={setTextSurface}
+          className="surface quran-content-surface reader-swipe-surface"
+          style={{ transform: textSwipe ? `translateX(${textSwipe}px)` : undefined }}
+        >
           {/* Bismillah Header */}
           {selectedSurah !== 1 && selectedSurah !== 9 && (
             <div style={{ textAlign: "center", padding: "16px 0 24px", borderBottom: "1px solid var(--border)" }}>
@@ -2419,6 +2476,7 @@ function QuranContent() {
             </div>
           )}
         </section>
+        </>
       ) : (
         /* Mushaf Page View */
         <section
@@ -2465,6 +2523,7 @@ function QuranContent() {
                 ) : foundationMushafPage ? (
                   <MushafPageTurn
                     direction={pageTurnDirection}
+                    fromText={mushafFromText}
                     pageId={`${selectedFoundationMushaf.source_id}-${foundationMushafPage.page_number}`}
                     key={selectedFoundationMushaf.source_id}
                   >
@@ -2723,6 +2782,19 @@ function QuranContent() {
           <AyahShareDialog target={shareTarget} onClose={() => setShareTarget(null)} />
         </ShareDialogBoundary>
       )}
+      {plainTextAyah !== null && viewMode === "text" && (
+        <QuranPlainText
+          key={`${selectedSurah}:${plainTextAyah}`}
+          surah={selectedSurah}
+          surahName={currentSurahObj?.name_ar}
+          ayahs={ayahs}
+          startAyah={plainTextAyah}
+          range={wordRange?.range ?? null}
+          playingWord={playingWord}
+          wordArea={setPlainWordArea}
+          onLeave={leavePlainText}
+        />
+      )}
       {wordRange && (
         <WordRangeBar
           range={wordRange.range}
@@ -2734,7 +2806,16 @@ function QuranContent() {
           })()}
           fallbackVoices={wordTimingFallback}
           onClear={clearWords}
-          onMore={() => openAyahMenu(`${wordRange.range.start.surah}:${wordRange.range.start.ayah}`)}
+          onMore={() => {
+            const ayahKey = `${wordRange.range.start.surah}:${wordRange.range.start.ayah}`;
+            if (plainTextAyah === null) {
+              openAyahMenu(ayahKey);
+              return;
+            }
+            // The ayah's buttons are on its card, under the plain text.
+            leavePlainText(wordRange.range.start.ayah);
+            window.requestAnimationFrame(() => openAyahMenu(ayahKey));
+          }}
           onPlayingWord={setPlayingWord}
         />
       )}
