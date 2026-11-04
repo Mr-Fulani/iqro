@@ -112,7 +112,7 @@ Map<String, Object?> buildPlanWidgetSnapshot({
   final result = <String, Object?>{
     'locale': normalized,
     'title': copy.dailyPlan,
-    'emptyLabel': copy.openPlan,
+    'emptyLabel': copy.planWidgetEmpty,
     'afterPrayerLabel': copy.afterPrayer,
     'pageUnit': copy.pages,
     'validUntil': 0,
@@ -149,6 +149,10 @@ Map<String, Object?> buildPlanWidgetSnapshot({
   ];
   const codes = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
   final palm = palmGrowthFor(plan).stage;
+  List<Map<String, String>> rows(String Function(String code) value) => [
+    for (var i = 0; i < codes.length; i++)
+      {'label': prayerNames[i], 'value': value(codes[i])},
+  ];
   result.addAll({
     'isCurrent': true,
     'validUntil': tz.TZDateTime(
@@ -166,15 +170,18 @@ Map<String, Object?> buildPlanWidgetSnapshot({
     // Static art per stage: home-screen widgets cannot run the animation.
     'palmStage': palm.index,
     'palmLabel': palmStageLabel(copy, palm),
-    'rows': [
-      for (var i = 0; i < codes.length; i++)
-        {
-          'label': prayerNames[i],
-          'value': number.format(
-            (plan.prayerPages[codes[i]] ?? 0).clamp(0, 1000000),
-          ),
-        },
-    ],
+    'rows': rows(
+      (code) => number.format((plan.prayerPages[code] ?? 0).clamp(0, 1000000)),
+    ),
+    // Shown from validUntil on, until the app publishes the new day: the same
+    // goal with nothing read yet, so the widget never waits for a tap.
+    'nextDay': {
+      'achieved': number.format(0),
+      'remainingLabel': copy.remaining,
+      'remaining': number.format(plan.target),
+      'progress': 0,
+      'rows': rows((_) => number.format(0)),
+    },
   });
   return result;
 }

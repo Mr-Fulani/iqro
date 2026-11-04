@@ -130,6 +130,25 @@ export function TodayReadingCard() {
     return () => window.removeEventListener("quran-reading-progress-changed", refresh);
   }, [loadToday]);
 
+  // Like the app's home-screen widget, a card left open past midnight starts
+  // the new day by itself instead of keeping yesterday's progress.
+  const shownDate = today?.local_date;
+  const shownTimezone = today?.timezone_name;
+  useEffect(() => {
+    if (!shownDate || !shownTimezone) return;
+    const checkDate = () => {
+      if (document.visibilityState === "visible" && todayInTimezone(shownTimezone) !== shownDate) {
+        void loadToday();
+      }
+    };
+    const timer = window.setInterval(checkDate, 60_000);
+    document.addEventListener("visibilitychange", checkDate);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", checkDate);
+    };
+  }, [loadToday, shownDate, shownTimezone]);
+
   const ensureGuestSession = async (): Promise<boolean> => {
     if (api.getSession()) return true;
     return Boolean(await loginGuest());

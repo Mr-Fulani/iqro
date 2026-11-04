@@ -292,6 +292,7 @@
   "homeWidgets": "أدوات الشاشة الرئيسية",
   "planWidget": "أداة خطة القراءة",
   "planWidgetHint": "الهدف اليومي والنخلة والقراءة بعد الصلاة",
+  "planWidgetEmpty": "افتح الخطة في IQRO ليظهر هنا هدف اليوم",
   "addPrayerWidget": "إضافة الويدجت",
   "homeWidgetAlreadyAdded": "تمت إضافة الأداة بالفعل. تم تحديث بياناتها.",
   "prayerWidgetPinRequested": "اختر موضع ويدجت IQRO على الشاشة الرئيسية",

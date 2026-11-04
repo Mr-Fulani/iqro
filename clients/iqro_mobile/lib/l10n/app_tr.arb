@@ -292,6 +292,7 @@
   "homeWidgets": "Ana ekran widget'ları",
   "planWidget": "Okuma planı widget'ı",
   "planWidgetHint": "Günlük hedef, hurma ağacı ve namaz sonrası okuma",
+  "planWidgetEmpty": "Bugünün hedefini burada görmek için IQRO’da planı açın",
   "addPrayerWidget": "Widget ekle",
   "homeWidgetAlreadyAdded": "Widget zaten eklenmiş. Verileri güncellendi.",
   "prayerWidgetPinRequested": "IQRO widget'ı için ana ekranınızda bir yer seçin",

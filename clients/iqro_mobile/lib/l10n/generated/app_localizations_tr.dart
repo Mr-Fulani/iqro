@@ -930,6 +930,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Günlük hedef, hurma ağacı ve namaz sonrası okuma';
 
   @override
+  String get planWidgetEmpty =>
+      'Bugünün hedefini burada görmek için IQRO’da planı açın';
+
+  @override
   String get addPrayerWidget => 'Widget ekle';
 
   @override

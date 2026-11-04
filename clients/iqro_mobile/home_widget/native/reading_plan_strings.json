@@ -63,25 +63,25 @@
       "ru": {
         "stringUnit": {
           "state": "translated",
-          "value": "Открыть план"
+          "value": "Откройте план в IQRO, и здесь появится цель на день"
         }
       },
       "en": {
         "stringUnit": {
           "state": "translated",
-          "value": "Open plan"
+          "value": "Open your plan in IQRO to see today’s goal here"
         }
       },
       "ar": {
         "stringUnit": {
           "state": "translated",
-          "value": "افتح الخطة"
+          "value": "افتح الخطة في IQRO ليظهر هنا هدف اليوم"
         }
       },
       "tr": {
         "stringUnit": {
           "state": "translated",
-          "value": "Planı aç"
+          "value": "Bugünün hedefini burada görmek için IQRO’da planı açın"
         }
       }
     }

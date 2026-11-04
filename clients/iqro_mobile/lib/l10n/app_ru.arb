@@ -292,6 +292,7 @@
   "homeWidgets": "Виджеты на рабочем столе",
   "planWidget": "Виджет плана чтения",
   "planWidgetHint": "Дневная цель, пальма и чтение после намаза",
+  "planWidgetEmpty": "Откройте план в IQRO, и здесь появится цель на день",
   "addPrayerWidget": "Добавить виджет",
   "homeWidgetAlreadyAdded": "Виджет уже добавлен. Данные обновлены.",
   "prayerWidgetPinRequested": "Выберите место для виджета IQRO на главном экране",

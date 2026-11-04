@@ -2,5 +2,5 @@
 <resources>
  <string name="home_widget_reading_plan_label">Okuma planı</string>
  <string name="home_widget_reading_plan_description">Günlük hedef ve namaz sonrası okuma</string>
- <string name="home_widget_reading_plan_open">Planı aç</string>
+ <string name="home_widget_reading_plan_open">Bugünün hedefini burada görmek için IQRO’da planı açın</string>
 </resources>

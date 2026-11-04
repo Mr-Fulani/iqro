@@ -304,6 +304,7 @@
   "homeWidgets": "Home screen widgets",
   "planWidget": "Reading plan widget",
   "planWidgetHint": "Daily goal, the palm and reading after prayers",
+  "planWidgetEmpty": "Open your plan in IQRO to see today’s goal here",
   "addPrayerWidget": "Add widget",
   "homeWidgetAlreadyAdded": "Widget already added. Its data has been updated.",
   "prayerWidgetPinRequested": "Choose where to place the IQRO widget on your home screen",

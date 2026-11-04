@@ -546,6 +546,33 @@ test("today's progress does not wait for the palm and leaves with the reader", a
   await expect(today.getByText("1 / 3 стр.")).toHaveCount(0);
 });
 
+test("Today card left open past midnight starts the new day by itself", async ({ page }) => {
+  // 23:59 in Istanbul, the goal's timezone.
+  await page.clock.install({ time: new Date("2026-08-28T20:59:00Z") });
+  await installReadingMocks(page);
+  // Route handlers run in Node on the real clock, so the test says when midnight passed.
+  let nextDay = false;
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/today",
+    (route) => {
+      const snapshot = todaySnapshot(nextDay ? 0 : 1, true);
+      if (nextDay) {
+        snapshot.local_date = "2026-08-29";
+        snapshot.progress!.local_date = "2026-08-29";
+      }
+      return route.fulfill({ json: snapshot });
+    },
+  );
+  await page.goto("/");
+
+  const today = page.getByTestId("today-reading");
+  await expect(today.getByText("1 / 3 стр.")).toBeVisible();
+  nextDay = true;
+  await page.clock.fastForward("02:00");
+  await expect(today.getByText("0 / 3 стр.")).toBeVisible();
+  await expect(today.getByText("1 / 3 стр.")).toHaveCount(0);
+});
+
 test("palm photographs load only with the palm card", async ({ page }) => {
   const palmImages: string[] = [];
   page.on("request", (request) => {
