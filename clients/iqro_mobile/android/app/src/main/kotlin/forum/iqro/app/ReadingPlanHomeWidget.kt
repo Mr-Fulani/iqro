@@ -1,6 +1,7 @@
 package forum.iqro.app
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
@@ -12,12 +13,14 @@ import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.currentState
 import androidx.glance.layout.fillMaxSize
 import es.antonborri.home_widget.HomeWidgetGlanceState
 import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
 import es.antonborri.home_widget.HomeWidgetGlanceWidgetReceiver
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
+import es.antonborri.home_widget.HomeWidgetScheduler
 import org.json.JSONObject
 
 class ReadingPlanHomeWidgetReceiver : HomeWidgetGlanceWidgetReceiver<ReadingPlanHomeWidget>() {
@@ -29,11 +32,16 @@ class ReadingPlanHomeWidget : GlanceAppWidget() {
     // The card is fitted to the cell it is given (HomeWidgetCard).
     override val sizeMode = SizeMode.Exact
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        // Re-arm the midnight switch on every render, so an alarm dropped by a
+        // force stop or a vendor battery saver comes back with the next update.
+        val stored = getAppWidgetState<HomeWidgetGlanceState>(context, stateDefinition, id)
+        ReadingPlanWidgetViews.refreshTime(ReadingPlanWidgetViews.snapshot(stored.preferences),
+            System.currentTimeMillis())?.let {
+            HomeWidgetScheduler.schedule(context, ReadingPlanHomeWidgetReceiver::class.java.name, listOf(it))
+        }
         provideContent {
             val state = currentState<HomeWidgetGlanceState>()
-            val snapshot = try {
-                JSONObject(state.preferences.getString("home_widget.ReadingPlan.snapshot", "{}") ?: "{}")
-            } catch (_: Exception) { JSONObject() }
+            val snapshot = ReadingPlanWidgetViews.snapshot(state.preferences)
             AndroidRemoteViews(
                 remoteViews = ReadingPlanWidgetViews.create(context, snapshot, LocalSize.current),
                 modifier = GlanceModifier.fillMaxSize(),
@@ -43,6 +51,38 @@ class ReadingPlanHomeWidget : GlanceAppWidget() {
 }
 
 internal object ReadingPlanWidgetViews {
+    /** What the widget shows: the published day, the next day's start, or the invitation to open the plan. */
+    enum class Face { TODAY, NEXT_DAY, EMPTY }
+
+    /**
+     * After the published day ends the widget starts the next one itself (the
+     * same goal, nothing read yet) instead of waiting for the app to be opened.
+     */
+    fun face(isCurrent: Boolean, validUntil: Long, hasNextDay: Boolean, now: Long): Face = when {
+        !isCurrent -> Face.EMPTY
+        validUntil > now -> Face.TODAY
+        hasNextDay -> Face.NEXT_DAY
+        else -> Face.EMPTY
+    }
+
+    /** The moment the shown content changes by itself, if one is still ahead. */
+    fun refreshTime(data: JSONObject, now: Long): Long? =
+        data.optLong("validUntil").takeIf { data.optBoolean("isCurrent") && it > now }
+
+    fun snapshot(prefs: SharedPreferences): JSONObject = try {
+        JSONObject(prefs.getString("home_widget.ReadingPlan.snapshot", "{}") ?: "{}")
+    } catch (_: Exception) { JSONObject() }
+
+    /** The snapshot as it reads at [now]: the next day's figures replace the expired ones. */
+    fun resolve(data: JSONObject, now: Long): Pair<Face, JSONObject> {
+        val nextDay = data.optJSONObject("nextDay")
+        val face = face(data.optBoolean("isCurrent"), data.optLong("validUntil"), nextDay != null, now)
+        if (face != Face.NEXT_DAY || nextDay == null) return face to data
+        val shown = JSONObject(data.toString())
+        nextDay.keys().forEach { shown.put(it, nextDay.get(it)) }
+        return face to shown
+    }
+
     // Photographs of the palm stages, cropped to the panel with its rounded
     // corners and a darker lower half baked in for the white text.
     private val PALM_STAGES = intArrayOf(
@@ -50,7 +90,8 @@ internal object ReadingPlanWidgetViews {
         R.drawable.reading_plan_palm_bg_2, R.drawable.reading_plan_palm_bg_3,
         R.drawable.reading_plan_palm_bg_4, R.drawable.reading_plan_palm_bg_5)
 
-    fun create(context: Context, data: JSONObject, size: DpSize): RemoteViews {
+    fun create(context: Context, snapshot: JSONObject, size: DpSize): RemoteViews {
+        val (face, data) = resolve(snapshot, System.currentTimeMillis())
         val views = RemoteViews(context.packageName, R.layout.reading_plan_widget)
         HomeWidgetCard.fit(context, views, R.id.plan_widget_frame, size)
         views.setInt(R.id.plan_widget_root, "setLayoutDirection",
@@ -59,7 +100,7 @@ internal object ReadingPlanWidgetViews {
             context, MainActivity::class.java, Uri.parse("iqro://open/plan?homeWidget")))
         views.setOnClickPendingIntent(R.id.plan_prayers, HomeWidgetLaunchIntent.getActivity(
             context, MainActivity::class.java, Uri.parse("iqro://open/after-prayer?homeWidget")))
-        val current = data.optBoolean("isCurrent") && data.optLong("validUntil") > System.currentTimeMillis()
+        val current = face != Face.EMPTY
         views.setViewVisibility(R.id.plan_content, if (current) View.VISIBLE else View.GONE)
         views.setViewVisibility(R.id.plan_empty, if (current) View.GONE else View.VISIBLE)
         views.setTextViewText(R.id.plan_empty, data.optString("emptyLabel", context.getString(R.string.home_widget_reading_plan_open)))

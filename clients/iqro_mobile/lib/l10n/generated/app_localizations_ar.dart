@@ -922,6 +922,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get planWidgetHint => 'الهدف اليومي والنخلة والقراءة بعد الصلاة';
 
   @override
+  String get planWidgetEmpty => 'افتح الخطة في IQRO ليظهر هنا هدف اليوم';
+
+  @override
   String get addPrayerWidget => 'إضافة الويدجت';
 
   @override
@@ -3425,4 +3428,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get wordTimingsChooseReciter => 'اختر قارئًا آخر في الأسفل.';
+
+  @override
+  String wordRangeTeachingVoice(String reciter) {
+    return 'الصوت: $reciter، قراءة تعليمية. لا يوجد توقيت للكلمات لدى القارئ المختار.';
+  }
 }

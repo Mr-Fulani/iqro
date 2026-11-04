@@ -292,6 +292,7 @@
   "homeWidgets": "أدوات الشاشة الرئيسية",
   "planWidget": "أداة خطة القراءة",
   "planWidgetHint": "الهدف اليومي والنخلة والقراءة بعد الصلاة",
+  "planWidgetEmpty": "افتح الخطة في IQRO ليظهر هنا هدف اليوم",
   "addPrayerWidget": "إضافة الويدجت",
   "homeWidgetAlreadyAdded": "تمت إضافة الأداة بالفعل. تم تحديث بياناتها.",
   "prayerWidgetPinRequested": "اختر موضع ويدجت IQRO على الشاشة الرئيسية",
@@ -1039,5 +1040,7 @@
   "wordRangeHint": "اسحب المقبضين لتغيير التحديد",
   "wordRangeError": "تعذّر تشغيل المحدد.",
   "wordTimingsUnavailable": "لا يوجد هنا توقيت للكلمات لهذا القارئ، فلا تُسمع هذه الآية إلا كاملة. هذا التوقيت ليس متاحًا لكل القرّاء، ولا في كل الآيات عند بعضهم.",
-  "wordTimingsChooseReciter": "اختر قارئًا آخر في الأسفل."
+  "wordTimingsChooseReciter": "اختر قارئًا آخر في الأسفل.",
+  "wordRangeTeachingVoice": "الصوت: {reciter}، قراءة تعليمية. لا يوجد توقيت للكلمات لدى القارئ المختار.",
+  "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}}
 }

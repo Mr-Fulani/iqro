@@ -1794,6 +1794,12 @@ abstract class AppLocalizations {
   /// **'Daily goal, the palm and reading after prayers'**
   String get planWidgetHint;
 
+  /// No description provided for @planWidgetEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your plan in IQRO to see today’s goal here'**
+  String get planWidgetEmpty;
+
   /// No description provided for @addPrayerWidget.
   ///
   /// In en, this message translates to:
@@ -6095,6 +6101,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose another reciter below.'**
   String get wordTimingsChooseReciter;
+
+  /// No description provided for @wordRangeTeachingVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice: {reciter}, teaching recitation. The chosen reciter has no word-by-word timing.'**
+  String wordRangeTeachingVoice(String reciter);
 }
 
 class _AppLocalizationsDelegate

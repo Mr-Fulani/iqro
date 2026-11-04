@@ -941,6 +941,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get planWidgetHint => 'Дневная цель, пальма и чтение после намаза';
 
   @override
+  String get planWidgetEmpty =>
+      'Откройте план в IQRO, и здесь появится цель на день';
+
+  @override
   String get addPrayerWidget => 'Добавить виджет';
 
   @override
@@ -3480,4 +3484,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get wordTimingsChooseReciter => 'Выберите другого чтеца ниже.';
+
+  @override
+  String wordRangeTeachingVoice(String reciter) {
+    return 'Голос: $reciter, учебное чтение. У выбранного чтеца нет разметки по словам.';
+  }
 }

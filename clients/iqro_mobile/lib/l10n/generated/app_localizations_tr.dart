@@ -930,6 +930,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Günlük hedef, hurma ağacı ve namaz sonrası okuma';
 
   @override
+  String get planWidgetEmpty =>
+      'Bugünün hedefini burada görmek için IQRO’da planı açın';
+
+  @override
   String get addPrayerWidget => 'Widget ekle';
 
   @override
@@ -3408,4 +3412,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get wordTimingsChooseReciter => 'Aşağıdan başka bir kâri seçin.';
+
+  @override
+  String wordRangeTeachingVoice(String reciter) {
+    return 'Ses: $reciter, öğretici okuma. Seçilen kârinin kelime kelime zamanlaması yok.';
+  }
 }

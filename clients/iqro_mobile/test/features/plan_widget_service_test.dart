@@ -63,6 +63,38 @@ void main() {
       expect(snapshot['emptyLabel'], isNotEmpty);
     }
   });
+  test('after midnight the widget starts the next day with the same goal', () {
+    final snapshot = buildPlanWidgetSnapshot(
+      plan: plan(achieved: 4),
+      locale: 'ru',
+      now: now,
+    );
+    final nextDay = snapshot['nextDay'] as Map<String, Object?>;
+    expect(nextDay['achieved'], '0');
+    expect(nextDay['remaining'], '6');
+    expect(nextDay['remainingLabel'], 'Осталось');
+    expect(nextDay['progress'], 0);
+    final rows = nextDay['rows'] as List;
+    expect(rows, hasLength(5));
+    expect(rows.map((row) => row['value']), everyElement('0'));
+    expect(rows.first['label'], (snapshot['rows'] as List).first['label']);
+    // The goal line, units and palm carry over unchanged.
+    for (final key in ['targetLine', 'unit', 'palmStage', 'title']) {
+      expect(nextDay.containsKey(key), false);
+      expect(snapshot[key], isNotNull);
+    }
+  });
+  test('without a plan the widget explains how to fill it', () {
+    for (final locale in ['ru', 'en', 'ar', 'tr']) {
+      final snapshot = buildPlanWidgetSnapshot(
+        plan: null,
+        locale: locale,
+        now: now,
+      );
+      expect(snapshot.containsKey('nextDay'), false);
+      expect(snapshot['emptyLabel'], contains('IQRO'));
+    }
+  });
   test(
     'goal completion clamps progress but preserves actual achieved amount',
     () {

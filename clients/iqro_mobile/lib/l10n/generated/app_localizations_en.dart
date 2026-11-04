@@ -935,6 +935,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planWidgetHint => 'Daily goal, the palm and reading after prayers';
 
   @override
+  String get planWidgetEmpty =>
+      'Open your plan in IQRO to see today’s goal here';
+
+  @override
   String get addPrayerWidget => 'Add widget';
 
   @override
@@ -3454,4 +3458,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wordTimingsChooseReciter => 'Choose another reciter below.';
+
+  @override
+  String wordRangeTeachingVoice(String reciter) {
+    return 'Voice: $reciter, teaching recitation. The chosen reciter has no word-by-word timing.';
+  }
 }
