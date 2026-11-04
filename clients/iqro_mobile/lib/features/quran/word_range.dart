@@ -218,6 +218,12 @@ const wordRangeSelectionColor = Color(0x380B6B57);
 const wordRangePlayingColor = Color(0x8CC49647);
 const wordRangeHandleColor = Color(0xFF0B6B57);
 
+/// The panel is dark in both themes: it stands on the Mushaf's light paper.
+const wordRangePanelColor = Color(0xFF17201D);
+const wordRangePanelInk = Colors.white;
+const wordRangePanelPlay = Color(0xFF0B5D4A);
+const wordRangePanelAccent = Color(0xFFE7C27D);
+
 /// The selected words of a reader and their playback: from the start of the
 /// first word to the end of the last, in the Mushaf reciter's surah track.
 class WordRangeController extends ChangeNotifier {
@@ -597,8 +603,7 @@ class WordRangePanel extends StatelessWidget {
       final range = controller.range;
       if (range == null) return const SizedBox.shrink();
       final theme = Theme.of(context);
-      final scheme = theme.colorScheme;
-      final ink = scheme.onInverseSurface;
+      const ink = wordRangePanelInk;
       final unavailable = controller.available == false;
       final checking = controller.available == null;
       final ordinal = controller.playing ? controller.playingOrdinal : null;
@@ -638,7 +643,7 @@ class WordRangePanel extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 360),
           child: Material(
             key: const ValueKey('word-range-panel'),
-            color: scheme.inverseSurface,
+            color: wordRangePanelColor,
             elevation: 6,
             shadowColor: Colors.black45,
             borderRadius: BorderRadius.circular(26),
@@ -654,6 +659,10 @@ class WordRangePanel extends StatelessWidget {
                       FilledButton.icon(
                         key: const ValueKey('word-range-play'),
                         style: FilledButton.styleFrom(
+                          backgroundColor: wordRangePanelPlay,
+                          foregroundColor: ink,
+                          disabledBackgroundColor: Colors.white12,
+                          disabledForegroundColor: Colors.white54,
                           minimumSize: const Size(44, 44),
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                         ),
@@ -694,7 +703,7 @@ class WordRangePanel extends StatelessWidget {
                         style: TextButton.styleFrom(
                           foregroundColor: controller.repeat == WordRepeat.once
                               ? ink
-                              : scheme.inversePrimary,
+                              : wordRangePanelAccent,
                           minimumSize: const Size(52, 44),
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
@@ -742,7 +751,9 @@ class WordRangePanel extends StatelessWidget {
                                 : 'word-range-note',
                           ),
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: controller.failed ? scheme.error : ink,
+                            color: controller.failed
+                                ? const Color(0xFFFFB4AB)
+                                : ink,
                           ),
                         ),
                       ),
