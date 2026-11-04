@@ -1688,6 +1688,56 @@ test("where al-Husary's Muallim has no word timings his Murattal plays the words
   }))).toEqual({ start: 3, src: alternateTracks[5].asset.url });
 });
 
+test.describe("text opened from the Mushaf", () => {
+  test.use({ viewport: devices["Pixel 7"].viewport, userAgent: devices["Pixel 7"].userAgent,
+    deviceScaleFactor: devices["Pixel 7"].deviceScaleFactor, isMobile: true, hasTouch: true });
+
+  async function openTextAt(page: Page) {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first().click();
+    await page.getByRole("toolbar").getByTestId("reader-open-text").click();
+    const target = page.locator("#quran-ayah-6-2");
+    await expect(target).toHaveClass(/is-navigation-target/);
+    await expect.poll(async () => Math.round((await target.boundingBox())!.y)).not.toBeNaN();
+    await page.waitForTimeout(300);
+    return target;
+  }
+  // A translation arriving late makes the card above the ayah taller.
+  const growCardAbove = (page: Page) => page.locator("#quran-ayah-6-1").evaluate((card) => {
+    card.style.paddingBottom = "400px";
+  });
+
+  test("the ayah stays in view while the cards above it grow", async ({ page }) => {
+    const target = await openTextAt(page);
+    const before = (await target.boundingBox())!.y;
+    await growCardAbove(page);
+    await expect.poll(async () => Math.round((await target.boundingBox())!.y - before)).toBe(0);
+  });
+
+  test("a reader who scrolls is left where they scrolled, not pulled back", async ({ page }) => {
+    const target = await openTextAt(page);
+    const anchor = (await target.boundingBox())!.y;
+    // A finger scrolls the text on: the reader takes over.
+    const session = await page.context().newCDPSession(page);
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 200, y: 600 }] });
+    for (let step = 1; step <= 12; step += 1) {
+      await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 200, y: 600 - step * 25 }] });
+      await page.waitForTimeout(16);
+    }
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await session.detach();
+    await page.waitForTimeout(600);
+    const scrolled = (await target.boundingBox())!.y;
+    expect(anchor - scrolled).toBeGreaterThan(100);
+    await growCardAbove(page);
+    await page.waitForTimeout(300);
+    expect(Math.abs((await target.boundingBox())!.y - anchor)).toBeGreaterThan(100);
+  });
+});
+
 test.describe("word selection on a phone", () => {
   test.use({ viewport: devices["Pixel 7"].viewport, userAgent: devices["Pixel 7"].userAgent,
     deviceScaleFactor: devices["Pixel 7"].deviceScaleFactor, isMobile: true, hasTouch: true });

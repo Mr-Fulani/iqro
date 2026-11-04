@@ -524,7 +524,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     }
     _restoringPosition = true;
     try {
-      for (var attempt = 0; attempt < 4 && mounted; attempt++) {
+      for (var attempt = 0; attempt < 24 && mounted; attempt++) {
         final targetContext = _ayahKeys[target.number]?.currentContext;
         if (targetContext != null && targetContext.mounted) {
           await Scrollable.ensureVisible(
@@ -538,10 +538,22 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           await _persistPosition(target, accountScope: scope);
           return;
         }
-        final ratio = (target.number - 1) / items.length;
-        final offset = _scrollController.position.maxScrollExtent * ratio;
+        final position = _scrollController.position;
+        final built = _builtAyahs();
+        // The list knows the heights of the cards it has built only, so a
+        // jump by the target's share of its estimated length lands a few
+        // ayahs off where ayahs differ in length. From the built cards the
+        // jump is measured in real card heights and closes in on the target.
+        final offset = built == null
+            ? position.maxScrollExtent * (target.number - 1) / items.length
+            : position.pixels +
+                  (target.number -
+                          (target.number < built.first
+                              ? built.first
+                              : built.last)) *
+                      built.extent;
         _scrollController.jumpTo(
-          offset.clamp(0, _scrollController.position.maxScrollExtent),
+          offset.clamp(position.minScrollExtent, position.maxScrollExtent),
         );
         await WidgetsBinding.instance.endOfFrame;
         if (!_isCurrentAccount(scope)) return;
@@ -550,6 +562,25 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     } finally {
       _restoringPosition = false;
     }
+  }
+
+  /// The first and last ayahs whose cards are built, and their average
+  /// height; null before any is.
+  ({int first, int last, double extent})? _builtAyahs() {
+    int? first;
+    int? last;
+    var height = 0.0;
+    var count = 0;
+    for (final MapEntry(key: number, value: key) in _ayahKeys.entries) {
+      final box = key.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+      if (first == null || number < first) first = number;
+      if (last == null || number > last) last = number;
+      height += box.size.height;
+      count++;
+    }
+    if (first == null || last == null || count == 0) return null;
+    return (first: first, last: last, extent: height / count);
   }
 
   Future<void> _persistTopVisibleAyah(List<QuranAyah> items) async {

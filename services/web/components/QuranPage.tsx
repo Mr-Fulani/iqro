@@ -87,6 +87,7 @@ import {
   type QuranWord,
   type QuranWordRange,
 } from "../lib/word-range";
+import { holdInView } from "../lib/hold-in-view";
 import { WordRangeHandles, useWordSelection } from "./WordSelection";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
@@ -452,6 +453,7 @@ function QuranContent() {
   const handledDeepLink = useRef<string | null>(null);
   const handledPageDeepLink = useRef<number | null>(null);
   const pendingTextAyah = useRef<string | null>(null);
+  const releaseTextAyah = useRef<() => void>(() => {});
   const pendingMushafAyah = useRef<string | null>(null);
   const lastMushafLocation = useRef<{ sourceId: number | null; ayah: string | null; page: number } | null>(null);
   const handledPrayerReadingStart = useRef(false);
@@ -1357,9 +1359,14 @@ function QuranContent() {
     if (!target) return;
     pendingTextAyah.current = null;
     window.requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.scrollIntoView({ behavior: "instant", block: "center" });
+      // The cards above it grow as their translations arrive: the ayah stays
+      // where it was put until the reader scrolls on their own.
+      releaseTextAyah.current();
+      releaseTextAyah.current = holdInView(target);
     });
   }, [ayahs, selectedMushafAyah, viewMode]);
+  useEffect(() => () => releaseTextAyah.current(), []);
 
   useEffect(() => {
     if (viewMode !== "text" || ayahs.length === 0) return;
