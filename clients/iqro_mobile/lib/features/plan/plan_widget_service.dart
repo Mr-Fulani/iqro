@@ -16,6 +16,9 @@ import 'plan_repository.dart';
 
 const planWidgetDataKey = 'home_widget.ReadingPlan.snapshot';
 const planWidgetGroup = 'group.forum.iqro.app';
+// The receiver keeps its package when the build adds an application id suffix
+// (forum.iqro.app.test), so the plugin must not derive it from the app id.
+const planWidgetReceiver = 'forum.iqro.app.ReadingPlanHomeWidgetReceiver';
 
 abstract interface class PlanWidgetGateway {
   Future<void> write(Map<String, Object?> snapshot);
@@ -34,19 +37,19 @@ class HomePlanWidgetGateway implements PlanWidgetGateway {
       appGroupId: planWidgetGroup,
     );
     await HomeWidget.updateWidget(
-      androidName: 'ReadingPlanHomeWidgetReceiver',
+      qualifiedAndroidName: planWidgetReceiver,
       iOSName: 'ReadingPlanHomeWidget',
     );
-    // Expire yesterday's progress even when Flutter is not running.
+    // Start the next day at midnight even when Flutter is not running.
     if (Platform.isAndroid) {
       final expiry = snapshot['validUntil'] as int?;
       if (expiry != null && expiry > DateTime.now().millisecondsSinceEpoch) {
         await HomeWidget.scheduleWidgetUpdates([
           DateTime.fromMillisecondsSinceEpoch(expiry),
-        ], androidName: 'ReadingPlanHomeWidgetReceiver');
+        ], qualifiedAndroidName: planWidgetReceiver);
       } else {
         await HomeWidget.cancelScheduledWidgetUpdates(
-          androidName: 'ReadingPlanHomeWidgetReceiver',
+          qualifiedAndroidName: planWidgetReceiver,
         );
       }
     }

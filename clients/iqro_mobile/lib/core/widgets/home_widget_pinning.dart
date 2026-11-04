@@ -17,7 +17,13 @@ class HomeWidgetPinning {
        _installedWidgets = installedWidgets ?? HomeWidget.getInstalledWidgets,
        _supportsPinning =
            supportsPinning ?? HomeWidget.isRequestPinWidgetSupported,
-       _pin = pin ?? ((name) => HomeWidget.requestPinWidget(androidName: name));
+       // Receivers live in forum.iqro.app in every build, including the
+       // forum.iqro.app.test id, so the class is named in full.
+       _pin =
+           pin ??
+           ((name) => HomeWidget.requestPinWidget(
+             qualifiedAndroidName: 'forum.iqro.app.$name',
+           ));
 
   final bool Function() _isAndroid;
   final Future<List<HomeWidgetInfo>> Function() _installedWidgets;
