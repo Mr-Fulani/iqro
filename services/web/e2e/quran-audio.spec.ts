@@ -4136,6 +4136,13 @@ test.describe("Desktop Mushaf page arrows", () => {
 
       const nextArrow = surface.getByRole("button", { name: `${next} (129)`, exact: true });
       const previousArrow = surface.getByRole("button", { name: `${previous} (127)`, exact: true });
+      // The page scrolls itself to the Mushaf after it loads; the sticky arrows
+      // reach the middle of the screen once that scroll ends.
+      const centres = () => Promise.all([nextArrow, previousArrow].map(async (arrow) => {
+        const box = (await arrow.boundingBox())!;
+        return Math.round(box.y + box.height / 2);
+      }));
+      await expect.poll(centres, { timeout: 5_000 }).toEqual([400, 400]);
       const sheet = (await surface.locator(".qf-mushaf-sheet").boundingBox())!;
       const nextBox = (await nextArrow.boundingBox())!;
       const previousBox = (await previousArrow.boundingBox())!;
@@ -4145,7 +4152,6 @@ test.describe("Desktop Mushaf page arrows", () => {
       for (const box of [nextBox, previousBox]) {
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
-        expect(box.y + box.height / 2).toBeCloseTo(400, 0);
       }
       expect(await nextArrow.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(1);
 
