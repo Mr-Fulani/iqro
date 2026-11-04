@@ -227,7 +227,10 @@ class _Quran implements QuranRepository {
           surah: 2,
           ayah: ayah.number,
           // Long enough to make every card several lines taller.
-          text: List<String>.filled(12, 'Хвала Аллаху, Господу миров.').join(' '),
+          text: List<String>.filled(
+            12,
+            'Хвала Аллаху, Господу миров.',
+          ).join(' '),
           footnotes: const <String>[],
         ),
     ];
