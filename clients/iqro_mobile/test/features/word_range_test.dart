@@ -264,6 +264,36 @@ void main() {
     });
   });
 
+  test('stand-in voices: Muallim, Murattal, al-Afasy, other QF, never the '
+      'Mujawwad', () {
+    Recitation recitation(String id, String code) =>
+        Recitation.fromJson(<String, Object?>{
+          'id': id,
+          'code': code,
+          'reciter': {'id': id, 'name_en': id},
+          'rights': {'stream': true},
+          'coverage': {'surah_count': 114},
+          'capabilities': {'listen': true, 'ayah_playback': true},
+        });
+    final voices = wordTimingFallbackRecitations(<Recitation>[
+      recitation('mp3', 'mp3quran-1'),
+      recitation('mujawwad', 'qf-12-mahmoud-khaleel-al-husary-mujawwad'),
+      recitation('sudais', 'qf-3-murattal'),
+      recitation('afasy', 'qf-7-murattal'),
+      recitation('murattal', 'qf-6-murattal'),
+      recitation('muallim', 'qf-12-muallim-01a15bc65dc9'),
+      recitation('ghamdi', 'qf-13-murattal'),
+      recitation('shuraym', 'qf-10-murattal'),
+    ]);
+    expect(voices.map((item) => item.id), <String>[
+      'muallim',
+      'murattal',
+      'afasy',
+      'sudais',
+      'ghamdi',
+    ]);
+  });
+
   group('teaching voice', () {
     testWidgets('words the chosen reciter has no timings of play in the '
         'teaching al-Husary', (tester) async {

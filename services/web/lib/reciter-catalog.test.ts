@@ -250,7 +250,10 @@ test("selected words without the reciter's timings play in al-Husary's Muallim, 
   const teaching = withCode("teaching", "qf-7-murattal-01a15bc65dc9", true);
   const ids = (list: Recitation[]) => wordTimingFallbackRecitations(list).map((item) => item.id);
 
-  assert.deepEqual(ids([mujawwad, murattal, teaching, muallim]), ["muallim", "murattal"]);
+  assert.deepEqual(ids([mujawwad, murattal, teaching, muallim]), ["muallim", "murattal", "teaching"]);
+  const others = ["qf-3-murattal", "qf-13-murattal", "qf-10-murattal"].map((code, index) => withCode(`other-${index}`, code));
+  assert.deepEqual(ids([withCode("mp3", "mp3quran-1"), ...others, murattal, muallim, teaching]),
+    ["muallim", "murattal", "teaching", "other-0", "other-1"]);
   assert.deepEqual(ids([mujawwad, teaching]), ["teaching"]);
   assert.deepEqual(ids([mujawwad]), []);
 });

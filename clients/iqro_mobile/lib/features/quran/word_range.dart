@@ -115,9 +115,11 @@ List<String> ayahWords(QuranAyah ayah) {
 
 /// The voices, in order, that play words of a reciter without their timings:
 /// al-Husary's Muallim, the teaching recitation (else the catalog's teaching
-/// reciter), then his Murattal for the ayahs the Muallim has no timings of:
-/// where the sheikh repeats words after a pause (2:9, 2:20, 3:7). His Mujawwad
-/// shares the `qf-12-` prefix but has no timings at all.
+/// reciter); his Murattal (`qf-6-`) for the ayahs the Muallim has no timings
+/// of, where the sheikh repeats words after a pause (2:9, 2:20, 3:7); then
+/// al-Afasy (`qf-7-`) and other Quran Foundation recitations. At most
+/// [wordTimingFallbackLimit]: each costs a request when it is tried. His
+/// Mujawwad shares the `qf-12-` prefix but has no timings at all.
 List<Recitation> wordTimingFallbackRecitations(
   Iterable<Recitation> recitations,
 ) {
@@ -128,10 +130,24 @@ List<Recitation> wordTimingFallbackRecitations(
     return null;
   }
 
-  final teaching = byPrefix('qf-12-muallim') ?? teachingRecitation(recitations);
-  final murattal = byPrefix('qf-6-');
-  return <Recitation>[?teaching, if (murattal?.id != teaching?.id) ?murattal];
+  final voices = <Recitation>[];
+  void add(Recitation? voice) {
+    if (voice == null || voices.any((item) => item.id == voice.id)) return;
+    if (voice.code.contains('husary-mujawwad')) return;
+    if (voices.length < wordTimingFallbackLimit) voices.add(voice);
+  }
+
+  add(byPrefix('qf-12-muallim') ?? teachingRecitation(recitations));
+  add(byPrefix('qf-6-'));
+  add(byPrefix('qf-7-'));
+  for (final recitation in recitations) {
+    if (recitation.code.startsWith('qf-')) add(recitation);
+  }
+  return voices;
 }
+
+/// How many stand-in voices a range may try.
+const wordTimingFallbackLimit = 5;
 
 /// Says whose voice plays the words when it is not the chosen reciter's.
 String wordRangeVoiceNote(BuildContext context, Recitation voice) {
