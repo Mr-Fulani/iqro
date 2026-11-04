@@ -6087,7 +6087,7 @@ abstract class AppLocalizations {
   /// No description provided for @wordTimingsUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'This reciter has no word-by-word timing, so it plays only whole ayahs. Not every reciter has it.'**
+  /// **'There is no word-by-word timing here for this reciter, so this ayah plays only as a whole. Not every reciter has it, and some not in every ayah.'**
   String get wordTimingsUnavailable;
 
   /// No description provided for @wordTimingsChooseReciter.

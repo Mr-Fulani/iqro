@@ -3404,7 +3404,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get wordTimingsUnavailable =>
-      'Bu kârinin kelime kelime zamanlaması yok; yalnızca tam ayetler dinlenebilir. Bu zamanlama her kâride yok.';
+      'Bu kârinin burada kelime kelime zamanlaması yok; bu ayet yalnızca tamamen dinlenebilir. Bu zamanlama her kâride yok, bazılarında da her ayette yok.';
 
   @override
   String get wordTimingsChooseReciter => 'Aşağıdan başka bir kâri seçin.';

@@ -75,6 +75,9 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
   var _offsets = const <int>[];
   QuranWord? _anchor;
 
+  /// The handle a finger pulls, and where it was taken.
+  ({bool start, Rect box})? _held;
+
   @override
   void initState() {
     super.initState();
@@ -112,7 +115,8 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
       return null;
     }
     final local = box.globalToLocal(global);
-    final size = box.size;
+    // The text, not the room kept under it for a handle's knob.
+    final size = Size(box.size.width, painter.height);
     final dy = local.dy < 0 ? -local.dy : math.max(0.0, local.dy - size.height);
     final point = Offset(
       local.dx.clamp(0.0, size.width),
@@ -199,21 +203,35 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     final start = indexOf(range.start);
     final end = indexOf(range.end);
     Widget? handle(int? index, {required bool start}) {
-      if (index == null || index < 0 || index >= widget.words.length) {
-        return null;
-      }
-      final box = _wordBox(index);
-      if (box == null) return null;
+      final box = index == null || index < 0 || index >= widget.words.length
+          ? null
+          : _wordBox(index);
+      // A handle pulled into another ayah stays here, unseen, until the
+      // finger lifts: its gesture lives in this card.
+      final held = _held?.start == start ? _held!.box : null;
+      final at = box ?? held;
+      if (at == null) return null;
       return Positioned(
         key: ValueKey(
           start ? 'word-range-start-handle' : 'word-range-end-handle',
         ),
-        left: (start ? box.right : box.left) - WordRangeHandle.width / 2,
-        top: box.top,
-        child: WordRangeHandle(
-          start: start,
-          lineHeight: box.height,
-          onDrag: (point) => _pull(point, start ? range.end : range.start),
+        left: (start ? at.right : at.left) - WordRangeHandle.width / 2,
+        top: at.top,
+        child: Opacity(
+          opacity: box == null ? 0 : 1,
+          child: WordRangeHandle(
+            start: start,
+            lineHeight: at.height,
+            onDrag: (point) {
+              _held ??= (start: start, box: at);
+              _pull(point, start ? range.end : range.start);
+            },
+            onEnd: () {
+              if (_held == null) return;
+              _held = null;
+              if (mounted) setState(() {});
+            },
+          ),
         ),
       );
     }
@@ -232,6 +250,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
         textScaler: MediaQuery.textScalerOf(context),
       )..layout(minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth);
       _painter = painter;
+      final handles = _handles();
       return Semantics(
         label: widget.words.join(' '),
         textDirection: TextDirection.rtl,
@@ -240,6 +259,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
             final found = _nearest(details.globalPosition);
             if (found == null) return;
             _anchor = found.word;
+            wordRangePulling.value = true;
             unawaited(HapticFeedback.selectionClick());
             widget.onRange(QuranWordRange.single(found.word));
           },
@@ -247,15 +267,24 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
             final anchor = _anchor;
             if (anchor != null) _pull(details.globalPosition, anchor);
           },
-          onLongPressEnd: (_) => _anchor = null,
+          onLongPressEnd: (_) {
+            _anchor = null;
+            wordRangePulling.value = false;
+          },
+          onLongPressCancel: () => wordRangePulling.value = false,
           child: Stack(
             clipBehavior: Clip.none,
             children: <Widget>[
               CustomPaint(
-                size: Size(constraints.maxWidth, painter.height),
+                // A knob hangs under its line. A touch only reaches it inside
+                // this box, so the box makes room for the knob of the last line.
+                size: Size(
+                  constraints.maxWidth,
+                  painter.height + (handles.isEmpty ? 0 : _knobRoom),
+                ),
                 painter: _WordsPainter(painter),
               ),
-              ..._handles(),
+              ...handles,
             ],
           ),
         ),
@@ -263,6 +292,9 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     },
   );
 }
+
+/// How far a handle's knob reaches under the line it marks.
+const _knobRoom = WordRangeHandle.knob + 6;
 
 class _WordsPainter extends CustomPainter {
   const _WordsPainter(this.painter);

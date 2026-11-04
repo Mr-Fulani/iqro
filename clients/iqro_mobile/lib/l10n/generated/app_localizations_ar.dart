@@ -3421,7 +3421,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get wordTimingsUnavailable =>
-      'لا يوجد لهذا القارئ توقيت للكلمات، فلا تُسمع منه إلا آيات كاملة. هذا التوقيت ليس متاحًا لكل القرّاء.';
+      'لا يوجد هنا توقيت للكلمات لهذا القارئ، فلا تُسمع هذه الآية إلا كاملة. هذا التوقيت ليس متاحًا لكل القرّاء، ولا في كل الآيات عند بعضهم.';
 
   @override
   String get wordTimingsChooseReciter => 'اختر قارئًا آخر في الأسفل.';

@@ -1038,6 +1038,6 @@
   "repeatForever": "Sürekli",
   "wordRangeHint": "Seçimi değiştirmek için tutamaçları sürükleyin",
   "wordRangeError": "Seçim çalınamadı.",
-  "wordTimingsUnavailable": "Bu kârinin kelime kelime zamanlaması yok; yalnızca tam ayetler dinlenebilir. Bu zamanlama her kâride yok.",
+  "wordTimingsUnavailable": "Bu kârinin burada kelime kelime zamanlaması yok; bu ayet yalnızca tamamen dinlenebilir. Bu zamanlama her kâride yok, bazılarında da her ayette yok.",
   "wordTimingsChooseReciter": "Aşağıdan başka bir kâri seçin."
 }

@@ -8842,6 +8842,13 @@ svg.track-surah-name-ar {
   box-shadow: 0 0 0 2px rgba(196, 150, 71, 0.55), inset 0 -3px 0 #9a6d22;
 }
 
+/* Each line is scaled, so each is its own layer and the next line covers
+   the knob hanging under this one: the line holding a handle goes on top. */
+.qf-mushaf-line-content:has(.word-range-handle) {
+  position: relative;
+  z-index: 3;
+}
+
 .word-range-handle {
   position: absolute;
   top: -2px;
@@ -8906,6 +8913,16 @@ svg.track-surah-name-ar {
   background: var(--panel);
   color: var(--text-primary);
   box-shadow: var(--shadow-lg);
+}
+
+/* While a finger pulls the selection the bar fades, so the words under it show. */
+html[data-word-selecting] .word-range-bar {
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.word-range-bar {
+  transition: opacity 120ms ease;
 }
 
 .word-range-bar-head {
