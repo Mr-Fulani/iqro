@@ -3433,4 +3433,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String wordRangeTeachingVoice(String reciter) {
     return 'الصوت: $reciter، قراءة تعليمية. لا يوجد توقيت للكلمات لدى القارئ المختار.';
   }
+
+  @override
+  String wordRangeOtherVoice(String reciter, String style) {
+    return 'الصوت: $reciter · $style. لا يوجد هنا توقيت للكلمات لدى القارئ المختار.';
+  }
 }

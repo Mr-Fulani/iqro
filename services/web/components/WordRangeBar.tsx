@@ -18,8 +18,7 @@ export default function WordRangeBar({
   wordCount,
   recitationId,
   reciterName,
-  teachingRecitationId = null,
-  teachingReciterName = "",
+  fallbackVoices = [],
   onClear,
   onPlayingWord,
 }: {
@@ -27,16 +26,15 @@ export default function WordRangeBar({
   wordCount: number;
   recitationId: string | null;
   reciterName?: string;
-  /** The voice for words the chosen reciter has no timings of: al-Husary's Muallim. */
-  teachingRecitationId?: string | null;
-  teachingReciterName?: string;
+  /** The voices, in order, for words the chosen reciter has no timings of, and what each says. */
+  fallbackVoices?: { id: string; name: string; note: string }[];
   onClear: () => void;
   onPlayingWord: (word: QuranWord | null) => void;
 }) {
   const { t } = useI18n();
   const [available, setAvailable] = useState<boolean | null>(null);
-  /** Whether the teaching voice stands in for the chosen reciter. */
-  const [teaching, setTeaching] = useState(false);
+  /** The voice standing in for the chosen reciter, if one does. */
+  const [standIn, setStandIn] = useState<{ id: string; name: string; note: string } | null>(null);
   const [repeat, setRepeat] = useState<Repeat>("once");
   const [round, setRound] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -107,9 +105,12 @@ export default function WordRangeBar({
   // first and last words, else the teaching al-Husary; null when neither has them.
   const resolveVoice = useCallback(async () => {
     const surah = range.start.surah;
-    const candidates = [recitationId, teachingRecitationId !== recitationId ? teachingRecitationId : null];
-    for (const id of candidates) {
-      if (!id) continue;
+    const candidates = [
+      ...(recitationId ? [{ id: recitationId, name: "", note: "" }] : []),
+      ...fallbackVoices.filter((voice) => voice.id !== recitationId),
+    ];
+    for (const candidate of candidates) {
+      const { id } = candidate;
       const [first, last] = await Promise.all([
         loadAyahAudio(id, `${surah}:${range.start.ayah}`),
         loadAyahAudio(id, `${surah}:${range.end.ayah}`),
@@ -117,11 +118,11 @@ export default function WordRangeBar({
       const from = first ? wordTiming(first.words, range.start.position) : null;
       const to = last ? wordTiming(last.words, range.end.position) : null;
       if (first && last && from && to && to.endMs > from.startMs) {
-        return { id, first, last, from, to, teaching: id !== recitationId };
+        return { id, first, last, from, to, standIn: id !== recitationId ? candidate : null };
       }
     }
     return null;
-  }, [range, recitationId, teachingRecitationId]);
+  }, [fallbackVoices, range, recitationId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,7 +130,7 @@ export default function WordRangeBar({
     void resolveVoice().then((voice) => {
       if (cancelled) return;
       setAvailable(Boolean(voice));
-      setTeaching(Boolean(voice?.teaching));
+      setStandIn(voice?.standIn ?? null);
     });
     return () => { cancelled = true; };
   }, [resolveVoice]);
@@ -144,7 +145,7 @@ export default function WordRangeBar({
         setAvailable(false);
         return;
       }
-      setTeaching(voice.teaching);
+      setStandIn(voice.standIn);
       const { id, first, last, from, to } = voice;
       const surah = range.start.surah;
       timings.current = new Map([[range.start.ayah, first], [range.end.ayah, last]]);
@@ -188,7 +189,7 @@ export default function WordRangeBar({
   const shownOrdinal = playing ? ordinal : null;
   const subtitle = [
     shownOrdinal ? t("wordRange.progress", { number: shownOrdinal, count: wordCount }) : t("wordRange.count", { count: wordCount }),
-    !shownOrdinal ? (teaching ? teachingReciterName : reciterName) || null : null,
+    !shownOrdinal ? (standIn ? standIn.name : reciterName) || null : null,
     playing && repeat === "three" ? t("wordRange.round", { round, total: 3 }) : null,
   ].filter(Boolean).join(" · ");
 
@@ -204,10 +205,8 @@ export default function WordRangeBar({
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </div>
-      {available && teaching && (
-        <p className="word-range-bar-note is-teaching" data-testid="word-range-teaching-voice">
-          {t("wordRange.teachingVoice", { reciter: teachingReciterName })}
-        </p>
+      {available && standIn && (
+        <p className="word-range-bar-note is-teaching" data-testid="word-range-teaching-voice">{standIn.note}</p>
       )}
       {available === false && (
         <p className="word-range-bar-note" data-testid="word-range-unavailable">{t("wordRange.unavailable")}</p>

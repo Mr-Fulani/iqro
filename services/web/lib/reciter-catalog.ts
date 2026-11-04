@@ -223,12 +223,17 @@ export function tajweedCourseRecitation(available: Recitation[]): Recitation | u
 }
 
 /**
- * The voice that plays selected words of a reciter without their timings:
- * al-Husary's Muallim, else the teaching reciter. His Mujawwad shares the
- * `qf-12-` prefix but has no word timings. Port of `wordTimingFallbackRecitation`.
+ * The voices, in order, that play selected words of a reciter without their
+ * timings: al-Husary's Muallim (else the teaching reciter), then his Murattal
+ * for the ayahs the Muallim has no timings of, where the sheikh repeats words
+ * after a pause (2:9, 2:20, 3:7). His Mujawwad shares the `qf-12-` prefix but
+ * has no word timings. Port of `wordTimingFallbackRecitations`.
  */
-export function wordTimingFallbackRecitation(available: Recitation[]): Recitation | undefined {
-  return available.find((item) => item.code.startsWith("qf-12-muallim")) ?? teachingRecitation(available);
+export function wordTimingFallbackRecitations(available: Recitation[]): Recitation[] {
+  const teaching = available.find((item) => item.code.startsWith("qf-12-muallim")) ?? teachingRecitation(available);
+  const murattal = available.find((item) => item.code.startsWith("qf-6-"));
+  return [teaching, murattal].filter((item, index, all): item is Recitation =>
+    Boolean(item) && all.findIndex((other) => other?.id === item?.id) === index);
 }
 
 function publishedTimestamp(recitation: Recitation): number {

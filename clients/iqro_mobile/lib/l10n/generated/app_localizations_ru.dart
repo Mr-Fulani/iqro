@@ -3489,4 +3489,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String wordRangeTeachingVoice(String reciter) {
     return 'Голос: $reciter, учебное чтение. У выбранного чтеца нет разметки по словам.';
   }
+
+  @override
+  String wordRangeOtherVoice(String reciter, String style) {
+    return 'Голос: $reciter · $style. У выбранного чтеца здесь нет разметки по словам.';
+  }
 }

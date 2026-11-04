@@ -1042,5 +1042,7 @@
   "wordTimingsUnavailable": "Bu kârinin burada kelime kelime zamanlaması yok; bu ayet yalnızca tamamen dinlenebilir. Bu zamanlama her kâride yok, bazılarında da her ayette yok.",
   "wordTimingsChooseReciter": "Aşağıdan başka bir kâri seçin.",
   "wordRangeTeachingVoice": "Ses: {reciter}, öğretici okuma. Seçilen kârinin kelime kelime zamanlaması yok.",
-  "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}}
+  "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}},
+  "wordRangeOtherVoice": "Ses: {reciter} · {style}. Seçilen kârinin burada kelime kelime zamanlaması yok.",
+  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}}
 }

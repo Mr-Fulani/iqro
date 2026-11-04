@@ -1425,6 +1425,7 @@ const ru = {
   "wordRange.handleStart": "Начало выделения",
   "wordRange.handleEnd": "Конец выделения",
   "wordRange.teachingVoice": "Голос: {reciter}, учебное чтение. У выбранного чтеца нет разметки по словам.",
+  "wordRange.otherVoice": "Голос: {reciter} · {style}. У выбранного чтеца здесь нет разметки по словам.",
 };
 
 export default ru;

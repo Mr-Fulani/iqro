@@ -57,7 +57,7 @@ import {
   type Recitation,
 } from "../lib/api";
 import { reciterName } from "../lib/audio-content";
-import { wordTimingFallbackRecitation } from "../lib/reciter-catalog";
+import { recitationStyleLabel, wordTimingFallbackRecitations } from "../lib/reciter-catalog";
 import { indexAyahBookmarks } from "../lib/ayah-bookmarks";
 import {
   indexAyahAnnotations,
@@ -1435,7 +1435,17 @@ function QuranContent() {
   }, []);
   useWordSelection(wordArea, wordRange?.range ?? null, selectWords, clearWords);
   // Words the chosen reciter has no timings of play in the teaching voice.
-  const wordTimingFallback = useMemo(() => wordTimingFallbackRecitation(mushafRecitations), [mushafRecitations]);
+  const wordTimingFallback = useMemo(() => wordTimingFallbackRecitations(mushafRecitations).map((voice) => {
+    const name = reciterName(voice.reciter, locale);
+    const teaching = voice.code.startsWith("qf-12-muallim") || voice.teaching_default === true;
+    return {
+      id: voice.id,
+      name,
+      note: teaching
+        ? t("wordRange.teachingVoice", { reciter: name })
+        : t("wordRange.otherVoice", { reciter: name, style: recitationStyleLabel(voice.style, t) }),
+    };
+  }), [locale, mushafRecitations, t]);
   // Another surah or view starts without a selection.
   useEffect(() => { clearWords(); }, [clearWords, selectedSurah, viewMode]);
 
@@ -2671,8 +2681,7 @@ function QuranContent() {
             const chosen = mushafRecitations.find((item) => item.id === mushafRecitationId);
             return chosen ? reciterName(chosen.reciter, locale) : undefined;
           })()}
-          teachingRecitationId={wordTimingFallback?.id ?? null}
-          teachingReciterName={wordTimingFallback ? reciterName(wordTimingFallback.reciter, locale) : ""}
+          fallbackVoices={wordTimingFallback}
           onClear={clearWords}
           onPlayingWord={setPlayingWord}
         />
