@@ -325,6 +325,16 @@ private struct ReadingPlanData {
   // Selects the photograph of the palm stage behind the daily figures.
   var palmStage: Int { min(5, max(0, (values["palmStage"] as? NSNumber)?.intValue ?? 0)) }
   var emptyLabel: String { values["emptyLabel"] as? String ?? NSLocalizedString("home_widget_reading_plan_open", comment: "") }
+  // After the published day ends the widget starts the next one itself (the
+  // same goal, nothing read yet) instead of waiting for the app to be opened.
+  func shown(at date: Date) -> ReadingPlanData {
+    guard values["isCurrent"] as? Bool == true, validUntil <= date,
+      let nextDay = values["nextDay"] as? [String: Any]
+    else { return self }
+    var merged = values.merging(nextDay) { _, next in next }
+    merged["validUntil"] = Date.distantFuture.timeIntervalSince1970 * 1000
+    return ReadingPlanData(values: merged)
+  }
   static func load() -> ReadingPlanData {
     let prefs = UserDefaults(suiteName: "group.forum.iqro.app")
     guard let raw = prefs?.string(forKey: "home_widget.ReadingPlan.snapshot"),
@@ -345,13 +355,16 @@ private struct ReadingPlanProvider: TimelineProvider {
     ReadingPlanEntry(date: Date(), data: ReadingPlanData(values: [:]))
   }
   func getSnapshot(in context: Context, completion: @escaping (ReadingPlanEntry) -> Void) {
-    completion(ReadingPlanEntry(date: Date(), data: .load()))
+    let now = Date()
+    completion(ReadingPlanEntry(date: now, data: ReadingPlanData.load().shown(at: now)))
   }
   func getTimeline(in context: Context, completion: @escaping (Timeline<ReadingPlanEntry>) -> Void) {
     let data = ReadingPlanData.load()
     let now = Date()
-    var entries = [ReadingPlanEntry(date: now, data: data)]
-    if data.validUntil > now { entries.append(ReadingPlanEntry(date: data.validUntil, data: data)) }
+    var entries = [ReadingPlanEntry(date: now, data: data.shown(at: now))]
+    if data.validUntil > now {
+      entries.append(ReadingPlanEntry(date: data.validUntil, data: data.shown(at: data.validUntil)))
+    }
     completion(Timeline(entries: entries, policy: .after(max(now, data.validUntil).addingTimeInterval(21600))))
   }
 }

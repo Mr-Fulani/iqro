@@ -941,6 +941,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get planWidgetHint => 'Дневная цель, пальма и чтение после намаза';
 
   @override
+  String get planWidgetEmpty =>
+      'Откройте план в IQRO, и здесь появится цель на день';
+
+  @override
   String get addPrayerWidget => 'Добавить виджет';
 
   @override

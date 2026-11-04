@@ -2,7 +2,7 @@
 <!-- minWidth/minHeight give 4×2 cells on launchers before Android 12
      (70 × cells − 30 dp); newer ones read targetCellWidth/Height. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:initialLayout="@layout/glance_default_loading_layout"
+    android:initialLayout="@layout/reading_plan_widget_initial"
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:minResizeWidth="250dp"

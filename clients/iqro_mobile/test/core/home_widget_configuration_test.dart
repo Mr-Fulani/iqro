@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/features/plan/plan_widget_service.dart';
 
 void main() {
   test('Android prayer widget is generated and fully wired', () {
@@ -26,6 +27,32 @@ void main() {
     expect(kotlin, contains('iqro://open/prayer?homeWidget'));
     expect(kotlin, isNot(contains('Color(0xFFE2B665, textAlign')));
   });
+
+  test(
+    'Android plan widget is found in every build and never starts blank',
+    () {
+      final manifest = File(
+        'android/app/src/main/AndroidManifest.xml',
+      ).readAsStringSync();
+      final provider = File(
+        'android/app/src/main/res/xml/reading_plan_home_widget.xml',
+      ).readAsStringSync();
+      final kotlin = File(
+        'android/app/src/main/kotlin/forum/iqro/app/ReadingPlanHomeWidget.kt',
+      ).readAsStringSync();
+
+      // The test build adds .test to the application id but not to the class.
+      expect(
+        planWidgetReceiver,
+        'forum.iqro.app.ReadingPlanHomeWidgetReceiver',
+      );
+      expect(kotlin, contains('package forum.iqro.app\n'));
+      expect(kotlin, contains('class ReadingPlanHomeWidgetReceiver'));
+      expect(manifest, contains('android:name="$planWidgetReceiver"'));
+      expect(provider, contains('@layout/reading_plan_widget_initial'));
+      expect(provider, isNot(contains('glance_default_loading_layout')));
+    },
+  );
 
   test('iOS prayer widget target shares only its explicit App Group', () {
     final runnerEntitlements = File(

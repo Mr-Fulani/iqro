@@ -935,6 +935,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planWidgetHint => 'Daily goal, the palm and reading after prayers';
 
   @override
+  String get planWidgetEmpty =>
+      'Open your plan in IQRO to see today’s goal here';
+
+  @override
   String get addPrayerWidget => 'Add widget';
 
   @override

@@ -922,6 +922,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get planWidgetHint => 'الهدف اليومي والنخلة والقراءة بعد الصلاة';
 
   @override
+  String get planWidgetEmpty => 'افتح الخطة في IQRO ليظهر هنا هدف اليوم';
+
+  @override
   String get addPrayerWidget => 'إضافة الويدجت';
 
   @override
