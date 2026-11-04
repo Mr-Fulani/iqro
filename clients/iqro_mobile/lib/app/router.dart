@@ -175,6 +175,15 @@ GoRouter createRouter({required bool onboardingComplete}) {
           child: DuaScreen(),
         ),
       ),
+      // Before `/dua/:collection/:sourceNumber`, which would read the topic
+      // as a du'a number.
+      GoRoute(
+        path: '/dua/topics/:topic',
+        builder: (context, state) => AudioNavigationBoundary(
+          section: AudioNavigationSection.dua,
+          child: DuaScreen(initialTopic: state.pathParameters['topic']),
+        ),
+      ),
       GoRoute(
         path: '/dua/:collection/:sourceNumber',
         builder: (context, state) {

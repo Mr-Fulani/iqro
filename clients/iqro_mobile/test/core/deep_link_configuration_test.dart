@@ -73,6 +73,39 @@ void main() {
     );
   });
 
+  test('every site Dua address opens its own app route', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final router = createRouter(onboardingComplete: true);
+    addTearDown(router.dispose);
+    const routes = <String, String>{
+      'dua': '/dua',
+      'dua/hisn-al-muslim/7': '/dua/:collection/:sourceNumber',
+      'dua/hisn-al-muslim/categories/027-morning':
+          '/dua/:collection/categories/:category',
+      'dua/waking-up': '/dua/:id',
+      // Topic cards were read as du'a number 0 of a «topics» collection.
+      'dua/topics/morning': '/dua/topics/:topic',
+      'dua/topics/evening': '/dua/topics/:topic',
+      'dua/topics/no-such-topic': '/dua/topics/:topic',
+    };
+    for (final locale in const <String>['ru', 'en', 'ar', 'tr']) {
+      routes.forEach((site, route) {
+        final path = normalizeLocalizedDuaDeepLink(
+          Uri.parse('https://iqro.forum/$locale/$site'),
+        );
+        expect(path, '/$site');
+        final match = router.configuration.findMatch(Uri.parse(path!));
+        expect(match.fullPath, route, reason: site);
+      });
+    }
+    expect(
+      router.configuration
+          .findMatch(Uri.parse('/dua/topics/morning'))
+          .pathParameters,
+      <String, String>{'topic': 'morning'},
+    );
+  });
+
   test('localized web Salah links normalize to course routes', () {
     for (final locale in const <String>['ru', 'en', 'ar', 'tr']) {
       expect(
