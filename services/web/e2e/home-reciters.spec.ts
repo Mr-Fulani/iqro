@@ -325,6 +325,6 @@ test("one reciter exposes multiple reading styles without duplicate person optio
   await expect(readingSelect.locator("option")).toHaveCount(2);
   await expect(readingSelect.locator("option")).toHaveText([
     "Муджаввад · Hafs 'an Asim (Треков: 114)",
-    "Мурратталь · Hafs 'an Asim (Треков: 114)",
+    "Муратталь · Hafs 'an Asim (Треков: 114)",
   ]);
 });

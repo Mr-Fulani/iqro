@@ -375,7 +375,7 @@ void main() {
       expect(harness.controller().recitation?.id, 'rec-6');
       expect(
         find.text(
-          'Голос: аль-Хусари · Мурратталь. '
+          'Голос: аль-Хусари · Муратталь. '
           'У выбранного чтеца здесь нет разметки по словам.',
         ),
         findsOneWidget,

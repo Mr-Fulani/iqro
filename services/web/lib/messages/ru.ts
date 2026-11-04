@@ -734,7 +734,7 @@ const ru = {
   "audio.mushafAlbum": "Quran Platform · Мусхаф",
   "audio.style.muallim": "Муаллим",
   "audio.style.mujawwad": "Муджаввад",
-  "audio.style.murattal": "Мурратталь",
+  "audio.style.murattal": "Муратталь",
   "audio.style.kidsRepeat": "Детское с повтором",
   "audio.deep.reciterCatalogTitle": "Опубликованные чтецы Корана",
   "audio.deep.reciterCatalogDescription": "Каталог чтецов, для которых опубликована полная лицензированная декламация с правом потокового воспроизведения.",

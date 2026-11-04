@@ -1143,7 +1143,7 @@ test("reader defaults to Mushaf, selects every fragment and starts ayah playback
     "src",
     tracks[5].asset.url,
   );
-  await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:2/)).toBeVisible();
+  await expect(page.getByText(/Махер аль-Муайкли · Муратталь · аят 6:2/)).toBeVisible();
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
 });
 
@@ -1647,7 +1647,7 @@ test("where al-Husary's Muallim has no word timings his Murattal plays the words
   await view.locator('[data-word-key="6:2:3"]').dblclick();
   const bar = page.getByTestId("word-range-bar");
   await expect(bar.getByTestId("word-range-teaching-voice")).toHaveText(
-    /^Голос: .+ · Мурратталь\. У выбранного чтеца здесь нет разметки по словам\.$/,
+    /^Голос: .+ · Муратталь\. У выбранного чтеца здесь нет разметки по словам\.$/,
   );
   await bar.getByTestId("word-range-play").click();
   expect(await bar.locator("audio").evaluate((audio: HTMLAudioElement) => ({
@@ -3001,7 +3001,7 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
   const audio = page.locator(".mushaf-audio-now-playing audio[src]");
   await expect(audio).toHaveAttribute("src", tracks[5].asset.url);
   await expect(firstAyah).toHaveClass(/is-audio-active/);
-  await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:1/)).toBeVisible();
+  await expect(page.getByText(/Махер аль-Муайкли · Муратталь · аят 6:1/)).toBeVisible();
   const pauseButton = firstAyah.getByRole("button", { name: "Поставить на паузу: Аят 6:1" });
   await expect(pauseButton).toHaveText("⏸");
   await expect(pauseButton).toHaveClass(/is-active/);
@@ -3023,7 +3023,7 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
   await expect(secondAyah).toHaveClass(/is-audio-active/);
   await expect(secondAyah.getByRole("button", { name: "Режим повтора: Без повтора" })).toHaveAttribute("aria-pressed", "true");
   await expect(firstAyah.getByRole("button", { name: "Повтор аята: Аят 6:1" })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByText(/Махер аль-Муайкли · Мурратталь · аят 6:2/)).toBeVisible();
+  await expect(page.getByText(/Махер аль-Муайкли · Муратталь · аят 6:2/)).toBeVisible();
 
   await secondAyah.getByRole("button", { name: "Режим повтора: Без повтора" }).click();
   await expect(page.getByLabel("Режим повтора", { exact: true })).toHaveValue("off");

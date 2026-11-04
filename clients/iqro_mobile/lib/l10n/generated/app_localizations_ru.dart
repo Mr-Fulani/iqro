@@ -628,7 +628,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chooseRecitationStyle => 'Выберите стиль чтения';
 
   @override
-  String get styleMurattal => 'Мурратталь';
+  String get styleMurattal => 'Муратталь';
 
   @override
   String get styleMujawwad => 'Муджаввад';
