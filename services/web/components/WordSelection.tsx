@@ -7,12 +7,13 @@ import {
   parseWordKey,
   sameWord,
   sameWordRange,
+  wordKey,
   wordRangeBetween,
   type QuranWord,
   type QuranWordRange,
 } from "../lib/word-range";
 
-const LONG_PRESS_MS = 450;
+const LONG_PRESS_MS = 300;
 
 /** How far, in screen pixels, a finger may land beside a handle's line and under its knob. */
 const HANDLE_REACH_X = 24;
@@ -45,6 +46,41 @@ function setSelectingFlag(on: boolean) {
   else delete document.documentElement.dataset.wordSelecting;
 }
 
+/**
+ * The word under a finger that pulls a selection, larger, above the finger:
+ * a phone's text loupe. It shows a copy of the word in its own font.
+ */
+function createLoupe() {
+  let loupe: HTMLElement | null = null;
+  return {
+    show(container: HTMLElement, word: QuranWord, x: number, y: number) {
+      const key = wordKey(word);
+      const source = container.querySelector<HTMLElement>(`[data-word-key="${key}"]`);
+      if (!source) return;
+      if (!loupe) {
+        loupe = document.createElement("div");
+        loupe.className = "word-range-loupe";
+        loupe.dataset.testid = "word-range-loupe";
+        loupe.setAttribute("aria-hidden", "true");
+        document.body.append(loupe);
+      }
+      if (loupe.dataset.word !== key) {
+        const copy = source.cloneNode(true) as HTMLElement;
+        copy.classList.remove("is-word-selected", "is-word-playing");
+        loupe.replaceChildren(copy);
+        loupe.dataset.word = key;
+        loupe.style.fontFamily = getComputedStyle(source).fontFamily;
+      }
+      loupe.style.left = `${x}px`;
+      loupe.style.top = `${y - 48}px`;
+    },
+    hide() {
+      loupe?.remove();
+      loupe = null;
+    },
+  };
+}
+
 function wordOfTarget(target: EventTarget | null, container: HTMLElement): QuranWord | null {
   if (!(target instanceof Element)) return null;
   const element = target.closest<HTMLElement>("[data-word-key]");
@@ -53,9 +89,10 @@ function wordOfTarget(target: EventTarget | null, container: HTMLElement): Quran
 
 /**
  * Word selection inside `element`, whose words carry `data-word-key`.
- * Touch: hold a word, then move the finger on. Mouse: double-click a word,
- * Shift+click another. Both: drag a `.word-range-handle`. A click beside a
- * selection clears it, as with selected text.
+ * Touch: hold a word 0.3 s, then move the finger on, with a loupe over it.
+ * Mouse: double-click a word, Shift+click another. Both: drag a
+ * `.word-range-handle`. A click beside a selection clears it, as with
+ * selected text; one on a Mushaf ayah number still opens the ayah.
  */
 export function useWordSelection(
   element: HTMLElement | null,
@@ -72,7 +109,8 @@ export function useWordSelection(
     let anchor: QuranWord | null = null;
     let start = { x: 0, y: 0 };
     let suppressClickUntil = 0;
-    let handle: { id: number; anchor: QuranWord; grabY: number } | null = null;
+    let handle: { id: number; anchor: QuranWord; grabY: number; touch: boolean } | null = null;
+    const loupe = createLoupe();
 
     // The word under the finger, even under the selection bar or a handle above it.
     const wordAt = (x: number, y: number) => {
@@ -122,10 +160,13 @@ export function useWordSelection(
       }
       if (event.cancelable) event.preventDefault();
       const word = wordAt(touch.clientX, touch.clientY);
-      if (word) extend(anchor, word);
+      if (!word) return;
+      extend(anchor, word);
+      loupe.show(element, word, touch.clientX, touch.clientY);
     };
     const touchEnd = () => {
       clearTimer();
+      loupe.hide();
       if (!anchor) return;
       anchor = null;
       suppressClickUntil = Date.now() + 600;
@@ -149,6 +190,8 @@ export function useWordSelection(
         extend(compareWords(word, current.start) < 0 ? current.end : current.start, word);
         return;
       }
+      // An ayah number in the Mushaf opens its ayah, selection or not.
+      if (event.target instanceof Element && event.target.closest(".qf-mushaf-word.is-ayah-end")) return;
       // Controls beside the text (an ayah card's buttons) keep the selection and their click.
       const onText = event.target instanceof Element
         && Boolean(event.target.closest("[data-word-key], [data-ayah-key], .quran-arabic-text, .qf-mushaf-view"));
@@ -179,6 +222,7 @@ export function useWordSelection(
         id: event.pointerId,
         anchor: target.dataset.handle === "start" ? current.end : current.start,
         grabY: word ? event.clientY - (word.top + word.height / 2) : 0,
+        touch: event.pointerType === "touch",
       };
       try { target.setPointerCapture(event.pointerId); } catch { /* A synthetic pointer has no capture. */ }
       setSelectingFlag(true);
@@ -187,11 +231,14 @@ export function useWordSelection(
       if (!handle || event.pointerId !== handle.id) return;
       event.preventDefault();
       const word = wordAt(event.clientX, event.clientY - handle.grabY);
-      if (word) extend(handle.anchor, word);
+      if (!word) return;
+      extend(handle.anchor, word);
+      if (handle.touch) loupe.show(element, word, event.clientX, event.clientY - handle.grabY);
     };
     const pointerUp = (event: PointerEvent) => {
       if (!handle || event.pointerId !== handle.id) return;
       handle = null;
+      loupe.hide();
       suppressClickUntil = Date.now() + 300;
       setSelectingFlag(false);
     };
@@ -211,6 +258,7 @@ export function useWordSelection(
     element.addEventListener("pointercancel", pointerUp);
     return () => {
       clearTimer();
+      loupe.hide();
       setSelectingFlag(false);
       element.removeEventListener("touchstart", touchStart);
       element.removeEventListener("touchmove", touchMove);

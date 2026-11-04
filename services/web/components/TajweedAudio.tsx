@@ -195,17 +195,80 @@ export function ClipButtons({
   );
 }
 
-/** Plays exactly one word of the current reciter's surah track. */
-export function WordAudio({ recitationId, verseKey, position }: { recitationId: string; verseKey: string; position: number }) {
-  const audio = useAyahAudio(recitationId, verseKey);
+/** A voice that plays words the chosen reciter has no timings of, and what it says about itself. */
+export type StandInVoice = { id: string; name: string; note: string };
+
+/**
+ * The word's voice: the current reciter when it has the word's timing, else
+ * the first of `fallbackVoices` that has it, as in a selection of words.
+ */
+function useWordVoice(recitationId: string | null, verseKey: string, position: number, fallbackVoices: StandInVoice[]) {
+  const key = `${recitationId ?? ""}|${verseKey}|${position}|${fallbackVoices.map((voice) => voice.id).join(",")}`;
+  const [state, setState] = useState<{
+    key: string;
+    voice: { audio: AyahAudio; timing: { startMs: number; endMs: number }; standIn: StandInVoice | null } | null;
+  } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const candidates = [
+        ...(recitationId ? [{ id: recitationId, name: "", note: "" }] : []),
+        ...fallbackVoices.filter((voice) => voice.id !== recitationId),
+      ];
+      for (const candidate of candidates) {
+        const audio = await loadAyahAudio(candidate.id, verseKey);
+        const timing = audio ? wordTiming(audio.words, position) : null;
+        if (audio && timing) {
+          if (!cancelled) setState({ key, voice: { audio, timing, standIn: candidate.id === recitationId ? null : candidate } });
+          return;
+        }
+      }
+      if (!cancelled) setState({ key, voice: null });
+    })();
+    return () => { cancelled = true; };
+  }, [fallbackVoices, key, position, recitationId, verseKey]);
+  return state?.key === key ? state : null;
+}
+
+/**
+ * The first actions of a word card: listen to exactly the word (in a stand-in
+ * voice when the reciter has no timing of it) and select words from it.
+ */
+export function WordAudio({
+  recitationId,
+  verseKey,
+  position,
+  fallbackVoices = [],
+  onSelectFrom,
+}: {
+  recitationId: string | null;
+  verseKey: string;
+  position: number;
+  fallbackVoices?: StandInVoice[];
+  onSelectFrom?: () => void;
+}) {
+  const { t } = useI18n();
+  const found = useWordVoice(recitationId, verseKey, position, fallbackVoices);
   const player = useClipPlayer();
   const [slow, setSlow] = useState(false);
   const { stop } = player;
-  const timing = audio ? wordTiming(audio.words, position) : null;
 
   // Leaving this word stops its clip.
   useEffect(() => stop, [position, stop, verseKey]);
 
-  if (!audio || !timing) return null;
-  return <ClipButtons player={player} clip={{ url: audio.url, ...timing }} slow={slow} onSlowChange={setSlow} />;
+  const voice = found?.voice ?? null;
+  if (!voice && !onSelectFrom) return null;
+  return (
+    <div className="tajweed-word-actions">
+      {voice && (
+        <ClipButtons player={player} clip={{ url: voice.audio.url, ...voice.timing }} slow={slow} onSlowChange={setSlow} />
+      )}
+      {onSelectFrom && (
+        <button type="button" className="btn btn-secondary btn-sm" onClick={onSelectFrom} data-testid="tajweed-select-from">
+          {t("tajweed.selectFrom")}
+        </button>
+      )}
+      {voice?.standIn && <p className="tajweed-word-voice" data-testid="tajweed-voice">{voice.standIn.note}</p>}
+    </div>
+  );
 }

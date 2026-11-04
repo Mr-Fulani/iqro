@@ -2477,7 +2477,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tajweedOccurrencesAyah => 'Где в этом аяте';
 
   @override
-  String get tajweedListen => 'Послушать фрагмент';
+  String get tajweedListen => 'Прослушать фрагмент';
 
   @override
   String get tajweedStop => 'Остановить';
@@ -3437,10 +3437,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listenWord => 'Прослушать слово';
 
   @override
-  String get selectWords => 'Выделить слова';
+  String get listenSelection => 'Прослушать выделенное';
 
   @override
-  String get listenSelection => 'Прослушать выделенное';
+  String get wordRangeWord => 'Слово';
+
+  @override
+  String get ayahMenu => 'Меню аята';
+
+  @override
+  String get tajweedSelectFrom => 'Выделить отсюда';
 
   @override
   String wordAt(String ayah, int position) {
@@ -3478,9 +3484,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get wordTimingsUnavailable =>
       'Здесь у этого чтеца нет разметки по словам: этот аят можно слушать только целиком. Разметка есть не у всех чтецов, а у некоторых — не во всех аятах.';
-
-  @override
-  String get wordTimingsChooseReciter => 'Выберите другого чтеца ниже.';
 
   @override
   String wordRangeTeachingVoice(String reciter) {

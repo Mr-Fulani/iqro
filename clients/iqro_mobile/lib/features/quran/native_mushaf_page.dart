@@ -89,7 +89,6 @@ class NativeMushafPage extends ConsumerStatefulWidget {
     this.wordRange,
     this.playingWord,
     this.onWordRange,
-    this.onOpenWord,
     this.onPainted,
     super.key,
   });
@@ -123,10 +122,9 @@ class NativeMushafPage extends ConsumerStatefulWidget {
   final QuranWordRange? wordRange;
   final QuranWord? playingWord;
 
-  /// Long press and drag selects words on QCF pages; a long press released
-  /// on a word goes to [onOpenWord] when it returns true.
+  /// Long press and drag selects words on QCF pages, as does «Select from
+  /// here» on a tajweed word card.
   final FoundationWordRangeChanged? onWordRange;
-  final FoundationWordTap? onOpenWord;
 
   /// Called after the frame that first paints the page itself (its text or
   /// picture), never its loading or error state.
@@ -301,9 +299,26 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
         wholePage: true,
         selection: TajweedWordSelection(ayah.key, position),
         recitation: widget.tajweedRecitation,
+        onSelectWord: _selectFrom,
       ),
     );
     return true;
+  }
+
+  /// «Select from here» on a word card: the word becomes the selection.
+  ValueChanged<TajweedWordSelection>? get _selectFrom {
+    final onWordRange = widget.onWordRange;
+    if (onWordRange == null) return null;
+    return (selection) {
+      final [surah, ayah] = selection.verseKey
+          .split(':')
+          .map(int.parse)
+          .toList();
+      onWordRange(
+        QuranWordRange.single(QuranWord(surah, ayah, selection.position)),
+        1,
+      );
+    };
   }
 
   // The legend sits on the light paper in both app themes.
@@ -387,6 +402,7 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                       wholePage: true,
                       selection: TajweedRuleSelection(code),
                       recitation: widget.tajweedRecitation,
+                      onSelectWord: _selectFrom,
                     ),
                   ),
                 ),
@@ -548,7 +564,6 @@ class _NativeMushafPageState extends ConsumerState<NativeMushafPage> {
                             wordRange: widget.wordRange,
                             playingWord: widget.playingWord,
                             onWordRange: widget.onWordRange,
-                            onOpenWord: widget.onOpenWord,
                             surahs: widget.surahs,
                             onPainted: widget.onPainted,
                           ),

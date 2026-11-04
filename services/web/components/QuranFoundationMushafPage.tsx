@@ -83,6 +83,8 @@ type QuranFoundationMushafPageProps = {
   /** Spoken highlight and note state per `surah:ayah`. */
   annotationLabels?: Record<string, string>;
   onSelectAyah: (ayahKey: string) => void;
+  /** A tap on an ayah number: opens the ayah's menu. */
+  onOpenAyah?: (ayahKey: string) => void;
   /** `verse:ayah#position` of the QCF V4 words that carry tajweed rules. */
   tajweedWords?: ReadonlySet<string>;
   onSelectTajweedWord?: (verseKey: string, position: number) => void;
@@ -261,6 +263,7 @@ export function QuranFoundationMushafPageView({
   highlightColors,
   annotationLabels,
   onSelectAyah,
+  onOpenAyah,
   tajweedWords,
   onSelectTajweedWord,
   juz,
@@ -541,6 +544,10 @@ export function QuranFoundationMushafPageView({
                     type="button"
                     key={fragment.key}
                     onClick={(event) => {
+                      if (onOpenAyah && (event.target as Element).closest(".qf-mushaf-word.is-ayah-end")) {
+                        onOpenAyah(ayahKey);
+                        return;
+                      }
                       onSelectAyah(ayahKey);
                       // A tap on a coloured word also explains its tajweed rules.
                       const word = (event.target as Element).closest<HTMLElement>(".qf-mushaf-word.has-tajweed");

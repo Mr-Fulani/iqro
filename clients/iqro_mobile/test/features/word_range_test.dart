@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,42 +60,64 @@ void main() {
   });
 
   group('panel place', () {
-    const screen = Size(400, 900);
+    const size = Size(400, 900);
     const padding = EdgeInsets.only(top: 24, bottom: 16);
+    const panel = Size(240, 52);
+    Offset place(Rect? selection) => wordRangePanelOffset(
+      selection: selection,
+      size: size,
+      padding: padding,
+      panel: panel,
+    );
 
-    test('stays at the bottom while the words are above it', () {
+    test('stands above the words, centred on them', () {
+      final at = place(const Rect.fromLTRB(150, 400, 250, 440));
+      expect(at.dy + panel.height, lessThanOrEqualTo(400));
+      expect(at.dx + panel.width / 2, 200);
+    });
+
+    test('goes under the words and their handles at the top', () {
+      final at = place(const Rect.fromLTRB(150, 40, 250, 80));
+      expect(at.dy, greaterThanOrEqualTo(80 + WordRangeHandle.extra));
+    });
+
+    test('keeps to the screen beside a word at its edge', () {
+      final at = place(const Rect.fromLTRB(360, 400, 396, 440));
+      expect(at.dx + panel.width, lessThanOrEqualTo(size.width - 12));
+    });
+
+    test('waits at the bottom while the words are off screen', () {
+      expect(place(null).dy, size.height - 16 - 12 - panel.height);
       expect(
-        wordRangePanelOnTop(
-          selection: const Rect.fromLTRB(20, 100, 380, 160),
-          screen: screen,
-          padding: padding,
-          panelHeight: 240,
-        ),
-        isFalse,
+        place(const Rect.fromLTRB(150, -300, 250, -260)).dy,
+        size.height - 16 - 12 - panel.height,
       );
     });
 
-    test('goes to the top when it would cover the words', () {
-      expect(
-        wordRangePanelOnTop(
-          selection: const Rect.fromLTRB(20, 700, 380, 760),
-          screen: screen,
-          padding: padding,
-          panelHeight: 240,
-        ),
-        isTrue,
+    testWidgets('the layer puts the panel over the selected words', (
+      tester,
+    ) async {
+      final bounds = ValueNotifier<Rect?>(
+        const Rect.fromLTRB(100, 500, 300, 540),
       );
-    });
+      addTearDown(bounds.dispose);
+      final harness = await _pumpPanel(tester, layer: bounds);
+      harness.controller().select(
+        const QuranWordRange.single(QuranWord(1, 5, 3)),
+        wordCount: 1,
+      );
+      await _settle(tester);
+      final rect = tester.getRect(
+        find.byKey(const ValueKey('word-range-panel')),
+      );
+      expect(rect.bottom, lessThanOrEqualTo(500));
+      expect(rect.center.dx, closeTo(200, 1));
 
-    test('stays at the bottom when the words fill the page', () {
+      bounds.value = const Rect.fromLTRB(100, 30, 300, 70);
+      await tester.pump();
       expect(
-        wordRangePanelOnTop(
-          selection: const Rect.fromLTRB(20, 120, 380, 860),
-          screen: screen,
-          padding: padding,
-          panelHeight: 240,
-        ),
-        isFalse,
+        tester.getRect(find.byKey(const ValueKey('word-range-panel'))).top,
+        greaterThanOrEqualTo(70 + WordRangeHandle.extra),
       );
     });
   });
@@ -105,7 +128,7 @@ void main() {
     ) async {
       final harness = await _pumpPage(tester);
       final gesture = await tester.startGesture(_wordCenter(tester, 1));
-      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump(const Duration(milliseconds: 350));
       await gesture.moveTo(_wordCenter(tester, 2));
       await tester.pump();
       await gesture.moveTo(_wordCenter(tester, 3));
@@ -131,19 +154,35 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a long press released in place opens the word menu', (
+    testWidgets('0.3 s on a word selects it at once, with no menu', (
       tester,
     ) async {
       final harness = await _pumpPage(tester);
       final gesture = await tester.startGesture(_wordCenter(tester, 2));
-      await tester.pump(const Duration(milliseconds: 600));
-      // The menu waits for the finger: holding still opens nothing yet.
-      expect(harness.opened, isEmpty);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(harness.ranges, isEmpty);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        harness.ranges.single.range,
+        const QuranWordRange.single(QuranWord(112, 4, 2)),
+      );
+      expect(harness.ranges.single.count, 1);
+      // The panel waits for the finger to lift.
+      expect(wordRangePulling.value, isTrue);
       await gesture.up();
       await tester.pump();
 
-      expect(harness.opened, ['112:4:2']);
-      expect(harness.ranges, isEmpty);
+      expect(wordRangePulling.value, isFalse);
+      expect(harness.opened, isEmpty);
+    });
+
+    testWidgets('a tap on an ayah number opens its menu', (tester) async {
+      final harness = await _pumpPage(tester);
+      await tester.tapAt(_markerCenter(tester));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(harness.opened, ['112:4']);
+      expect(harness.selected, isEmpty);
     });
 
     testWidgets('a tap beside the selected words only clears them', (
@@ -246,8 +285,7 @@ void main() {
         wordCount: 4,
       );
       await _settle(tester);
-      expect(find.text('1:5, слово 3 — 1:6, слово 2'), findsOneWidget);
-      expect(find.text('4 слова · Husary'), findsOneWidget);
+      expect(find.text('4 слова'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('word-range-play')));
       await _settle(tester);
@@ -267,6 +305,19 @@ void main() {
       );
     });
 
+    testWidgets('«⋯» opens the ayah menu', (tester) async {
+      final harness = await _pumpPanel(tester);
+      harness.controller().select(
+        const QuranWordRange.single(QuranWord(1, 5, 3)),
+        wordCount: 1,
+      );
+      await _settle(tester);
+      expect(find.text('Слово'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('word-range-more')));
+      await tester.pump();
+      expect(harness.more(), 1);
+    });
+
     testWidgets('three repeats play the clip three times', (tester) async {
       final harness = await _pumpPanel(tester);
       harness.controller().select(
@@ -274,7 +325,11 @@ void main() {
         wordCount: 1,
       );
       await _settle(tester);
-      await tester.tap(find.text('3 раза'));
+      // The repeat button goes 1× → 3× → ∞.
+      await tester.tap(find.byKey(const ValueKey('word-range-repeat')));
+      await tester.pump();
+      expect(find.text('3×'), findsOneWidget);
+      expect(harness.controller().repeat, WordRepeat.three);
       await tester.tap(find.byKey(const ValueKey('word-range-play')));
       await _settle(tester);
       expect(harness.engine.plays, 1);
@@ -359,15 +414,16 @@ void main() {
         find.byKey(const ValueKey('word-range-unavailable')),
         findsNothing,
       );
+      await tester.tap(find.byKey(const ValueKey('word-range-play')));
+      await _settle(tester);
+      // Whose voice it is shows while it sounds.
       expect(
-        find.text(
+        find.textContaining(
           'Голос: аль-Хусари, учебное чтение. '
           'У выбранного чтеца нет разметки по словам.',
         ),
         findsOneWidget,
       );
-      await tester.tap(find.byKey(const ValueKey('word-range-play')));
-      await _settle(tester);
 
       final source = harness.engine.sources.single as ClippingAudioSource;
       expect(source.start, const Duration(milliseconds: 21300));
@@ -417,8 +473,10 @@ void main() {
       await _settle(tester);
 
       expect(harness.controller().recitation?.id, 'rec-6');
+      await tester.tap(find.byKey(const ValueKey('word-range-play')));
+      await _settle(tester);
       expect(
-        find.text(
+        find.textContaining(
           'Голос: аль-Хусари · Муратталь. '
           'У выбранного чтеца здесь нет разметки по словам.',
         ),
@@ -506,7 +564,7 @@ void main() {
 
       expect(ranges.last.start, const QuranWord(1, 5, 1));
       expect(ranges.last.end, const QuranWord(1, 6, 3));
-      // The reader scrolls the last word above the panel by its rect.
+      // The panel stands beside the words by their rects.
       final rect = registry.wordRect(const QuranWord(1, 6, 3));
       expect(rect, isNotNull);
       expect(second.overlaps(rect!), isTrue);
@@ -648,10 +706,6 @@ Future<_PageHarness> _pumpPage(
                   ranges.add((range: value, count: count));
                   setState(() => range = value);
                 },
-                onOpenWord: (ayah, position) {
-                  opened.add('${ayah.key}:$position');
-                  return true;
-                },
               ),
             ),
           ),
@@ -711,6 +765,7 @@ typedef _PanelHarness = ({
   WordRangeController Function() controller,
   _Engine engine,
   _AudioRepository repository,
+  int Function() more,
 });
 
 _PanelHarness? _lastPanel;
@@ -722,6 +777,7 @@ Future<_PanelHarness> _pumpPanel(
   bool teachingTimed = true,
   bool withMurattal = false,
   bool teachingChosen = false,
+  ValueListenable<Rect?>? layer,
 }) async {
   final engine = _Engine();
   final audio = AudioController(engine: engine);
@@ -746,7 +802,7 @@ Future<_PanelHarness> _pumpPanel(
         locale: const Locale('ru'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: _Host(key: host),
+        home: _Host(key: host, layer: layer),
       ),
     ),
   );
@@ -754,13 +810,17 @@ Future<_PanelHarness> _pumpPanel(
     controller: () => host.currentState!.controller,
     engine: engine,
     repository: repository,
+    more: () => host.currentState!.more,
   );
   _lastPanel = harness;
   return harness;
 }
 
 class _Host extends ConsumerStatefulWidget {
-  const _Host({super.key});
+  const _Host({this.layer, super.key});
+
+  /// Where the words are, for the panel's layer; null puts the panel alone.
+  final ValueListenable<Rect?>? layer;
 
   @override
   ConsumerState<_Host> createState() => _HostState();
@@ -768,6 +828,7 @@ class _Host extends ConsumerStatefulWidget {
 
 class _HostState extends ConsumerState<_Host> {
   late final controller = WordRangeController(ref);
+  var more = 0;
 
   @override
   void dispose() {
@@ -777,10 +838,17 @@ class _HostState extends ConsumerState<_Host> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: Align(
-      alignment: Alignment.bottomCenter,
-      child: WordRangePanel(controller: controller),
-    ),
+    body: switch (widget.layer) {
+      final layer? => WordRangePanelLayer(
+        controller: controller,
+        selection: layer,
+        onMore: () => more++,
+      ),
+      null => Align(
+        alignment: Alignment.bottomCenter,
+        child: WordRangePanel(controller: controller, onMore: () => more++),
+      ),
+    },
   );
 }
 
@@ -789,6 +857,20 @@ Future<void> _settle(WidgetTester tester) async {
     await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await tester.pump(const Duration(milliseconds: 100));
   }
+}
+
+/// The middle of the number at the end of 112:4.
+Offset _markerCenter(WidgetTester tester) {
+  final canvas = find.byWidgetPredicate(
+    (widget) =>
+        widget is CustomPaint && widget.painter is FoundationPagePainter,
+  );
+  final painter =
+      tester.widget<CustomPaint>(canvas).painter! as FoundationPagePainter;
+  final marker = painter.layout.words.firstWhere(
+    (word) => word.reference.key == '112:4' && word.position == null,
+  );
+  return tester.getTopLeft(canvas) + marker.rect.center;
 }
 
 Offset _wordCenter(WidgetTester tester, int position) {

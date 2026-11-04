@@ -1497,11 +1497,15 @@ test("tajweed Mushaf explains a tapped word, its letters and its sound", async (
   await expect(idgham.getByText("Нун с сукуном перед ل или ر.")).toBeVisible();
   await expect(idgham.getByText("Сразу читайте удвоенную ل.")).toBeVisible();
   await expect(card.getByText("Пояснения проходят проверку у преподавателя таджвида.")).toBeVisible();
+  // Listening and «Select from here» come before the explanations.
+  const actions = card.locator(".tajweed-word-actions");
+  expect((await actions.boundingBox())!.y).toBeLessThan((await idgham.boundingBox())!.y);
+  await expect(actions.getByTestId("tajweed-select-from")).toHaveText("Выделить отсюда");
 
   const slow = card.getByRole("button", { name: "Медленнее, 0,75×" });
   await slow.click();
   await expect(slow).toHaveAttribute("aria-pressed", "true");
-  await card.getByRole("button", { name: "Послушать фрагмент" }).click();
+  await card.getByRole("button", { name: "Прослушать фрагмент" }).click();
   await expect(card.getByRole("button", { name: "Остановить" })).toBeVisible();
   expect(await card.locator("audio").evaluate((audio: HTMLAudioElement) => ({
     rate: audio.playbackRate,
@@ -1533,6 +1537,12 @@ test("tajweed Mushaf explains a tapped word, its letters and its sound", async (
   // A tap on the shade around the card closes it.
   await page.mouse.click(4, 4);
   await expect(wordCard).toHaveCount(0);
+
+  // «Select from here» closes the card and selects its word.
+  await view.locator('.qf-mushaf-word.has-tajweed[data-word-position="3"]').click();
+  await card.getByTestId("tajweed-select-from").click();
+  await expect(card).toHaveCount(0);
+  await expect(page.getByTestId("word-range-title")).toHaveText("6:2, слово 3");
 });
 
 test("word selection plays the selected words of the Mushaf and of the text", async ({ page }) => {
@@ -1545,7 +1555,8 @@ test("word selection plays the selected words of the Mushaf and of the text", as
   await view.locator('[data-word-key="6:2:3"]').dblclick();
   const bar = page.getByTestId("word-range-bar");
   await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 3");
-  await expect(bar.getByTestId("word-range-play")).toHaveText(/Прослушать слово/);
+  await expect(bar.getByTestId("word-range-play")).toHaveAccessibleName("Прослушать слово");
+  await expect(bar.getByTestId("word-range-play")).toHaveText(/Слово/);
   await view.locator('[data-word-key="6:2:4"]').click({ modifiers: ["Shift"] });
   await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 3 — 6:2, слово 4");
   await expect(view.locator(".is-word-selected")).toHaveCount(2);
@@ -1558,8 +1569,15 @@ test("word selection plays the selected words of the Mushaf and of the text", as
     start: audio.currentTime,
     src: audio.getAttribute("src"),
   }))).toEqual({ start: 1, src: tracks[5].asset.url });
-  await bar.getByRole("button", { name: "3 раза" }).click();
-  await expect(bar.getByRole("button", { name: "3 раза" })).toHaveAttribute("aria-pressed", "true");
+  // One button goes 1× → 3× → ∞.
+  await bar.getByTestId("word-range-repeat").click();
+  await expect(bar.getByTestId("word-range-repeat")).toHaveAccessibleName("Повтор: 3 раза");
+  await expect(bar.getByTestId("word-range-repeat")).toHaveText("3×");
+
+  // «⋯» opens the first ayah's actions; the words stay selected.
+  await bar.getByTestId("word-range-more").click();
+  await expect(page.getByTestId("mushaf-ayah-actions")).toContainText("Аят 6:2");
+  await expect(view.locator(".is-word-selected")).toHaveCount(2);
 
   // Escape clears it, as a click beside it does.
   await page.keyboard.press("Escape");
@@ -1608,11 +1626,13 @@ test("words the chosen reciter has no timings of play in the teaching al-Husary"
   await view.locator('[data-word-key="6:2:3"]').dblclick();
   await view.locator('[data-word-key="6:2:4"]').click({ modifiers: ["Shift"] });
   const bar = page.getByTestId("word-range-bar");
+  await expect(bar.getByTestId("word-range-play")).toBeEnabled();
+  await expect(bar.getByTestId("word-range-unavailable")).toHaveCount(0);
+  await bar.getByTestId("word-range-play").click();
+  // Whose voice it is shows while it sounds.
   await expect(bar.getByTestId("word-range-teaching-voice")).toHaveText(
     /^Голос: .+, учебное чтение\. У выбранного чтеца нет разметки по словам\.$/,
   );
-  await expect(bar.getByTestId("word-range-unavailable")).toHaveCount(0);
-  await bar.getByTestId("word-range-play").click();
   // The clip is the teaching voice's surah track, from its first word.
   expect(await bar.locator("audio").evaluate((audio: HTMLAudioElement) => ({
     start: audio.currentTime,
@@ -1646,10 +1666,10 @@ test("where al-Husary's Muallim has no word timings his Murattal plays the words
 
   await view.locator('[data-word-key="6:2:3"]').dblclick();
   const bar = page.getByTestId("word-range-bar");
+  await bar.getByTestId("word-range-play").click();
   await expect(bar.getByTestId("word-range-teaching-voice")).toHaveText(
     /^Голос: .+ · Муратталь\. У выбранного чтеца здесь нет разметки по словам\.$/,
   );
-  await bar.getByTestId("word-range-play").click();
   expect(await bar.locator("audio").evaluate((audio: HTMLAudioElement) => ({
     start: audio.currentTime,
     src: audio.getAttribute("src"),
@@ -1670,9 +1690,14 @@ test.describe("word selection on a phone", () => {
     const session = await page.context().newCDPSession(page);
     const point = (box: NonNullable<typeof from>) => [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }];
     await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: point(from!) });
-    await page.waitForTimeout(700);
+    // 0.3 s selects the word at once; no menu opens.
+    await page.waitForTimeout(400);
+    await expect(page.getByTestId("word-range-title")).toHaveText("6:2, слово 3");
     await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: point(to!) });
+    // A loupe shows the word under the finger.
+    await expect(page.locator(".word-range-loupe [data-word-key='6:2:1']")).toHaveCount(1);
     await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(page.locator(".word-range-loupe")).toHaveCount(0);
 
     const bar = page.getByTestId("word-range-bar");
     await expect(bar.getByTestId("word-range-title")).toHaveText("6:2, слово 1 — 6:2, слово 3");
@@ -1711,22 +1736,50 @@ test.describe("word selection on a phone", () => {
     await finger(page, from, { x: target.x, y: target.y + from.y - (line.y + line.height / 2) });
   };
 
-  test("the bar never covers the selected words: the text scrolls them above it", async ({ page }) => {
+  test("the bar stands beside the selected words, never on them", async ({ page }) => {
     await installTajweedMocks(page);
     await page.goto("/ru/quran?surah=6");
-    await expect(page.locator('.qf-mushaf-view[data-mushaf-id="19"]')).toHaveAttribute("data-font-status", "ready");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const bar = page.getByTestId("word-range-bar");
+    const clear = async (word: Locator) => {
+      const [wordBox, barBox] = await Promise.all([word.boundingBox(), bar.boundingBox()]);
+      return wordBox!.y + wordBox!.height <= barBox!.y || barBox!.y + barBox!.height <= wordBox!.y;
+    };
+    // The last word of the Mushaf page, at the bottom of the full-screen reader.
+    const low = view.locator("[data-word-key]").last();
+    await finger(page, await centre(low), await centre(low), 400);
+    await expect(bar).toBeVisible();
+    await expect.poll(() => clear(low)).toBe(true);
+    await bar.getByTestId("word-range-clear").click();
+
     await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
     await page.getByRole("button", { name: /Текст/ }).click();
     const word = page.locator('.quran-content-surface .quran-word[data-word-key="6:2:3"]');
     // The word sits at the bottom of the screen, where the bar will be.
     await word.evaluate((element) => element.scrollIntoView({ block: "end" }));
     await word.dblclick();
-    const bar = page.getByTestId("word-range-bar");
     await expect(bar).toBeVisible();
-    await expect.poll(async () => {
-      const [wordBox, barBox] = await Promise.all([word.boundingBox(), bar.boundingBox()]);
-      return wordBox!.y + wordBox!.height <= barBox!.y;
-    }).toBe(true);
+    await expect.poll(() => clear(word)).toBe(true);
+  });
+
+  test("an ayah number, or «⋯» on the bar, opens the ayah's actions over the full-screen Mushaf", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const actions = page.getByTestId("mushaf-ayah-actions");
+    await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
+    await expect(actions).toBeVisible();
+    await expect(actions).toContainText("Аят 6:2");
+    await actions.getByRole("button", { name: "Закрыть" }).click();
+    await expect(actions).toBeHidden();
+
+    await finger(page, await centre(view.locator('[data-word-key="6:2:3"]')),
+      await centre(view.locator('[data-word-key="6:2:3"]')), 400);
+    await page.getByTestId("word-range-more").click();
+    await expect(actions).toBeVisible();
+    await expect(actions).toContainText("Аят 6:2");
   });
 
   test("a finger grows the selection, then pulls its handles, in the Mushaf and the text", async ({ page }) => {
@@ -1757,7 +1810,7 @@ test.describe("word selection on a phone", () => {
     await finger(page, await centre(text.locator('.quran-word[data-word-key="6:1:1"]')),
       await centre(text.locator('.quran-word[data-word-key="6:2:2"]')), 700);
     await expect(bar.getByTestId("word-range-title")).toHaveText("6:1, слово 1 — 6:2, слово 2");
-    // The bar covers the bottom of the screen: the handle is brought above it first.
+    // The handle is brought to the middle of the screen first.
     await text.locator('.quran-word[data-word-key="6:2:2"]').evaluate((word) => word.scrollIntoView({ block: "center" }));
     const scrolled = await page.evaluate(() => window.scrollY);
     const textEnd = text.locator('.quran-word[data-word-key="6:2:2"] .word-range-handle.is-end');
@@ -1824,7 +1877,7 @@ test("tajweed breakdown walks an ayah rule by rule and sums it up", async ({ pag
 
   // The fragment plays both words of the rule, slowed down when asked.
   await breakdown.getByRole("button", { name: "Медленнее, 0,75×" }).click();
-  await breakdown.getByRole("button", { name: "Послушать фрагмент" }).click();
+  await breakdown.getByRole("button", { name: "Прослушать фрагмент" }).click();
   await expect(breakdown.getByRole("button", { name: "Остановить" })).toBeVisible();
   const fragment = breakdown.locator(".tajweed-audio audio");
   expect(await fragment.evaluate((audio: HTMLAudioElement) => ({
@@ -1837,7 +1890,7 @@ test("tajweed breakdown walks an ayah rule by rule and sums it up", async ({ pag
   await page.keyboard.press("ArrowRight");
   await expect(counter).toHaveText("2 из 2: Мадд табии");
   expect(await fragment.evaluate((audio: HTMLAudioElement) => audio.paused)).toBe(true);
-  await expect(breakdown.getByRole("button", { name: "Послушать фрагмент" })).toBeVisible();
+  await expect(breakdown.getByRole("button", { name: "Прослушать фрагмент" })).toBeVisible();
   await expect(step.getByRole("heading", { name: "Мадд табии · Мадд силя сугра" })).toBeVisible();
   await expect(lit).toHaveCount(1);
   await expect(lit).toHaveAttribute("data-word-position", "4");

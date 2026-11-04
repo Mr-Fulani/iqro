@@ -136,7 +136,7 @@ test("a session asks to find, to name and to recognise by ear, then counts the s
   await page.keyboard.press("ArrowRight");
   await expect(step.getByRole("heading")).toHaveText("Послушайте и определите правило");
   await expect(step.getByTestId("tajweed-practice-ayah")).toHaveCount(0);
-  await step.getByRole("button", { name: "Послушать фрагмент" }).click();
+  await step.getByRole("button", { name: "Прослушать фрагмент" }).click();
   await expect(step.getByRole("button", { name: "Остановить" })).toBeVisible();
   await step.getByRole("button", { name: NAMES[tasks[2]!.target], exact: true }).click();
   await expect(feedback).toHaveText("Верно!");

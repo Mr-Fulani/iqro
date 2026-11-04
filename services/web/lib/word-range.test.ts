@@ -10,6 +10,8 @@ import {
   wordRangeContains,
   wordRangeCount,
   wordRangeSpansAyahEnd,
+  wordRangeBarPlace,
+  WORD_RANGE_HANDLE_REACH,
 } from "./word-range.ts";
 
 test("a pause mark written apart belongs to the word before it", () => {
@@ -41,4 +43,23 @@ test("a word key round-trips and rejects other values", () => {
   assert.deepEqual(parseWordKey(wordKey({ surah: 2, ayah: 255, position: 7 })), { surah: 2, ayah: 255, position: 7 });
   assert.equal(parseWordKey("2:255"), null);
   assert.equal(parseWordKey(undefined), null);
+});
+
+test("the bar stands above the selected words, centred on them", () => {
+  const place = wordRangeBarPlace({ top: 400, bottom: 440, left: 150, right: 250 }, { width: 400, height: 900 }, { width: 240, height: 52 });
+  assert.ok(place.y + 52 <= 400);
+  assert.equal(place.x + 120, 200);
+});
+
+test("the bar goes under words at the top, and keeps to the screen", () => {
+  const under = wordRangeBarPlace({ top: 40, bottom: 80, left: 360, right: 396 }, { width: 400, height: 900 }, { width: 240, height: 52 });
+  assert.ok(under.y >= 80 + WORD_RANGE_HANDLE_REACH);
+  assert.ok(under.x + 240 <= 400 - 12);
+});
+
+test("the bar waits at the bottom while the words are off screen", () => {
+  const size = { width: 400, height: 900 };
+  const bar = { width: 240, height: 52 };
+  assert.equal(wordRangeBarPlace(null, size, bar, { top: 0, bottom: 16 }).y, 900 - 16 - 12 - 52);
+  assert.equal(wordRangeBarPlace({ top: -300, bottom: -260, left: 0, right: 100 }, size, bar).y, 900 - 12 - 52);
 });

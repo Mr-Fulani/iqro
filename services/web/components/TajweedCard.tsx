@@ -9,7 +9,7 @@ import {
   ruleText,
   type TajweedSelection,
 } from "../lib/tajweed";
-import { WordAudio } from "./TajweedAudio";
+import { WordAudio, type StandInVoice } from "./TajweedAudio";
 import { Explanation, HighlightedWord, Letters, RuleHeading, TajweedDialog } from "./TajweedParts";
 
 type TajweedCardProps = {
@@ -19,6 +19,10 @@ type TajweedCardProps = {
   /** Where the rule occurrences come from: the Mushaf page or one ayah. */
   scope: "page" | "ayah";
   recitationId: string | null;
+  /** The voices for a word the reciter has no timing of. */
+  fallbackVoices?: StandInVoice[];
+  /** «Select from here»: the word becomes the selection; the card closes. */
+  onSelectWord?: (verseKey: string, position: number) => void;
   onSelect: (selection: TajweedSelection) => void;
   onClose: () => void;
 };
@@ -44,6 +48,8 @@ export default function TajweedCard({
   selection,
   scope,
   recitationId,
+  fallbackVoices,
+  onSelectWord,
   onSelect,
   onClose,
 }: TajweedCardProps) {
@@ -65,6 +71,17 @@ export default function TajweedCard({
             <HighlightedWord reference={reference} text={found.word.text} fragments={found.word.rules} />
             <small dir="ltr">{found.ayah.verse_key}</small>
           </p>
+          {/* First, so a long explanation does not push them out of sight. */}
+          {(recitationId || fallbackVoices?.length || onSelectWord) && (
+            <WordAudio
+              key={`${found.ayah.verse_key}#${found.word.position}`}
+              recitationId={recitationId}
+              verseKey={found.ayah.verse_key}
+              position={found.word.position}
+              fallbackVoices={fallbackVoices}
+              onSelectFrom={onSelectWord ? () => onSelectWord(found.ayah.verse_key, found.word.position) : undefined}
+            />
+          )}
           {fragmentGroups(found.word.rules).map((fragment) => {
             const text = ruleText(reference, fragment.code, locale, fragment.variant);
             if (!text) return null;
@@ -79,9 +96,6 @@ export default function TajweedCard({
               </section>
             );
           })}
-          {recitationId && (
-            <WordAudio recitationId={recitationId} verseKey={found.ayah.verse_key} position={found.word.position} />
-          )}
         </>
       )}
 

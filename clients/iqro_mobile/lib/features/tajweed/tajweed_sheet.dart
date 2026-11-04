@@ -8,6 +8,7 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../audio/audio_models.dart';
+import '../quran/word_range.dart';
 import 'tajweed_models.dart';
 
 /// Resolves the reciter whose timings play a word from a tajweed card.
@@ -37,6 +38,7 @@ Future<void> showTajweedSheet(
   required bool wholePage,
   required TajweedSelection selection,
   TajweedRecitation? recitation,
+  ValueChanged<TajweedWordSelection>? onSelectWord,
 }) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
@@ -53,6 +55,7 @@ Future<void> showTajweedSheet(
       wholePage: wholePage,
       selection: selection,
       recitation: recitation,
+      onSelectWord: onSelectWord,
     ),
   ),
 );
@@ -122,6 +125,7 @@ class TajweedSheet extends ConsumerStatefulWidget {
     required this.wholePage,
     required this.selection,
     this.recitation,
+    this.onSelectWord,
     super.key,
   });
 
@@ -133,11 +137,21 @@ class TajweedSheet extends ConsumerStatefulWidget {
   /// Null hides the listen button.
   final TajweedRecitation? recitation;
 
+  /// Selects words on the page from a word card's word; null hides «Select
+  /// from here». The card closes first.
+  final ValueChanged<TajweedWordSelection>? onSelectWord;
+
   @override
   ConsumerState<TajweedSheet> createState() => _TajweedSheetState();
 }
 
-typedef _WordAudio = ({String recitationId, AyahPlayback playback});
+/// The voice of a word card: the chosen reciter's, or [standIn] when it has
+/// no timing of the word.
+typedef _WordAudio = ({
+  String recitationId,
+  AyahPlayback playback,
+  Recitation? standIn,
+});
 
 class _TajweedSheetState extends ConsumerState<TajweedSheet> {
   late TajweedSelection _selection = widget.selection;
@@ -145,7 +159,7 @@ class _TajweedSheetState extends ConsumerState<TajweedSheet> {
     audioControllerProvider.notifier,
   );
   final _owner = Object();
-  final _audioByAyah = <String, Future<_WordAudio?>>{};
+  final _audioByWord = <String, Future<_WordAudio?>>{};
   late final Future<String?> _recitationId =
       widget.recitation?.call().catchError((Object _) => null) ??
       Future<String?>.value();
@@ -254,6 +268,7 @@ class _TajweedSheetState extends ConsumerState<TajweedSheet> {
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodySmall,
       ),
+      _wordActions(context, ayah, word, verseKey, position, clip),
       for (final (code, variant) in sections) ...<Widget>[
         const Divider(height: 32),
         _ruleHeading(context, code, variant, locale),
@@ -283,82 +298,142 @@ class _TajweedSheetState extends ConsumerState<TajweedSheet> {
           style: _body(context),
         ),
       ],
-      FutureBuilder<_WordAudio?>(
-        future: _wordAudio(ayah),
-        builder: (context, snapshot) {
-          final audio = snapshot.data;
-          final timing = audio?.playback.words[word.position];
-          if (audio == null || timing == null) return const SizedBox.shrink();
-          final id = 'tajweed:${audio.recitationId}:$verseKey:$position';
-          final playing = clip?.id == id && clip!.active;
-          final failed =
-              _clipId == id && (_audioFailed || clip?.failed == true);
-          return Padding(
-            padding: const EdgeInsets.only(top: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    ];
+  }
+
+  /// Listen to the word and select words from it: first on the card, so a
+  /// long explanation does not push them out of sight.
+  Widget _wordActions(
+    BuildContext context,
+    TajweedAyah ayah,
+    TajweedWord word,
+    String verseKey,
+    int position,
+    ({String id, bool active, bool failed})? clip,
+  ) => FutureBuilder<_WordAudio?>(
+    future: _wordAudio(ayah, position),
+    builder: (context, snapshot) {
+      final checking = snapshot.connectionState != ConnectionState.done;
+      final audio = snapshot.data;
+      final timing = audio?.playback.words[word.position];
+      final selectFrom = widget.onSelectWord;
+      final listen = checking || timing != null;
+      if (!listen && selectFrom == null) return const SizedBox.shrink();
+      final id = audio == null
+          ? null
+          : 'tajweed:${audio.recitationId}:$verseKey:$position';
+      final playing = id != null && clip?.id == id && clip!.active;
+      final failed =
+          id != null && _clipId == id && (_audioFailed || clip?.failed == true);
+      final standIn = audio?.standIn;
+      return Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        key: const ValueKey('tajweed-listen'),
-                        onPressed: playing
-                            ? () => _audio.stopStandalone(id, owner: _owner)
-                            : () => _play(id, word, audio.playback, timing),
-                        icon: Icon(
-                          playing
-                              ? Icons.stop_rounded
-                              : Icons.play_arrow_rounded,
-                        ),
-                        label: Text(
-                          playing
-                              ? context.l10n.tajweedStop
-                              : context.l10n.tajweedListen,
-                        ),
+                if (listen)
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const ValueKey('tajweed-listen'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      key: const ValueKey('tajweed-slow'),
-                      label: Text(context.l10n.tajweedSlow),
-                      tooltip: context.l10n.tajweedSlowLabel,
-                      selected: _slow,
-                      onSelected: (value) {
-                        setState(() => _slow = value);
-                        if (playing) {
-                          unawaited(
-                            _audio.setStandaloneSpeed(
-                              id,
-                              value ? .75 : 1,
-                              owner: _owner,
+                      onPressed: id == null || timing == null
+                          ? null
+                          : playing
+                          ? () => _audio.stopStandalone(id, owner: _owner)
+                          : () => _play(id, word, audio!.playback, timing),
+                      icon: checking
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              playing
+                                  ? Icons.stop_rounded
+                                  : Icons.play_arrow_rounded,
                             ),
-                          );
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                if (failed)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Semantics(
-                      liveRegion: true,
-                      child: Text(
-                        context.l10n.tajweedAudioError,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                      label: Text(
+                        playing
+                            ? context.l10n.tajweedStop
+                            : context.l10n.tajweedListen,
                       ),
+                    ),
+                  ),
+                if (listen && selectFrom != null) const SizedBox(width: 8),
+                if (selectFrom != null)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('tajweed-select-from'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      onPressed: () {
+                        Navigator.maybePop(context);
+                        selectFrom(TajweedWordSelection(verseKey, position));
+                      },
+                      icon: const Icon(Icons.format_list_numbered_rtl),
+                      label: Text(context.l10n.tajweedSelectFrom),
                     ),
                   ),
               ],
             ),
-          );
-        },
-      ),
-    ];
-  }
+            if (timing != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  FilterChip(
+                    key: const ValueKey('tajweed-slow'),
+                    label: Text(context.l10n.tajweedSlow),
+                    tooltip: context.l10n.tajweedSlowLabel,
+                    selected: _slow,
+                    onSelected: (value) {
+                      setState(() => _slow = value);
+                      if (playing) {
+                        unawaited(
+                          _audio.setStandaloneSpeed(
+                            id,
+                            value ? .75 : 1,
+                            owner: _owner,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  if (standIn != null) ...<Widget>[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        wordRangeVoiceNote(context, standIn),
+                        key: const ValueKey('tajweed-voice'),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+            if (failed)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    context.l10n.tajweedAudioError,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+  );
 
   List<Widget> _ruleCard(BuildContext context, String code) {
     final rule = widget.reference.rule(code);
@@ -447,22 +522,47 @@ class _TajweedSheetState extends ConsumerState<TajweedSheet> {
   TextSpan _spans(List<TajweedPart> parts) =>
       tajweedPartsSpan(widget.reference, parts);
 
-  Future<_WordAudio?> _wordAudio(TajweedAyah ayah) {
+  /// The voice of the word at [position]: the chosen reciter, else the
+  /// voices that stand in for it in a selection of words.
+  Future<_WordAudio?> _wordAudio(TajweedAyah ayah, int position) {
     final repository = ref.read(audioRepositoryProvider);
-    return _audioByAyah.putIfAbsent(ayah.verseKey, () async {
+    return _audioByWord.putIfAbsent('${ayah.verseKey}:$position', () async {
+      final chosen = await _recitationId;
+      if (chosen == null) return null;
+      Future<AyahPlayback?> timed(String recitationId) async {
+        try {
+          final playback = await repository.ayahPlayback(
+            recitationId: recitationId,
+            surah: ayah.surah,
+            ayah: ayah.ayah,
+          );
+          return playback.words[position] == null ? null : playback;
+        } on Object {
+          return null;
+        }
+      }
+
+      final own = await timed(chosen);
+      if (own != null) {
+        return (recitationId: chosen, playback: own, standIn: null);
+      }
+      final List<Recitation> recitations;
       try {
-        final recitationId = await _recitationId;
-        if (recitationId == null) return null;
-        final playback = await repository.ayahPlayback(
-          recitationId: recitationId,
-          surah: ayah.surah,
-          ayah: ayah.ayah,
+        recitations = await repository.recitationsForRole(
+          AudioRecitationRole.ayahPlayback,
         );
-        return (recitationId: recitationId, playback: playback);
       } on Object {
-        // Without the word's timing the card simply has no listen button.
         return null;
       }
+      for (final voice in wordTimingFallbackRecitations(recitations)) {
+        if (voice.id == chosen) continue;
+        final playback = await timed(voice.id);
+        if (playback != null) {
+          return (recitationId: voice.id, playback: playback, standIn: voice);
+        }
+      }
+      // Without any voice's timing the card has no listen button.
+      return null;
     });
   }
 

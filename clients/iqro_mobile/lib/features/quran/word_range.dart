@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -178,23 +180,39 @@ enum WordRepeat { once, three, forever }
 final wordRangePulling = ValueNotifier<bool>(false);
 
 /// Where the selected words are on screen, in global coordinates: a Mushaf
-/// page reports them, so the panel moves up when it would cover them.
+/// page reports them, so the panel stands beside them.
 final wordRangeBounds = ValueNotifier<Rect?>(null);
 
-/// Whether the panel goes to the top of [screen]: when at the bottom it
-/// would cover [selection] and there is room for it above the selection.
-bool wordRangePanelOnTop({
+/// How long a finger rests on a word before it is selected.
+const wordPressDuration = Duration(milliseconds: 300);
+
+/// Where the panel's top-left corner goes in an area of [size]: above
+/// [selection], else under it and its handles, else at the bottom. Centred
+/// on the selection and kept [_panelMargin] from the sides.
+Offset wordRangePanelOffset({
   required Rect? selection,
-  required Size screen,
+  required Size size,
   required EdgeInsets padding,
-  required double panelHeight,
+  required Size panel,
 }) {
-  if (selection == null) return false;
-  const margin = 12.0;
-  final bottomTop = screen.height - padding.bottom - margin - panelHeight;
-  if (selection.bottom <= bottomTop - 8) return false;
-  return selection.top >= padding.top + margin + panelHeight + 8;
+  final bottom = size.height - padding.bottom - _panelMargin - panel.height;
+  final width = size.width - panel.width - _panelMargin;
+  final visible =
+      selection != null && selection.bottom > 0 && selection.top < size.height;
+  final centre = visible ? selection.center.dx : size.width / 2;
+  final x = (centre - panel.width / 2)
+      .clamp(_panelMargin, math.max(_panelMargin, width))
+      .toDouble();
+  if (!visible) return Offset(x, bottom);
+  final above = selection.top - _panelGap - panel.height;
+  if (above >= padding.top + _panelMargin) return Offset(x, above);
+  final below = selection.bottom + WordRangeHandle.extra + _panelGap;
+  if (below <= bottom) return Offset(x, below);
+  return Offset(x, bottom);
 }
+
+const _panelMargin = 12.0;
+const _panelGap = 10.0;
 
 const wordRangeSelectionColor = Color(0x380B6B57);
 const wordRangePlayingColor = Color(0x8CC49647);
@@ -551,11 +569,26 @@ String wordRangeLabel(BuildContext context, QuranWordRange range) {
   return '$start — ${context.l10n.wordAt(range.end.ayahKey, range.end.position)}';
 }
 
-/// The bar under a reader with a selection: listen, repeat and clear.
+/// The panel beside a selection: listen, repeat, the ayah's menu and clear.
+/// A line under it tells which word sounds, whose voice it is, or why the
+/// words cannot play.
 class WordRangePanel extends StatelessWidget {
-  const WordRangePanel({required this.controller, super.key});
+  const WordRangePanel({
+    required this.controller,
+    required this.onMore,
+    super.key,
+  });
 
   final WordRangeController controller;
+
+  /// Opens the menu of the selection's first ayah.
+  final VoidCallback onMore;
+
+  static const _next = <WordRepeat, WordRepeat>{
+    WordRepeat.once: WordRepeat.three,
+    WordRepeat.three: WordRepeat.forever,
+    WordRepeat.forever: WordRepeat.once,
+  };
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -565,199 +598,255 @@ class WordRangePanel extends StatelessWidget {
       if (range == null) return const SizedBox.shrink();
       final theme = Theme.of(context);
       final scheme = theme.colorScheme;
-      final locale = Localizations.localeOf(context).languageCode;
+      final ink = scheme.onInverseSurface;
       final unavailable = controller.available == false;
-      final reciter = controller.recitation?.reciter.nameFor(locale);
+      final checking = controller.available == null;
       final ordinal = controller.playing ? controller.playingOrdinal : null;
-      final subtitle = ordinal != null
-          ? context.l10n.wordNumberOf(ordinal, controller.wordCount)
-          : [
-              context.l10n.noteWordCount(controller.wordCount),
-              ?reciter,
-            ].join(' · ');
       final title = wordRangeLabel(context, range);
+      final note = <String>[
+        if (ordinal != null)
+          context.l10n.wordNumberOf(ordinal, controller.wordCount),
+        if (controller.playing && controller.repeat == WordRepeat.three)
+          context.l10n.repeatRound(controller.round, 3),
+        if (controller.playing &&
+            controller.teachingVoice &&
+            controller.recitation != null)
+          wordRangeVoiceNote(context, controller.recitation!),
+        if (unavailable) context.l10n.wordTimingsUnavailable,
+        if (controller.failed) context.l10n.wordRangeError,
+      ].join(' · ');
+      final repeatLabel = switch (controller.repeat) {
+        WordRepeat.once => context.l10n.repeatOnce,
+        WordRepeat.three => context.l10n.repeatThreeTimes,
+        WordRepeat.forever => context.l10n.repeatForever,
+      };
+      final iconStyle = IconButton.styleFrom(
+        foregroundColor: ink,
+        minimumSize: const Size(44, 44),
+      );
       return ValueListenableBuilder<bool>(
         valueListenable: wordRangePulling,
         builder: (context, pulling, panel) => IgnorePointer(
           ignoring: pulling,
           child: AnimatedOpacity(
-            opacity: pulling ? .15 : 1,
+            opacity: pulling ? 0 : 1,
             duration: const Duration(milliseconds: 120),
             child: panel,
           ),
         ),
-        child: Material(
-          key: const ValueKey('word-range-panel'),
-          color: scheme.surface,
-          elevation: 6,
-          shadowColor: Colors.black38,
-          borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(title, style: theme.textTheme.titleSmall),
-                          const SizedBox(height: 2),
-                          Text(
-                            controller.repeat == WordRepeat.three &&
-                                    controller.playing
-                                ? '$subtitle · ${context.l10n.repeatRound(controller.round, 3)}'
-                                : subtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton.filledTonal(
-                      key: const ValueKey('word-range-clear'),
-                      tooltip: context.l10n.clearSelection,
-                      onPressed: controller.clear,
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (controller.teachingVoice && !unavailable) ...<Widget>[
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Material(
+            key: const ValueKey('word-range-panel'),
+            color: scheme.inverseSurface,
+            elevation: 6,
+            shadowColor: Colors.black45,
+            borderRadius: BorderRadius.circular(26),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Icon(
-                        Icons.record_voice_over_outlined,
-                        size: 18,
-                        color: scheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          wordRangeVoiceNote(context, controller.recitation!),
-                          key: const ValueKey('word-range-teaching-voice'),
-                          style: theme.textTheme.bodySmall,
+                      FilledButton.icon(
+                        key: const ValueKey('word-range-play'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(44, 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                        ),
+                        onPressed: unavailable || checking
+                            ? null
+                            : () => controller.toggle(
+                                title: '${context.l10n.ayah} $title',
+                              ),
+                        icon: controller.loading || checking
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                controller.playing
+                                    ? Icons.pause
+                                    : Icons.play_arrow,
+                              ),
+                        label: Text(
+                          controller.playing
+                              ? context.l10n.pause
+                              : range.single
+                              ? context.l10n.wordRangeWord
+                              : context.l10n.noteWordCount(
+                                  controller.wordCount,
+                                ),
+                          semanticsLabel: controller.playing
+                              ? null
+                              : range.single
+                              ? context.l10n.listenWord
+                              : context.l10n.listenSelection,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (unavailable) ...<Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: scheme.secondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          context.l10n.wordTimingsUnavailable,
-                          key: const ValueKey('word-range-unavailable'),
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (controller.failed) ...<Widget>[
-                  Text(
-                    context.l10n.wordRangeError,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.error,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                FilledButton.icon(
-                  key: const ValueKey('word-range-play'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  onPressed: unavailable || controller.available == null
-                      ? null
-                      : () => controller.toggle(
-                          title: '${context.l10n.ayah} $title',
-                        ),
-                  icon: controller.loading || controller.available == null
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(
-                          controller.playing ? Icons.pause : Icons.play_arrow,
-                        ),
-                  label: Text(
-                    controller.playing
-                        ? context.l10n.pause
-                        : range.single
-                        ? context.l10n.listenWord
-                        : context.l10n.listenSelection,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: <Widget>[
-                    Icon(
-                      Icons.repeat_rounded,
-                      size: 18,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      context.l10n.repeat,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: SegmentedButton<WordRepeat>(
+                      TextButton.icon(
                         key: const ValueKey('word-range-repeat'),
-                        showSelectedIcon: false,
-                        style: ButtonStyle(
-                          visualDensity: VisualDensity.compact,
-                          padding: const WidgetStatePropertyAll(
-                            EdgeInsets.symmetric(horizontal: 4),
+                        style: TextButton.styleFrom(
+                          foregroundColor: controller.repeat == WordRepeat.once
+                              ? ink
+                              : scheme.inversePrimary,
+                          minimumSize: const Size(52, 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        onPressed: () =>
+                            controller.setRepeat(_next[controller.repeat]!),
+                        icon: const Icon(Icons.repeat_rounded, size: 18),
+                        label: Text(
+                          switch (controller.repeat) {
+                            WordRepeat.once => '1×',
+                            WordRepeat.three => '3×',
+                            WordRepeat.forever => '∞',
+                          },
+                          semanticsLabel:
+                              '${context.l10n.repeat}: $repeatLabel',
+                        ),
+                      ),
+                      IconButton(
+                        key: const ValueKey('word-range-more'),
+                        tooltip: context.l10n.ayahMenu,
+                        style: iconStyle,
+                        onPressed: onMore,
+                        icon: const Icon(Icons.more_horiz),
+                      ),
+                      IconButton(
+                        key: const ValueKey('word-range-clear'),
+                        tooltip: context.l10n.clearSelection,
+                        style: iconStyle,
+                        onPressed: controller.clear,
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  if (note.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          note,
+                          key: ValueKey(
+                            unavailable
+                                ? 'word-range-unavailable'
+                                : controller.teachingVoice
+                                ? 'word-range-teaching-voice'
+                                : 'word-range-note',
                           ),
-                          textStyle: WidgetStatePropertyAll(
-                            theme.textTheme.labelMedium,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: controller.failed ? scheme.error : ink,
                           ),
                         ),
-                        segments: <ButtonSegment<WordRepeat>>[
-                          ButtonSegment(
-                            value: WordRepeat.once,
-                            label: Text(context.l10n.repeatOnce),
-                          ),
-                          ButtonSegment(
-                            value: WordRepeat.three,
-                            label: Text(context.l10n.repeatThreeTimes),
-                          ),
-                          ButtonSegment(
-                            value: WordRepeat.forever,
-                            label: Text(context.l10n.repeatForever),
-                          ),
-                        ],
-                        selected: <WordRepeat>{controller.repeat},
-                        onSelectionChanged: (value) =>
-                            controller.setRepeat(value.single),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       );
     },
+  );
+}
+
+/// A layer over a reader that puts the [WordRangePanel] beside the
+/// [selection] (global coordinates) without covering it.
+class WordRangePanelLayer extends StatelessWidget {
+  const WordRangePanelLayer({
+    required this.controller,
+    required this.selection,
+    required this.onMore,
+    super.key,
+  });
+
+  final WordRangeController controller;
+  final ValueListenable<Rect?> selection;
+  final VoidCallback onMore;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Rect?>(
+    valueListenable: selection,
+    builder: (context, global, panel) {
+      final box = context.findRenderObject() as RenderBox?;
+      final origin = box != null && box.attached
+          ? box.localToGlobal(Offset.zero)
+          : Offset.zero;
+      return CustomSingleChildLayout(
+        delegate: _PanelPlace(
+          selection: global?.shift(-origin),
+          padding: MediaQuery.paddingOf(context),
+        ),
+        child: panel,
+      );
+    },
+    child: WordRangePanel(controller: controller, onMore: onMore),
+  );
+}
+
+class _PanelPlace extends SingleChildLayoutDelegate {
+  const _PanelPlace({required this.selection, required this.padding});
+
+  final Rect? selection;
+  final EdgeInsets padding;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      constraints.loosen().deflate(
+        const EdgeInsets.symmetric(horizontal: _panelMargin),
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) => wordRangePanelOffset(
+    selection: selection,
+    size: size,
+    padding: padding,
+    panel: childSize,
+  );
+
+  @override
+  bool shouldRelayout(_PanelPlace oldDelegate) =>
+      oldDelegate.selection != selection || oldDelegate.padding != padding;
+}
+
+/// The magnifier above the finger that pulls a selection; [point] is the
+/// finger in the coordinates of the [Stack] it goes in.
+class WordRangeLoupe extends StatelessWidget {
+  const WordRangeLoupe({required this.point, super.key});
+
+  final Offset point;
+
+  @override
+  Widget build(BuildContext context) => Positioned(
+    key: const ValueKey('word-range-loupe'),
+    left: point.dx - 64,
+    top: point.dy - 112,
+    child: const IgnorePointer(
+      child: RawMagnifier(
+        size: Size(128, 60),
+        magnificationScale: 1.6,
+        focalPointOffset: Offset(0, 82),
+        decoration: MagnifierDecoration(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(30)),
+          ),
+          shadows: <BoxShadow>[
+            BoxShadow(
+              color: Color(0x40000000),
+              blurRadius: 14,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }
 

@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useI18n } from "../lib/i18n-context";
 import { wordTiming } from "../lib/tajweed";
-import { compareWords, sameWord, wordRangeContains, type QuranWord, type QuranWordRange } from "../lib/word-range";
+import { compareWords, sameWord, wordRangeBarPlace, wordRangeContains, type QuranWord, type QuranWordRange } from "../lib/word-range";
 import { loadAyahAudio, useClipPlayer, type AyahAudio, type Clip } from "./TajweedAudio";
 
 type Repeat = "once" | "three" | "forever";
 
+const NEXT_REPEAT: Record<Repeat, Repeat> = { once: "three", three: "forever", forever: "once" };
+
 /**
- * The bar under a reader with selected words: plays them from the start of
- * the first to the end of the last in the reciter's surah track, with a
- * repeat, and reports the word that sounds.
+ * The small bar beside selected words: plays them from the start of the first
+ * to the end of the last in the reciter's surah track, with a repeat, opens
+ * the first ayah's menu, and reports the word that sounds.
  */
 export default function WordRangeBar({
   range,
@@ -20,6 +22,7 @@ export default function WordRangeBar({
   reciterName,
   fallbackVoices = [],
   onClear,
+  onMore,
   onPlayingWord,
 }: {
   range: QuranWordRange;
@@ -29,6 +32,8 @@ export default function WordRangeBar({
   /** The voices, in order, for words the chosen reciter has no timings of, and what each says. */
   fallbackVoices?: { id: string; name: string; note: string }[];
   onClear: () => void;
+  /** Opens the menu of the selection's first ayah. */
+  onMore: () => void;
   onPlayingWord: (word: QuranWord | null) => void;
 }) {
   const { t } = useI18n();
@@ -93,39 +98,50 @@ export default function WordRangeBar({
   const startKey = `${range.start.surah}:${range.start.ayah}`;
   const rangeKey = `${startKey}:${range.start.position}-${range.end.ayah}:${range.end.position}`;
 
-  // The bar never covers the selected words: the page scrolls them above it,
-  // and where it cannot (the phone's full-screen Mushaf) the bar goes up.
+  // The bar stands beside the selected words, never on them, and follows
+  // them as the page scrolls.
   const barRef = useRef<HTMLElement>(null);
-  const [onTop, setOnTop] = useState(false);
-  useEffect(() => {
-    const place = () => {
-      if (document.documentElement.dataset.wordSelecting) return;
+  const [place, setPlace] = useState<{ x: number; y: number } | null>(null);
+  useLayoutEffect(() => {
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
       const bar = barRef.current;
-      const words = [...document.querySelectorAll<HTMLElement>(".is-word-selected[data-word-key]")];
-      if (!bar || words.length === 0) return;
-      const bounds = () => words.map((word) => word.getBoundingClientRect());
-      const barHeight = bar.getBoundingClientRect().height;
-      const bottomTop = window.innerHeight - 12 - barHeight;
-      const overlap = Math.max(...bounds().map((box) => box.bottom)) + 12 - bottomTop;
-      if (overlap <= 0) {
-        setOnTop(false);
-        return;
-      }
-      const before = window.scrollY;
-      window.scrollBy({ top: overlap, behavior: "instant" });
-      if (window.scrollY - before >= overlap - 1) {
-        setOnTop(false);
-        return;
-      }
-      setOnTop(Math.min(...bounds().map((box) => box.top)) > 12 + barHeight + 8);
+      if (!bar) return;
+      const boxes = [...document.querySelectorAll<HTMLElement>(".is-word-selected[data-word-key]")]
+        .map((word) => word.getBoundingClientRect())
+        .filter((box) => box.width > 0 || box.height > 0);
+      const selection = boxes.length === 0 ? null : {
+        top: Math.min(...boxes.map((box) => box.top)),
+        bottom: Math.max(...boxes.map((box) => box.bottom)),
+        left: Math.min(...boxes.map((box) => box.left)),
+        right: Math.max(...boxes.map((box) => box.right)),
+      };
+      const viewport = window.visualViewport;
+      const next = wordRangeBarPlace(
+        selection,
+        { width: document.documentElement.clientWidth, height: viewport?.height ?? window.innerHeight },
+        { width: bar.offsetWidth, height: bar.offsetHeight },
+      );
+      setPlace((current) => current && current.x === next.x && current.y === next.y ? current : next);
     };
-    const timer = window.setTimeout(place);
-    // A finger that lets go of the selection places the bar again.
-    const observer = new MutationObserver(place);
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", schedule, { capture: true, passive: true });
+    window.addEventListener("resize", schedule);
+    // A finger that lets go of the selection, or a turned page, places the bar again.
+    const observer = new MutationObserver(schedule);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-word-selecting"] });
+    const sizes = new ResizeObserver(schedule);
+    if (barRef.current) sizes.observe(barRef.current);
     return () => {
-      window.clearTimeout(timer);
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule, { capture: true });
+      window.removeEventListener("resize", schedule);
       observer.disconnect();
+      sizes.disconnect();
     };
   }, [rangeKey]);
 
@@ -223,70 +239,67 @@ export default function WordRangeBar({
   const single = sameWord(range.start, range.end);
   const title = single ? label(range.start) : `${label(range.start)} — ${label(range.end)}`;
   const shownOrdinal = playing ? ordinal : null;
-  const subtitle = [
-    shownOrdinal ? t("wordRange.progress", { number: shownOrdinal, count: wordCount }) : t("wordRange.count", { count: wordCount }),
-    !shownOrdinal ? (standIn ? standIn.name : reciterName) || null : null,
+  const note = [
+    shownOrdinal ? t("wordRange.progress", { number: shownOrdinal, count: wordCount }) : null,
     playing && repeat === "three" ? t("wordRange.round", { round, total: 3 }) : null,
   ].filter(Boolean).join(" · ");
+  const repeatLabel = t(repeat === "once" ? "wordRange.repeatOnce" : repeat === "three" ? "wordRange.repeatThree" : "wordRange.repeatForever");
 
   return (
     <section
       ref={barRef}
-      className={`word-range-bar${onTop ? " is-top" : ""}`}
-      aria-label={t("wordRange.label")}
+      className="word-range-bar"
+      style={place ? { left: place.x, top: place.y } : { visibility: "hidden" }}
+      aria-label={`${t("wordRange.label")}: ${title}${reciterName && !standIn ? ` · ${reciterName}` : ""}`}
+      title={t("wordRange.hintPointer")}
       data-testid="word-range-bar"
     >
       <audio ref={attach} preload="none" onEnded={() => { stop(); replay.current(); }} />
-      <div className="word-range-bar-head">
-        <div className="word-range-bar-title">
-          <strong data-testid="word-range-title">{title}</strong>
-          <small>{subtitle}</small>
-        </div>
-        <button type="button" className="word-range-bar-close" onClick={onClear} aria-label={t("wordRange.clear")} title={`${t("wordRange.clear")} (Esc)`}>
+      <strong className="sr-only" data-testid="word-range-title">{title}</strong>
+      <div className="word-range-bar-actions">
+        <button
+          type="button"
+          className="word-range-bar-play"
+          onClick={toggle}
+          disabled={!available || loading}
+          aria-busy={loading || available === null}
+          aria-label={playing ? t("wordRange.pause") : single ? t("wordRange.listenWord") : t("wordRange.listenSelection")}
+          data-testid="word-range-play"
+        >
+          <span aria-hidden="true">{playing ? "⏸" : "▶"}</span>
+          <span aria-hidden="true">{playing ? t("wordRange.pause") : single ? t("wordRange.word") : t("wordRange.count", { count: wordCount })}</span>
+        </button>
+        <button
+          type="button"
+          className={`word-range-bar-repeat${repeat !== "once" ? " is-active" : ""}`}
+          onClick={() => {
+            setRepeat(NEXT_REPEAT[repeat]);
+            rounds.current = 1;
+            setRound(1);
+          }}
+          aria-label={`${t("wordRange.repeat")}: ${repeatLabel}`}
+          title={`${t("wordRange.repeat")}: ${repeatLabel}`}
+          data-testid="word-range-repeat"
+          data-repeat={repeat}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M17 2l3 3-3 3" /><path d="M4 11V9a4 4 0 0 1 4-4h12" /><path d="M7 22l-3-3 3-3" /><path d="M20 13v2a4 4 0 0 1-4 4H4" /></svg>
+          <span aria-hidden="true">{repeat === "once" ? "1×" : repeat === "three" ? "3×" : "∞"}</span>
+        </button>
+        <button type="button" className="word-range-bar-icon" onClick={onMore} aria-label={t("wordRange.more")} title={t("wordRange.more")} data-testid="word-range-more">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+        </button>
+        <button type="button" className="word-range-bar-icon" onClick={onClear} aria-label={t("wordRange.clear")} title={`${t("wordRange.clear")} (Esc)`} data-testid="word-range-clear">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </div>
-      {available && standIn && (
-        <p className="word-range-bar-note is-teaching" data-testid="word-range-teaching-voice">{standIn.note}</p>
+      {note && <p className="word-range-bar-note" aria-live="polite">{note}</p>}
+      {available && standIn && playing && (
+        <p className="word-range-bar-note" data-testid="word-range-teaching-voice">{standIn.note}</p>
       )}
       {available === false && (
         <p className="word-range-bar-note" data-testid="word-range-unavailable">{t("wordRange.unavailable")}</p>
       )}
-      {error && <p className="error-text" role="alert">{t("wordRange.error")}</p>}
-      <div className="word-range-bar-actions">
-        <button
-          type="button"
-          className="btn btn-primary word-range-bar-play"
-          onClick={toggle}
-          disabled={!available || loading}
-          aria-busy={loading || available === null}
-          data-testid="word-range-play"
-        >
-          <span aria-hidden="true">{playing ? "⏸" : "▶"}</span>{" "}
-          {playing ? t("wordRange.pause") : single ? t("wordRange.listenWord") : t("wordRange.listenSelection")}
-        </button>
-        <div className="word-range-bar-repeat" role="group" aria-label={t("wordRange.repeat")}>
-          {(["once", "three", "forever"] as const).map((value) => (
-            <button
-              type="button"
-              key={value}
-              aria-pressed={repeat === value}
-              className={repeat === value ? "is-active" : undefined}
-              onClick={() => {
-                setRepeat(value);
-                rounds.current = 1;
-                setRound(1);
-              }}
-            >
-              {t(value === "once" ? "wordRange.repeatOnce" : value === "three" ? "wordRange.repeatThree" : "wordRange.repeatForever")}
-            </button>
-          ))}
-        </div>
-      </div>
-      <p className="word-range-bar-hint">
-        <span className="is-pointer">{t("wordRange.hintPointer")}</span>
-        <span className="is-touch">{t("wordRange.hintTouch")}</span>
-      </p>
+      {error && <p className="word-range-bar-note is-error" role="alert">{t("wordRange.error")}</p>}
     </section>
   );
 }

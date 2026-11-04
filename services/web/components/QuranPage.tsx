@@ -1467,6 +1467,27 @@ function QuranContent() {
     });
   }, [ayahs, currentPage, queueReadingPlace]);
 
+  // The ayah's menu, from an ayah number or «⋯» on the selection bar: the
+  // actions under the Mushaf, a sheet over the full-screen reader, the card's
+  // own buttons in the text.
+  const [ayahMenu, setAyahMenu] = useState<string | null>(null);
+  const openAyahMenu = useCallback((ayahKey: string) => {
+    if (viewMode === "text") {
+      const [surahNumber, ayahNumber] = ayahKey.split(":");
+      const card = document.getElementById(`quran-ayah-${surahNumber}-${ayahNumber}`);
+      card?.scrollIntoView({ block: "nearest" });
+      card?.querySelector<HTMLElement>(".ayah-action-buttons button")?.focus({ preventScroll: true });
+      return;
+    }
+    handleSelectMushafAyah(ayahKey);
+    setAyahMenu(ayahKey);
+    window.requestAnimationFrame(() => {
+      const actions = document.querySelector<HTMLElement>(".mushaf-ayah-actions");
+      actions?.scrollIntoView({ block: "nearest" });
+      actions?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+    });
+  }, [handleSelectMushafAyah, setAyahMenu, viewMode]);
+
   const handlePlayAyah = useCallback((ayahNumber: number) => {
     const ayahKey = `${selectedSurah}:${ayahNumber}`;
     const ayah = ayahs.find((item) => item.number === ayahNumber);
@@ -2446,6 +2467,7 @@ function QuranContent() {
                       highlightColors={ayahHighlightColors}
                       annotationLabels={ayahAnnotationLabels}
                       onSelectAyah={handleSelectMushafAyah}
+                      onOpenAyah={openAyahMenu}
                       tajweedWords={tajweedWords}
                       onSelectTajweedWord={handleSelectTajweedWord}
                       juz={divisionAtAyah(juz, mushafVerseKeys[0] ?? null) || null}
@@ -2499,7 +2521,10 @@ function QuranContent() {
           </div>
 
           {selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah) && (
-            <div className="mushaf-ayah-actions">
+            <div
+              className={`mushaf-ayah-actions${ayahMenu === selectedMushafAyah ? " is-open" : ""}`}
+              data-testid="mushaf-ayah-actions"
+            >
               <span>{t("common.ayah", { ayah: selectedMushafAyah })}</span>
               {tajweedPage?.ayahs.some((ayah) => ayah.verse_key === selectedMushafAyah && ayah.words.length > 0) && (
                 <button
@@ -2542,6 +2567,16 @@ function QuranContent() {
               >
                 <ShareIcon /> {t("contentShare.share")}
               </button>
+              {ayahMenu === selectedMushafAyah && isImmersiveReader && (
+                <button
+                  className="btn btn-secondary btn-sm mushaf-ayah-actions-close"
+                  type="button"
+                  onClick={() => setAyahMenu(null)}
+                  aria-label={t("common.close")}
+                >
+                  ✕
+                </button>
+              )}
             </div>
           )}
 
@@ -2653,6 +2688,11 @@ function QuranContent() {
           selection={tajweedSelection}
           scope="page"
           recitationId={mushafRecitationId || null}
+          fallbackVoices={wordTimingFallback}
+          onSelectWord={(verseKey, position) => {
+            const [surah, ayah] = verseKey.split(":").map(Number);
+            selectWords({ start: { surah, ayah, position }, end: { surah, ayah, position } });
+          }}
           onSelect={setTajweedSelection}
           onClose={() => setTajweedSelection(null)}
         />
@@ -2683,6 +2723,7 @@ function QuranContent() {
           })()}
           fallbackVoices={wordTimingFallback}
           onClear={clearWords}
+          onMore={() => openAyahMenu(`${wordRange.range.start.surah}:${wordRange.range.start.ayah}`)}
           onPlayingWord={setPlayingWord}
         />
       )}

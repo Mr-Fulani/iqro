@@ -96,7 +96,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   late final QuranRepository _quranRepository;
   late final LatestAsyncWorkQueue<_PendingPositionSave> _positionSaves;
   late final WordRangeController _words;
-  final _panelKey = GlobalKey();
 
   @override
   void initState() {
@@ -374,10 +373,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                     wordRange: _words.range,
                     playingWord: _words.playingWord,
                     onWordRange: _selectWords,
-                    onOpenWord: (reference, position) {
-                      unawaited(_openAyah(reference, word: position));
-                      return true;
-                    },
                     onBackgroundTap: () => _words.range != null
                         ? _words.clear()
                         : _setControls(!_controlsVisible),
@@ -493,36 +488,22 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
             ),
             if (_words.range != null && !_controlsVisible)
               Positioned.fill(
-                child: ValueListenableBuilder<Rect?>(
-                  valueListenable: wordRangeBounds,
-                  builder: (context, bounds, panel) {
-                    final media = MediaQuery.of(context);
-                    final size =
-                        (_panelKey.currentContext?.findRenderObject()
-                                as RenderBox?)
-                            ?.size;
-                    // The page does not scroll: a selection low on it gets
-                    // the panel at the top instead.
-                    final top = wordRangePanelOnTop(
-                      selection: bounds,
-                      screen: media.size,
-                      padding: media.padding,
-                      panelHeight: size?.height ?? 240,
-                    );
-                    return Stack(
-                      children: <Widget>[
-                        PositionedDirectional(
-                          key: const ValueKey('word-range-panel-place'),
-                          start: 12,
-                          end: 12,
-                          top: top ? 12 + media.padding.top : null,
-                          bottom: top ? null : 12 + media.padding.bottom,
-                          child: panel!,
+                child: WordRangePanelLayer(
+                  controller: _words,
+                  selection: wordRangeBounds,
+                  onMore: () {
+                    final start = _words.range?.start;
+                    if (start == null) return;
+                    unawaited(
+                      _openAyah(
+                        QuranAyahReference(
+                          id: '',
+                          surah: start.surah,
+                          ayah: start.ayah,
                         ),
-                      ],
+                      ),
                     );
                   },
-                  child: WordRangePanel(key: _panelKey, controller: _words),
                 ),
               ),
             PositionedDirectional(
@@ -1378,9 +1359,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     }
   }
 
-  /// The ayah's menu; [word] is the `position_in_verse` of a long-pressed
-  /// word, which the menu then offers to play or to start a selection from.
-  Future<void> _openAyah(QuranAyahReference reference, {int? word}) async {
+  /// The ayah's menu: a tap on its number, or «⋯» on the selection panel.
+  Future<void> _openAyah(QuranAyahReference reference) async {
     final scope = _database.accountScope.current;
     if (_detailsOpen || scope == null || !_isCurrentAccount(scope)) return;
     _detailsOpen = true;
@@ -1406,8 +1386,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       final tajweed = _tajweedAyah(reference, page);
       var breakdown = false;
       var memorize = false;
-      var listenWord = false;
-      var selectWords = false;
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -1418,24 +1396,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
           page: page,
           onTajweedBreakdown: tajweed == null ? null : () => breakdown = true,
           onMemorize: () => memorize = true,
-          word: word,
-          onListenWord: word == null ? null : () => listenWord = true,
-          onSelectWords: word == null ? null : () => selectWords = true,
         ),
       );
-      if ((listenWord || selectWords) && word != null && mounted) {
-        final range = QuranWordRange.single(
-          QuranWord(reference.surah, reference.ayah, word),
-        );
-        _words.select(range, wordCount: 1);
-        if (listenWord) {
-          unawaited(
-            _words.play(
-              title: '${context.l10n.ayah} ${wordRangeLabel(context, range)}',
-            ),
-          );
-        }
-      }
       if (memorize && mounted) {
         await showMemorizeAyahSheet(
           context,

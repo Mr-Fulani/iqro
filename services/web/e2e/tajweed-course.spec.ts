@@ -161,7 +161,7 @@ test("a lesson explains the rule, plays its examples and asks to find it", async
     .toBe(first.words.map((word) => word.text).join(" "));
   const firstWord = Math.min(...first.occurrences[0]!.parts.map((part) => part.position));
   await step.getByRole("button", { name: "Медленнее, 0,75×" }).click();
-  await step.getByRole("button", { name: "Послушать фрагмент" }).click();
+  await step.getByRole("button", { name: "Прослушать фрагмент" }).click();
   await expect(step.getByRole("button", { name: "Остановить" })).toBeVisible();
   const fragment = step.locator(".tajweed-audio audio");
   // Word N of the mocked timings sounds from N to N + 1 seconds.
@@ -248,7 +248,7 @@ test("the find exercise marks misses, shows the answer and takes another ayah", 
   await expect(feedback).toHaveText("");
   await find.locator(`button[data-word-position="${wordPositions(next, true)[0]}"]`).click();
   await expect(feedback).toHaveText("Верно! Здесь «Икляб».");
-  await expect(find.getByRole("button", { name: "Послушать фрагмент" })).toBeVisible();
+  await expect(find.getByRole("button", { name: "Прослушать фрагмент" })).toBeVisible();
 });
 
 test("a signed-in visitor's progress is merged with the account", async ({ page }) => {
