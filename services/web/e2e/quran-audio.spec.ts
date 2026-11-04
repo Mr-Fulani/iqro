@@ -1532,11 +1532,23 @@ test("tajweed Mushaf explains a tapped word, its letters and its sound", async (
   const wordCard = page.getByRole("dialog", { name: "Таджвид в слове" });
   await expect(wordCard.getByRole("heading", { name: "Калькаля · при остановке" })).toBeVisible();
   await expect(wordCard.getByText("Буква в конце слова.")).toBeVisible();
-  // This reciter has no word timing for 6:1, so the card offers nothing to play.
-  await expect(wordCard.getByTestId("tajweed-listen")).toHaveCount(0);
+  // No voice has word timings for 6:1: the button stays, disabled, and says why.
+  await expect(wordCard.getByTestId("tajweed-listen")).toBeDisabled();
+  await expect(wordCard.getByTestId("tajweed-audio-unavailable")).toBeVisible();
   // A tap on the shade around the card closes it.
   await page.mouse.click(4, 4);
   await expect(wordCard).toHaveCount(0);
+
+  // Every coloured word of the page has its listen button, for a rule inside
+  // one word (qalqala, madd) and one across two (idgham).
+  const coloured = view.locator(".qf-mushaf-word.has-tajweed");
+  for (let index = 0; index < await coloured.count(); index += 1) {
+    await coloured.nth(index).click();
+    await expect(card.getByTestId("tajweed-listen")).toBeVisible();
+    await expect(card.locator('[data-testid="tajweed-listen"]:enabled, [data-testid="tajweed-audio-unavailable"]').first()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(card).toHaveCount(0);
+  }
 
   // «Select from here» closes the card and selects its word.
   await view.locator('.qf-mushaf-word.has-tajweed[data-word-position="3"]').click();

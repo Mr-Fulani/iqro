@@ -167,6 +167,22 @@ export function joinedParts(ayah: TajweedAyah, word: TajweedWord, fragment: Tajw
   return parts;
 }
 
+/**
+ * The words a word card plays, by position: the word and the neighbours its
+ * rules continue into (an idgham or ikhfa across two words).
+ */
+export function wordSpan(ayah: TajweedAyah, word: TajweedWord): { first: number; last: number } {
+  let first = word.position;
+  let last = word.position;
+  for (const fragment of word.rules) {
+    for (const part of joinedParts(ayah, word, fragment)) {
+      first = Math.min(first, part.word.position);
+      last = Math.max(last, part.word.position);
+    }
+  }
+  return { first, last };
+}
+
 /** Every place a rule occurs; a rule spanning two words is one occurrence. */
 export function ruleOccurrences(ayahs: readonly TajweedAyah[], code: string): TajweedPart[][] {
   const occurrences: TajweedPart[][] = [];

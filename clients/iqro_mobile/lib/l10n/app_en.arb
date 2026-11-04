@@ -859,6 +859,7 @@
   "tajweedClose": "Close",
   "tajweedReviewNote": "These explanations are being reviewed by a tajweed teacher.",
   "tajweedAudioError": "Could not play this word.",
+  "tajweedAudioUnavailable": "No reciter has timings for these words, so they cannot play alone. You can listen to the whole ayah.",
   "tajweedBreakdown": "Tajweed breakdown",
   "tajweedPlayAyah": "Listen to the whole ayah",
   "tajweedStepOf": "{current} of {total}",

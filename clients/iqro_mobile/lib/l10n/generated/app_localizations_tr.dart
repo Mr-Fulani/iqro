@@ -2439,6 +2439,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tajweedAudioError => 'Kelime çalınamadı.';
 
   @override
+  String get tajweedAudioUnavailable =>
+      'Hiçbir kârinin bu kelimeler için zamanlaması yok, tek başına çalınamazlar. Ayetin tamamını dinleyebilirsiniz.';
+
+  @override
   String get tajweedBreakdown => 'Tecvid incelemesi';
 
   @override

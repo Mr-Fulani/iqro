@@ -750,6 +750,7 @@
   "tajweedClose": "إغلاق",
   "tajweedReviewNote": "تخضع هذه الشروح لمراجعة معلّم تجويد.",
   "tajweedAudioError": "تعذّر تشغيل الكلمة.",
+  "tajweedAudioUnavailable": "لا توجد لدى أي قارئ توقيتات هذه الكلمات، فلا يمكن تشغيلها وحدها. يمكنك الاستماع إلى الآية كاملة.",
   "tajweedBreakdown": "شرح التجويد",
   "tajweedPlayAyah": "استمع إلى الآية كاملة",
   "tajweedStepOf": "{current} من {total}",

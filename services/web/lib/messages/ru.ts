@@ -372,6 +372,7 @@ const ru = {
   "tajweed.slowLabel": "Медленнее, 0,75×",
   "tajweed.reviewNote": "Пояснения проходят проверку у преподавателя таджвида.",
   "tajweed.audioError": "Не удалось воспроизвести фрагмент.",
+  "tajweed.audioUnavailable": "Звука этого места нет ни у одного чтеца: у них нет разметки этих слов. Аят можно послушать целиком.",
   "tajweed.breakdown": "Разбор таджвида",
   "tajweed.playAyah": "Прослушать весь аят",
   "tajweed.stepOf": "{current} из {total}",

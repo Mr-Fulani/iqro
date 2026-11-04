@@ -7,6 +7,7 @@ import {
   joinedParts,
   ruleOccurrences,
   ruleText,
+  wordSpan,
   type TajweedSelection,
 } from "../lib/tajweed";
 import { WordAudio, type StandInVoice } from "./TajweedAudio";
@@ -72,16 +73,16 @@ export default function TajweedCard({
             <small dir="ltr">{found.ayah.verse_key}</small>
           </p>
           {/* First, so a long explanation does not push them out of sight. */}
-          {(recitationId || fallbackVoices?.length || onSelectWord) && (
-            <WordAudio
-              key={`${found.ayah.verse_key}#${found.word.position}`}
-              recitationId={recitationId}
-              verseKey={found.ayah.verse_key}
-              position={found.word.position}
-              fallbackVoices={fallbackVoices}
-              onSelectFrom={onSelectWord ? () => onSelectWord(found.ayah.verse_key, found.word.position) : undefined}
-            />
-          )}
+          {/* Every word card has its listen button. */}
+          <WordAudio
+            key={`${found.ayah.verse_key}#${found.word.position}`}
+            recitationId={recitationId}
+            verseKey={found.ayah.verse_key}
+            position={found.word.position}
+            span={wordSpan(found.ayah, found.word)}
+            fallbackVoices={fallbackVoices}
+            onSelectFrom={onSelectWord ? () => onSelectWord(found.ayah.verse_key, found.word.position) : undefined}
+          />
           {fragmentGroups(found.word.rules).map((fragment) => {
             const text = ruleText(reference, fragment.code, locale, fragment.variant);
             if (!text) return null;

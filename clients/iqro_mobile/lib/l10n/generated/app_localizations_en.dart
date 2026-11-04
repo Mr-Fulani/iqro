@@ -2476,6 +2476,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tajweedAudioError => 'Could not play this word.';
 
   @override
+  String get tajweedAudioUnavailable =>
+      'No reciter has timings for these words, so they cannot play alone. You can listen to the whole ayah.';
+
+  @override
   String get tajweedBreakdown => 'Tajweed breakdown';
 
   @override

@@ -750,6 +750,7 @@
   "tajweedClose": "Kapat",
   "tajweedReviewNote": "Bu açıklamalar bir tecvid hocası tarafından gözden geçiriliyor.",
   "tajweedAudioError": "Kelime çalınamadı.",
+  "tajweedAudioUnavailable": "Hiçbir kârinin bu kelimeler için zamanlaması yok, tek başına çalınamazlar. Ayetin tamamını dinleyebilirsiniz.",
   "tajweedBreakdown": "Tecvid incelemesi",
   "tajweedPlayAyah": "Ayetin tamamını dinle",
   "tajweedStepOf": "{current} / {total}",

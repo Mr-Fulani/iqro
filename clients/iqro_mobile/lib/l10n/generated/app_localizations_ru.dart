@@ -2499,6 +2499,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tajweedAudioError => 'Не удалось воспроизвести фрагмент.';
 
   @override
+  String get tajweedAudioUnavailable =>
+      'Звука этого места нет ни у одного чтеца: у них нет разметки этих слов. Аят можно послушать целиком.';
+
+  @override
   String get tajweedBreakdown => 'Разбор таджвида';
 
   @override

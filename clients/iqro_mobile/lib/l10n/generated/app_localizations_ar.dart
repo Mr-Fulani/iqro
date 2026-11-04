@@ -2453,6 +2453,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tajweedAudioError => 'تعذّر تشغيل الكلمة.';
 
   @override
+  String get tajweedAudioUnavailable =>
+      'لا توجد لدى أي قارئ توقيتات هذه الكلمات، فلا يمكن تشغيلها وحدها. يمكنك الاستماع إلى الآية كاملة.';
+
+  @override
   String get tajweedBreakdown => 'شرح التجويد';
 
   @override

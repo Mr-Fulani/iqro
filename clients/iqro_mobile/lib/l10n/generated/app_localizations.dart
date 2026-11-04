@@ -4452,6 +4452,12 @@ abstract class AppLocalizations {
   /// **'Could not play this word.'**
   String get tajweedAudioError;
 
+  /// No description provided for @tajweedAudioUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No reciter has timings for these words, so they cannot play alone. You can listen to the whole ayah.'**
+  String get tajweedAudioUnavailable;
+
   /// No description provided for @tajweedBreakdown.
   ///
   /// In en, this message translates to:

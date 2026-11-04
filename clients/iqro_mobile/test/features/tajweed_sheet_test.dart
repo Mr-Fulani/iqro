@@ -160,21 +160,54 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('without the word timing there is no listen button', (
-    tester,
-  ) async {
+  testWidgets('without any voice for the words the button stays and says '
+      'why', (tester) async {
     await _pumpMushaf(tester, timings: const {});
     await tester.tapAt(_wordCenter(tester, 2));
     await _settle(tester);
     expect(find.text('Таджвид в слове'), findsOneWidget);
-    expect(find.byKey(const ValueKey('tajweed-listen')), findsNothing);
-    expect(find.text('Прослушать фрагмент'), findsNothing);
+    final listen = find.byKey(const ValueKey('tajweed-listen'));
+    expect(listen, findsOneWidget);
+    expect(tester.widget<FilledButton>(listen).onPressed, isNull);
+    expect(
+      find.byKey(const ValueKey('tajweed-audio-unavailable')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('listen plays exactly the word, slower when 0.75× is on', (
+  testWidgets('every coloured word of the page has a listen button', (
     tester,
   ) async {
+    await _pumpMushaf(tester, timings: _allTimings);
+    final page = TajweedPage.fromJson(tajweedPage604Json, 604);
+    final words = <TajweedWord>[
+      for (final ayah in page.ayahs)
+        for (final word in ayah.words)
+          if (word.rules.isNotEmpty) word,
+    ];
+    // Within a word (qalqala, madd) and across two words (idgham).
+    expect(
+      words.expand((word) => word.rules.map((rule) => rule.code)).toSet(),
+      page.rules.toSet(),
+    );
+    for (final word in words) {
+      await tester.tapAt(_wordCenter(tester, word.position));
+      await _settle(tester);
+      final listen = find.byKey(const ValueKey('tajweed-listen'));
+      expect(listen, findsOneWidget, reason: 'word ${word.position}');
+      expect(
+        tester.widget<FilledButton>(listen).onPressed,
+        isNotNull,
+        reason: 'word ${word.position}',
+      );
+      await tester.tap(find.byTooltip('Закрыть'));
+      await _settle(tester);
+    }
+  });
+
+  testWidgets('listen plays the word with the one its idgham joins, slower '
+      'when 0.75× is on', (tester) async {
     final harness = await _pumpMushaf(tester);
     await harness.audio.loadStandalone(
       id: 'dua:1',
@@ -202,13 +235,14 @@ void main() {
     final source = harness.engine.sources.last as ClippingAudioSource;
     expect(source.child.uri, Uri.parse('https://cdn.example/112.mp3'));
     expect(source.start, const Duration(milliseconds: 9600));
-    expect(source.end, const Duration(milliseconds: 10100));
+    // The idgham of word 2 continues into word 3: both words sound.
+    expect(source.end, const Duration(milliseconds: 10600));
     expect(harness.engine.speed, .75);
     expect(harness.engine.stopCalls, greaterThan(stopsBefore));
     expect(harness.repository.requested, ('recitation-1', 112, 4));
     expect(
       harness.audio.state.standalone?.mediaItem.id,
-      'tajweed:recitation-1:112:4:2',
+      'tajweed:recitation-1:112:4:2-3',
     );
     expect(find.text('Остановить'), findsOneWidget);
 
@@ -257,7 +291,7 @@ void main() {
     await _settle(tester);
     expect(
       harness.audio.state.standalone?.mediaItem.id,
-      'tajweed:qf-6-murattal:112:4:2',
+      'tajweed:qf-6-murattal:112:4:2-3',
     );
     final source = harness.engine.sources.last as ClippingAudioSource;
     expect(source.start, const Duration(milliseconds: 9600));
@@ -360,6 +394,19 @@ final _defaultTimings = {
     start: const Duration(milliseconds: 9600),
     end: const Duration(milliseconds: 10100),
   ),
+  3: (
+    start: const Duration(milliseconds: 10100),
+    end: const Duration(milliseconds: 10600),
+  ),
+};
+
+/// Timings of every word of 112:4.
+final _allTimings = {
+  for (var position = 1; position <= 6; position++)
+    position: (
+      start: Duration(milliseconds: 9000 + position * 500),
+      end: Duration(milliseconds: 9500 + position * 500),
+    ),
 };
 
 typedef _Harness = ({

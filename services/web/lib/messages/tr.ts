@@ -369,6 +369,7 @@ const tr: Messages = {
   "tajweed.slowLabel": "Daha yavaş, 0,75×",
   "tajweed.reviewNote": "Bu açıklamalar bir tecvid hocası tarafından gözden geçiriliyor.",
   "tajweed.audioError": "Kelime çalınamadı.",
+  "tajweed.audioUnavailable": "Hiçbir kârinin bu kelimeler için zamanlaması yok, tek başına çalınamazlar. Ayetin tamamını dinleyebilirsiniz.",
   "tajweed.breakdown": "Tecvid incelemesi",
   "tajweed.playAyah": "Ayetin tamamını dinle",
   "tajweed.stepOf": "{current} / {total}",

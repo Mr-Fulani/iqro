@@ -369,6 +369,7 @@ const en: Messages = {
   "tajweed.slowLabel": "Slower, 0.75×",
   "tajweed.reviewNote": "These explanations are being reviewed by a tajweed teacher.",
   "tajweed.audioError": "Could not play this word.",
+  "tajweed.audioUnavailable": "No reciter has timings for these words, so they cannot play alone. You can listen to the whole ayah.",
   "tajweed.breakdown": "Tajweed breakdown",
   "tajweed.playAyah": "Listen to the whole ayah",
   "tajweed.stepOf": "{current} of {total}",

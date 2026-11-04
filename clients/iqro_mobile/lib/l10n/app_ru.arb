@@ -754,6 +754,7 @@
   "tajweedClose": "Закрыть",
   "tajweedReviewNote": "Пояснения проходят проверку у преподавателя таджвида.",
   "tajweedAudioError": "Не удалось воспроизвести фрагмент.",
+  "tajweedAudioUnavailable": "Звука этого места нет ни у одного чтеца: у них нет разметки этих слов. Аят можно послушать целиком.",
   "tajweedBreakdown": "Разбор таджвида",
   "tajweedPlayAyah": "Прослушать весь аят",
   "tajweedStepOf": "{current} из {total}",

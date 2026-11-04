@@ -369,6 +369,7 @@ const ar: Messages = {
   "tajweed.slowLabel": "أبطأ، 0.75×",
   "tajweed.reviewNote": "تخضع هذه الشروح لمراجعة معلّم تجويد.",
   "tajweed.audioError": "تعذّر تشغيل الكلمة.",
+  "tajweed.audioUnavailable": "لا توجد لدى أي قارئ توقيتات هذه الكلمات، فلا يمكن تشغيلها وحدها. يمكنك الاستماع إلى الآية كاملة.",
   "tajweed.breakdown": "شرح التجويد",
   "tajweed.playAyah": "استمع إلى الآية كاملة",
   "tajweed.stepOf": "{current} من {total}",

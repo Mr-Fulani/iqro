@@ -573,8 +573,9 @@ test("coloured memorization text explains a tapped tajweed word", async ({ page 
   await expect(ruleCard.getByText("Где в этом аяте")).toBeVisible();
   await ruleCard.getByRole("button", { name: /1:2/ }).click();
   await expect(page.getByRole("dialog", { name: "Таджвид в слове" })).toBeVisible();
-  // 1:2 has no word timing for this reciter, so there is nothing to play.
-  await expect(page.getByTestId("tajweed-listen")).toHaveCount(0);
+  // 1:2 has no word timing for this reciter: the button stays, disabled, and says why.
+  await expect(page.getByTestId("tajweed-listen")).toBeDisabled();
+  await expect(page.getByTestId("tajweed-audio-unavailable")).toBeVisible();
   await page.keyboard.press("Escape");
 
   // Each coloured ayah has its step-by-step breakdown with the plan's reciter.
