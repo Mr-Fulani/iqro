@@ -163,9 +163,16 @@ def card_html(folder, guide, card, index, total, stage_h=None):
     """Without stage_h the stage is empty: the first pass only measures how tall it may be."""
     shots = card["shots"]
     gap = 34
-    max_w = (W - 112 - gap * (len(shots) - 1)) / len(shots)
     labels = any(s.get("label") for s in shots)
-    stage = "".join(shot_html(folder, s, stage_h - (40 if labels else 0), max_w) for s in shots) if stage_h else ""
+    stack = card.get("stack")  # wide desktop shots go one under another
+    if stack and stage_h:
+        each_h = (stage_h - gap * (len(shots) - 1)) / len(shots) - (40 if labels else 0)
+        stage = "".join(shot_html(folder, s, each_h, W - 112) for s in shots)
+    elif stage_h:
+        max_w = (W - 112 - gap * (len(shots) - 1)) / len(shots)
+        stage = "".join(shot_html(folder, s, stage_h - (40 if labels else 0), max_w) for s in shots)
+    else:
+        stage = ""
     steps = "".join(
         f'<div class="step"><b>{i + 1}</b><span>{html.escape(t)}</span></div>'
         for i, t in enumerate(card.get("steps", []))
@@ -175,6 +182,8 @@ def card_html(folder, guide, card, index, total, stage_h=None):
     platform = PLATFORM.get(card.get("platform", guide.get("platform", "both")), card.get("platform"))
     page = f'<span class="page">{index}/{total}</span>' if total > 1 else ""
     pad_top = "padding-top:40px;" if labels else ""
+    if stack:
+        pad_top += f"flex-direction:column;gap:{gap + (40 if labels else 0)}px;"
     return f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><style>{CSS % {"W": W, "H": H}}</style></head>
 <body><div class="card">
 <div class="top"><img src="{data_uri(SEAL)}"><div class="brand">IQRO<small>{html.escape(guide["title"])}</small></div>
