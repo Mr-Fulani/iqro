@@ -109,7 +109,7 @@ void main() {
       );
       expect(_place(tester), 'Аят ٢ · стр. ١');
       final before = tester
-          .getSize(find.byKey(const ValueKey('reader-flow-page-1')))
+          .getSize(find.byKey(const ValueKey('reader-flow-ayah-2')))
           .height;
 
       await tester.tap(find.byKey(const ValueKey('reader-flow-text-size')));
@@ -122,7 +122,7 @@ void main() {
       await tester.tapAt(const Offset(4, 4));
       await tester.pumpAndSettle();
       expect(
-        tester.getSize(find.byKey(const ValueKey('reader-flow-page-1'))).height,
+        tester.getSize(find.byKey(const ValueKey('reader-flow-ayah-2'))).height,
         greaterThan(before),
       );
       expect(_place(tester), 'Аят ٢ · стр. ١');

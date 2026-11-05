@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -11,6 +12,7 @@ import '../../core/text/arabic_digits.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../dua/dua_arabic.dart';
 import 'ayah_action_sheet.dart';
+import 'mushaf_paper.dart';
 import 'quran_models.dart';
 import 'reader_page_turn.dart';
 import 'reader_words.dart';
@@ -51,14 +53,14 @@ class ReaderFlowScreen extends ConsumerStatefulWidget {
   ConsumerState<ReaderFlowScreen> createState() => _ReaderFlowScreenState();
 }
 
-/// The ayahs of one Mushaf page: one paragraph of the text.
-typedef _FlowPage = ({int page, List<QuranAyah> ayahs});
+/// The ayah numbers on the paper: the app's gold, apart from the ink.
+const _markerColor = Color(0xFF9A6D22);
 
 class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
   final _scrollController = ScrollController();
   final _viewportKey = GlobalKey();
   final _stackKey = GlobalKey();
-  final _pageKeys = <int, GlobalKey>{};
+  final _ayahKeys = <int, GlobalKey>{};
   final _wordRegistry = ReaderWordRegistry();
   final _selectionBounds = ValueNotifier<Rect?>(null);
   late final WordRangeController _words;
@@ -159,30 +161,16 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
     return box is RenderBox && box.attached && box.hasSize ? box : null;
   }
 
-  static List<_FlowPage> _pages(List<QuranAyah> items) {
-    final pages = <_FlowPage>[];
-    for (final ayah in items) {
-      final page = ayah.pages.firstOrNull ?? 0;
-      if (pages.isEmpty || pages.last.page != page) {
-        pages.add((page: page, ayahs: <QuranAyah>[]));
-      }
-      pages.last.ayahs.add(ayah);
-    }
-    return pages;
-  }
-
   /// Brings [ayah]'s first word to the top of the screen.
-  Future<void> _place(List<_FlowPage> pages, int ayah) async {
-    final index = pages.indexWhere(
-      (page) => page.ayahs.any((item) => item.number == ayah),
-    );
+  Future<void> _place(List<QuranAyah> items, int ayah) async {
+    final index = items.indexWhere((item) => item.number == ayah);
     if (index < 0 || !_scrollController.hasClients) return;
     _placing = true;
     try {
       for (var attempt = 0; attempt < 6 && mounted; attempt++) {
-        final pageContext = _pageKeys[index]?.currentContext;
-        if (pageContext != null && pageContext.mounted) {
-          await Scrollable.ensureVisible(pageContext);
+        final ayahContext = _ayahKeys[ayah]?.currentContext;
+        if (ayahContext != null && ayahContext.mounted) {
+          await Scrollable.ensureVisible(ayahContext);
           await WidgetsBinding.instance.endOfFrame;
           _alignTo(ayah);
           return;
@@ -190,7 +178,7 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
         // Not built yet: jump near it, and look again.
         final position = _scrollController.position;
         _scrollController.jumpTo(
-          (position.maxScrollExtent * (index + 1) / (pages.length + 1)).clamp(
+          (position.maxScrollExtent * (index + 1) / (items.length + 1)).clamp(
             0,
             position.maxScrollExtent,
           ),
@@ -232,11 +220,16 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
     }
   }
 
-  /// Keeps the ayah at the top in place while the text reflows.
+  var _keepScheduled = false;
+
+  /// Keeps the ayah at the top in place while the text reflows: once a
+  /// frame, as a second jump would measure the text before the first moved it.
   void _keepPlace() {
-    if (!_placed) return;
+    if (!_placed || _keepScheduled) return;
+    _keepScheduled = true;
     final ayah = _ayah;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _keepScheduled = false;
       _alignTo(ayah);
       _reportBounds();
     });
@@ -278,11 +271,11 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
     if (ayah != _ayah) setState(() => _ayah = ayah);
   }
 
-  void _schedulePlace(List<QuranAyah> items, List<_FlowPage> pages) {
+  void _schedulePlace(List<QuranAyah> items) {
     if (_placed || items.isEmpty) return;
     _placed = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _place(pages, widget.initialAyah);
+      await _place(items, widget.initialAyah);
       if (!mounted) return;
       final ayah = items
           .where((item) => item.number == widget.initialAyah)
@@ -372,7 +365,6 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
       appPreferencesProvider.select((value) => value.readerFlowFontSize),
     );
     final size = _fontSize ?? saved;
-    final scheme = Theme.of(context).colorScheme;
     final items = ayahs.valueOrNull ?? const <QuranAyah>[];
     final page = items
         .where((item) => item.number == _ayah)
@@ -384,50 +376,57 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) _leave();
       },
-      child: Scaffold(
-        key: const ValueKey('reader-flow'),
-        body: SafeArea(
-          child: Column(
-            children: <Widget>[
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 6, top: 4),
-                  child: IconButton(
-                    key: const ValueKey('reader-flow-text-size'),
-                    tooltip: context.l10n.arabicTextSize,
-                    onPressed: () => _showTextSize(size),
-                    icon: const Icon(Icons.tune),
+      // Ink on paper, as in the Mushaf, in a dark app theme too.
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          key: const ValueKey('reader-flow'),
+          backgroundColor: mushafPaperColor,
+          body: SafeArea(
+            child: Column(
+              children: <Widget>[
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 6, top: 4),
+                    child: IconButton(
+                      key: const ValueKey('reader-flow-text-size'),
+                      tooltip: context.l10n.arabicTextSize,
+                      onPressed: () => _showTextSize(size),
+                      color: mushafInkColor,
+                      icon: const Icon(Icons.tune),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: ayahs.when(
-                  loading: () => const IqroLoading(),
-                  error: (error, stack) => IqroAsyncError(
-                    title: context.l10n.noQuranData,
-                    onRetry: () => ref.invalidate(ayahsProvider(widget.surah)),
+                Expanded(
+                  child: ayahs.when(
+                    loading: () => const IqroLoading(),
+                    error: (error, stack) => IqroAsyncError(
+                      title: context.l10n.noQuranData,
+                      onRetry: () =>
+                          ref.invalidate(ayahsProvider(widget.surah)),
+                    ),
+                    data: (items) => _text(items, size),
                   ),
-                  data: (items) => _text(items, size),
                 ),
-              ),
-              SizedBox(
-                height: 40,
-                child: Center(
-                  child: page == null
-                      ? null
-                      : Text(
-                          context.l10n.readerPlainTextPlace(
-                            arabicIndicDigits(_ayah),
-                            arabicIndicDigits(page),
+                SizedBox(
+                  height: 40,
+                  child: Center(
+                    child: page == null
+                        ? null
+                        : Text(
+                            context.l10n.readerPlainTextPlace(
+                              arabicIndicDigits(_ayah),
+                              arabicIndicDigits(page),
+                            ),
+                            key: const ValueKey('reader-flow-place'),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(color: mushafAccentColor),
                           ),
-                          key: const ValueKey('reader-flow-place'),
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -435,11 +434,10 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
   }
 
   Widget _text(List<QuranAyah> items, double size) {
-    final pages = _pages(items);
-    _schedulePlace(items, pages);
+    _schedulePlace(items);
     final theme = Theme.of(context);
     final style = theme.textTheme.headlineMedium?.copyWith(
-      color: IqroTheme.arabicInk(context),
+      color: mushafInkColor,
       fontFamily: IqroTheme.arabicFontFamily,
       fontWeight: FontWeight.normal,
       fontSize: size,
@@ -467,6 +465,7 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
         // Lines no longer than a page of a book, on a tablet too.
         final side = math.max(20.0, (constraints.maxWidth - 820) / 2);
         return ReaderSwipeArea(
+          background: mushafPaperColor,
           enabled: _words.range == null && !wordRangePulling.value,
           left: ReaderSwipeTarget(
             icon: Icons.subject_rounded,
@@ -501,7 +500,7 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
                         side,
                         _words.range == null ? 32 : 280,
                       ),
-                      itemCount: pages.length + 1,
+                      itemCount: items.length + 1,
                       itemBuilder: (context, index) {
                         if (index == 0) {
                           return _FlowHeader(
@@ -511,22 +510,28 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
                             style: style,
                           );
                         }
-                        final page = pages[index - 1];
+                        final ayah = items[index - 1];
+                        // Each ayah a paragraph of its own, a blank line
+                        // between them.
                         return Padding(
-                          key: _pageKeys.putIfAbsent(index - 1, GlobalKey.new),
-                          padding: EdgeInsets.only(bottom: size * .5),
+                          key: _ayahKeys.putIfAbsent(
+                            ayah.number,
+                            GlobalKey.new,
+                          ),
+                          padding: EdgeInsets.only(bottom: size * .9),
                           child: ReaderAyahWords.flow(
-                            key: ValueKey('reader-flow-page-${page.page}'),
+                            key: ValueKey('reader-flow-ayah-${ayah.number}'),
                             surah: widget.surah,
                             ayahs: <ReaderAyahText>[
-                              for (final ayah in page.ayahs)
-                                ReaderAyahText(
-                                  ayah: ayah.number,
-                                  words: ayahWords(ayah),
-                                  marker:
-                                      ' ﴿${arabicIndicDigits(ayah.number)}﴾',
-                                ),
+                              ReaderAyahText(
+                                ayah: ayah.number,
+                                words: ayahWords(ayah),
+                                marker:
+                                    '\u00A0﴿${arabicIndicDigits(ayah.number)}﴾',
+                              ),
                             ],
+                            textAlign: TextAlign.start,
+                            markerStyle: const TextStyle(color: _markerColor),
                             style: style,
                             registry: _wordRegistry,
                             range: _words.range,
@@ -573,9 +578,9 @@ class _FlowHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
+    const color = _markerColor;
     return Padding(
-      padding: EdgeInsets.only(bottom: size * .3),
+      padding: EdgeInsets.only(bottom: size * .5),
       child: Column(
         children: <Widget>[
           if (name?.isNotEmpty ?? false)

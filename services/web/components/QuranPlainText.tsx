@@ -24,17 +24,6 @@ function readSize() {
   }
 }
 
-/** The ayahs of each Mushaf page: one paragraph of the text. */
-function byPage(ayahs: PlainAyah[]) {
-  const pages: { page: number; ayahs: PlainAyah[] }[] = [];
-  for (const ayah of ayahs) {
-    const page = ayah.pages[0] ?? 0;
-    if (pages.at(-1)?.page !== page) pages.push({ page, ayahs: [] });
-    pages.at(-1)!.ayahs.push(ayah);
-  }
-  return pages;
-}
-
 /**
  * The surah as plain Arabic text, running on as on a Mushaf page, in a size
  * the reader picks: for those who find the Mushaf too small and the cards,
@@ -225,35 +214,31 @@ export function QuranPlainText({
           <div className="plain-text-body" ref={wordArea} style={{ fontSize: size }}>
             {surahName && <p className="plain-text-surah" dir="rtl">{`سُورَةُ ${surahName}`}</p>}
             {opening && <p className="plain-text-opening" dir="rtl">{opening}</p>}
-            {byPage(ayahs).map(({ page: number, ayahs: items }) => (
-              <p className="plain-text-page quran-arabic-text" dir="rtl" key={number} data-page={number}>
-                {items.map((item, itemIndex) => (
-                  <span key={item.id}>
-                    {itemIndex > 0 && " "}
-                    {ayahTextParts(surah, item.number, item.text_uthmani)
-                      .flatMap((part) => part.words ?? [])
-                      .map((text, index) => {
-                        const at = { surah, ayah: item.number, position: index + 1 };
-                        const selected = wordRangeContains(range, at);
-                        return (
-                          <span key={index}>
-                            {index > 0 && " "}
-                            <span
-                              className={`quran-word${selected ? " is-word-selected" : ""}${selected && sameWord(at, playingWord) ? " is-word-playing" : ""}${marked === item.number ? " is-word-marked" : ""}`}
-                              data-word-key={wordKey(at)}
-                            >
-                              <WordRangeHandles range={range} word={at} />
-                              {text}
-                            </span>
-                          </span>
-                        );
-                      })}
-                    {" "}
-                    <span className="ayah-end-marker" aria-hidden="true">
-                      {`﴿${arabicNumber.format(item.number)}﴾`}
-                    </span>
-                  </span>
-                ))}
+            {/* Each ayah a paragraph of its own, a blank line between them. */}
+            {ayahs.map((item) => (
+              <p className="plain-text-ayah quran-arabic-text" dir="rtl" key={item.id} data-ayah={item.number}>
+                {ayahTextParts(surah, item.number, item.text_uthmani)
+                  .flatMap((part) => part.words ?? [])
+                  .map((text, index) => {
+                    const at = { surah, ayah: item.number, position: index + 1 };
+                    const selected = wordRangeContains(range, at);
+                    return (
+                      <span key={index}>
+                        {index > 0 && " "}
+                        <span
+                          className={`quran-word${selected ? " is-word-selected" : ""}${selected && sameWord(at, playingWord) ? " is-word-playing" : ""}${marked === item.number ? " is-word-marked" : ""}`}
+                          data-word-key={wordKey(at)}
+                        >
+                          <WordRangeHandles range={range} word={at} />
+                          {text}
+                        </span>
+                      </span>
+                    );
+                  })}
+                {"\u00A0"}
+                <span className="ayah-end-marker" aria-hidden="true">
+                  {`\uFD3F${arabicNumber.format(item.number)}\uFD3E`}
+                </span>
               </p>
             ))}
           </div>

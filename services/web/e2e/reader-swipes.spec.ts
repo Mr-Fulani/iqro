@@ -90,13 +90,14 @@ for (const layout of layouts) {
       await openText(page);
       await swipeAyah(page, 3, 1);
       const body = plainText(page).locator(".plain-text-body");
-      const before = (await body.boundingBox())!.height;
+      // Its own height: on screen the sheet may still be turning in.
+      const before = await body.evaluate((element) => (element as HTMLElement).offsetHeight);
 
       await page.getByTestId("plain-text-size").click();
       const range = page.getByRole("slider", { name: "Размер арабского текста" });
       await range.fill("72");
       await expect(body).toHaveCSS("font-size", "72px");
-      expect((await body.boundingBox())!.height).toBeGreaterThan(before);
+      expect(await body.evaluate((element) => (element as HTMLElement).offsetHeight)).toBeGreaterThan(before);
       await expect(page.getByTestId("plain-text-place")).toHaveText("Аят ٣ · стр. ١");
 
       // A sheet on a phone, a panel by the button on a tablet.

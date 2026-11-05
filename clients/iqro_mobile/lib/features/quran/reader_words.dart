@@ -72,6 +72,7 @@ class ReaderAyahWords extends StatefulWidget {
     super.key,
   }) : flowAyahs = null,
        textAlign = TextAlign.center,
+       markerStyle = null,
        marked = null;
 
   /// Several ayahs running on in one paragraph, as on a Mushaf page.
@@ -82,6 +83,7 @@ class ReaderAyahWords extends StatefulWidget {
     required this.registry,
     required this.onRange,
     this.textAlign = TextAlign.justify,
+    this.markerStyle,
     this.range,
     this.marked,
     this.playingWord,
@@ -106,6 +108,9 @@ class ReaderAyahWords extends StatefulWidget {
   /// Set by [ReaderAyahWords.flow]: the ayahs in place of the one above.
   final List<ReaderAyahText>? flowAyahs;
   final TextAlign textAlign;
+
+  /// The end markers' own style, over [style].
+  final TextStyle? markerStyle;
 
   /// Words shown for a moment in a soft tint: the place a reader came to.
   final QuranWordRange? marked;
@@ -266,7 +271,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
       if (ayah.marker.isNotEmpty) {
         // The end of the last word: the marker belongs to no word.
         if (identical(ayah, texts.last)) offsets.add(length);
-        children.add(TextSpan(text: ayah.marker));
+        children.add(TextSpan(text: ayah.marker, style: widget.markerStyle));
         length += ayah.marker.length;
       }
     }

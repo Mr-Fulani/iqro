@@ -27,10 +27,14 @@ class ReaderSwipeArea extends StatefulWidget {
     this.right,
     this.left,
     this.enabled = true,
+    this.background,
     super.key,
   });
 
   final Widget child;
+
+  /// Under the page while it slides; the app's background by default.
+  final Color? background;
 
   /// Where a swipe to the right and to the left lead; null: nowhere.
   final ReaderSwipeTarget? right;
@@ -162,7 +166,9 @@ class _ReaderSwipeAreaState extends State<ReaderSwipeArea>
                           ],
                   ),
                   child: ColoredBox(
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color:
+                        widget.background ??
+                        Theme.of(context).scaffoldBackgroundColor,
                     child: child,
                   ),
                 ),

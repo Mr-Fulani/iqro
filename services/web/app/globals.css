@@ -9109,7 +9109,8 @@ html[data-word-selecting] .word-range-bar {
   flex-direction: column;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
-  background: var(--bg);
+  /* Ink on paper, as on the Mushaf page. */
+  background: #fffcf7;
   transform-origin: left center;
   animation: plain-text-turn-in 450ms cubic-bezier(0.22, 0.78, 0.26, 1);
 }
@@ -9151,7 +9152,7 @@ html[data-word-selecting] .word-range-bar {
   border: 0;
   border-radius: 22px;
   background: transparent;
-  color: var(--text-primary);
+  color: #392d20;
   cursor: pointer;
 }
 
@@ -9174,13 +9175,13 @@ html[data-word-selecting] .word-range-bar {
   padding-bottom: 32px;
   font-family: var(--font-arabic);
   line-height: 2.1;
-  color: #1e293b;
+  color: #392d20;
 }
 
 .plain-text-surah,
 .plain-text-opening {
   margin: 0;
-  color: var(--primary);
+  color: #9a6d22;
   text-align: center;
 }
 
@@ -9190,15 +9191,20 @@ html[data-word-selecting] .word-range-bar {
 }
 
 .plain-text-opening {
-  margin-bottom: 0.2em;
+  margin-bottom: 0.5em;
   font-size: 0.8em;
 }
 
-.plain-text-page.quran-arabic-text {
-  margin: 0 0 0.5em;
+.plain-text-ayah.quran-arabic-text {
+  margin: 0 0 0.9em;
   font-size: inherit;
   line-height: inherit;
-  text-align: justify;
+  color: inherit;
+  text-align: start;
+}
+
+.plain-text-ayah .ayah-end-marker {
+  color: #9a6d22;
 }
 
 .quran-word.is-word-marked {
@@ -9212,7 +9218,7 @@ html[data-word-selecting] .word-range-bar {
   justify-content: center;
   height: 40px;
   margin: 0;
-  color: var(--text-secondary);
+  color: #6b5a43;
   font-size: 13px;
 }
 
