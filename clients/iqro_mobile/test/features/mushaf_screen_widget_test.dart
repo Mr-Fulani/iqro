@@ -351,6 +351,74 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  test('the play button reads the page by surah runs from the chosen ayah', () {
+    const page = <QuranAyahReference>[
+      QuranAyahReference(id: '', surah: 4, ayah: 175),
+      QuranAyahReference(id: '', surah: 4, ayah: 176),
+      QuranAyahReference(id: '', surah: 5, ayah: 1),
+      QuranAyahReference(id: '', surah: 5, ayah: 2),
+    ];
+    expect(mushafPageRuns(page), <MushafPageRun>[
+      (surah: 4, start: 175, end: 176),
+      (surah: 5, start: 1, end: 2),
+    ]);
+    expect(
+      mushafPageRuns(
+        page,
+        from: const QuranAyahReference(id: '', surah: 4, ayah: 176),
+      ),
+      <MushafPageRun>[
+        (surah: 4, start: 176, end: 176),
+        (surah: 5, start: 1, end: 2),
+      ],
+    );
+    expect(
+      mushafPageRuns(
+        page,
+        from: const QuranAyahReference(id: '', surah: 5, ayah: 2),
+      ),
+      <MushafPageRun>[(surah: 5, start: 2, end: 2)],
+    );
+    // An ayah from another page starts at the top of this one.
+    expect(
+      mushafPageRuns(
+        page,
+        from: const QuranAyahReference(id: '', surah: 9, ayah: 1),
+      ),
+      hasLength(2),
+    );
+  });
+
+  testWidgets('the round button reads the page on from the selected ayah, '
+      'repeat holds one ayah, and a page turn stops the sound and folds the '
+      'player', (tester) async {
+    final harness = await _pump(tester);
+    await _tapAyah(tester, .15);
+    expect(find.text('Аят 5:84'), findsOneWidget);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(harness.controller.ranges, <(int?, int?)>[(84, 85)]);
+    expect(find.byType(IqroMiniPlayer), findsOneWidget);
+    expect(find.text('1×'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('mushaf-player-repeat')));
+    await tester.pump();
+    expect(harness.controller.state.repeatEnabled, isTrue);
+    expect(harness.controller.ranges.last, (84, 84));
+    await tester.tap(find.byKey(const ValueKey('mushaf-player-repeat')));
+    await tester.pump();
+    expect(harness.controller.state.repeatEnabled, isFalse);
+    expect(harness.controller.ranges.last, (84, 85));
+    expect(harness.controller.state.playing, isTrue);
+
+    await tester.drag(find.byType(PageView), const Offset(600, 0));
+    await _settle(tester);
+    expect(harness.controller.state.playing, isFalse);
+    expect(find.byType(IqroMiniPlayer), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'another selected ayah cancels an obsolete pending audio request',
     (tester) async {
@@ -923,6 +991,26 @@ class _Audio extends AudioController {
   Future<void> toggle() async {
     toggles++;
     state = state.copyWith(playing: !state.playing);
+  }
+
+  @override
+  Future<void> toggleRepeat() async {
+    state = state.copyWith(repeatEnabled: !state.repeatEnabled);
+  }
+
+  @override
+  Future<void> setAyahRange(
+    int startAyah,
+    int endAyah, {
+    bool autoplay = true,
+  }) async {
+    ranges.add((startAyah, endAyah));
+    state = state.copyWith(
+      playing: autoplay,
+      activeAyah: startAyah,
+      rangeStartAyah: startAyah,
+      rangeEndAyah: endAyah,
+    );
   }
 }
 

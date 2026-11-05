@@ -98,6 +98,7 @@ const MemorizeAyahDialog = dynamic(() => import("./MemorizeAyahDialog"), { ssr: 
 const TajweedCard = dynamic(() => import("./TajweedCard"), { ssr: false });
 const TajweedBreakdown = dynamic(() => import("./TajweedBreakdown"), { ssr: false });
 const WordRangeBar = dynamic(() => import("./WordRangeBar"), { ssr: false });
+const NO_AYAH_KEYS: string[] = [];
 // The share dialog is loaded again after a failed load, as React.lazy keeps it.
 const loadAyahShareDialog = () => lazy(() => import("./AyahShareDialog"));
 let AyahShareDialog = loadAyahShareDialog();
@@ -1306,6 +1307,9 @@ function QuranContent() {
     locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
   const surahName = (surah: Surah) =>
     locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en;
+  // The reader's play button reads the open page once its ayahs are known.
+  const readerPageAyahKeys = viewMode === "mushaf" && !foundationPageLoading
+    && foundationMushafPage?.page_number === currentPage ? mushafVerseKeys : NO_AYAH_KEYS;
   const mushafSurahName = useCallback((number: number) => {
     const surah = surahs.find((item) => item.number === number);
     return surah ? (locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en) : "";
@@ -2255,6 +2259,8 @@ function QuranContent() {
           onRecitationChange={setMushafRecitationId}
           onRecitationsChange={setMushafRecitations}
           surahName={mushafSurahName}
+          pageAyahKeys={readerPageAyahKeys}
+          pageNumber={viewMode === "mushaf" ? currentPage : undefined}
         />
       </MushafReaderPanel>
 

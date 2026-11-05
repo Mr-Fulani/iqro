@@ -52,6 +52,7 @@ const ru = {
   "quran.readerHideControls": "Свернуть меню читалки",
   "quran.readerPlayAyah": "Воспроизвести аят {ayah}",
   "quran.readerPauseAyah": "Пауза — аят {ayah}",
+  "quran.readerPlayPage": "Читать страницу",
   "quran.readerAyahUnavailable": "Не удалось воспроизвести аят. Повторите попытку или проверьте настройки аудио.",
   "quran.enterReader": "Открыть читалку",
   "quran.exitReader": "Выйти из читалки",

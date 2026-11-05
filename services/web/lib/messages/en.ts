@@ -49,6 +49,7 @@ const en: Messages = {
   "quran.readerHideControls": "Hide reader controls",
   "quran.readerPlayAyah": "Play ayah {ayah}",
   "quran.readerPauseAyah": "Pause ayah {ayah}",
+  "quran.readerPlayPage": "Read the page",
   "quran.readerAyahUnavailable": "Unable to play this ayah. Retry or check the audio settings.",
   "quran.enterReader": "Open reader",
   "quran.exitReader": "Exit reader",

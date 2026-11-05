@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../core/audio/playback_speed.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
@@ -104,6 +105,7 @@ class IqroMiniPlayer extends ConsumerStatefulWidget {
     this.allowCollapse = true,
     this.mushafControls = false,
     this.onReciterTap,
+    this.onRepeatTap,
     this.onSwipeAway,
     super.key,
   });
@@ -111,10 +113,12 @@ class IqroMiniPlayer extends ConsumerStatefulWidget {
   /// Mushaf has its own reader controls, so its inline player stays expanded.
   final bool allowCollapse;
 
-  /// The Mushaf's player: one ayah chosen on the page, so no surah skipping;
-  /// the reciter's name is a button for [onReciterTap].
+  /// The Mushaf's player reads its page, so no surah skipping. The portrait
+  /// opens the reciters ([onReciterTap]); under the title are the speed and
+  /// the ayah repeat ([onRepeatTap]).
   final bool mushafControls;
   final VoidCallback? onReciterTap;
+  final VoidCallback? onRepeatTap;
 
   /// Where the bar does not fold itself, a swipe hands it to the screen, as
   /// the Mushaf does with its round play button.
@@ -212,12 +216,19 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
               .where((item) => item.number == track.surah)
               .firstOrNull
               ?.nameFor(locale);
-    // The Mushaf plays the ayah chosen on its page: "Аят 2:10 · Аль-Бакара".
-    final mushafAyah = widget.mushafControls
+    // The ayah of the Mushaf's page that sounds: "Аят 2:10 · Аль-Бакара".
+    final mushaf = widget.mushafControls
         ? ref.watch(
-            audioControllerProvider.select((value) => value.rangeStartAyah),
+            audioControllerProvider.select(
+              (value) => (
+                ayah: value.displayedAyah,
+                speed: value.speed,
+                repeat: value.repeatEnabled,
+              ),
+            ),
           )
         : null;
+    final mushafAyah = mushaf?.ayah;
     final title =
         standalone?.title ??
         (track == null
@@ -278,13 +289,21 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
               ),
               child: ListTile(
                 minTileHeight: 66,
+                // The speed and repeat buttons make a taller second line.
+                isThreeLine: widget.mushafControls,
                 contentPadding: const EdgeInsetsDirectional.fromSTEB(
                   8,
                   0,
                   6,
                   0,
                 ),
-                leading: artwork,
+                leading: widget.mushafControls && standalone == null
+                    ? _ReciterPortraitButton(
+                        name: subtitle,
+                        onPressed: widget.onReciterTap,
+                        child: artwork,
+                      )
+                    : artwork,
                 title: Text(
                   title,
                   maxLines: 1,
@@ -294,12 +313,51 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                subtitle: widget.mushafControls && standalone == null
-                    ? Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: _ReciterButton(
-                          name: subtitle,
-                          onPressed: widget.onReciterTap,
+                subtitle: mushaf != null && standalone == null
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: <Widget>[
+                            _MushafChip(
+                              key: const ValueKey('mushaf-player-speed'),
+                              tooltip: context.l10n.speed,
+                              onPressed: player.track == null
+                                  ? null
+                                  : () => unawaited(
+                                      controller.setSpeed(
+                                        nextPlayerSpeed(mushaf.speed),
+                                      ),
+                                    ),
+                              child: Text(
+                                '${playbackSpeedLabel(mushaf.speed)}×',
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            _MushafChip(
+                              key: const ValueKey('mushaf-player-repeat'),
+                              tooltip: mushaf.repeat
+                                  ? context.l10n.repeatOn
+                                  : context.l10n.repeatSelectedAyah,
+                              selected: mushaf.repeat,
+                              onPressed: widget.onRepeatTap,
+                              child: const Icon(
+                                Icons.repeat_one_rounded,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: .68),
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       )
                     : Text(
@@ -534,48 +592,112 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
   }
 }
 
-/// The Mushaf player's reciter: large enough to read and to press, with the
-/// arrow of a list that opens.
-class _ReciterButton extends StatelessWidget {
-  const _ReciterButton({required this.name, required this.onPressed});
+/// The Mushaf player's portrait opens its reciters; a small arrow on it
+/// says so.
+class _ReciterPortraitButton extends StatelessWidget {
+  const _ReciterPortraitButton({
+    required this.name,
+    required this.onPressed,
+    required this.child,
+  });
 
   final String name;
   final VoidCallback? onPressed;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: context.l10n.chooseReciter,
-      child: Material(
-        color: Colors.white.withValues(alpha: .14),
-        shape: const StadiumBorder(),
-        child: InkWell(
+    return Semantics(
+      button: true,
+      label: '${context.l10n.chooseReciter}: $name',
+      excludeSemantics: true,
+      child: Tooltip(
+        message: context.l10n.chooseReciter,
+        child: InkResponse(
           key: const ValueKey('mushaf-player-reciter'),
-          customBorder: const StadiumBorder(),
           onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(10, 4, 6, 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          radius: 28,
+          child: SizedBox.square(
+            dimension: 48,
+            child: Stack(
+              alignment: Alignment.center,
               children: <Widget>[
-                Flexible(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                child,
+                const PositionedDirectional(
+                  end: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
                       color: Colors.white,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      color: Color(0xFF08241D),
+                      size: 16,
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.expand_more_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The Mushaf player's speed and repeat: small round-ended buttons.
+class _MushafChip extends StatelessWidget {
+  const _MushafChip({
+    required this.tooltip,
+    required this.onPressed,
+    required this.child,
+    this.selected = false,
+    super.key,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final Widget child;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? const Color(0xFF08241D) : Colors.white;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        child: Material(
+          color: selected
+              ? const Color(0xFF9BDECB)
+              : Colors.white.withValues(alpha: .14),
+          shape: const StadiumBorder(),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: onPressed,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 30),
+              child: Center(
+                widthFactor: 1,
+                heightFactor: 1,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: IconTheme.merge(
+                    data: IconThemeData(color: foreground),
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),

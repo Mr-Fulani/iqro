@@ -49,6 +49,7 @@ const ar: Messages = {
   "quran.readerHideControls": "إخفاء أدوات القراءة",
   "quran.readerPlayAyah": "تشغيل الآية {ayah}",
   "quran.readerPauseAyah": "إيقاف الآية {ayah} مؤقتًا",
+  "quran.readerPlayPage": "قراءة الصفحة",
   "quran.readerAyahUnavailable": "تعذر تشغيل الآية. حاول مجددًا أو راجع إعدادات الصوت.",
   "quran.enterReader": "فتح القارئ",
   "quran.exitReader": "الخروج من القارئ",

@@ -11,6 +11,7 @@ import { formatClock } from "../lib/audio-content";
 import type { ListeningQueue } from "../lib/listening-queue";
 import { seekPositionMs } from "../lib/mini-player";
 import { useBarSwipe } from "../lib/use-bar-swipe";
+import { nextPlayerSpeed } from "../lib/mushaf-page-runs";
 import type { PlayerBackground } from "../lib/player-backgrounds";
 import type { ListeningQueueControls } from "../lib/use-listening-queue";
 
@@ -158,11 +159,17 @@ type SegmentedAudioPlayerProps = {
   readerControls?: {
     container: HTMLElement | null;
     ayahKey: string | null;
-    /** "Аят 2:10 · Аль-Бакара"; without it, the ayah alone. */
-    title?: string | null;
+    /** For "Аят 2:10 · Аль-Бакара"; without it, the ayah alone. */
+    surahName?: (surah: number) => string;
+    /** What the title says with no ayah selected, such as "Страница 3". */
+    pageTitle?: string;
+    /** The request that sounds reads the reader's page. */
+    pageActive?: boolean;
+    /** The page can be read without a selected ayah. */
+    pageAvailable?: boolean;
     artist: string;
     portraitUrl?: string | null;
-    /** The reciter's name becomes a button that opens the reciter list. */
+    /** The portrait opens the reciter list. */
     onChooseReciter?: () => void;
     loading: boolean;
     available: boolean;
@@ -276,10 +283,13 @@ export function SegmentedAudioPlayer({
   const [activeRequest, setActiveRequest] = useState<AudioPlaybackRequest | null>(null);
   const [activePlan, setActivePlan] = useState<RuntimePlan | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const isPlayingRef = useRef(false);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
   const [status, setStatus] = useState<StatusMessage>({ key: "player.status.idle" });
   const [error, setError] = useState<string | null>(null);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [readerFolded, setReaderFolded] = useState(false);
   const [pauseMs, setPauseMs] = useState(0);
   const [sleepMode, setSleepMode] = useState<SleepMode>("off");
   const [sleepDeadline, setSleepDeadline] = useState<number | null>(null);
@@ -446,6 +456,9 @@ export function SegmentedAudioPlayer({
     if (navigationKeyRef.current === pauseOnNavigationKey) return;
     navigationKeyRef.current = pauseOnNavigationKey;
     if (requestRef.current) {
+      // As in the app's Mushaf: a page turned while the sound plays stops it
+      // and folds the reader's player into its round button.
+      if (readerControlsRef.current && isPlayingRef.current) setReaderFolded(true);
       stopAtCurrentPosition({ key: "player.status.pausedNavigation" });
       onActiveAyahChangeRef.current?.(null);
     }
@@ -719,10 +732,11 @@ export function SegmentedAudioPlayer({
     const audio = audioRef.current;
     const plan = planRef.current;
     const reader = readerControlsRef.current;
-    const segment = plan ? segmentsRef.current[plan.currentIndex] : undefined;
-    if (reader && (!reader.ayahKey || plan?.kind !== "ayah" || plan.startIndex !== plan.endIndex
-      || !segment || `${segment.surah_number}:${segment.ayah_number}` !== reader.ayahKey)) {
-      if (reader.ayahKey && reader.available && !reader.loading) reader.onPlayAyah();
+    // The reader resumes its page; anything else, or a page read to its end,
+    // starts the page again from the selected ayah.
+    const finished = Boolean(audio && plan && audio.currentTime * 1000 >= plan.endMs - 40);
+    if (reader && (!reader.pageActive || finished)) {
+      if ((reader.ayahKey || reader.pageAvailable) && reader.available && !reader.loading) reader.onPlayAyah();
       return;
     }
     if (!audio || !plan) return;
@@ -922,13 +936,11 @@ export function SegmentedAudioPlayer({
       : (activeRequest && displayTitle) || activeRequest?.title || t("player.noAudio");
   const statusLabel = t(status.key, status.variables);
   const settingsActionLabel = settingsOpen ? t("player.hideSettings") : t("player.showSettings");
-  const readerAyahIsActive = Boolean(readerControls?.ayahKey && activePlan?.kind === "ayah"
-    && activePlan.startIndex === activePlan.endIndex && activeAyah
-    && `${activeAyah.surah_number}:${activeAyah.ayah_number}` === readerControls.ayahKey);
+  // The reader's page sounds: the play button pauses it, the title follows it.
+  const readerAyahIsActive = Boolean(readerControls?.pageActive && activePlan);
   const readerIsPlaying = readerAyahIsActive && isPlaying;
   // As in the app's Mushaf: a swipe folds the player into a round play
   // button and the sound plays on; the button plays or pauses and unfolds it.
-  const [readerFolded, setReaderFolded] = useState(false);
   const readerSwipe = useBarSwipe(readerControls ? () => setReaderFolded(true) : null);
 
   // load() drops the queued pause event and a broken source never plays, so a
@@ -1084,9 +1096,17 @@ export function SegmentedAudioPlayer({
     else if (isPlaying) stopAtCurrentPosition({ key: "player.status.paused" });
     else resumePlayback();
   };
-  const playLabel = readerIsPlaying ? t("quran.readerPauseAyah", { ayah: readerControls!.ayahKey! })
-    : readerControls?.ayahKey ? t("quran.readerPlayAyah", { ayah: readerControls.ayahKey }) : t("quran.readerSelectAyah");
-  const playDisabled = !readerControls?.ayahKey || !readerControls.available || readerControls.loading;
+  const soundingAyahKey = readerAyahIsActive && activeAyah ? `${activeAyah.surah_number}:${activeAyah.ayah_number}` : null;
+  const readerTitleKey = soundingAyahKey ?? readerControls?.ayahKey ?? null;
+  const readerSurahName = readerTitleKey ? readerControls?.surahName?.(Number(readerTitleKey.split(":")[0])) : null;
+  const readerTitle = readerTitleKey
+    ? `${t("common.ayah", { ayah: readerTitleKey })}${readerSurahName ? ` · ${readerSurahName}` : ""}`
+    : readerControls?.pageTitle || t("quran.readerSelectAyah");
+  const playLabel = readerIsPlaying ? t("quran.readerPauseAyah", { ayah: readerTitleKey ?? "" })
+    : readerControls?.ayahKey ? t("quran.readerPlayAyah", { ayah: readerControls.ayahKey })
+      : readerControls?.pageAvailable ? t("quran.readerPlayPage") : t("quran.readerSelectAyah");
+  const playDisabled = !readerControls?.available || readerControls.loading
+    || (!readerControls.ayahKey && !readerControls.pageAvailable && !readerAyahIsActive);
   const playIcon = (
     <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
       {readerIsPlaying ? <path d="M6 4h4v16H6zm8 0h4v16h-4z" /> : <path d="m7 3 15 9-15 9z" />}
@@ -1111,26 +1131,39 @@ export function SegmentedAudioPlayer({
           </div>
         ) : (
           <div className="reader-selected-audio" {...readerSwipe}>
-            {readerControls.portraitUrl && (
+            {readerControls.portraitUrl && (readerControls.onChooseReciter ? (
+              <button type="button" className="reader-portrait-button"
+                aria-label={t("mushafAudio.reciterButton", { name: readerControls.artist })}
+                onClick={readerControls.onChooseReciter}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- avatar copies are pre-sized. */}
+                <img className="reader-selected-audio-portrait" src={readerControls.portraitUrl} alt="" width={40} height={40} decoding="async" />
+                <svg className="reader-portrait-chevron" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+            ) : (
               // eslint-disable-next-line @next/next/no-img-element -- avatar copies are pre-sized.
               <img className="reader-selected-audio-portrait" src={readerControls.portraitUrl} alt="" width={40} height={40} decoding="async" />
-            )}
+            ))}
             <div className="reader-selected-audio-copy" aria-live="polite">
-              <strong>{readerControls.ayahKey
-                ? readerControls.title || t("common.ayah", { ayah: readerControls.ayahKey })
-                : t("quran.readerSelectAyah")}</strong>
-              {readerControls.onChooseReciter && readerControls.artist ? (
-                <button type="button" className="reader-reciter-button"
-                  aria-label={t("mushafAudio.reciterButton", { name: readerControls.artist })}
-                  onClick={readerControls.onChooseReciter}>
-                  <span>{readerControls.artist}</span>
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              ) : !notice && <span>{readerAyahIsActive ? statusLabel : readerControls.artist}</span>}
-              {notice && <span>{notice}</span>}
-              {!notice && readerControls.onChooseReciter && readerAyahIsActive && <span className="sr-only">{statusLabel}</span>}
+              <strong>{readerTitle}</strong>
+              {notice ? <span>{notice}</span> : (
+                <div className="reader-audio-tools">
+                  <button type="button" className="reader-audio-chip" aria-label={t("player.speedAria")}
+                    data-testid="reader-speed" onClick={() => setPlaybackRate((current) => nextPlayerSpeed(current))}>
+                    {formatNumber(playbackRate)}×
+                  </button>
+                  <button type="button" className="reader-audio-chip" aria-label={t("player.repeatAyah")}
+                    aria-pressed={repeatMode === "ayah"} data-testid="reader-repeat"
+                    onClick={() => setRepeatMode((current) => current === "ayah" ? "off" : "ayah")}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /><path d="M11 10h1v4" />
+                    </svg>
+                  </button>
+                  <span className="reader-audio-artist">{readerControls.artist}</span>
+                </div>
+              )}
+              {!notice && readerAyahIsActive && <span className="sr-only">{statusLabel}</span>}
             </div>
             <button type="button" className="reader-ayah-play" disabled={playDisabled} aria-label={playLabel} onClick={playReaderAyah}>
               {playIcon}

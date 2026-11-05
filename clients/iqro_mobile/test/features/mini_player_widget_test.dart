@@ -425,8 +425,9 @@ void main() {
     expect(button('Previous surah').onPressed, isNotNull);
   });
 
-  testWidgets('the Mushaf player has no surah buttons, names its reciter in '
-      'a button and hands a swipe to the Mushaf', (tester) async {
+  testWidgets('the Mushaf player has no surah buttons; its portrait opens the '
+      'reciters, under the title are the speed and the repeat, and a swipe goes '
+      'to the Mushaf', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 800);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -455,6 +456,7 @@ void main() {
       autoplay: false,
     );
     var reciterTaps = 0;
+    var repeatTaps = 0;
     var swipes = 0;
     await tester.pumpWidget(
       ProviderScope(
@@ -481,6 +483,7 @@ void main() {
                 allowCollapse: false,
                 mushafControls: true,
                 onReciterTap: () => reciterTaps++,
+                onRepeatTap: () => repeatTaps++,
                 onSwipeAway: () => swipes++,
               ),
             ),
@@ -494,14 +497,23 @@ void main() {
     expect(find.byTooltip('Next surah'), findsNothing);
     expect(find.byIcon(Icons.expand_more_rounded), findsOneWidget);
     expect(find.text('Ayah 2:10 · Al-Baqara'), findsOneWidget);
+    expect(find.text('Reader'), findsOneWidget);
     final reciter = find.byKey(const ValueKey('mushaf-player-reciter'));
-    expect(
-      find.descendant(of: reciter, matching: find.text('Reader')),
-      findsOneWidget,
-    );
-    // Large enough to press.
-    expect(tester.getSize(reciter).height, greaterThanOrEqualTo(28));
-    // The bar grows to hold it rather than clipping it at 66 dp.
+    expect(tester.getSize(reciter), const Size(48, 48));
+    await tester.tap(reciter);
+    expect(reciterTaps, 1);
+
+    // The Audio player's speeds, one step per press.
+    final speed = find.byKey(const ValueKey('mushaf-player-speed'));
+    expect(find.descendant(of: speed, matching: find.text('1×')), findsOne);
+    await tester.tap(speed);
+    await tester.pumpAndSettle();
+    expect(controller.state.speed, 1.25);
+    expect(find.descendant(of: speed, matching: find.text('1.25×')), findsOne);
+    final repeat = find.byKey(const ValueKey('mushaf-player-repeat'));
+    await tester.tap(repeat);
+    expect(repeatTaps, 1);
+    // The bar grows to hold its buttons rather than clipping them at 66 dp.
     final bar = tester.getRect(
       find
           .descendant(
@@ -510,9 +522,10 @@ void main() {
           )
           .first,
     );
-    expect(bar.bottom, greaterThanOrEqualTo(tester.getRect(reciter).bottom));
-    await tester.tap(reciter);
-    expect(reciterTaps, 1);
+    for (final button in <Finder>[speed, repeat]) {
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(30));
+      expect(bar.bottom, greaterThanOrEqualTo(tester.getRect(button).bottom));
+    }
 
     await tester.fling(
       find.byKey(const ValueKey('mini-player-bar')),

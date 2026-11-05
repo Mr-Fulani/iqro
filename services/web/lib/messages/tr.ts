@@ -49,6 +49,7 @@ const tr: Messages = {
   "quran.readerHideControls": "Okuyucu menüsünü gizle",
   "quran.readerPlayAyah": "{ayah} ayetini oynat",
   "quran.readerPauseAyah": "{ayah} ayetini duraklat",
+  "quran.readerPlayPage": "Sayfayı oku",
   "quran.readerAyahUnavailable": "Ayet oynatılamadı. Tekrar deneyin veya ses ayarlarını kontrol edin.",
   "quran.enterReader": "Okuyucuyu aç",
   "quran.exitReader": "Okuyucudan çık",

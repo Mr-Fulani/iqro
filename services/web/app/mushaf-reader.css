@@ -416,27 +416,25 @@ body:has(.quran-reader-boot) .app-footer {
 .reader-selected-audio.is-folded { position: absolute; inset-inline-end: 4px; bottom: calc(100% + 10px); padding: 0; border: 0; }
 .reader-actions .reader-ayah-fab { flex-basis: 52px; width: 52px; height: 52px; box-shadow: 0 3px 14px #073e3433; }
 .reader-selected-audio-portrait { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--primary-subtle); }
-.reader-actions .reader-reciter-button {
-  display: inline-flex;
-  flex: 0 1 auto;
-  align-items: center;
-  justify-self: start;
-  gap: 2px;
+/* The portrait opens the reciters; the speed and the ayah repeat sit under the title. */
+.reader-actions .reader-portrait-button { position: relative; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; }
+.reader-portrait-chevron { position: absolute; inset-inline-end: -1px; bottom: 0; width: 16px; height: 16px; padding: 1px; border-radius: 50%; background: #fff; color: #073e34; box-shadow: 0 1px 3px #073e3433; }
+.reader-audio-tools { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.reader-actions .reader-audio-chip {
+  flex: 0 0 auto;
   width: auto;
-  max-width: 100%;
-  height: auto;
-  min-height: 32px;
-  padding: 4px 6px 4px 12px;
+  min-width: 44px;
+  height: 32px;
+  padding: 0 10px;
   border-radius: 999px;
   background: var(--primary-subtle);
   color: #073e34;
   font: inherit;
-  font-size: 14.5px;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: 13.5px;
+  font-weight: 700;
 }
-.reader-reciter-button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reader-reciter-button svg { flex: none; }
+.reader-actions .reader-audio-chip[aria-pressed="true"] { background: var(--primary); color: #fff; }
+.reader-audio-artist { min-width: 0; overflow: hidden; color: var(--text-secondary); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
 
 .mushaf-reciter-sheet {
   position: absolute;
