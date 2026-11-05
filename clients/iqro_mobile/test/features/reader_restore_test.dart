@@ -52,6 +52,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a reader selecting words is not pulled back when the '
+      'translations arrive', (tester) async {
+    final harness = await _pump(tester, initialAyah: 40);
+    // Holding a word selects it; pulling the selection near the edge then
+    // scrolls the list under the finger.
+    await tester.longPress(find.byKey(const ValueKey('reader-ayah-40')));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const ValueKey('word-range-panel')), findsOneWidget);
+    final position = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    position.jumpTo(position.pixels + 200);
+    await tester.pump();
+    final scrolled = position.pixels;
+
+    harness.quran.translationsReady.complete();
+    for (var frame = 0; frame < 30; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    expect(position.pixels, closeTo(scrolled, 1));
+  });
+
   testWidgets('a reader who scrolls away is left where they scrolled', (
     tester,
   ) async {
