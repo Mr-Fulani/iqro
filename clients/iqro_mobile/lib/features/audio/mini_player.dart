@@ -266,6 +266,8 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
               },
           onExpand: () => setCollapsed(false),
           playing: player.playing,
+          // The reciter's button makes the Mushaf's bar taller than 66 dp.
+          fitContent: widget.mushafControls,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(17),
             child: DecoratedBox(
@@ -639,9 +641,13 @@ class _CollapsiblePlayer extends StatefulWidget {
     required this.onExpand,
     required this.playing,
     required this.child,
+    this.fitContent = false,
   });
 
   final bool collapsed;
+
+  /// A bar that never folds into the button takes the height of its content.
+  final bool fitContent;
 
   /// The fold hint slides the bar towards the corner it folds into.
   final bool nudged;
@@ -718,6 +724,7 @@ class _CollapsiblePlayerState extends State<_CollapsiblePlayer> {
                 ),
               ),
         builder: (context, progress, panel) {
+          if (widget.fitContent) return panel!;
           final width = constraints.maxWidth;
           return Align(
             alignment: AlignmentDirectional.bottomEnd,

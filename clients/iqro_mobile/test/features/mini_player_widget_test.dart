@@ -501,6 +501,16 @@ void main() {
     );
     // Large enough to press.
     expect(tester.getSize(reciter).height, greaterThanOrEqualTo(28));
+    // The bar grows to hold it rather than clipping it at 66 dp.
+    final bar = tester.getRect(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('mini-player-bar')),
+            matching: find.byType(ClipRRect),
+          )
+          .first,
+    );
+    expect(bar.bottom, greaterThanOrEqualTo(tester.getRect(reciter).bottom));
     await tester.tap(reciter);
     expect(reciterTaps, 1);
 
