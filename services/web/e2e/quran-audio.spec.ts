@@ -1851,6 +1851,26 @@ test.describe("word selection on a phone", () => {
     await expect(page.locator(".is-reader-immersive")).toHaveCount(0);
   });
 
+  test("a swipe left on the text turns in its Mushaf page at the same ayah", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    await page.getByRole("toolbar").getByTestId("reader-open-text").click();
+    const words = page.locator("#quran-ayah-6-2 .quran-arabic-text");
+    await expect(words).toBeVisible();
+    await words.scrollIntoViewIfNeeded();
+    const box = (await words.boundingBox())!;
+    const width = page.viewportSize()!.width;
+    const y = box.y + box.height / 2;
+    await finger(page, { x: width * 0.75, y }, { x: width * 0.25, y });
+    await expect(page.locator(".mushaf-page-turn.is-from-text")).toHaveCount(1);
+    await expect(view.getByRole("button", { name: "Аят 6:2", exact: true }).first()).toHaveClass(/is-selected/);
+    // The sheet keeps its class once the swipe's moment is over: it turns no second time.
+    await page.waitForTimeout(2500);
+    await expect(page.locator(".mushaf-page-turn.is-from-text")).toHaveCount(1);
+  });
+
   test("an ayah number, or «⋯» on the bar, opens the ayah's actions over the full-screen Mushaf", async ({ page }) => {
     await installTajweedMocks(page);
     await page.goto("/ru/quran?surah=6");

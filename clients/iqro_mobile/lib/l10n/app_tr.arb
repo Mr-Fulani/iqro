@@ -134,6 +134,8 @@
   "alFatiha": "Fâtiha",
   "textMode": "Metin",
   "mushafMode": "Mushaf",
+  "readerPlainText": "Arapça metin",
+  "readerPlainTextPlace": "Ayet {ayah} · s. {page}",
   "selectedMushaf": "Seçili Mushaf",
   "chooseMushaf": "Mushaf seçin",
   "mushafCatalogEmpty": "Mushaflar henüz yüklenmedi",

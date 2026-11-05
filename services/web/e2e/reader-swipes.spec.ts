@@ -1,0 +1,152 @@
+import { devices, expect, type Locator, type Page, test } from "@playwright/test";
+
+type Point = { x: number; y: number };
+
+/** A finger moving in small steps, as a real one does (CDP touch events). */
+async function finger(page: Page, from: Point, to: Point, holdMs = 0) {
+  const session = await page.context().newCDPSession(page);
+  await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [from] });
+  if (holdMs) await page.waitForTimeout(holdMs);
+  for (let step = 1; step <= 12; step += 1) {
+    const point = { x: from.x + (to.x - from.x) * step / 12, y: from.y + (to.y - from.y) * step / 12 };
+    await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [point] });
+    await page.waitForTimeout(16);
+  }
+  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await session.detach();
+}
+
+async function centre(locator: Locator): Promise<Point> {
+  const box = (await locator.boundingBox())!;
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+/** The Quran text, the cards with translation and buttons. */
+async function openText(page: Page, surah = 1) {
+  await page.goto(surah === 1 ? "/ru/quran" : `/ru/quran?surah=${surah}`);
+  const toText = page.getByRole("button", { name: "📜 Текст", exact: true });
+  const toolbar = page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true });
+  // A phone opens the full-screen Mushaf: the switch is in its settings.
+  const immersive = await toolbar.waitFor({ timeout: 4000 }).then(() => true, () => false);
+  if (immersive) await toolbar.click();
+  await toText.click();
+  await expect(page.locator(`#quran-ayah-${surah}-${surah === 1 ? 5 : 2}`)).toBeVisible();
+}
+
+/** A swipe across the Arabic of an ayah's card, half the screen to the right (1) or left (-1). */
+async function swipeAyah(page: Page, ayah: number, way: 1 | -1, surah = 1) {
+  const words = page.locator(`#quran-ayah-${surah}-${ayah} .quran-arabic-text`);
+  await words.scrollIntoViewIfNeeded();
+  const from = await centre(words);
+  const width = page.viewportSize()!.width;
+  const start = { x: way > 0 ? width * 0.25 : width * 0.75, y: from.y };
+  await finger(page, start, { x: start.x + way * width * 0.5, y: from.y });
+}
+
+const plainText = (page: Page) => page.getByTestId("plain-text-reader");
+
+const layouts = [
+  { name: "a phone", use: { viewport: devices["Pixel 7"].viewport, userAgent: devices["Pixel 7"].userAgent,
+    deviceScaleFactor: devices["Pixel 7"].deviceScaleFactor, isMobile: true, hasTouch: true } },
+  { name: "a phone in landscape", use: { viewport: { width: 915, height: 412 }, isMobile: true, hasTouch: true } },
+  { name: "a tablet", use: { viewport: { width: 820, height: 1180 }, isMobile: true, hasTouch: true } },
+  { name: "a tablet in landscape", use: { viewport: { width: 1180, height: 820 }, isMobile: true, hasTouch: true } },
+];
+
+for (const layout of layouts) {
+  test.describe(`text swipes on ${layout.name}`, () => {
+    test.use(layout.use);
+
+    test("a swipe right turns in the plain Arabic text at that ayah, a swipe back returns to it", async ({ page }) => {
+      await openText(page);
+      await swipeAyah(page, 5, 1);
+
+      const reader = plainText(page);
+      await expect(reader).toBeVisible();
+      await expect(page.getByTestId("plain-text-place")).toHaveText("Аят ٥ · стр. ١");
+      // Only the Arabic: no translation, no ayah buttons, no close button.
+      await expect(reader.locator(".ayah-translation, .ayah-action-buttons")).toHaveCount(0);
+      await expect(reader.getByRole("button")).toHaveCount(1);
+      await expect(reader.locator('[data-word-key="1:5:1"]')).toHaveClass(/is-word-marked/);
+      await expect(reader.locator('[data-word-key="1:4:1"]')).not.toHaveClass(/is-word-marked/);
+
+      const sheet = await centre(reader.locator(".plain-text-scroll"));
+      const width = page.viewportSize()!.width;
+      await finger(page, { x: width * 0.75, y: sheet.y }, { x: width * 0.25, y: sheet.y });
+      await expect(reader).toHaveCount(0);
+      await expect(page.locator("#quran-ayah-1-5")).toHaveClass(/is-navigation-target/);
+    });
+
+    // The page turning in is checked where the test API has the Mushaf page:
+    // quran-audio.spec.ts, «a swipe left on the text turns in its Mushaf page».
+    test("a swipe left opens the Mushaf", async ({ page }) => {
+      await openText(page);
+      await swipeAyah(page, 6, -1);
+      await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
+      await expect(plainText(page)).toHaveCount(0);
+    });
+
+    test("the size reflows the plain text and keeps its ayah", async ({ page }) => {
+      await openText(page);
+      await swipeAyah(page, 3, 1);
+      const body = plainText(page).locator(".plain-text-body");
+      // Its own height: on screen the sheet may still be turning in.
+      const before = await body.evaluate((element) => (element as HTMLElement).offsetHeight);
+
+      await page.getByTestId("plain-text-size").click();
+      const range = page.getByRole("slider", { name: "Размер арабского текста" });
+      await range.fill("72");
+      await expect(body).toHaveCSS("font-size", "72px");
+      expect(await body.evaluate((element) => (element as HTMLElement).offsetHeight)).toBeGreaterThan(before);
+      await expect(page.getByTestId("plain-text-place")).toHaveText("Аят ٣ · стр. ١");
+
+      // A sheet on a phone, a panel by the button on a tablet.
+      const panel = (await page.locator(".plain-text-size-panel").boundingBox())!;
+      const viewport = page.viewportSize()!;
+      const tablet = viewport.width >= 600 && viewport.height >= 600;
+      expect(panel.width).toBeCloseTo(tablet ? 340 : viewport.width, -1);
+
+      await page.reload();
+      await openText(page);
+      await swipeAyah(page, 3, 1);
+      await expect(plainText(page).locator(".plain-text-body")).toHaveCSS("font-size", "72px");
+    });
+  });
+}
+
+test.describe("text swipes leave other gestures alone", () => {
+  test.use(layouts[0].use);
+
+  test("scrolling, the screen edge and selected words turn nothing", async ({ page }) => {
+    await openText(page);
+    const words = page.locator("#quran-ayah-1-4 .quran-arabic-text");
+    const from = await centre(words);
+    // Up and down: the page scrolls.
+    await finger(page, from, { x: from.x + 40, y: from.y - 200 });
+    // From the very edge: the browser's back gesture.
+    const edge = await centre(page.locator("#quran-ayah-1-5 .quran-arabic-text"));
+    await finger(page, { x: 8, y: edge.y }, { x: 260, y: edge.y });
+    await expect(plainText(page)).toHaveCount(0);
+    await expect(page.locator(".quran-page-layout").filter({ visible: true })).not.toHaveClass(/is-mushaf-mode/);
+
+    // Held, a word is selected; a swipe then pulls nothing.
+    const held = page.locator('[data-word-key="1:5:2"]');
+    await held.scrollIntoViewIfNeeded();
+    const word = await centre(held);
+    await finger(page, word, word, 450);
+    await expect(page.getByTestId("word-range-bar")).toBeVisible();
+    await finger(page, { x: 100, y: word.y }, { x: 320, y: word.y });
+    await expect(plainText(page)).toHaveCount(0);
+  });
+});
+
+test("a mouse on a computer turns no page", async ({ page }) => {
+  await openText(page);
+  const from = await centre(page.locator("#quran-ayah-1-5 .quran-arabic-text"));
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 300, from.y, { steps: 12 });
+  await page.mouse.up();
+  await expect(plainText(page)).toHaveCount(0);
+  await expect(page.locator(".quran-page-layout").filter({ visible: true })).not.toHaveClass(/is-mushaf-mode/);
+});

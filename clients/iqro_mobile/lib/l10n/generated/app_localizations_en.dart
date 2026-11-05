@@ -452,6 +452,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mushafMode => 'Mushaf';
 
   @override
+  String get readerPlainText => 'Arabic text';
+
+  @override
+  String readerPlainTextPlace(String ayah, String page) {
+    return 'Ayah $ayah · p. $page';
+  }
+
+  @override
   String get selectedMushaf => 'Selected Mushaf';
 
   @override

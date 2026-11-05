@@ -13,6 +13,12 @@ const defaultReaderArabicFontSize = 30.0;
 const minReaderArabicFontSize = 24.0;
 const maxReaderArabicFontSize = 40.0;
 const defaultReaderLineHeight = 1.9;
+
+/// The Arabic size of the plain text a swipe opens from the reader: larger
+/// by default, and its own, so the cards keep theirs.
+const defaultReaderFlowFontSize = 40.0;
+const minReaderFlowFontSize = 24.0;
+const maxReaderFlowFontSize = 72.0;
 const minReaderLineHeight = 1.5;
 const maxReaderLineHeight = 2.4;
 const defaultReaderAyahSpacing = 10.0;
@@ -45,6 +51,7 @@ class AppPreferences {
     this.readerLineHeight = defaultReaderLineHeight,
     this.readerAyahSpacing = defaultReaderAyahSpacing,
     this.readerFocusMode = false,
+    this.readerFlowFontSize = defaultReaderFlowFontSize,
     this.readerHaptics = true,
     this.duaShowTransliteration = true,
     this.duaShowTranslation = true,
@@ -76,6 +83,7 @@ class AppPreferences {
       readerLineHeight = defaultReaderLineHeight,
       readerAyahSpacing = defaultReaderAyahSpacing,
       readerFocusMode = false,
+      readerFlowFontSize = defaultReaderFlowFontSize,
       readerHaptics = true,
       duaShowTransliteration = true,
       duaShowTranslation = true,
@@ -105,6 +113,7 @@ class AppPreferences {
   final double readerLineHeight;
   final double readerAyahSpacing;
   final bool readerFocusMode;
+  final double readerFlowFontSize;
   final bool readerHaptics;
 
   /// What du'a cards show besides the Arabic, which they always show.
@@ -147,6 +156,7 @@ class AppPreferences {
     double? readerLineHeight,
     double? readerAyahSpacing,
     bool? readerFocusMode,
+    double? readerFlowFontSize,
     bool? readerHaptics,
     bool? duaShowTransliteration,
     bool? duaShowTranslation,
@@ -181,6 +191,7 @@ class AppPreferences {
       readerLineHeight: readerLineHeight ?? this.readerLineHeight,
       readerAyahSpacing: readerAyahSpacing ?? this.readerAyahSpacing,
       readerFocusMode: readerFocusMode ?? this.readerFocusMode,
+      readerFlowFontSize: readerFlowFontSize ?? this.readerFlowFontSize,
       readerHaptics: readerHaptics ?? this.readerHaptics,
       duaShowTransliteration:
           duaShowTransliteration ?? this.duaShowTransliteration,
@@ -289,6 +300,12 @@ class PreferencesStore {
         maxReaderAyahSpacing,
       ),
       readerFocusMode: _preferences.getBool('reader_focus_mode') ?? false,
+      readerFlowFontSize: _boundedDouble(
+        'reader_flow_font_size',
+        defaultReaderFlowFontSize,
+        minReaderFlowFontSize,
+        maxReaderFlowFontSize,
+      ),
       readerHaptics: _preferences.getBool('reader_haptics') ?? true,
       duaShowTransliteration:
           _preferences.getBool('dua_show_transliteration') ?? true,
@@ -359,6 +376,7 @@ class PreferencesStore {
       _preferences.setDouble('reader_line_height', value.readerLineHeight),
       _preferences.setDouble('reader_ayah_spacing', value.readerAyahSpacing),
       _preferences.setBool('reader_focus_mode', value.readerFocusMode),
+      _preferences.setDouble('reader_flow_font_size', value.readerFlowFontSize),
       _preferences.setBool('reader_haptics', value.readerHaptics),
       _preferences.setBool(
         'dua_show_transliteration',

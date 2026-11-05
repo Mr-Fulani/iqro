@@ -9038,3 +9038,261 @@ html[data-word-selecting] .word-range-bar {
 .word-range-loupe .word-range-handle {
   display: none;
 }
+
+/* A swipe across the Quran text on a phone or a tablet: the text slides with
+   the finger, and the strip it uncovers says where the swipe leads. */
+.reader-swipe-surface {
+  touch-action: pan-y pinch-zoom;
+}
+
+.reader-swipe-reveal {
+  position: fixed;
+  z-index: 40;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  background: var(--primary);
+  color: var(--text-inverse);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}
+
+.reader-swipe-reveal.is-right {
+  left: 0;
+}
+
+.reader-swipe-reveal.is-left {
+  right: 0;
+}
+
+.reader-swipe-reveal > span {
+  flex-shrink: 0;
+  width: 120px;
+}
+
+.reader-swipe-reveal-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.reader-swipe-glyph {
+  font-family: var(--font-arabic);
+  font-size: 30px;
+}
+
+/* The surah as plain Arabic text: a sheet that turns in over the text from
+   its left edge, as a page does, and turns away again. */
+.plain-text-reader {
+  position: fixed;
+  z-index: 900;
+  inset: 0;
+  perspective: 1600px;
+}
+
+.plain-text-reader .reader-swipe-reveal {
+  position: absolute;
+  z-index: 0;
+}
+
+.plain-text-sheet {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  /* Ink on paper, as on the Mushaf page. */
+  background: #fffcf7;
+  transform-origin: left center;
+  animation: plain-text-turn-in 450ms cubic-bezier(0.22, 0.78, 0.26, 1);
+}
+
+.plain-text-reader.is-leaving .plain-text-sheet {
+  animation: plain-text-turn-out 380ms ease-in forwards;
+}
+
+@keyframes plain-text-turn-in {
+  from {
+    transform: rotateY(-88deg);
+  }
+  to {
+    transform: rotateY(0);
+  }
+}
+
+@keyframes plain-text-turn-out {
+  from {
+    transform: rotateY(0);
+  }
+  to {
+    transform: rotateY(-88deg);
+  }
+}
+
+.plain-text-top {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 10px 0;
+}
+
+.plain-text-size-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: #392d20;
+  cursor: pointer;
+}
+
+.plain-text-size-button[aria-expanded="true"] {
+  background: var(--primary-subtle);
+  color: var(--primary-text);
+}
+
+.plain-text-scroll {
+  /* The words measure their place from here. */
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
+  padding: 0 max(20px, calc((100% - 820px) / 2));
+}
+
+.plain-text-body {
+  padding-bottom: 32px;
+  font-family: var(--font-arabic);
+  line-height: 2.1;
+  color: #392d20;
+}
+
+.plain-text-surah,
+.plain-text-opening {
+  margin: 0;
+  color: #9a6d22;
+  text-align: center;
+}
+
+.plain-text-surah {
+  font-size: 0.7em;
+  line-height: 1.8;
+}
+
+.plain-text-opening {
+  margin-bottom: 0.5em;
+  font-size: 0.8em;
+}
+
+.plain-text-ayah.quran-arabic-text {
+  margin: 0 0 0.9em;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: start;
+}
+
+.plain-text-ayah .ayah-end-marker {
+  color: #9a6d22;
+}
+
+.quran-word.is-word-marked {
+  border-radius: 4px;
+  background: rgba(196, 150, 71, 0.22);
+}
+
+.plain-text-place {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  margin: 0;
+  color: #6b5a43;
+  font-size: 13px;
+}
+
+.plain-text-size-backdrop {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.plain-text-size-panel {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 22px calc(22px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: var(--panel);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.16);
+}
+
+/* On a tablet the size is a panel by its button. */
+@media (min-width: 600px) and (min-height: 600px) {
+  .plain-text-size-panel {
+    left: auto;
+    bottom: auto;
+    top: calc(56px + env(safe-area-inset-top));
+    right: 16px;
+    width: 340px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+  }
+}
+
+.plain-text-size-label {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.plain-text-size-panel input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+.plain-text-size-panel .btn {
+  align-self: flex-end;
+}
+
+/* The Mushaf a swipe opened turns in over the text from its right edge. */
+.mushaf-page-turn.is-from-text {
+  transform-origin: right center;
+  animation: mushaf-page-turn-from-text 450ms cubic-bezier(0.22, 0.78, 0.26, 1);
+}
+
+@keyframes mushaf-page-turn-from-text {
+  from {
+    transform: perspective(1600px) rotateY(88deg);
+  }
+  to {
+    transform: perspective(1600px) rotateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plain-text-sheet,
+  .plain-text-reader.is-leaving .plain-text-sheet,
+  .mushaf-page-turn.is-from-text {
+    animation: none;
+  }
+}
