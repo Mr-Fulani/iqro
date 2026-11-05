@@ -1,14 +1,11 @@
 # Production-запуск
 
-Боевой сервер ещё предстоит создать; прежний staging-сервер временно удалён
-(статус со слов владельца на 13 сентября 2026 года). Состав резервных копий,
-готовые механизмы и оставшиеся задачи до запуска зафиксированы в
-[архитектуре резервного копирования и восстановления](backup-recovery-architecture.md).
-
-Если публичной среды ещё нет, сначала пройдите пошаговый [staging runbook](staging.md). Staging
-использует тот же production Compose как основу, но отдельные secrets/data, автоматический TLS,
-запрет индексации и тестовую почту. Непроверенный staging нельзя заменять прямым первым запуском
-production.
+Production работает на https://iqro.forum: один VPS, код в `/opt/quran`, стек из
+`compose.production.yaml` с TLS-надстройкой `compose.production.tls.yaml` (раздел 2.1).
+Выкладка новой версии — раздел 4. Состав резервных копий —
+[архитектура резервного копирования и восстановления](backup-recovery-architecture.md),
+команды — [backup/recovery runbook](backup-recovery.md). Уведомления о сбоях — [alerts.md](alerts.md).
+Прежний staging-сервер удалён; [staging runbook](staging.md) остаётся архивом.
 
 `compose.production.yaml` запускает отдельный production-стек: PostgreSQL, Redis, отдельный
 Redis `web-cache` для Next.js, одноразовую миграцию, Django/Gunicorn, Celery worker/beat, Next.js standalone и Nginx
@@ -22,15 +19,14 @@ stateless API/web/worker replicas за load balancer, подключает manag
 через connection pool и отдаёт managed media из object storage через CDN. Подробности:
 [архитектура расширения и масштабирования](architecture-and-scaling.md).
 
-Домен/TLS, внешний uptime/error monitoring, доставляемый on-call и offsite-хранилище резервных
-копий требуют отдельной deployment-настройки. В репозитории есть opt-in
-Prometheus/Grafana/Alertmanager baseline, private S3 offsite pipeline, full-download restore
-drill и лёгкий dead-man heartbeat, но их наличие в коде не заменяет launch evidence.
+На production настроены TLS (Caddy), offsite-бэкап PostgreSQL
+(`make production-backup-offsite`), heartbeat и уведомления в Telegram ([alerts.md](alerts.md)).
+Opt-in Prometheus/Grafana/Alertmanager baseline включается отдельно (раздел 2). Sentry
+подключён в коде, но без DSN выключен ([tech-debt.md, 1.1](tech-debt.md)).
 
 Для ограниченного Web MVP существующие staging capacity reports приняты как нижняя измеренная
 граница; дополнительные production-sized/load/soak исследования перенесены post-MVP. Это не
-разрешает массовое привлечение трафика и не снимает monitoring, offsite backup, security,
-content sign-off или rollback smoke. Перед production deploy заполните
+разрешает массовое привлечение трафика. Исторический план запуска —
 [fast-track release plan](release/web-mvp-fast-track-2026-08-25.md) и
 [sign-off package](sign-offs/README.md).
 
@@ -68,6 +64,10 @@ chmod 600 services/backend/.env.production
 - `WEB_GA_MEASUREMENT_ID` и `WEB_YANDEX_METRIKA_ID` — публичные ID счётчиков Google Analytics 4 и
   Яндекс Метрики. Они тоже встраиваются в образ web при сборке; пустые значения отключают баннер
   согласия и счётчики. Подробно — [analytics.md](analytics.md).
+- `TELEGRAM_BOT_TOKEN` и `TELEGRAM_ALERT_CHAT_ID` — уведомления админу в Telegram. Пустые
+  значения их выключают. Подробно — [alerts.md](alerts.md).
+- `QURAN_GOOGLE_WEB_CLIENT_ID` и `QURAN_GOOGLE_ANDROID_CLIENT_IDS` — вход через Google. Без
+  Web client ID кнопка не показывается. Подробно — [google-sign-in.md](google-sign-in.md).
 
 Production settings и `docker compose config` fail closed без этих значений. Credentials должны
 иметь доступ только к media bucket; их нельзя передавать web/mobile/Mini App или добавлять в URL.
@@ -168,8 +168,8 @@ API отвечает только на хосты из `DJANGO_ALLOWED_HOSTS`, �
 не с самого сервера и с `--concurrency 4`: gateway пропускает 20 запросов к API в секунду
 с одного IP, а при параллельности по умолчанию (10) часть ответов будет 429.
 
-Курс «Обучение намазу» после первой выкладки нужно импортировать и опубликовать отдельно:
-[operations.md, «Курс „Обучение намазу“»](operations.md) и [tech-debt.md, 1.5](tech-debt.md).
+Курс «Обучение намазу» опубликован. Новые версии курса импортируются и публикуются отдельно:
+[operations.md, «Курс „Обучение намазу“»](operations.md).
 
 ### 2.1. Один сервер с собственным HTTPS
 
@@ -420,7 +420,38 @@ operations-token adapter и обходит запросы с cookie/`Authorizati
 
 ## 4. Обновление и откат
 
-Перед обновлением создайте и проверьте backup:
+Выкладка выполняется на сервере в `/opt/quran`.
+
+1. Сделать offsite-бэкап базы:
+
+   ```bash
+   make production-backup-offsite PRODUCTION_COMPOSE_OVERLAY="-f compose.production.tls.yaml"
+   ```
+
+2. Получить `main` и перейти на проверенный commit только fast-forward:
+
+   ```bash
+   git fetch origin main
+   git merge --ff-only <sha>
+   ```
+
+3. Запустить `/home/deploy/redeploy.sh`. Он пересобирает и перезапускает стек. Журнал —
+   `/home/deploy/redeploy.log`; последняя строка `EXIT=<code>`, успешная выкладка — `EXIT=0`.
+4. Проверить сайт с другого компьютера, не с сервера:
+
+   ```bash
+   python3 ops/load/smoke.py --base-url https://iqro.forum --concurrency 4
+   ```
+
+   Скрипт должен напечатать `PASS`.
+
+Откат: вернуть checkout на предыдущий commit (`git checkout <предыдущий sha>`) и снова
+запустить `/home/deploy/redeploy.sh`; следующая выкладка снова идёт через
+`git merge --ff-only`. Миграции должны быть обратно совместимыми с предыдущей версией
+приложения. Если нужно вернуть данные базы, восстановление — по
+[backup/recovery runbook](backup-recovery.md).
+
+Локальная копия без offsite проверяется так:
 
 ```bash
 make production-backup
@@ -429,15 +460,8 @@ make production-backup-verify
 make production-restore-check
 ```
 
-Эти команды проверяют локальную копию. Пока offsite bucket отложен, backup всё ещё
-нужно вручную переносить на отдельный зашифрованный носитель; backup на том же диске
-не защищает от отказа диска или потери сервера.
-
-Затем обновите checkout/образы и повторите `make production-up`. Чтобы откат был
-воспроизводимым, в production задавайте неизменяемые `BACKEND_IMAGE`, `WEB_IMAGE` и
-`GATEWAY_IMAGE`, а для single-host database — также `POSTGRES_IMAGE` (version tag или
-digest). Предыдущие значения сохраняйте в журнале релиза. Миграции должны быть обратно
-совместимыми с предыдущей версией приложения.
+Backup на том же диске не защищает от отказа диска или потери сервера, поэтому перед выкладкой
+используется offsite-копия.
 
 Остановка без удаления данных:
 

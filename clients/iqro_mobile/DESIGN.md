@@ -177,7 +177,7 @@ The frontmatter records only explicit overrides. Inherited weight, line height, 
 
 ## Layout
 
-The verified operating context is an Android phone. `IqroPage` wraps content in `SafeArea(bottom: false)` and normally a vertical `SingleChildScrollView`; dragging dismisses the keyboard. Default directional insets are defined in frontmatter. Root tabs use bottom clearance of 76 logical pixels, or 148 when the player is active, through `iqroRootTabPadding`.
+The verified operating context is an Android phone; tablets use `iqroTabletShortestSide` (600) and capped content widths (`iqroLandscapeContentWidth` 640, `homeTabletContentWidth` 1100). `IqroPage` wraps content in `SafeArea(bottom: false)` and normally a vertical `SingleChildScrollView`; dragging dismisses the keyboard. Default directional insets are defined in frontmatter. Root tabs add 76 logical pixels to the bottom safe area while the mini-player is expanded, otherwise 4, through `iqroRootTabPadding`.
 
 `IqroTopBar` has a height of 64, or 72 with a subtitle. Its title and subtitle each occupy one line with ellipsis. List rows have a minimum height of 64. Buttons have a minimum size of 48 × 52, not a fixed text-clipping height.
 
@@ -229,13 +229,13 @@ The existing `Chip` for forthcoming content uses inherited Material styling. No 
 
 ### Home dashboard
 
-The implemented composition follows the agreed Home hierarchy: prayer first, continuing reading second, and the daily plan third. The feature grid follows, then a shared utilities card and an optional guest banner. These changes compose the incumbent theme rather than replacing its palette or shapes.
+The implemented composition follows the agreed Home hierarchy: prayer first, continuing reading second, and the daily plan third. The feature grid follows, then a shared utilities card and an optional guest banner. `AnnouncementBubbleLayer` wraps the screen and shows the announcement bubble. These changes compose the incumbent theme rather than replacing its palette or shapes.
 
 - **Prayer:** `HomePrayerCard` uses `ink` with an `inkSoft` border, gold mosque/time accents, white summary text, and a reminder action. The action uses pale emerald (`dark-primary`) in both themes for contrast against the deep panel. The next prayer time uses tabular figures and explicit left-to-right numeric direction. Loading and unavailable schedules display honest placeholders. The reminder control has a 48 × 48 minimum target.
 - **Continue reading:** `HomeContinueReadingCard` uses the normal surface, a primary book icon, `titleLarge` surah name, reading position, and a filled Read action. Its dark-theme button is warm white (`#FFFCF5`) with ink content; light mode keeps the standard primary button. A separated compact bookmark row has a minimum height of 48. Missing data disables reading until available; errors expose Retry.
 - **Daily plan:** `HomePlanCard` is a compact surface card showing the real achieved/target amount and unit. Its progress bar is 6 logical pixels high with a local radius of 4. Labels can wrap. Completion is shown only when a loaded, non-error goal has a positive target and is achieved; loading and error states remain distinct.
 - **Features:** reading after prayer, memorization, audio, and dua use `HomeFeatureCard` in the shared action grid. Each card has a 14 inset, primary icon, flexible title and short secondary text, and a chevron or active audio control. Their data and actions come from the existing app state and routes.
-- **Utilities:** favorites, Hijri calendar, reminders, and downloads share a divided card. `HomeUtilityRow` uses a minimum height of 72, no content inset, and a primary icon; the parent supplies horizontal padding. Its compact bookmark variant uses 48. Calendar details and other secondary descriptions can truncate after two lines without clipping the title.
+- **Utilities:** favorites, Hijri calendar, and downloads share a divided card. `HomeUtilityRow` uses a minimum height of 72, no content inset, and a primary icon; the parent supplies horizontal padding. Its compact bookmark variant uses 48. Calendar details and other secondary descriptions can truncate after two lines without clipping the title.
 
 ### More tools
 
@@ -251,6 +251,6 @@ The existing sand calendar/prayer cards, lavender memorization card, primary-con
 
 ### Don't:
 - Don't apply the card radius globally to buttons, fields, sheets, or dialogs.
-- Don't infer a custom body font, global shadow scale, or tablet breakpoint that the implementation does not define.
+- Don't infer a custom body font or global shadow scale that the implementation does not define; use the existing tablet constants instead of new breakpoints.
 - Don't encode one Home composition as a system-wide rule for every screen.
 - Don't restore fixed-height action-grid rows that clip translated tool titles or large text.

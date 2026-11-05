@@ -11,7 +11,8 @@
    mobile `flutter pub get --enforce-lockfile`. Обновление версий — отдельное осознанное изменение.
 6. Запускайте проверки затронутых компонентов: `make backend-check backend-test`,
    web `npm run lint && npm run typecheck && npm run test:e2e`, `make mobile-check`.
-   Общие API/миграции проверяйте также в клиентах. CI проверяет backend с PostgreSQL.
+   Общие API/миграции проверяйте также в клиентах. GitHub CI проверяет backend с PostgreSQL,
+   web, mobile и production Compose (`.github/workflows`).
 
 После получения изменений `make up` применяет новые миграции и автоматически
 подготавливает недостающие данные. Повторный запуск проверяет готовность и сохраняет

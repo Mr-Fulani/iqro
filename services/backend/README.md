@@ -88,6 +88,12 @@ optimistic concurrency, минимизированные tombstones, retention �
 - `dua` — каталог ду‘а ([docs/dua](../../docs/dua));
 - `salah` — курс «Обучение намазу» ([спецификация](../../docs/salah/learning-spec.md),
   [порядок выпуска](../../docs/operations.md));
+- `tajweed` — курс таджвида и цветовая разметка таджвида в тексте ([docs/tajweed](../../docs/tajweed));
+- `courses`, `course_feedback` — тематические курсы с видео и озвучками, оценки и замечания
+  по курсам ([docs/courses](../../docs/courses/README.md));
+- `announcements` — новости и объявления для сайта и приложения
+  ([docs/announcements](../../docs/announcements));
+- `alerts` — уведомления админу в Telegram ([docs/alerts.md](../../docs/alerts.md));
 - `prayer_times`, `reminders`, `calendar` — время намаза, напоминания, календарь Хиджры;
 - `reading`, `memorization` — позиции, закладки, заметки, план и заучивание;
 - `accounts`, `feedback`, `share_referrals`, `website`, `core` — аккаунты, обратная связь,

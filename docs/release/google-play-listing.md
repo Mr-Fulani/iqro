@@ -47,7 +47,7 @@ IQRO — спокойное место для ежедневного чтени�
 
 ЯЗЫКИ И ДАННЫЕ
 • Интерфейс на русском, английском, арабском и турецком
-• Всё работает без регистрации; вход по коду из письма нужен только для синхронизации между устройствами
+• Всё работает без регистрации; вход по коду из письма или «Продолжить с Google» нужен только для синхронизации между устройствами
 • Без рекламы. Статистика использования — только с вашего согласия
 
 Тексты и записи публикуются с указанием источников и лицензий: https://iqro.forum/ru/sources
@@ -93,7 +93,7 @@ DU'A
 
 LANGUAGES AND DATA
 • Interface in English, Russian, Arabic and Turkish
-• Everything works without an account; sign-in by email code is only for syncing devices
+• Everything works without an account; sign-in by email code or "Continue with Google" is only for syncing devices
 • No ads. Usage statistics only with your consent
 
 Texts and recordings are published with their sources and licenses: https://iqro.forum/en/sources
@@ -139,7 +139,7 @@ IQRO مكان هادئ لقراءة القرآن ودراسته كل يوم.
 
 اللغات والبيانات
 • الواجهة بالعربية والإنجليزية والروسية والتركية
-• كل شيء يعمل دون حساب؛ الدخول برمز البريد للمزامنة بين الأجهزة فقط
+• كل شيء يعمل دون حساب؛ الدخول برمز البريد أو «المتابعة باستخدام Google» للمزامنة بين الأجهزة فقط
 • بلا إعلانات. إحصاءات الاستخدام بموافقتك فقط
 
 تُنشر النصوص والتلاوات مع مصادرها وتراخيصها: https://iqro.forum/ar/sources
@@ -185,12 +185,14 @@ DUALAR
 
 DİLLER VE VERİLER
 • Türkçe, İngilizce, Rusça ve Arapça arayüz
-• Her şey hesap açmadan çalışır; e-posta koduyla giriş yalnızca cihazlar arası eşitleme içindir
+• Her şey hesap açmadan çalışır; e-posta koduyla veya "Google ile devam et" ile giriş yalnızca cihazlar arası eşitleme içindir
 • Reklam yok. Kullanım istatistikleri yalnızca onayınızla
 
 Metinler ve kayıtlar kaynakları ve lisanslarıyla yayınlanır: https://iqro.forum/tr/sources
 
 ## «Что нового» для версии 1.0.0
+
+Текущая версия — 1.0.5: [notes-1.0.5.md](notes-1.0.5.md). Ниже — тексты первого выпуска.
 
 - ru: Первый выпуск IQRO для Android.
 - en: The first release of IQRO for Android.

@@ -1,31 +1,48 @@
 # План и roadmap Quran Platform
 
-> **Состояние на 19.10.2026** (main `430ca8a`). Документ ниже — план на 4 сентября, его разделы
-> не переписывались. После этого сделано: Flutter-клиент для Android и iOS (читалка, 13 макетов
-> Мусхафа Quran Foundation, офлайн-пакеты Мусхафа, аудио и картинок курса, фоновое аудио,
-> локальный расчёт намаза, виджеты), календарь Хиджры, заметки и выделения аятов (в
-> приложении), ду‘а «Хисн аль-Муслим» и коранические, базовое заучивание, записи «только для
-> прослушивания» (PR #39), фоны плеера (PR #35, #38), курс «Обучение намазу» с особыми
-> молитвами (PR #41), карточка «Имена Аллаха — скоро» (PR #43), подключение Sentry без DSN
-> (PR #15). Что осталось до production и что расходится между приложением и сайтом —
-> [tech-debt.md](tech-debt.md). Из этого плана по-прежнему открыты: Telegram Mini App
-> (или решение от него отказаться), OpenAPI-гейт и генерация SDK, editorial approvals и
-> вложения в обратной связи, security review, on-call, PITR, soak и canary, колоды и SRS в
-> заучивании, `library`, поиск и хадисы, OAuth-провайдеры, MFA и роли в админке, реклама и
-> пожертвования.
+> **Состояние на 06.11.2026** (main `7885128c`, после PR #214). Документ ниже — план на
+> 4 сентября; отмеченные ниже пункты обновлены, остальные разделы не переписывались.
+>
+> До 19.10 сделано: Flutter-клиент для Android и iOS (читалка, 13 макетов Мусхафа Quran
+> Foundation, офлайн-пакеты Мусхафа, аудио и картинок курса, фоновое аудио, локальный расчёт
+> намаза, виджеты), календарь Хиджры, заметки и выделения аятов, ду‘а «Хисн аль-Муслим» и
+> коранические, базовое заучивание, записи «только для прослушивания» (PR #39), фоны плеера
+> (PR #35, #38), курс «Обучение намазу» с особыми молитвами (PR #41), карточка «Имена Аллаха —
+> скоро» (PR #43), подключение Sentry без DSN (PR #15).
+>
+> После 19.10 сделано: production на https://iqro.forum с собственным HTTPS (PR #21, #63),
+> offsite-бэкап PostgreSQL (`make production-backup-offsite`), уведомления админу в Telegram
+> (PR #115, [alerts.md](alerts.md)), объявления и новости (PR #80, #83, #86, #88, #93, #94, #97), курс таджвида
+> (PR #77, #89, #98, #99), тематические курсы с видео и озвучками (PR #107–#113), отзывы о
+> курсах (PR #114, #116, #118), статистика GA4/Яндекс Метрика/Firebase после согласия
+> (PR #125, #126, [analytics.md](analytics.md)), вход через Google (PR #142,
+> [google-sign-in.md](google-sign-in.md)), список заучивания, этап 1 (PR #146), каталог
+> MP3Quran (PR #163, #165–#167), портреты и биографии чтецов (PR #169, #173), обновления
+> внутри приложения (PR #156). Android-приложение 1.0.5 (сборка 6, PR #213) — во внутреннем
+> тестировании Google Play и на проверке для закрытого тестирования.
+>
+> Что расходится между приложением и сайтом и что ещё не сделано — [tech-debt.md](tech-debt.md).
+> Из этого плана по-прежнему открыты: Telegram Mini App (или решение от него отказаться),
+> OpenAPI-гейт и генерация SDK, вложения в обратной связи, security review, on-call, PITR, soak
+> и canary, колоды и SRS в заучивании, `library`, поиск и хадисы, «Викторина», MFA и роли в
+> админке, реклама и пожертвования.
 
 Дата обновления: 4 сентября 2026 года
 
-Roadmap объединяет развитие клиентов, функциональных доменов и производительности. Текущий
-статус реализации по P0 остаётся в [MVP gap audit](mvp-gap-audit.md), а архитектурные правила —
+Roadmap объединяет развитие клиентов, функциональных доменов и производительности. Статус
+реализации по P0 на 29.08.2026 — в [MVP gap audit](mvp-gap-audit.md), а архитектурные правила —
 в [документе масштабирования](architecture-and-scaling.md). Простая сводка всех фактических
 capacity-прогонов, оценка стартового DAU и пороги апгрейда собраны в
 [итоговом отчёте CX23](capacity/staging-cx23-executive-summary-2026-08-25.md).
 
-## Текущий release verdict для web
+## Release verdict для web на 4 сентября
+
+С октября 2026 года сайт работает в production на https://iqro.forum. Ниже — вердикт на
+4 сентября.
 
 Функциональный web-клиент готов для закрытой beta/staging-проверки: production build,
-ESLint, TypeScript и 80 Playwright-сценариев доступны в одном regression-наборе для dev server
+ESLint, TypeScript и Playwright-сценарии (80 на 4 сентября, более 300 на 06.11.2026) доступны
+в одном regression-наборе для dev server
 и standalone
 production bundle. Это ещё не означает готовность
 публичного индексируемого production-MVP:
@@ -106,8 +123,9 @@ flowchart LR
   R2 credential/CORS настройка, preflight, backup/observability Make-команды и пошаговый
   [runbook](staging.md). Отдельный budget overlay поддерживает функциональный staging на
   2 vCPU/4 GiB. Бюджетный Hetzner CX23, `staging.iqro.forum`, TLS, отдельный R2 bucket,
-  backup/restore drill и pre-publication capacity evidence фактически проверены; production
-  media domain, offsite backup и production-sized observability/capacity gates остаются открыты.
+  backup/restore drill и pre-publication capacity evidence фактически проверены. Production
+  media domain `media.iqro.forum` и offsite backup работают с октября 2026 года;
+  production-sized observability/capacity gates остаются открыты.
 - [x] Завершить staging media edge: bucket `iqro-staging-media`, scoped token, точный CORS,
   делегирование `iqro.forum`, custom domain `media.staging.iqro.forum` и edge TLS активны.
   Бесплатные hostname-scoped cache/security header rules включены, staging env переключён с
@@ -134,9 +152,10 @@ flowchart LR
   fail-closed скрыт. [Audio evidence](capacity/staging-qf-real-audio-2026-08-25.md),
   [license decision](sign-offs/quran-foundation-audio-license-decision-2026-08-25.md),
   [full-catalog evidence](capacity/quran-foundation-production-catalog-2026-08-25.md).
-- [ ] Provision production R2 bucket/custom domain/CORS, загрузить реальные versioned assets,
-  приложить CDN contract reports и провести restore/inventory drill; покупать media-серверы
-  заранее не требуется.
+- [x] Provision production R2 bucket/custom domain: `media.iqro.forum` отдаёт портреты чтецов,
+  обложки, картинки и видео курсов (PR #109–#113, #169).
+- [ ] Приложить CDN contract reports production media и провести restore/inventory drill;
+  покупать media-серверы заранее не требуется.
 - [x] Разделить логический `AudioTrack`/таймлайн и физические `AudioRendition` вариантов
   economy/standard/high; backfill существующих assets обратим, API сохраняет совместимый
   default `asset` и отдаёт типизированный список renditions.
@@ -156,8 +175,10 @@ flowchart LR
   token-safe Redis lease и прекращает работу при его потере.
 - [ ] Добавить API/DB/Redis/Celery/CDN/egress dashboards и budget alerts: versioned opt-in
   Prometheus/Grafana/Alertmanager baseline, bounded multi-worker API metrics, exporters, S0
-  rules и budget rendering готовы; остаются provider CDN/billing/QoE ingestion, внешний uptime,
-  production alert routing и доказательство синтетической доставки.
+  rules и budget rendering готовы. Уведомления админу в Telegram (ошибки backend/worker/beat,
+  молчание beat, бэкап и доступность сайта, PR #115) и внешняя проверка UptimeRobot описаны в
+  [alerts.md](alerts.md). Остаются provider CDN/billing/QoE ingestion и Prometheus dashboards
+  в production.
 - [ ] **Post-MVP:** расширить load harness: staged public web/Quran/audio API read workload уже добавлен;
   bounded audio `HEAD`/startup/seek Range harness пишет TTFB/throughput/cache/bytes evidence,
   fail-closed stateful harness покрывает guest auth/token refresh/reading sync push-pull;
@@ -250,20 +271,23 @@ flowchart LR
 
 - [x] Развернуть staging на публичном домене с TLS, redirect HTTP→HTTPS и проверенной
   proxy-конфигурацией: бюджетный CX23, `staging.iqro.forum`, Cloudflare R2 custom media domain,
-  backup/restore и runtime evidence готовы. Отдельный production deployment остаётся release gate.
+  backup/restore и runtime evidence готовы. Production работает на https://iqro.forum
+  (собственный HTTPS через Caddy, PR #63); порядок выкладки — [production.md](production.md).
 - [x] Добавить defense-in-depth security headers в Next.js и gateway: CSP без `unsafe-eval`
   в production, clickjacking/MIME/referrer/permissions policy и HSTS; отдельный Telegram Mini
   App origin должен получить собственный `frame-ancestors`, а не ослаблять web policy.
-- [ ] Подключить внешний uptime/error monitoring, dashboards/alerts и offsite backup с
-  проверенным restore. Код offsite upload/full-download/restore, отдельный strict preflight,
-  dead-man heartbeat и systemd timers готовы; внешний bucket/token, monitor URL, timer activation
-  и доставленный тестовый alert остаются deployment evidence.
+- [x] Подключить offsite backup и внешнюю проверку доступности: production копирует базу
+  командой `make production-backup-offsite`, heartbeat и ошибки приходят в Telegram (PR #115),
+  сайт и API извне проверяет UptimeRobot ([alerts.md](alerts.md)).
+- [ ] Включить error monitoring Sentry: код подключён (PR #15), DSN не задан
+  ([tech-debt.md, 1.1](tech-debt.md)).
 - [x] Добавить SEO/metadata/robots/sitemap regression tests.
 - [x] Добавить блокирующие Lighthouse budgets для landing RU/EN/AR/TR и опубликованной суры
   RU/AR, включая проверку `lang`/`dir`, RTL, performance/a11y/best-practices/SEO, Web Vitals,
   transfer size и request count на standalone production build.
 - [ ] Browser E2E против standalone production build уже является блокирующим CI-слоем и
-  использует те же 80 сценариев, что быстрый dev/mock слой. Реальный staging smoke подтвердил
+  использует те же сценарии, что быстрый dev/mock слой (80 на 4 сентября, более 300 на
+  06.11.2026). Реальный staging smoke подтвердил
   RU/EN/AR/TR locale metadata, Quran shell, EN/TR audio/prayer/login/404, canonical,
   RTL/noindex и sitemap без mock contracts. `madani-hafs@1.0.2` временно активирован только на
   noindex staging; content-backed SSR/API и глубокая сура отвечают `200`. Полный browser journey
@@ -317,8 +341,10 @@ flowchart LR
 - [x] Подготовить единый Web MVP sign-off package: границы релиза, готовый запрос в
   Quran.Foundation, per-reciter religious/editorial review и product release decision.
   [Пакет и порядок заполнения](sign-offs/README.md).
-- [ ] После deployment проверить Search Console/Webmaster Tools, отправку sitemap, canonical,
-  hreflang, отсутствие индексирования приватных маршрутов и реальные Core Web Vitals.
+- [x] Подключить Google Search Console и Яндекс Вебмастер к iqro.forum (PR #125,
+  [analytics.md](analytics.md)).
+- [ ] Проверить в них отправку sitemap, canonical, hreflang, отсутствие индексирования
+  приватных маршрутов и реальные Core Web Vitals.
 
 Критерий выхода: ключевые публичные страницы отдают содержательный HTML без JavaScript,
 имеют стабильные canonical/locale URL и проходят SEO regression; приватные маршруты исключены
@@ -465,8 +491,10 @@ client workload mix.
   невидимые Quran/Plan/Audio/More не инициируют свои provider/API-нагрузки до первого открытия,
   а уже посещённые вкладки сохраняют состояние при последующих переключениях.
 - [ ] Security/privacy review, SAST/SCA/container scan и threat-model update.
-- [ ] Dashboards, alerts, on-call ownership и runbooks DB/Redis/CDN/provider failure.
-- [ ] Offsite backup, PITR и измеренный restore drill.
+- [ ] Dashboards, on-call ownership и runbooks DB/Redis/CDN/provider failure. Alerts в
+  Telegram уже работают (PR #115, [alerts.md](alerts.md)).
+- [ ] PITR и измеренный restore drill. Offsite backup уже работает
+  (`make production-backup-offsite`).
 - [ ] Capacity/soak tests для реального client workload mix.
 - [ ] Accessibility, RTL, browser/device/Telegram matrix.
 - [ ] License, product и религиозно-редакционный sign-off.
@@ -517,12 +545,14 @@ matrix.
 - [ ] Добавить поиск с domain filters, locale и versioned index.
 - [ ] Подключать хадисы, книги и образовательные подборки отдельными доменами по тому же
   extension contract.
-- [ ] Видео вводить только после CDN/rights/cost spike.
-- [ ] Тематические курсы с видео и конспектами и отдельный раздел «Викторина»
-  ([docs/courses](courses/README.md)). Решение владельца 24.10.2026: делать до Рамадана 1448,
-  хотя в спецификации викторины — P2, а видео — после проверки CDN и стоимости. Проверка стоимости
-  и нагрузки — в [docs/courses/plan.md](courses/plan.md), раздел 5: видео хранится в R2 и отдаётся
-  через media.iqro.forum, сервер не перекодирует.
+- [x] Видео вводить только после CDN/rights/cost spike: проверка стоимости и нагрузки — в
+  [docs/courses/plan.md](courses/plan.md), раздел 5; видео хранится в R2 и отдаётся через
+  media.iqro.forum, сервер не перекодирует.
+- [x] Тематические курсы с видео, озвучками по языкам и конспектами
+  ([docs/courses](courses/README.md), PR #107–#113, отзывы о курсах — PR #114, #116, #118).
+  Решение владельца 24.10.2026: делать до Рамадана 1448.
+- [ ] Отдельный раздел «Викторина»: ещё не сделан, план — в [docs/courses](courses/README.md).
+  В спецификации викторина — P2.
 
 Критерий выхода: новый тип контента можно добавить без миграции Quran/audio таблиц и без
 breaking change существующих клиентов.
