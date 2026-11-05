@@ -582,15 +582,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       });
       return;
     }
-    if (!_contentLoading && !_contentRestoreScheduled && !_readerWasDragged) {
+    if (!_contentLoading && !_contentRestoreScheduled && !_readerLeftPlace) {
       _contentRestoreScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !_readerWasDragged) {
+        if (mounted && !_readerLeftPlace) {
           unawaited(_restorePosition(items, scope));
         }
       });
     }
   }
+
+  /// The reader has taken the list elsewhere: dragged it, or selects words,
+  /// which scrolls it under the finger. Aligning the opened ayah again after
+  /// the translations load would pull the list from under them.
+  bool get _readerLeftPlace => _readerWasDragged || _words.range != null;
 
   Future<void> _restorePosition(
     List<QuranAyah> items,

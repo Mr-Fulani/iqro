@@ -1717,6 +1717,19 @@ test.describe("text opened from the Mushaf", () => {
     await expect.poll(async () => Math.round((await target.boundingBox())!.y - before)).toBe(0);
   });
 
+  test("a scroll the hold did not make lets go of the ayah", async ({ page }) => {
+    const target = await openTextAt(page);
+    // The page itself scrolls elsewhere — to a word for a selection, to an
+    // ayah that starts playing — or the reader drags the scrollbar.
+    // Measured in the same task as the scroll, before any frame can undo it.
+    const scrolled = await target.evaluate((element) => {
+      window.scrollBy({ top: -300, behavior: "instant" });
+      return element.getBoundingClientRect().top;
+    });
+    await page.waitForTimeout(300);
+    expect(Math.abs(await target.evaluate((element) => element.getBoundingClientRect().top) - scrolled)).toBeLessThan(2);
+  });
+
   test("a reader who scrolls is left where they scrolled, not pulled back", async ({ page }) => {
     const target = await openTextAt(page);
     const anchor = (await target.boundingBox())!.y;
