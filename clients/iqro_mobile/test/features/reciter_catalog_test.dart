@@ -20,6 +20,46 @@ void main() {
     expect(search.find('афаси'), isEmpty);
   });
 
+  test('the Mushaf list goes by name, one reciter\'s styles in order, and '
+      'finds by any of the names', () {
+    Reciter named(String id, String ru, String en) =>
+        Reciter.fromJson(<String, dynamic>{
+          'id': id,
+          'slug': en.toLowerCase().replaceAll(' ', '-'),
+          'name_ar': '',
+          'name_en': en,
+          'name_ru': ru,
+          'name_tr': '',
+        });
+    final husary = named('h', 'Махмуд аль-Хусари', 'Mahmoud Al-Husary');
+    final basit = named('b', 'Абдуль-Басит', 'Abdul Basit');
+    final yasin = named('y', 'Ёсин', 'Yasin');
+    final list = <Recitation>[
+      _timed('h-muallim', 'muallim', husary),
+      _timed('b-mujawwad', 'mujawwad', basit),
+      _timed('y', 'murattal', yasin),
+      _timed('b-murattal', 'murattal', basit),
+    ];
+
+    expect(recitationsByName(list, 'ru').map((item) => item.code), <String>[
+      'b-murattal',
+      'b-mujawwad',
+      'y',
+      'h-muallim',
+    ]);
+    expect(recitationsByName(list, 'en').map((item) => item.code), <String>[
+      'b-murattal',
+      'b-mujawwad',
+      'h-muallim',
+      'y',
+    ]);
+    expect(findRecitations(list, 'husary').map((item) => item.code), <String>[
+      'h-muallim',
+    ]);
+    expect(findRecitations(list, 'басит'), hasLength(2));
+    expect(findRecitations(list, ' '), list);
+  });
+
   test('the search forgives Arabic letter forms', () {
     final person = _person('أبو بكر الشاطري', 'Abu Bakr', 'Абу Бакр');
     final hamza = _person('حمزة', 'Hamza', 'Хамза');

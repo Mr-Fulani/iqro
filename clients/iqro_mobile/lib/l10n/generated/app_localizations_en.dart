@@ -667,6 +667,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nowPlaying => 'Now playing';
 
   @override
+  String get mushafReciter => 'Mushaf reciter';
+
+  @override
   String get play => 'Play';
 
   @override

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design_system/iqro_icon.dart';
 import '../../app/providers.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../core/audio/playback_speed.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/local_database.dart';
@@ -103,12 +104,25 @@ class IqroMiniPlayer extends ConsumerStatefulWidget {
   const IqroMiniPlayer({
     this.allowCollapse = true,
     this.mushafControls = false,
+    this.onReciterTap,
+    this.onRepeatTap,
+    this.onSwipeAway,
     super.key,
   });
 
   /// Mushaf has its own reader controls, so its inline player stays expanded.
   final bool allowCollapse;
+
+  /// The Mushaf's player reads its page, so no surah skipping. The portrait
+  /// opens the reciters ([onReciterTap]); under the title are the speed and
+  /// the ayah repeat ([onRepeatTap]).
   final bool mushafControls;
+  final VoidCallback? onReciterTap;
+  final VoidCallback? onRepeatTap;
+
+  /// Where the bar does not fold itself, a swipe hands it to the screen, as
+  /// the Mushaf does with its round play button.
+  final VoidCallback? onSwipeAway;
 
   @override
   ConsumerState<IqroMiniPlayer> createState() => _IqroMiniPlayerState();
@@ -202,10 +216,26 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
               .where((item) => item.number == track.surah)
               .firstOrNull
               ?.nameFor(locale);
+    // The ayah of the Mushaf's page that sounds: "Аят 2:10 · Аль-Бакара".
+    final mushaf = widget.mushafControls
+        ? ref.watch(
+            audioControllerProvider.select(
+              (value) => (
+                ayah: value.displayedAyah,
+                speed: value.speed,
+                repeat: value.repeatEnabled,
+              ),
+            ),
+          )
+        : null;
+    final mushafAyah = mushaf?.ayah;
     final title =
         standalone?.title ??
         (track == null
             ? context.l10n.audioTitle
+            : mushafAyah != null
+            ? '${context.l10n.ayah} ${track.surah}:$mushafAyah · '
+                  '${catalogName ?? player.surahName}'
             : surahDisplayTitle(
                 track.surah,
                 catalogName ?? player.surahName,
@@ -227,22 +257,28 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
           collapsed: collapsed,
           nudged:
               widget.allowCollapse && ref.watch(miniPlayerHintNudgeProvider),
-          onCollapse: widget.allowCollapse ? () => setCollapsed(true) : null,
-          onSwipe: () {
-            setCollapsed(true);
-            // Once folded by hand, the bar stops showing how.
-            try {
-              unawaited(
-                ref
-                    .read(appPreferencesProvider.notifier)
-                    .markPlayerHintLearned(),
-              );
-            } on Object {
-              // A missing preference store only means the hint may show again.
-            }
-          },
+          onCollapse: widget.allowCollapse
+              ? () => setCollapsed(true)
+              : widget.onSwipeAway,
+          onSwipe:
+              widget.onSwipeAway ??
+              () {
+                setCollapsed(true);
+                // Once folded by hand, the bar stops showing how.
+                try {
+                  unawaited(
+                    ref
+                        .read(appPreferencesProvider.notifier)
+                        .markPlayerHintLearned(),
+                  );
+                } on Object {
+                  // A missing preference store only means the hint may show again.
+                }
+              },
           onExpand: () => setCollapsed(false),
           playing: player.playing,
+          // The reciter's button makes the Mushaf's bar taller than 66 dp.
+          fitContent: widget.mushafControls,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(17),
             child: DecoratedBox(
@@ -253,13 +289,21 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
               ),
               child: ListTile(
                 minTileHeight: 66,
+                // The speed and repeat buttons make a taller second line.
+                isThreeLine: widget.mushafControls,
                 contentPadding: const EdgeInsetsDirectional.fromSTEB(
                   8,
                   0,
                   6,
                   0,
                 ),
-                leading: artwork,
+                leading: widget.mushafControls && standalone == null
+                    ? _ReciterPortraitButton(
+                        name: subtitle,
+                        onPressed: widget.onReciterTap,
+                        child: artwork,
+                      )
+                    : artwork,
                 title: Text(
                   title,
                   maxLines: 1,
@@ -269,32 +313,82 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                subtitle: Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white.withValues(alpha: .68)),
-                ),
+                subtitle: mushaf != null && standalone == null
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: <Widget>[
+                            _MushafChip(
+                              key: const ValueKey('mushaf-player-speed'),
+                              tooltip: context.l10n.speed,
+                              onPressed: player.track == null
+                                  ? null
+                                  : () => unawaited(
+                                      controller.setSpeed(
+                                        nextPlayerSpeed(mushaf.speed),
+                                      ),
+                                    ),
+                              child: Text(
+                                '${playbackSpeedLabel(mushaf.speed)}×',
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            _MushafChip(
+                              key: const ValueKey('mushaf-player-repeat'),
+                              tooltip: mushaf.repeat
+                                  ? context.l10n.repeatOn
+                                  : context.l10n.repeatSelectedAyah,
+                              selected: mushaf.repeat,
+                              onPressed: widget.onRepeatTap,
+                              child: const Icon(
+                                Icons.repeat_one_rounded,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: .68),
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .68),
+                        ),
+                      ),
                 trailing: SizedBox(
-                  width: 144,
+                  width: widget.mushafControls ? 48 : 144,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: <Widget>[
-                      _MiniPlayerControl(
-                        tooltip: context.l10n.previousSurah,
-                        icon: Icons.skip_previous_rounded,
-                        onPressed:
-                            controlsEnabled &&
-                                adjacentQueueSurah(
-                                      held,
-                                      currentSurah,
-                                      -1,
-                                      navigationMode,
-                                    ) !=
-                                    null
-                            ? () => _changeSurah(-1)
-                            : null,
-                      ),
+                      if (!widget.mushafControls)
+                        _MiniPlayerControl(
+                          tooltip: context.l10n.previousSurah,
+                          icon: Icons.skip_previous_rounded,
+                          onPressed:
+                              controlsEnabled &&
+                                  adjacentQueueSurah(
+                                        held,
+                                        currentSurah,
+                                        -1,
+                                        navigationMode,
+                                      ) !=
+                                      null
+                              ? () => _changeSurah(-1)
+                              : null,
+                        ),
                       _MiniPlayerControl(
                         controlKey: const ValueKey('mini-player-play-toggle'),
                         tooltip: player.playing
@@ -313,21 +407,22 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                                   : _toggleListening
                             : null,
                       ),
-                      _MiniPlayerControl(
-                        tooltip: context.l10n.nextSurah,
-                        icon: Icons.skip_next_rounded,
-                        onPressed:
-                            controlsEnabled &&
-                                adjacentQueueSurah(
-                                      held,
-                                      currentSurah,
-                                      1,
-                                      navigationMode,
-                                    ) !=
-                                    null
-                            ? () => _changeSurah(1)
-                            : null,
-                      ),
+                      if (!widget.mushafControls)
+                        _MiniPlayerControl(
+                          tooltip: context.l10n.nextSurah,
+                          icon: Icons.skip_next_rounded,
+                          onPressed:
+                              controlsEnabled &&
+                                  adjacentQueueSurah(
+                                        held,
+                                        currentSurah,
+                                        1,
+                                        navigationMode,
+                                      ) !=
+                                      null
+                              ? () => _changeSurah(1)
+                              : null,
+                        ),
                     ],
                   ),
                 ),
@@ -497,6 +592,120 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
   }
 }
 
+/// The Mushaf player's portrait opens its reciters; a small arrow on it
+/// says so.
+class _ReciterPortraitButton extends StatelessWidget {
+  const _ReciterPortraitButton({
+    required this.name,
+    required this.onPressed,
+    required this.child,
+  });
+
+  final String name;
+  final VoidCallback? onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '${context.l10n.chooseReciter}: $name',
+      excludeSemantics: true,
+      child: Tooltip(
+        message: context.l10n.chooseReciter,
+        child: InkResponse(
+          key: const ValueKey('mushaf-player-reciter'),
+          onTap: onPressed,
+          radius: 28,
+          child: SizedBox.square(
+            dimension: 48,
+            child: Stack(
+              alignment: Alignment.center,
+              children: <Widget>[
+                child,
+                const PositionedDirectional(
+                  end: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      color: Color(0xFF08241D),
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The Mushaf player's speed and repeat: small round-ended buttons.
+class _MushafChip extends StatelessWidget {
+  const _MushafChip({
+    required this.tooltip,
+    required this.onPressed,
+    required this.child,
+    this.selected = false,
+    super.key,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final Widget child;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? const Color(0xFF08241D) : Colors.white;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        child: Material(
+          color: selected
+              ? const Color(0xFF9BDECB)
+              : Colors.white.withValues(alpha: .14),
+          shape: const StadiumBorder(),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: onPressed,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 30),
+              child: Center(
+                widthFactor: 1,
+                heightFactor: 1,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: IconTheme.merge(
+                    data: IconThemeData(color: foreground),
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MiniPlayerControl extends StatelessWidget {
   const _MiniPlayerControl({
     this.controlKey,
@@ -554,9 +763,13 @@ class _CollapsiblePlayer extends StatefulWidget {
     required this.onExpand,
     required this.playing,
     required this.child,
+    this.fitContent = false,
   });
 
   final bool collapsed;
+
+  /// A bar that never folds into the button takes the height of its content.
+  final bool fitContent;
 
   /// The fold hint slides the bar towards the corner it folds into.
   final bool nudged;
@@ -633,6 +846,7 @@ class _CollapsiblePlayerState extends State<_CollapsiblePlayer> {
                 ),
               ),
         builder: (context, progress, panel) {
+          if (widget.fitContent) return panel!;
           final width = constraints.maxWidth;
           return Align(
             alignment: AlignmentDirectional.bottomEnd,

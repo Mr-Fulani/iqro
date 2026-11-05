@@ -451,7 +451,8 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
         labelText: context.l10n.chooseReciter,
         prefixIcon: const Icon(Icons.record_voice_over_outlined),
       ),
-      items: details.recitations
+      // By name, as the Mushaf player's reciter list.
+      items: recitationsByName(details.recitations, locale)
           .map(
             (item) => DropdownMenuItem<String>(
               value: item.id,

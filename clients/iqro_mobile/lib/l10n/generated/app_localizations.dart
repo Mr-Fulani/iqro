@@ -1284,6 +1284,12 @@ abstract class AppLocalizations {
   /// **'Now playing'**
   String get nowPlaying;
 
+  /// No description provided for @mushafReciter.
+  ///
+  /// In en, this message translates to:
+  /// **'Mushaf reciter'**
+  String get mushafReciter;
+
   /// No description provided for @play.
   ///
   /// In en, this message translates to:

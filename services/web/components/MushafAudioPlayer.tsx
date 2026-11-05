@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, Recitation, SurahPlayback } from "../lib/api";
 import { reciterName } from "../lib/audio-content";
-import { reciterPortraitUrl } from "../lib/reciter-portraits";
+import { reciterAvatarUrl, reciterPortraitUrl } from "../lib/reciter-portraits";
 import { useI18n } from "../lib/i18n-context";
-import { latestRecitationsByVariant, recitationStyleLabel } from "../lib/reciter-catalog";
+import { latestRecitationsByVariant, recitationStyleLabel, recitationsByName } from "../lib/reciter-catalog";
 import { useMushafReader } from "./MushafReaderLayout";
+import { MushafReciterSheet } from "./MushafReciterSheet";
+import { mushafPageRuns, type MushafPageRun } from "../lib/mushaf-page-runs";
 import { learningRecitation, rememberReciterPreference } from "../lib/reciter-preference";
 import {
   AudioPlaybackRequest,
@@ -35,6 +38,11 @@ type MushafAudioPlayerProps = {
   onRecitationChange?: (recitationId: string) => void;
   /** The recitations the Mushaf can play, once loaded. */
   onRecitationsChange?: (recitations: Recitation[]) => void;
+  /** A surah's name, for the reader's "Аят 2:10 · Аль-Бакара". */
+  surahName?: (surah: number) => string;
+  /** The reader page's ayahs in reading order; its play button reads them. */
+  pageAyahKeys?: string[];
+  pageNumber?: number;
 };
 
 function parseAyahKey(value: string | null): { surah: number; ayah: number } | null {
@@ -57,6 +65,9 @@ export function MushafAudioPlayer({
   onSettingsChange,
   onRecitationChange,
   onRecitationsChange,
+  surahName,
+  pageAyahKeys = [],
+  pageNumber,
 }: MushafAudioPlayerProps) {
   const { locale, t } = useI18n();
   const reader = useMushafReader();
@@ -94,6 +105,26 @@ export function MushafAudioPlayer({
 
   const selectedAyah = useMemo(() => parseAyahKey(selectedAyahKey), [selectedAyahKey]);
   const selectedRecitation = recitations.find((item) => item.id === selectedRecitationId);
+  // By name, as the app's Mushaf reciter list.
+  const sortedRecitations = useMemo(() => recitationsByName(recitations, locale), [locale, recitations]);
+  const [reciterSheetOpen, setReciterSheetOpen] = useState(false);
+  const playingRef = useRef(false);
+  const activeAyahRef = useRef<string | null>(null);
+  // The ayah to play again in the new voice once its timings are ready.
+  const resumeAyahRef = useRef<string | null>(null);
+  const handlePlayingChange = useCallback((playing: boolean) => {
+    playingRef.current = playing;
+    onPlayingChange?.(playing);
+  }, [onPlayingChange]);
+  const handleActiveAyahChange = useCallback((ayahKey: string | null) => {
+    activeAyahRef.current = ayahKey;
+    onActiveAyahChange(ayahKey);
+  }, [onActiveAyahChange]);
+  // The reader's page plays run by run (one per surah on the page); the
+  // request of the run that sounds tells the reader its page is playing.
+  const runsRef = useRef<MushafPageRun[]>([]);
+  const runIndexRef = useRef(0);
+  const [pageRequestId, setPageRequestId] = useState<number | null>(null);
 
   useEffect(() => {
     onRecitationChange?.(selectedRecitationId);
@@ -140,6 +171,15 @@ export function MushafAudioPlayer({
     const recitation = recitations.find((item) => item.id === recitationId);
     if (recitation) rememberReciterPreference(recitation.reciter, recitation, "mushaf");
     setSelectedRecitationId(recitationId);
+  };
+
+  // From the reader's player: the ayah that sounds starts again in the new
+  // voice, a paused one waits, as in the app.
+  const chooseReaderRecitation = (recitationId: string) => {
+    setReciterSheetOpen(false);
+    if (recitationId === selectedRecitationId) return;
+    resumeAyahRef.current = playingRef.current ? activeAyahRef.current ?? readerAyahKey : null;
+    selectRecitation(recitationId);
   };
 
   useEffect(() => {
@@ -250,6 +290,67 @@ export function MushafAudioPlayer({
     t,
   ]);
 
+  const playRun = useCallback(async (index: number) => {
+    const run = runsRef.current[index];
+    if (!run || !selectedRecitationId) return;
+    const generation = ++playbackGeneration.current;
+    setAyahLoading(true);
+    setError(null);
+    try {
+      const playback = await loadPlayback(run.surah);
+      if (generation !== playbackGeneration.current) return;
+      if (!playback.segments?.some((segment) => segment.surah_number === run.surah && segment.ayah_number === run.start)) {
+        setError(t("quran.readerAyahUnavailable"));
+        return;
+      }
+      runIndexRef.current = index;
+      requestIdRef.current += 1;
+      setPageRequestId(requestIdRef.current);
+      setPlayerRequest({
+        requestId: requestIdRef.current,
+        track: playback.track,
+        segments: playback.segments || [],
+        kind: "range",
+        startAyah: run.start,
+        endAyah: run.end,
+        title: surahName?.(run.surah) || t("common.surah", { surah: run.surah }),
+        artist: selectedRecitation ? recitationLabel(selectedRecitation) : t("audio.qfReciter"),
+        album: t("audio.mushafAlbum"),
+        artworkUrl: selectedRecitation ? reciterPortraitUrl(selectedRecitation.reciter) : null,
+        autoPlay: true,
+      });
+    } catch (reason) {
+      if (generation === playbackGeneration.current) setError(api.normalizeError(reason));
+    } finally {
+      if (generation === playbackGeneration.current) setAyahLoading(false);
+    }
+  }, [loadPlayback, recitationLabel, selectedRecitation, selectedRecitationId, surahName, t]);
+
+  // The reader's play button reads the open page: from the selected ayah, or
+  // the first, to the last ayah of the page, as the app does.
+  const startPage = useCallback((fromKey: string | null) => {
+    runsRef.current = mushafPageRuns(pageAyahKeys, fromKey);
+    void playRun(0);
+  }, [pageAyahKeys, playRun]);
+
+  // A page that ends one surah reads on into the next one.
+  const pageActive = playerRequest !== null && playerRequest.requestId === pageRequestId;
+  const pageActiveRef = useRef(pageActive);
+  useEffect(() => { pageActiveRef.current = pageActive; }, [pageActive]);
+  const handlePlanEnd = useCallback(() => {
+    const next = runIndexRef.current + 1;
+    if (!pageActiveRef.current || next >= runsRef.current.length) return false;
+    void playRun(next);
+    return true;
+  }, [playRun]);
+
+  useEffect(() => {
+    const ayahKey = resumeAyahRef.current;
+    if (!ayahKey || !preparedPlayback || preparedPlayback.track.recitation_id !== selectedRecitationId) return;
+    resumeAyahRef.current = null;
+    startPage(ayahKey);
+  }, [preparedPlayback, selectedRecitationId, startPage]);
+
   useEffect(() => {
     if (
       !playAyahRequest ||
@@ -285,7 +386,7 @@ export function MushafAudioPlayer({
             onChange={(event) => selectRecitation(event.target.value)}
             disabled={catalogLoading || recitations.length === 0}
           >
-            {recitations.map((recitation) => (
+            {sortedRecitations.map((recitation) => (
               <option key={recitation.id} value={recitation.id}>
                 {recitationLabel(recitation)} · {t("mushafAudio.coverage", { count: recitation.coverage.surah_count })}
               </option>
@@ -320,20 +421,36 @@ export function MushafAudioPlayer({
         request={playerRequest}
         className="mushaf-audio-now-playing"
         controlRequest={controlRequest}
-        onActiveAyahChange={onActiveAyahChange}
-        onPlayingChange={onPlayingChange}
+        onActiveAyahChange={handleActiveAyahChange}
+        onPlayingChange={handlePlayingChange}
+        onPlanEnd={reader?.immersive ? handlePlanEnd : undefined}
         onSettingsChange={onSettingsChange}
         pauseOnNavigationKey={readerScopeKey}
         readerControls={reader?.immersive ? {
           container: reader.audioSlot,
           ayahKey: readerAyahKey,
-          artist: selectedRecitation ? reciterName(selectedRecitation.reciter, locale) : "",
+          surahName,
+          pageTitle: pageNumber ? t("common.page", { page: pageNumber }) : t("quran.readerSelectAyah"),
+          pageActive,
+          pageAvailable: pageAyahKeys.length > 0,
+          artist: selectedRecitation ? reciterName(selectedRecitation.reciter, locale) || selectedRecitation.reciter.name_en : "",
+          portraitUrl: selectedRecitation ? reciterAvatarUrl(selectedRecitation.reciter) : null,
+          onChooseReciter: recitations.length > 0 ? () => setReciterSheetOpen(true) : undefined,
           loading: catalogLoading || playbackLoading || ayahLoading,
           available: Boolean(selectedRecitationId),
           error,
-          onPlayAyah: () => void startPlayback("ayah", parseAyahKey(readerAyahKey)),
+          onPlayAyah: () => startPage(readerAyahKey),
         } : undefined}
       />
+      {reader?.immersive && reciterSheetOpen && reader.audioSlot && createPortal(
+        <MushafReciterSheet
+          recitations={sortedRecitations}
+          selectedId={selectedRecitationId}
+          onSelect={chooseReaderRecitation}
+          onClose={() => setReciterSheetOpen(false)}
+        />,
+        reader.audioSlot.closest(".quran-page-layout") ?? reader.audioSlot,
+      )}
     </div>
   );
 }

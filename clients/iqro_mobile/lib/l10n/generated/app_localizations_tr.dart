@@ -662,6 +662,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get nowPlaying => 'Şimdi çalıyor';
 
   @override
+  String get mushafReciter => 'Mushaf kârisi';
+
+  @override
   String get play => 'Oynat';
 
   @override

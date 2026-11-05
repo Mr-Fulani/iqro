@@ -27,11 +27,43 @@ import 'native_mushaf_page.dart';
 import 'mushaf_paper.dart';
 import 'mushaf_bookmarks_sheet.dart';
 import 'mushaf_reader_controls.dart';
+import 'mushaf_reciter_sheet.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
 import 'surah_open_reporter.dart';
 import 'word_range.dart';
+
+/// A stretch of one surah on a Mushaf page, played as one clip.
+typedef MushafPageRun = ({int surah, int start, int end});
+
+/// What the Mushaf's play button reads: the page's ayahs from [from] (the
+/// first, when it is not on the page) to the last, one run per surah, since a
+/// page may end one surah and begin the next.
+List<MushafPageRun> mushafPageRuns(
+  List<QuranAyahReference> ayahs, {
+  QuranAyahReference? from,
+}) {
+  final first = from == null
+      ? 0
+      : ayahs.indexWhere(
+          (item) => item.surah == from.surah && item.ayah == from.ayah,
+        );
+  final runs = <MushafPageRun>[];
+  for (final item in ayahs.skip(first < 0 ? 0 : first)) {
+    final last = runs.isEmpty ? null : runs.last;
+    if (last != null && last.surah == item.surah && item.ayah > last.end) {
+      runs[runs.length - 1] = (
+        surah: last.surah,
+        start: last.start,
+        end: item.ayah,
+      );
+    } else {
+      runs.add((surah: item.surah, start: item.ayah, end: item.ayah));
+    }
+  }
+  return runs;
+}
 
 typedef _PendingPositionSave = ({
   int page,
@@ -80,6 +112,12 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   var _audioLoading = false;
   var _audioRequest = 0;
   var _playerExpanded = false;
+  // The page the Mushaf's sound reads and its runs; the sound never leaves it.
+  int? _playbackPage;
+  QuranAyahReference? _playbackFrom;
+  List<MushafPageRun> _runs = const <MushafPageRun>[];
+  var _run = 0;
+  ProviderSubscription<IqroAudioState>? _audioSubscription;
   var _bookmarkLoading = false;
   var _detailsOpen = false;
   int? _dotTargetPage;
@@ -120,6 +158,10 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       },
     );
     WidgetsBinding.instance.addObserver(this);
+    _audioSubscription = ref.listenManual(
+      audioControllerProvider,
+      _followPageRuns,
+    );
     _currentPage = widget.initialPage.clamp(1, _pageCount);
     _initialAccountScope = _database.accountScope.current;
     _accountKey = _initialAccountScope == null
@@ -197,6 +239,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       ..dispose();
     _positionSaves.close(discardPending: false);
     WidgetsBinding.instance.removeObserver(this);
+    _audioSubscription?.close();
     unawaited(_readingSession?.finish());
     for (final subscription in _pageKeepAlive.values) {
       subscription.close();
@@ -317,11 +360,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         player.active && player.surah != null && player.ayah != null
         ? QuranAyahReference(id: '', surah: player.surah!, ayah: player.ayah!)
         : null;
+    // The round button pauses the page that sounds and plays any other.
     final playingSelected =
-        player.playing &&
-        player.surah == reference?.surah &&
-        player.start == reference?.ayah &&
-        player.end == reference?.ayah;
+        player.active && player.playing && _playbackPage == _currentPage;
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
@@ -517,25 +558,18 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
+                      // A swipe folds the player into the round button below,
+                      // as the Audio tab's bar folds; the sound plays on.
                       if (_playerExpanded && player.active)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: <Widget>[
-                              const Expanded(
-                                child: IqroMiniPlayer(
-                                  allowCollapse: false,
-                                  mushafControls: true,
-                                ),
-                              ),
-                              IconButton(
-                                tooltip: context.l10n.close,
-                                onPressed: () =>
-                                    setState(() => _playerExpanded = false),
-                                icon: const Icon(Icons.expand_more_rounded),
-                                color: mushafAccentColor,
-                              ),
-                            ],
+                          child: IqroMiniPlayer(
+                            allowCollapse: false,
+                            mushafControls: true,
+                            onReciterTap: _chooseReciter,
+                            onRepeatTap: _toggleRepeat,
+                            onSwipeAway: () =>
+                                setState(() => _playerExpanded = false),
                           ),
                         ),
                       if (!_playerExpanded || !player.active)
@@ -549,14 +583,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                                 heroTag: 'mushaf-play-selected',
                                 tooltip: playingSelected
                                     ? context.l10n.pause
-                                    : '${context.l10n.listen} ${reference?.key ?? ''}',
+                                    : '${context.l10n.listen} ${_selectedAyah?.key ?? ''}'
+                                          .trim(),
                                 backgroundColor: mushafAccentColor,
                                 foregroundColor: Colors.white,
                                 elevation: 1,
                                 shape: const CircleBorder(),
-                                onPressed: reference == null || _audioLoading
-                                    ? null
-                                    : _playSelected,
+                                onPressed: _audioLoading ? null : _playSelected,
                                 child:
                                     _audioLoading ||
                                         (playingSelected && player.buffering)
@@ -643,23 +676,31 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     );
   }
 
-  Future<void> _playSelected() async {
-    final reference = _selectedAyah ?? _pageReference;
-    final scope = _database.accountScope.current;
-    if (_audioLoading ||
-        reference == null ||
-        scope == null ||
-        !_isCurrentAccount(scope)) {
-      return;
+  /// The sound stays within its page: a turn to another page, by a swipe,
+  /// the page bar or a jump to a surah or ayah, stops it.
+  void _stopPageSound() {
+    final current = ref.read(audioControllerProvider);
+    _playbackPage = null;
+    _runs = const <MushafPageRun>[];
+    if (current.channel == AudioPlaybackChannel.mushaf && current.playing) {
+      unawaited(ref.read(audioControllerProvider.notifier).toggle());
     }
+  }
+
+  /// The play button reads the open page: from the selected ayah, or the
+  /// first, to the last ayah of the page. A second press pauses or resumes.
+  Future<void> _playSelected() async {
+    final scope = _database.accountScope.current;
+    if (_audioLoading || scope == null || !_isCurrentAccount(scope)) return;
     final controller = ref.read(audioControllerProvider.notifier);
     final navigationEpoch = controller.navigationEpoch;
     final current = ref.read(audioControllerProvider);
+    final from = _selectedAyah;
     if (current.error == null &&
+        current.active &&
         current.channel == AudioPlaybackChannel.mushaf &&
-        current.track?.surah == reference.surah &&
-        current.rangeStartAyah == reference.ayah &&
-        current.rangeEndAyah == reference.ayah) {
+        _playbackPage == _currentPage &&
+        (from == null || from == _playbackFrom || _isPlayingAyah(from))) {
       setState(() => _playerExpanded = true);
       await controller.toggle();
       return;
@@ -671,14 +712,17 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         request == _audioRequest &&
         controller.navigationEpoch == navigationEpoch &&
         page == _currentPage &&
-        reference == (_selectedAyah ?? _pageReference) &&
+        from == _selectedAyah &&
         identical(controller, ref.read(audioControllerProvider.notifier));
     setState(() => _audioLoading = true);
     try {
-      final repository = ref.read(audioRepositoryProvider);
-      final recitations = await repository.recitationsForRole(
-        AudioRecitationRole.ayahPlayback,
-      );
+      final pageData = await ref.read(mushafPageProvider(page).future);
+      if (!ownsRequest()) return;
+      final runs = mushafPageRuns(pageData.ayahReferences, from: from);
+      if (runs.isEmpty) throw StateError('The page has no ayahs');
+      final recitations = await ref
+          .read(audioRepositoryProvider)
+          .recitationsForRole(AudioRecitationRole.ayahPlayback);
       if (!ownsRequest()) return;
       final recitation = preferredRecitation(
         recitations,
@@ -690,32 +734,226 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         role: AudioRecitationRole.ayahPlayback,
       );
       if (recitation == null) throw StateError('No timed recitation');
-      final playback = await repository.playback(
-        recitationId: recitation.id,
-        surah: reference.surah,
+      _playbackPage = page;
+      _playbackFrom = from;
+      _runs = runs;
+      await _playRun(
+        0,
+        recitation: recitation,
+        recitations: recitations,
+        owns: ownsRequest,
       );
-      if (!ownsRequest() || !mounted) return;
-      final surah = ref
-          .read(quranCatalogProvider)
-          .valueOrNull
-          ?.surahs
-          .where((s) => s.number == reference.surah)
-          .firstOrNull;
+      if (ownsRequest()) setState(() => _playerExpanded = true);
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (ownsRequest() && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+      }
+    } finally {
+      if (mounted && request == _audioRequest) {
+        setState(() => _audioLoading = false);
+      }
+    }
+  }
+
+  bool _isPlayingAyah(QuranAyahReference reference) {
+    final current = ref.read(audioControllerProvider);
+    return current.track?.surah == reference.surah &&
+        current.displayedAyah == reference.ayah;
+  }
+
+  /// Loads run [index] of the page; with repeat on, only its first ayah,
+  /// which then sounds over and over.
+  Future<void> _playRun(
+    int index, {
+    required Recitation recitation,
+    required List<Recitation> recitations,
+    required bool Function() owns,
+    bool autoplay = true,
+  }) async {
+    final run = _runs[index];
+    final playback = await ref
+        .read(audioRepositoryProvider)
+        .playback(recitationId: recitation.id, surah: run.surah);
+    if (!owns() || !mounted) return;
+    final surah = ref
+        .read(quranCatalogProvider)
+        .valueOrNull
+        ?.surahs
+        .where((s) => s.number == run.surah)
+        .firstOrNull;
+    final controller = ref.read(audioControllerProvider.notifier);
+    _run = index;
+    await controller.loadPlayback(
+      playback: playback,
+      reciter: reciterWithPersonPortrait(
+        recitation.reciter,
+        apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+        reciters: recitations.map((r) => r.reciter),
+      ),
+      surahName:
+          surah?.nameFor(Localizations.localeOf(context).languageCode) ??
+          '${context.l10n.surah} ${run.surah}',
+      channel: AudioPlaybackChannel.mushaf,
+      startAyah: run.start,
+      endAyah: ref.read(audioControllerProvider).repeatEnabled
+          ? run.start
+          : run.end,
+      autoplay: autoplay,
+    );
+  }
+
+  /// A page that ends one surah and begins the next reads on into the next
+  /// once the first run ends by itself.
+  void _followPageRuns(IqroAudioState? previous, IqroAudioState next) {
+    if (previous == null ||
+        !previous.playing ||
+        next.playing ||
+        next.error != null ||
+        next.repeatEnabled ||
+        next.channel != AudioPlaybackChannel.mushaf ||
+        _playbackPage != _currentPage ||
+        _run + 1 >= _runs.length) {
+      return;
+    }
+    final run = _runs[_run];
+    if (next.track?.surah != run.surah ||
+        next.rangeEndAyah != run.end ||
+        next.position <
+            next.rangeEndPosition - const Duration(milliseconds: 600)) {
+      return;
+    }
+    final scope = _database.accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final controller = ref.read(audioControllerProvider.notifier);
+    final navigationEpoch = controller.navigationEpoch;
+    final request = ++_audioRequest;
+    final page = _currentPage;
+    bool ownsRequest() =>
+        _isCurrentAccount(scope) &&
+        request == _audioRequest &&
+        controller.navigationEpoch == navigationEpoch &&
+        page == _currentPage &&
+        identical(controller, ref.read(audioControllerProvider.notifier));
+    unawaited(() async {
+      try {
+        final recitations = await ref
+            .read(audioRepositoryProvider)
+            .recitationsForRole(AudioRecitationRole.ayahPlayback);
+        final recitation = recitations
+            .where((item) => item.id == next.track?.recitationId)
+            .firstOrNull;
+        if (recitation == null || !ownsRequest()) return;
+        await _playRun(
+          _run + 1,
+          recitation: recitation,
+          recitations: recitations,
+          owns: ownsRequest,
+        );
+      } on Object {
+        // The first surah has played; the page simply stops there.
+      }
+    }());
+  }
+
+  /// Repeat sounds the current ayah over and over; switched off, the page
+  /// reads on from that ayah.
+  Future<void> _toggleRepeat() async {
+    final current = ref.read(audioControllerProvider);
+    final ayah = current.displayedAyah;
+    if (current.channel != AudioPlaybackChannel.mushaf ||
+        current.track == null ||
+        ayah == null) {
+      return;
+    }
+    final controller = ref.read(audioControllerProvider.notifier);
+    await controller.toggleRepeat();
+    final repeat = ref.read(audioControllerProvider).repeatEnabled;
+    final run = _runs
+        .where((item) => item.surah == current.track?.surah)
+        .firstOrNull;
+    try {
+      await controller.setAyahRange(
+        ayah,
+        repeat ? ayah : run?.end ?? current.rangeEndAyah ?? ayah,
+        autoplay: current.playing,
+      );
+    } on Object {
+      // A range without timings keeps the clip that plays now.
+    }
+  }
+
+  /// The player's reciter list. A new reciter is the Mushaf's from now on;
+  /// the ayah in the player starts again in the new voice, or waits paused.
+  Future<void> _chooseReciter() async {
+    final scope = _database.accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final repository = ref.read(audioRepositoryProvider);
+    final List<Recitation> recitations;
+    try {
+      recitations = await repository.recitationsForRole(
+        AudioRecitationRole.ayahPlayback,
+      );
+    } on Object {
+      if (_isCurrentAccount(scope) && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+      }
+      return;
+    }
+    if (!_isCurrentAccount(scope) || !mounted) return;
+    final shown = ref.read(audioControllerProvider);
+    final chosen = await showMushafReciterSheet(
+      context,
+      recitations: recitations,
+      selectedId: shown.channel == AudioPlaybackChannel.mushaf
+          ? shown.track?.recitationId
+          : ref.read(appPreferencesProvider).mushafRecitationId,
+    );
+    if (chosen == null || !_isCurrentAccount(scope) || !mounted) return;
+    unawaited(
+      ref.read(appPreferencesProvider.notifier).setMushafRecitation(chosen.id),
+    );
+    final controller = ref.read(audioControllerProvider.notifier);
+    final current = ref.read(audioControllerProvider);
+    final track = current.track;
+    if (current.channel != AudioPlaybackChannel.mushaf ||
+        track == null ||
+        track.recitationId == chosen.id ||
+        current.rangeStartAyah == null) {
+      return;
+    }
+    final navigationEpoch = controller.navigationEpoch;
+    final request = ++_audioRequest;
+    bool ownsRequest() =>
+        _isCurrentAccount(scope) &&
+        request == _audioRequest &&
+        controller.navigationEpoch == navigationEpoch &&
+        identical(controller, ref.read(audioControllerProvider.notifier));
+    setState(() => _audioLoading = true);
+    try {
+      final playback = await repository.playback(
+        recitationId: chosen.id,
+        surah: track.surah,
+      );
+      if (!ownsRequest()) return;
       await controller.loadPlayback(
         playback: playback,
         reciter: reciterWithPersonPortrait(
-          recitation.reciter,
+          chosen.reciter,
           apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
           reciters: recitations.map((r) => r.reciter),
         ),
-        surahName:
-            surah?.nameFor(Localizations.localeOf(context).languageCode) ??
-            '${context.l10n.surah} ${reference.surah}',
+        surahName: current.surahName,
         channel: AudioPlaybackChannel.mushaf,
-        startAyah: reference.ayah,
-        endAyah: reference.ayah,
+        startAyah: current.displayedAyah ?? current.rangeStartAyah,
+        endAyah: current.rangeEndAyah,
+        autoplay: current.playing,
       );
-      if (ownsRequest()) setState(() => _playerExpanded = true);
     } on AccountScopeChanged {
       return;
     } on Object {
@@ -940,6 +1178,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     _audioRequest++;
     _audioLoading = false;
     _playerExpanded = false;
+    _stopPageSound();
     _initialPageHandled = true;
     _zoomControllers[_currentPage]?.setZoom(1);
     setState(() {
@@ -1293,12 +1532,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
               icon: Icons.note_alt_outlined,
               title: context.l10n.notes,
               onTap: () => leave = () => context.push('/notes'),
-            ),
-            (
-              key: const ValueKey('mushaf-now-playing'),
-              icon: Icons.headphones_rounded,
-              title: context.l10n.nowPlaying,
-              onTap: () => leave = () => context.push('/app?tab=3'),
             ),
           ],
         ),

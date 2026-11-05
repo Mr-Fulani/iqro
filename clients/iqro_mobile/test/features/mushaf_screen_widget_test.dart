@@ -15,11 +15,13 @@ import 'package:iqro_mobile/core/platform/reader_haptics.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/features/audio/audio_models.dart';
+import 'package:iqro_mobile/features/audio/mini_player.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/mushaf_edition.dart';
 import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
+import 'package:iqro_mobile/features/quran/mushaf_reciter_sheet.dart';
 import 'package:iqro_mobile/features/quran/mushaf_screen.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
@@ -63,11 +65,12 @@ void main() {
       'mushaf-zoom',
       'mushaf-bookmarks',
       'mushaf-notes',
-      'mushaf-now-playing',
     ]) {
       await tester.ensureVisible(find.byKey(ValueKey(key)));
       expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
     }
+    // «Сейчас играет» led to the Audio tab's player, not the Mushaf's.
+    expect(find.byKey(const ValueKey('mushaf-now-playing')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -265,6 +268,156 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('the player folds by a swipe and changes the Mushaf reciter '
+      'from its name, keeping the ayah', (tester) async {
+    final harness = await _pump(tester);
+    Recitation timed(String id, String name, String style) => Recitation(
+      id: id,
+      code: id,
+      reciter: Reciter.fromJson(<String, Object?>{
+        'id': id,
+        'slug': id,
+        'name_ru': name,
+      }),
+      style: style,
+      timingsAvailable: true,
+      timingsComplete: true,
+      surahCount: 114,
+      streamAllowed: true,
+      offlineDownloadAllowed: false,
+    );
+    harness.audio.more = <Recitation>[
+      timed('yasser', 'Ясир ад-Дусари', 'murattal'),
+      timed('basit', 'Абдуль-Басит', 'mujawwad'),
+    ];
+    await _tapAyah(tester, .35);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(harness.controller.ranges, <(int?, int?)>[(85, 85)]);
+    expect(find.byTooltip('Предыдущая сура'), findsNothing);
+    expect(find.byTooltip('Следующая сура'), findsNothing);
+    expect(find.byTooltip('Закрыть'), findsNothing);
+
+    await tester.fling(
+      find.byKey(const ValueKey('mini-player-bar')),
+      const Offset(0, 80),
+      800,
+    );
+    await _settle(tester);
+    expect(find.byType(IqroMiniPlayer), findsNothing);
+    expect(find.byType(FloatingActionButton).hitTestable(), findsOneWidget);
+    // The sound plays on; the round button pauses it and brings the bar back.
+    expect(harness.controller.state.playing, isTrue);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pump();
+    expect(harness.controller.toggles, 1);
+    expect(find.byType(IqroMiniPlayer), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('mini-player-play-toggle')));
+    await tester.pump();
+    expect(harness.controller.state.playing, isTrue);
+
+    await tester.tap(find.byKey(const ValueKey('mushaf-player-reciter')));
+    await _settle(tester);
+    expect(find.text('Чтец Мусхафа'), findsOneWidget);
+    double top(String name) => tester
+        .getTopLeft(
+          find.descendant(
+            of: find.byType(MushafReciterSheet),
+            matching: find.text(name),
+          ),
+        )
+        .dy;
+    expect(top('Абдуль-Басит'), lessThan(top('Тестовый чтец')));
+    expect(top('Тестовый чтец'), lessThan(top('Ясир ад-Дусари')));
+    await tester.enterText(
+      find.byKey(const ValueKey('mushaf-reciter-search')),
+      'дусари',
+    );
+    await tester.pump();
+    expect(find.text('Абдуль-Басит'), findsNothing);
+    await tester.tap(find.text('Ясир ад-Дусари'));
+    await _settle(tester);
+
+    expect(harness.audio.requestedRecitation, 'yasser');
+    expect(harness.controller.ranges, <(int?, int?)>[(85, 85), (85, 85)]);
+    expect(harness.controller.state.playing, isTrue);
+    expect(harness.controller.state.track?.recitationId, 'yasser');
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MushafScreen)),
+    );
+    expect(container.read(appPreferencesProvider).mushafRecitationId, 'yasser');
+    expect(tester.takeException(), isNull);
+  });
+
+  test('the play button reads the page by surah runs from the chosen ayah', () {
+    const page = <QuranAyahReference>[
+      QuranAyahReference(id: '', surah: 4, ayah: 175),
+      QuranAyahReference(id: '', surah: 4, ayah: 176),
+      QuranAyahReference(id: '', surah: 5, ayah: 1),
+      QuranAyahReference(id: '', surah: 5, ayah: 2),
+    ];
+    expect(mushafPageRuns(page), <MushafPageRun>[
+      (surah: 4, start: 175, end: 176),
+      (surah: 5, start: 1, end: 2),
+    ]);
+    expect(
+      mushafPageRuns(
+        page,
+        from: const QuranAyahReference(id: '', surah: 4, ayah: 176),
+      ),
+      <MushafPageRun>[
+        (surah: 4, start: 176, end: 176),
+        (surah: 5, start: 1, end: 2),
+      ],
+    );
+    expect(
+      mushafPageRuns(
+        page,
+        from: const QuranAyahReference(id: '', surah: 5, ayah: 2),
+      ),
+      <MushafPageRun>[(surah: 5, start: 2, end: 2)],
+    );
+    // An ayah from another page starts at the top of this one.
+    expect(
+      mushafPageRuns(
+        page,
+        from: const QuranAyahReference(id: '', surah: 9, ayah: 1),
+      ),
+      hasLength(2),
+    );
+  });
+
+  testWidgets('the round button reads the page on from the selected ayah, '
+      'repeat holds one ayah, and a page turn stops the sound and folds the '
+      'player', (tester) async {
+    final harness = await _pump(tester);
+    await _tapAyah(tester, .15);
+    expect(find.text('Аят 5:84'), findsOneWidget);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(harness.controller.ranges, <(int?, int?)>[(84, 85)]);
+    expect(find.byType(IqroMiniPlayer), findsOneWidget);
+    expect(find.text('1×'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('mushaf-player-repeat')));
+    await tester.pump();
+    expect(harness.controller.state.repeatEnabled, isTrue);
+    expect(harness.controller.ranges.last, (84, 84));
+    await tester.tap(find.byKey(const ValueKey('mushaf-player-repeat')));
+    await tester.pump();
+    expect(harness.controller.state.repeatEnabled, isFalse);
+    expect(harness.controller.ranges.last, (84, 85));
+    expect(harness.controller.state.playing, isTrue);
+
+    await tester.drag(find.byType(PageView), const Offset(600, 0));
+    await _settle(tester);
+    expect(harness.controller.state.playing, isFalse);
+    expect(find.byType(IqroMiniPlayer), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'another selected ayah cancels an obsolete pending audio request',
@@ -623,6 +776,13 @@ MushafPageData _page(int number) => MushafPageData(
   ],
 );
 
+/// The pages keep a spinner going, so frames are pumped for a fixed time.
+Future<void> _settle(WidgetTester tester) async {
+  for (var frame = 0; frame < 10; frame++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 class _Database implements LocalDatabase {
   @override
   final accountScope = AccountScope.forTesting('reader');
@@ -755,12 +915,15 @@ final _recitation = Recitation(
 class _AudioRepository implements AudioRepository {
   Completer<List<Recitation>>? pending;
   int? requestedSurah;
+  String? requestedRecitation;
+  var more = const <Recitation>[];
   @override
   Future<List<Recitation>> recitations({
     String? reciterId,
     bool forceRefresh = false,
-  }) async =>
-      pending == null ? <Recitation>[_recitation] : await pending!.future;
+  }) async => pending == null
+      ? <Recitation>[_recitation, ...more]
+      : await pending!.future;
 
   @override
   Future<List<Recitation>> recitationsForRole(
@@ -777,6 +940,7 @@ class _AudioRepository implements AudioRepository {
     bool forceRefresh = false,
   }) async {
     requestedSurah = surah;
+    requestedRecitation = recitationId;
     return SurahPlayback(
       track: AudioTrack(
         id: 'test-track',
@@ -827,6 +991,26 @@ class _Audio extends AudioController {
   Future<void> toggle() async {
     toggles++;
     state = state.copyWith(playing: !state.playing);
+  }
+
+  @override
+  Future<void> toggleRepeat() async {
+    state = state.copyWith(repeatEnabled: !state.repeatEnabled);
+  }
+
+  @override
+  Future<void> setAyahRange(
+    int startAyah,
+    int endAyah, {
+    bool autoplay = true,
+  }) async {
+    ranges.add((startAyah, endAyah));
+    state = state.copyWith(
+      playing: autoplay,
+      activeAyah: startAyah,
+      rangeStartAyah: startAyah,
+      rangeEndAyah: endAyah,
+    );
   }
 }
 
