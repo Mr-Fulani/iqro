@@ -657,6 +657,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get nowPlaying => 'يُشغّل الآن';
 
   @override
+  String get mushafReciter => 'قارئ المصحف';
+
+  @override
   String get play => 'تشغيل';
 
   @override

@@ -845,6 +845,8 @@ const tr: Messages = {
   "mushafAudio.coverage": "{count}/114 sure",
   "mushafAudio.chooseAyah": "Bir ayet seçin",
   "mushafAudio.none": "Bu baskı için henüz yayımlanmış ses kaydı yok.",
+  "mushafAudio.sheetTitle": "Mushaf kârisi",
+  "mushafAudio.reciterButton": "Mushaf kârisi: {name}. Başka birini seçin",
   "quran.bookmarkLoginError": "Yer imi eklemek için giriş yapılamadı.",
   "quran.bookmarkLabel": "Sure {surah}:{ayah} (s. {page})",
   "quran.bookmarkAdded": "Yer imi profilinize eklendi.",

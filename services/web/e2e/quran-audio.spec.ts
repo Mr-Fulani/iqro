@@ -3682,6 +3682,47 @@ test.describe("Selected ayah controls in the mobile reader", () => {
     await expect(layout.locator(".mushaf-page-turn .qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   });
 
+  test("the reader's player has no skip buttons, changes the Mushaf reciter by name and folds by a swipe", async ({ page }) => {
+    await page.goto("/ru/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const actions = page.getByRole("toolbar");
+    const audio = layout.locator(".mushaf-audio-now-playing audio");
+    const player = layout.locator(".reader-selected-audio");
+    await layout.locator('[data-ayah-key="6:2"]').last().click();
+    await expect(player).toContainText("Аят 6:2");
+    await expect(actions.getByRole("button", { name: /сура|аят$/i })).toHaveCount(0);
+    await actions.getByRole("button", { name: "Воспроизвести аят 6:2", exact: true }).click();
+    await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
+    await expect(audio).toHaveAttribute("src", tracks[5].asset.url);
+
+    // The reciter's name opens the timed reciters, by name, with a search.
+    await actions.getByRole("button", { name: `Чтец Мусхафа: ${reciter.name_ru}. Выбрать другого` }).click();
+    const sheet = page.getByRole("dialog", { name: "Чтец Мусхафа" });
+    await expect(sheet.getByRole("listitem")).toHaveText([new RegExp(reciter.name_ru), new RegExp(alternateReciter.name_ru)]);
+    await expect(sheet.getByRole("button", { name: new RegExp(reciter.name_ru) })).toHaveAttribute("aria-pressed", "true");
+    await sheet.getByRole("searchbox", { name: "Найти чтеца" }).fill("хусари");
+    await expect(sheet.getByRole("listitem")).toHaveText([new RegExp(alternateReciter.name_ru)]);
+    await sheet.getByRole("button", { name: new RegExp(alternateReciter.name_ru) }).click();
+    await expect(sheet).toHaveCount(0);
+    // The ayah that sounded starts again in the new voice.
+    await expect(audio).toHaveAttribute("src", alternateTracks[5].asset.url);
+    await expect(actions.getByRole("button", { name: "Пауза — аят 6:2" })).toBeVisible();
+    await expect(actions.getByRole("button", { name: `Чтец Мусхафа: ${alternateReciter.name_ru}. Выбрать другого` })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("quran_reciter_preference_v2:mushaf")))
+      .toContain(alternateRecitation.id);
+
+    // A swipe folds the player into a round button that plays or pauses the
+    // ayah and brings the player back.
+    await swipe(page, player.locator(".reader-selected-audio-copy strong"), 60);
+    const fab = layout.locator(".reader-selected-audio.is-folded .reader-ayah-fab");
+    await expect(fab).toBeVisible();
+    await expect(fab).toHaveAccessibleName(/аят 6:2$/);
+    await expect(layout.locator(".reader-reciter-button")).toHaveCount(0);
+    await fab.click();
+    await expect(layout.locator(".reader-selected-audio.is-folded")).toHaveCount(0);
+    await expect(layout.locator(".reader-reciter-button")).toBeVisible();
+  });
+
   test("synchronizes a page deep link with the selected ayah and surah settings", async ({ page }) => {
     await page.goto("/ru/quran?surah=1&page=128");
     const layout = page.locator(".quran-page-layout").filter({ visible: true });

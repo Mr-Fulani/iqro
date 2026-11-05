@@ -13,7 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import {
   SegmentedAudioPlayer,
 } from "../components/SegmentedAudioPlayer";
@@ -42,13 +42,11 @@ import {
   PLAYER_HINT_LIMIT,
   PLAYER_HINT_NUDGE_MS,
   PLAYER_HINT_STORAGE_KEY,
-  SWIPE_TAP_SLOP,
   miniPlayerReducer,
   parsePlayerHint,
   playerHintDue,
   rolledUp,
   sheetShown,
-  swipeCollapses,
 } from "./mini-player";
 import {
   loadPlayerBackgroundId,
@@ -62,6 +60,7 @@ import { useHydrated } from "./use-hydrated";
 import { useListeningQueue } from "./use-listening-queue";
 import type { QueueStart } from "./use-listening-queue";
 import { useMediaQuery } from "./use-media-query";
+import { useBarSwipe } from "./use-bar-swipe";
 import { useReducedMotion } from "./use-reduced-motion";
 import { localizedPath, stripLocalePrefix } from "./routing";
 
@@ -351,11 +350,6 @@ export function AudioPlayerProvider({
     dispatchView({ type: "toggle-controls" });
   };
 
-  // As in the app: a swipe on the bar in any direction rolls it into the round
-  // button. The pointer is captured only once it moves, so a tap still reaches
-  // its button, and a drag that falls short is not taken for a tap.
-  const barSwipe = useRef<{ pointerId: number; startX: number; startY: number; startedAt: number; moved: boolean } | null>(null);
-  const dragWasSwipe = useRef(false);
   // Once in a while on the home page the bar shows how it folds: a folded bar
   // opens, waits, slides aside and folds; an open one slides aside, folds,
   // waits and opens. The same steps as the app (MiniPlayerHint). It starts on
@@ -417,62 +411,16 @@ export function AudioPlayerProvider({
     };
   }, [hasPlayback, mobile, onHome, reduceMotion]);
 
-  // While the bar still unrolls, a swipe rolls it straight back up, as a tap on the old button did.
-  const barSwipeHandlers = mobile && (view === "bar" || view === "expanding")
-    ? {
-      onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
-        if (event.button !== 0) return;
-        dragWasSwipe.current = false;
-        barSwipe.current = {
-          pointerId: event.pointerId,
-          startX: event.clientX,
-          startY: event.clientY,
-          startedAt: performance.now(),
-          moved: false,
-        };
-      },
-      onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => {
-        const swipe = barSwipe.current;
-        if (!swipe || swipe.moved || event.pointerId !== swipe.pointerId) return;
-        if (Math.hypot(event.clientX - swipe.startX, event.clientY - swipe.startY) < SWIPE_TAP_SLOP) return;
-        swipe.moved = true;
-        try {
-          event.currentTarget.setPointerCapture(event.pointerId);
-        } catch {
-          // Synthetic pointers have no capture.
-        }
-      },
-      onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => {
-        const swipe = barSwipe.current;
-        barSwipe.current = null;
-        if (!swipe || event.pointerId !== swipe.pointerId) return;
-        // The click that follows this pointerup, if any, comes before the next task.
-        dragWasSwipe.current = swipe.moved;
-        if (swipe.moved) setTimeout(() => {
-          dragWasSwipe.current = false;
-        }, 0);
-        const sample = {
-          deltaX: event.clientX - swipe.startX,
-          deltaY: event.clientY - swipe.startY,
-          durationMs: performance.now() - swipe.startedAt,
-        };
-        if (swipeCollapses(sample)) {
-          dispatchView({ type: "collapse" });
-          // Once folded by hand, the bar stops showing how.
-          writePlayerHint({ shown: PLAYER_HINT_LIMIT, lastShownAt: Date.now() });
-        }
-      },
-      onPointerCancel: () => {
-        barSwipe.current = null;
-      },
-      onClickCapture: (event: ReactMouseEvent<HTMLDivElement>) => {
-        if (!dragWasSwipe.current) return;
-        dragWasSwipe.current = false;
-        event.preventDefault();
-        event.stopPropagation();
-      },
+  // As in the app: a swipe on the bar in any direction rolls it into the round
+  // button. While the bar still unrolls, a swipe rolls it straight back up, as
+  // a tap on the old button did.
+  const barSwipeHandlers = useBarSwipe(mobile && (view === "bar" || view === "expanding")
+    ? () => {
+      dispatchView({ type: "collapse" });
+      // Once folded by hand, the bar stops showing how.
+      writePlayerHint({ shown: PLAYER_HINT_LIMIT, lastShownAt: Date.now() });
     }
-    : {};
+    : null);
 
   const value = useMemo<AudioPlayerContextValue>(() => ({
     request,

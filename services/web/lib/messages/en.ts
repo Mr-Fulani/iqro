@@ -845,6 +845,8 @@ const en: Messages = {
   "mushafAudio.coverage": "{count}/114 surahs",
   "mushafAudio.chooseAyah": "Choose an ayah",
   "mushafAudio.none": "No published audio is available for this edition yet.",
+  "mushafAudio.sheetTitle": "Mushaf reciter",
+  "mushafAudio.reciterButton": "Mushaf reciter: {name}. Choose another",
   "quran.bookmarkLoginError": "Could not sign in to add a bookmark.",
   "quran.bookmarkLabel": "Surah {surah}:{ayah} (p. {page})",
   "quran.bookmarkAdded": "Bookmark added to your profile.",

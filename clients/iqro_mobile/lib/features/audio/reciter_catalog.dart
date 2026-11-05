@@ -147,6 +147,45 @@ List<String> orderedRecitationStyles(Iterable<Recitation> recitations) {
   ];
 }
 
+/// The Mushaf's reciter list: by name in [locale], one reciter's styles in
+/// the Audio tab's order. The site sorts its list the same way.
+List<Recitation> recitationsByName(
+  Iterable<Recitation> recitations,
+  String locale,
+) {
+  int styleRank(String style) {
+    final index = recitationStyleOrder.indexOf(style);
+    return index < 0 ? recitationStyleOrder.length : index;
+  }
+
+  final named = <(String, Recitation)>[
+    for (final item in recitations)
+      (_normalizedName(item.reciter.nameFor(locale)), item),
+  ];
+  named.sort((left, right) {
+    final byName = left.$1.compareTo(right.$1);
+    if (byName != 0) return byName;
+    return styleRank(left.$2.style).compareTo(styleRank(right.$2.style));
+  });
+  return <Recitation>[for (final item in named) item.$2];
+}
+
+/// The recitations whose reciter [ReciterSearch] finds for [query].
+List<Recitation> findRecitations(List<Recitation> recitations, String query) {
+  if (query.trim().isEmpty) return recitations;
+  final found = ReciterSearch(
+    groupRecitersByPerson(
+      recitations.map((item) => item.reciter).toList(growable: false),
+    ),
+  ).find(query);
+  return recitations
+      .where(
+        (item) =>
+            found.any((person) => person.containsReciter(item.reciter.id)),
+      )
+      .toList(growable: false);
+}
+
 Recitation? recitationForPersonStyle(
   ReciterPerson person,
   Iterable<Recitation> recitations,

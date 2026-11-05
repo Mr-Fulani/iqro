@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, Recitation, SurahPlayback } from "../lib/api";
 import { reciterName } from "../lib/audio-content";
-import { reciterPortraitUrl } from "../lib/reciter-portraits";
+import { reciterAvatarUrl, reciterPortraitUrl } from "../lib/reciter-portraits";
 import { useI18n } from "../lib/i18n-context";
-import { latestRecitationsByVariant, recitationStyleLabel } from "../lib/reciter-catalog";
+import { latestRecitationsByVariant, recitationStyleLabel, recitationsByName } from "../lib/reciter-catalog";
 import { useMushafReader } from "./MushafReaderLayout";
+import { MushafReciterSheet } from "./MushafReciterSheet";
 import { learningRecitation, rememberReciterPreference } from "../lib/reciter-preference";
 import {
   AudioPlaybackRequest,
@@ -35,6 +37,8 @@ type MushafAudioPlayerProps = {
   onRecitationChange?: (recitationId: string) => void;
   /** The recitations the Mushaf can play, once loaded. */
   onRecitationsChange?: (recitations: Recitation[]) => void;
+  /** A surah's name, for the reader's "Аят 2:10 · Аль-Бакара". */
+  surahName?: (surah: number) => string;
 };
 
 function parseAyahKey(value: string | null): { surah: number; ayah: number } | null {
@@ -57,6 +61,7 @@ export function MushafAudioPlayer({
   onSettingsChange,
   onRecitationChange,
   onRecitationsChange,
+  surahName,
 }: MushafAudioPlayerProps) {
   const { locale, t } = useI18n();
   const reader = useMushafReader();
@@ -93,7 +98,18 @@ export function MushafAudioPlayer({
   }, [readerScopeKey, selectedRecitationId, selectedSurah]);
 
   const selectedAyah = useMemo(() => parseAyahKey(selectedAyahKey), [selectedAyahKey]);
+  const readerAyah = useMemo(() => parseAyahKey(readerAyahKey), [readerAyahKey]);
   const selectedRecitation = recitations.find((item) => item.id === selectedRecitationId);
+  // By name, as the app's Mushaf reciter list.
+  const sortedRecitations = useMemo(() => recitationsByName(recitations, locale), [locale, recitations]);
+  const [reciterSheetOpen, setReciterSheetOpen] = useState(false);
+  const playingRef = useRef(false);
+  // The ayah to play again in the new voice once its timings are ready.
+  const resumeAyahRef = useRef<string | null>(null);
+  const handlePlayingChange = useCallback((playing: boolean) => {
+    playingRef.current = playing;
+    onPlayingChange?.(playing);
+  }, [onPlayingChange]);
 
   useEffect(() => {
     onRecitationChange?.(selectedRecitationId);
@@ -140,6 +156,15 @@ export function MushafAudioPlayer({
     const recitation = recitations.find((item) => item.id === recitationId);
     if (recitation) rememberReciterPreference(recitation.reciter, recitation, "mushaf");
     setSelectedRecitationId(recitationId);
+  };
+
+  // From the reader's player: the ayah that sounds starts again in the new
+  // voice, a paused one waits, as in the app.
+  const chooseReaderRecitation = (recitationId: string) => {
+    setReciterSheetOpen(false);
+    if (recitationId === selectedRecitationId) return;
+    resumeAyahRef.current = playingRef.current ? readerAyahKey : null;
+    selectRecitation(recitationId);
   };
 
   useEffect(() => {
@@ -251,6 +276,14 @@ export function MushafAudioPlayer({
   ]);
 
   useEffect(() => {
+    const ayahKey = resumeAyahRef.current;
+    if (!ayahKey || !preparedPlayback || preparedPlayback.track.recitation_id !== selectedRecitationId) return;
+    resumeAyahRef.current = null;
+    const ayah = parseAyahKey(ayahKey);
+    if (ayah?.surah === preparedPlayback.track.surah_number) void startPlayback("ayah", ayah);
+  }, [preparedPlayback, selectedRecitationId, startPlayback]);
+
+  useEffect(() => {
     if (
       !playAyahRequest ||
       handledAyahRequestRef.current === playAyahRequest.requestId ||
@@ -285,7 +318,7 @@ export function MushafAudioPlayer({
             onChange={(event) => selectRecitation(event.target.value)}
             disabled={catalogLoading || recitations.length === 0}
           >
-            {recitations.map((recitation) => (
+            {sortedRecitations.map((recitation) => (
               <option key={recitation.id} value={recitation.id}>
                 {recitationLabel(recitation)} · {t("mushafAudio.coverage", { count: recitation.coverage.surah_count })}
               </option>
@@ -321,19 +354,33 @@ export function MushafAudioPlayer({
         className="mushaf-audio-now-playing"
         controlRequest={controlRequest}
         onActiveAyahChange={onActiveAyahChange}
-        onPlayingChange={onPlayingChange}
+        onPlayingChange={handlePlayingChange}
         onSettingsChange={onSettingsChange}
         pauseOnNavigationKey={readerScopeKey}
         readerControls={reader?.immersive ? {
           container: reader.audioSlot,
           ayahKey: readerAyahKey,
-          artist: selectedRecitation ? reciterName(selectedRecitation.reciter, locale) : "",
+          title: readerAyah && surahName?.(readerAyah.surah)
+            ? `${t("common.ayah", { ayah: readerAyahKey! })} · ${surahName(readerAyah.surah)}`
+            : null,
+          artist: selectedRecitation ? reciterName(selectedRecitation.reciter, locale) || selectedRecitation.reciter.name_en : "",
+          portraitUrl: selectedRecitation ? reciterAvatarUrl(selectedRecitation.reciter) : null,
+          onChooseReciter: recitations.length > 0 ? () => setReciterSheetOpen(true) : undefined,
           loading: catalogLoading || playbackLoading || ayahLoading,
           available: Boolean(selectedRecitationId),
           error,
           onPlayAyah: () => void startPlayback("ayah", parseAyahKey(readerAyahKey)),
         } : undefined}
       />
+      {reader?.immersive && reciterSheetOpen && reader.audioSlot && createPortal(
+        <MushafReciterSheet
+          recitations={sortedRecitations}
+          selectedId={selectedRecitationId}
+          onSelect={chooseReaderRecitation}
+          onClose={() => setReciterSheetOpen(false)}
+        />,
+        reader.audioSlot.closest(".quran-page-layout") ?? reader.audioSlot,
+      )}
     </div>
   );
 }

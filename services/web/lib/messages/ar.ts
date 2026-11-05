@@ -845,6 +845,8 @@ const ar: Messages = {
   "mushafAudio.coverage": "{count}/114 سورة",
   "mushafAudio.chooseAyah": "اختر آية",
   "mushafAudio.none": "لا توجد تسجيلات منشورة لهذه الطبعة بعد.",
+  "mushafAudio.sheetTitle": "قارئ المصحف",
+  "mushafAudio.reciterButton": "قارئ المصحف: {name}. اختر قارئًا آخر",
   "quran.bookmarkLoginError": "تعذر الدخول لإضافة علامة.",
   "quran.bookmarkLabel": "السورة {surah}:{ayah} (ص {page})",
   "quran.bookmarkAdded": "أُضيفت العلامة إلى حسابك.",

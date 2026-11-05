@@ -6,6 +6,7 @@ import {
   groupRecitersByPerson,
   latestRecitationsByVariant,
   recitationHasSurah,
+  recitationsByName,
   recitersWithPortraitsFirst,
   reciterSearch,
   recitationStyleLabel,
@@ -256,4 +257,22 @@ test("selected words without the reciter's timings play in al-Husary's Muallim, 
     ["muallim", "murattal", "teaching", "other-0", "other-1"]);
   assert.deepEqual(ids([mujawwad, teaching]), ["teaching"]);
   assert.deepEqual(ids([mujawwad]), []);
+});
+
+test("the Mushaf list goes by name, one reciter's styles in order, as the app's", () => {
+  const timed = { listen: true, ayah_playback: true, memorization: true, offline: false };
+  const named = (id: string, name_ru: string, name_en: string, style: string): Recitation => ({
+    ...recitation(id, "2026-08-01T00:00:00Z", timed),
+    style,
+    reciter: { ...reciter, id, slug: id, name_ru, name_en },
+  });
+  const list = [
+    named("h-muallim", "Махмуд аль-Хусари", "Mahmoud Al-Husary", "muallim"),
+    named("b-mujawwad", "Абдуль-Басит", "Abdul Basit", "mujawwad"),
+    named("y", "Ёсин", "Yasin", "murattal"),
+    named("b-murattal", "Абдуль-Басит", "Abdul Basit", "murattal"),
+  ];
+
+  assert.deepEqual(recitationsByName(list, "ru").map((item) => item.id), ["b-murattal", "b-mujawwad", "y", "h-muallim"]);
+  assert.deepEqual(recitationsByName(list, "en").map((item) => item.id), ["b-murattal", "b-mujawwad", "h-muallim", "y"]);
 });

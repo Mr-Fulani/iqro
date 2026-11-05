@@ -103,12 +103,22 @@ class IqroMiniPlayer extends ConsumerStatefulWidget {
   const IqroMiniPlayer({
     this.allowCollapse = true,
     this.mushafControls = false,
+    this.onReciterTap,
+    this.onSwipeAway,
     super.key,
   });
 
   /// Mushaf has its own reader controls, so its inline player stays expanded.
   final bool allowCollapse;
+
+  /// The Mushaf's player: one ayah chosen on the page, so no surah skipping;
+  /// the reciter's name is a button for [onReciterTap].
   final bool mushafControls;
+  final VoidCallback? onReciterTap;
+
+  /// Where the bar does not fold itself, a swipe hands it to the screen, as
+  /// the Mushaf does with its round play button.
+  final VoidCallback? onSwipeAway;
 
   @override
   ConsumerState<IqroMiniPlayer> createState() => _IqroMiniPlayerState();
@@ -202,10 +212,19 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
               .where((item) => item.number == track.surah)
               .firstOrNull
               ?.nameFor(locale);
+    // The Mushaf plays the ayah chosen on its page: "Аят 2:10 · Аль-Бакара".
+    final mushafAyah = widget.mushafControls
+        ? ref.watch(
+            audioControllerProvider.select((value) => value.rangeStartAyah),
+          )
+        : null;
     final title =
         standalone?.title ??
         (track == null
             ? context.l10n.audioTitle
+            : mushafAyah != null
+            ? '${context.l10n.ayah} ${track.surah}:$mushafAyah · '
+                  '${catalogName ?? player.surahName}'
             : surahDisplayTitle(
                 track.surah,
                 catalogName ?? player.surahName,
@@ -227,20 +246,24 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
           collapsed: collapsed,
           nudged:
               widget.allowCollapse && ref.watch(miniPlayerHintNudgeProvider),
-          onCollapse: widget.allowCollapse ? () => setCollapsed(true) : null,
-          onSwipe: () {
-            setCollapsed(true);
-            // Once folded by hand, the bar stops showing how.
-            try {
-              unawaited(
-                ref
-                    .read(appPreferencesProvider.notifier)
-                    .markPlayerHintLearned(),
-              );
-            } on Object {
-              // A missing preference store only means the hint may show again.
-            }
-          },
+          onCollapse: widget.allowCollapse
+              ? () => setCollapsed(true)
+              : widget.onSwipeAway,
+          onSwipe:
+              widget.onSwipeAway ??
+              () {
+                setCollapsed(true);
+                // Once folded by hand, the bar stops showing how.
+                try {
+                  unawaited(
+                    ref
+                        .read(appPreferencesProvider.notifier)
+                        .markPlayerHintLearned(),
+                  );
+                } on Object {
+                  // A missing preference store only means the hint may show again.
+                }
+              },
           onExpand: () => setCollapsed(false),
           playing: player.playing,
           child: ClipRRect(
@@ -269,32 +292,43 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                subtitle: Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white.withValues(alpha: .68)),
-                ),
+                subtitle: widget.mushafControls && standalone == null
+                    ? Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: _ReciterButton(
+                          name: subtitle,
+                          onPressed: widget.onReciterTap,
+                        ),
+                      )
+                    : Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .68),
+                        ),
+                      ),
                 trailing: SizedBox(
-                  width: 144,
+                  width: widget.mushafControls ? 48 : 144,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: <Widget>[
-                      _MiniPlayerControl(
-                        tooltip: context.l10n.previousSurah,
-                        icon: Icons.skip_previous_rounded,
-                        onPressed:
-                            controlsEnabled &&
-                                adjacentQueueSurah(
-                                      held,
-                                      currentSurah,
-                                      -1,
-                                      navigationMode,
-                                    ) !=
-                                    null
-                            ? () => _changeSurah(-1)
-                            : null,
-                      ),
+                      if (!widget.mushafControls)
+                        _MiniPlayerControl(
+                          tooltip: context.l10n.previousSurah,
+                          icon: Icons.skip_previous_rounded,
+                          onPressed:
+                              controlsEnabled &&
+                                  adjacentQueueSurah(
+                                        held,
+                                        currentSurah,
+                                        -1,
+                                        navigationMode,
+                                      ) !=
+                                      null
+                              ? () => _changeSurah(-1)
+                              : null,
+                        ),
                       _MiniPlayerControl(
                         controlKey: const ValueKey('mini-player-play-toggle'),
                         tooltip: player.playing
@@ -313,21 +347,22 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
                                   : _toggleListening
                             : null,
                       ),
-                      _MiniPlayerControl(
-                        tooltip: context.l10n.nextSurah,
-                        icon: Icons.skip_next_rounded,
-                        onPressed:
-                            controlsEnabled &&
-                                adjacentQueueSurah(
-                                      held,
-                                      currentSurah,
-                                      1,
-                                      navigationMode,
-                                    ) !=
-                                    null
-                            ? () => _changeSurah(1)
-                            : null,
-                      ),
+                      if (!widget.mushafControls)
+                        _MiniPlayerControl(
+                          tooltip: context.l10n.nextSurah,
+                          icon: Icons.skip_next_rounded,
+                          onPressed:
+                              controlsEnabled &&
+                                  adjacentQueueSurah(
+                                        held,
+                                        currentSurah,
+                                        1,
+                                        navigationMode,
+                                      ) !=
+                                      null
+                              ? () => _changeSurah(1)
+                              : null,
+                        ),
                     ],
                   ),
                 ),
@@ -494,6 +529,56 @@ class _IqroMiniPlayerState extends ConsumerState<IqroMiniPlayer> {
   void dispose() {
     _changeRequest += 1;
     super.dispose();
+  }
+}
+
+/// The Mushaf player's reciter: large enough to read and to press, with the
+/// arrow of a list that opens.
+class _ReciterButton extends StatelessWidget {
+  const _ReciterButton({required this.name, required this.onPressed});
+
+  final String name;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: context.l10n.chooseReciter,
+      child: Material(
+        color: Colors.white.withValues(alpha: .14),
+        shape: const StadiumBorder(),
+        child: InkWell(
+          key: const ValueKey('mushaf-player-reciter'),
+          customBorder: const StadiumBorder(),
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(10, 4, 6, 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Flexible(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.expand_more_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

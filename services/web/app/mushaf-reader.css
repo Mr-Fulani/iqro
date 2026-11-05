@@ -411,6 +411,74 @@ body:has(.quran-reader-boot) .app-footer {
 .reader-selected-audio-copy strong { font-size: 14px; font-weight: 600; line-height: 1.4; }
 .reader-selected-audio-copy span { font-size: 12px; line-height: 1.35; color: var(--text-secondary); overflow-wrap: anywhere; max-height: 3em; overflow-y: auto; }
 .reader-actions .reader-ayah-play { background: var(--primary); color: white; border-radius: 50%; }
+/* As in the app's Mushaf: a swipe folds the player into a round button above the bar. */
+.reader-selected-audio:not(.is-folded) { touch-action: none; }
+.reader-selected-audio.is-folded { position: absolute; inset-inline-end: 4px; bottom: calc(100% + 10px); padding: 0; border: 0; }
+.reader-actions .reader-ayah-fab { flex-basis: 52px; width: 52px; height: 52px; box-shadow: 0 3px 14px #073e3433; }
+.reader-selected-audio-portrait { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--primary-subtle); }
+.reader-actions .reader-reciter-button {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-self: start;
+  gap: 2px;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  min-height: 32px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 999px;
+  background: var(--primary-subtle);
+  color: #073e34;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.reader-reciter-button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reader-reciter-button svg { flex: none; }
+
+.mushaf-reciter-sheet {
+  position: absolute;
+  z-index: 230;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 640px);
+  height: min(75%, 640px);
+  margin: 0 auto;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-radius: 18px 18px 0 0;
+  background: var(--panel);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+.mushaf-reciter-sheet .reader-panel-heading { border-radius: 18px 18px 0 0; }
+.mushaf-reciter-search { width: auto; margin: 12px 16px 8px; }
+.mushaf-reciter-empty { margin: 16px; color: var(--text-secondary); }
+.mushaf-reciter-list { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0 0 8px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+.mushaf-reciter-list button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.mushaf-reciter-list button:hover { background: var(--primary-subtle); }
+.mushaf-reciter-list button[aria-pressed="true"] { background: var(--primary-subtle); color: #073e34; }
+.mushaf-reciter-list button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.mushaf-reciter-list img { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.mushaf-reciter-list span { display: grid; flex: 1; min-width: 0; gap: 2px; }
+.mushaf-reciter-list strong { font-weight: 600; overflow-wrap: anywhere; }
+.mushaf-reciter-list small { color: var(--text-secondary); font-size: 13px; }
 .reader-actions button:disabled { opacity: .45; cursor: default; }
 
 .reader-actions button,

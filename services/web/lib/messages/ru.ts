@@ -848,6 +848,8 @@ const ru = {
   "mushafAudio.coverage": "{count}/114 сур",
   "mushafAudio.chooseAyah": "Выберите аят",
   "mushafAudio.none": "Для этого издания пока нет опубликованных аудиозаписей.",
+  "mushafAudio.sheetTitle": "Чтец Мусхафа",
+  "mushafAudio.reciterButton": "Чтец Мусхафа: {name}. Выбрать другого",
   "quran.bookmarkLoginError": "Не удалось войти для добавления закладки.",
   "quran.bookmarkLabel": "Сура {surah}:{ayah} (стр. {page})",
   "quran.bookmarkAdded": "Закладка добавлена в личный кабинет.",

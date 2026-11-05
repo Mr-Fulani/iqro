@@ -27,6 +27,7 @@ import 'native_mushaf_page.dart';
 import 'mushaf_paper.dart';
 import 'mushaf_bookmarks_sheet.dart';
 import 'mushaf_reader_controls.dart';
+import 'mushaf_reciter_sheet.dart';
 import 'quick_jump_sheet.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
@@ -517,25 +518,17 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
+                      // A swipe folds the player into the round button below,
+                      // as the Audio tab's bar folds; the sound plays on.
                       if (_playerExpanded && player.active)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: <Widget>[
-                              const Expanded(
-                                child: IqroMiniPlayer(
-                                  allowCollapse: false,
-                                  mushafControls: true,
-                                ),
-                              ),
-                              IconButton(
-                                tooltip: context.l10n.close,
-                                onPressed: () =>
-                                    setState(() => _playerExpanded = false),
-                                icon: const Icon(Icons.expand_more_rounded),
-                                color: mushafAccentColor,
-                              ),
-                            ],
+                          child: IqroMiniPlayer(
+                            allowCollapse: false,
+                            mushafControls: true,
+                            onReciterTap: _chooseReciter,
+                            onSwipeAway: () =>
+                                setState(() => _playerExpanded = false),
                           ),
                         ),
                       if (!_playerExpanded || !player.active)
@@ -716,6 +709,89 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         endAyah: reference.ayah,
       );
       if (ownsRequest()) setState(() => _playerExpanded = true);
+    } on AccountScopeChanged {
+      return;
+    } on Object {
+      if (ownsRequest() && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+      }
+    } finally {
+      if (mounted && request == _audioRequest) {
+        setState(() => _audioLoading = false);
+      }
+    }
+  }
+
+  /// The player's reciter list. A new reciter is the Mushaf's from now on;
+  /// the ayah in the player starts again in the new voice, or waits paused.
+  Future<void> _chooseReciter() async {
+    final scope = _database.accountScope.current;
+    if (scope == null || !_isCurrentAccount(scope)) return;
+    final repository = ref.read(audioRepositoryProvider);
+    final List<Recitation> recitations;
+    try {
+      recitations = await repository.recitationsForRole(
+        AudioRecitationRole.ayahPlayback,
+      );
+    } on Object {
+      if (_isCurrentAccount(scope) && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.noAudio)));
+      }
+      return;
+    }
+    if (!_isCurrentAccount(scope) || !mounted) return;
+    final shown = ref.read(audioControllerProvider);
+    final chosen = await showMushafReciterSheet(
+      context,
+      recitations: recitations,
+      selectedId: shown.channel == AudioPlaybackChannel.mushaf
+          ? shown.track?.recitationId
+          : ref.read(appPreferencesProvider).mushafRecitationId,
+    );
+    if (chosen == null || !_isCurrentAccount(scope) || !mounted) return;
+    unawaited(
+      ref.read(appPreferencesProvider.notifier).setMushafRecitation(chosen.id),
+    );
+    final controller = ref.read(audioControllerProvider.notifier);
+    final current = ref.read(audioControllerProvider);
+    final track = current.track;
+    if (current.channel != AudioPlaybackChannel.mushaf ||
+        track == null ||
+        track.recitationId == chosen.id ||
+        current.rangeStartAyah == null) {
+      return;
+    }
+    final navigationEpoch = controller.navigationEpoch;
+    final request = ++_audioRequest;
+    bool ownsRequest() =>
+        _isCurrentAccount(scope) &&
+        request == _audioRequest &&
+        controller.navigationEpoch == navigationEpoch &&
+        identical(controller, ref.read(audioControllerProvider.notifier));
+    setState(() => _audioLoading = true);
+    try {
+      final playback = await repository.playback(
+        recitationId: chosen.id,
+        surah: track.surah,
+      );
+      if (!ownsRequest()) return;
+      await controller.loadPlayback(
+        playback: playback,
+        reciter: reciterWithPersonPortrait(
+          chosen.reciter,
+          apiBaseUrl: ref.read(appConfigProvider).apiBaseUrl,
+          reciters: recitations.map((r) => r.reciter),
+        ),
+        surahName: current.surahName,
+        channel: AudioPlaybackChannel.mushaf,
+        startAyah: current.rangeStartAyah,
+        endAyah: current.rangeEndAyah,
+        autoplay: current.playing,
+      );
     } on AccountScopeChanged {
       return;
     } on Object {
@@ -1293,12 +1369,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
               icon: Icons.note_alt_outlined,
               title: context.l10n.notes,
               onTap: () => leave = () => context.push('/notes'),
-            ),
-            (
-              key: const ValueKey('mushaf-now-playing'),
-              icon: Icons.headphones_rounded,
-              title: context.l10n.nowPlaying,
-              onTap: () => leave = () => context.push('/app?tab=3'),
             ),
           ],
         ),

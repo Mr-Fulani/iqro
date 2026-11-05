@@ -425,6 +425,95 @@ void main() {
     expect(button('Previous surah').onPressed, isNotNull);
   });
 
+  testWidgets('the Mushaf player has no surah buttons, names its reciter in '
+      'a button and hands a swipe to the Mushaf', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = AudioController(engine: _MiniPlayerAudioEngine());
+    addTearDown(controller.dispose);
+    await controller.loadPlayback(
+      playback: const SurahPlayback(
+        track: _miniPlayerTrack,
+        segments: <AudioSegment>[
+          AudioSegment(
+            ayahId: '2:10',
+            surah: 2,
+            ayah: 10,
+            start: Duration(seconds: 1),
+            end: Duration(seconds: 5),
+          ),
+        ],
+      ),
+      reciter: _miniPlayerReciter,
+      surahName: 'Al-Baqara',
+      channel: AudioPlaybackChannel.mushaf,
+      startAyah: 10,
+      endAyah: 10,
+      autoplay: false,
+    );
+    var reciterTaps = 0;
+    var swipes = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          audioControllerProvider.overrideWith((ref) => controller),
+          appConfigProvider.overrideWithValue(
+            const AppConfig(
+              apiBaseUrl: 'https://media.example.test',
+              fallbackDownloadUrl: 'https://iqro.forum',
+              environment: 'local',
+            ),
+          ),
+          recitersProvider.overrideWith(
+            (ref) async => <Reciter>[_miniPlayerReciter],
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: IqroMiniPlayer(
+                allowCollapse: false,
+                mushafControls: true,
+                onReciterTap: () => reciterTaps++,
+                onSwipeAway: () => swipes++,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Previous surah'), findsNothing);
+    expect(find.byTooltip('Next surah'), findsNothing);
+    expect(find.byIcon(Icons.expand_more_rounded), findsOneWidget);
+    expect(find.text('Ayah 2:10 · Al-Baqara'), findsOneWidget);
+    final reciter = find.byKey(const ValueKey('mushaf-player-reciter'));
+    expect(
+      find.descendant(of: reciter, matching: find.text('Reader')),
+      findsOneWidget,
+    );
+    // Large enough to press.
+    expect(tester.getSize(reciter).height, greaterThanOrEqualTo(28));
+    await tester.tap(reciter);
+    expect(reciterTaps, 1);
+
+    await tester.fling(
+      find.byKey(const ValueKey('mini-player-bar')),
+      const Offset(0, 60),
+      800,
+    );
+    await tester.pumpAndSettle();
+    expect(swipes, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'app-shell player restores listening instead of owned Dua audio',
     (tester) async {

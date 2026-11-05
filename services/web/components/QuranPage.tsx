@@ -1306,6 +1306,10 @@ function QuranContent() {
     locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
   const surahName = (surah: Surah) =>
     locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en;
+  const mushafSurahName = useCallback((number: number) => {
+    const surah = surahs.find((item) => item.number === number);
+    return surah ? (locale === "ar" ? surah.name_ar : locale === "ru" ? surah.name_ru : surah.name_en) : "";
+  }, [locale, surahs]);
 
   const handleActiveAyahChange = useCallback((ayahKey: string | null) => {
     setPlayingMushafAyah(ayahKey);
@@ -2250,6 +2254,7 @@ function QuranContent() {
           onSettingsChange={setAudioSettings}
           onRecitationChange={setMushafRecitationId}
           onRecitationsChange={setMushafRecitations}
+          surahName={mushafSurahName}
         />
       </MushafReaderPanel>
 

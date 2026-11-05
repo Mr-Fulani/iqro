@@ -106,6 +106,33 @@ export function reciterSearch<T extends SearchableReciter>(
   };
 }
 
+const RECITATION_STYLE_ORDER = ["murattal", "mujawwad", "muallim"];
+
+function localReciterName(reciter: Reciter, locale: string): string {
+  const name = locale === "ar" ? reciter.name_ar
+    : locale === "ru" ? reciter.name_ru
+      : locale === "tr" ? reciter.name_tr
+        : "";
+  return name || reciter.name_en || reciter.name_ar;
+}
+
+/**
+ * The Mushaf's reciter list: by name in `locale`, one reciter's styles in the
+ * Audio page's order. The app sorts its list the same way (recitationsByName).
+ */
+export function recitationsByName(recitations: readonly Recitation[], locale: string): Recitation[] {
+  const rank = (style: string) => {
+    const index = RECITATION_STYLE_ORDER.indexOf(style);
+    return index < 0 ? RECITATION_STYLE_ORDER.length : index;
+  };
+  return recitations
+    .map((recitation) => ({ recitation, name: normalizedName(localReciterName(recitation.reciter, locale)) }))
+    .sort((left, right) =>
+      (left.name < right.name ? -1 : left.name > right.name ? 1 : 0)
+      || rank(left.recitation.style) - rank(right.recitation.style))
+    .map((item) => item.recitation);
+}
+
 export function groupRecitersByPerson(reciters: Reciter[]): Reciter[] {
   const people = new Map<string, Reciter>();
   for (const reciter of reciters) {

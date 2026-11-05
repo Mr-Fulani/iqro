@@ -202,6 +202,7 @@
   "fullReciterHint": "Mushaf ve Ezber'de de var",
   "showAllReciters": "Tümünü göster: {count}",
   "nowPlaying": "Şimdi çalıyor",
+  "mushafReciter": "Mushaf kârisi",
   "play": "Oynat",
   "pause": "Duraklat",
   "previousSurah": "Önceki sure",

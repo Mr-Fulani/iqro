@@ -672,6 +672,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get nowPlaying => 'Сейчас играет';
 
   @override
+  String get mushafReciter => 'Чтец Мусхафа';
+
+  @override
   String get play => 'Воспроизвести';
 
   @override
