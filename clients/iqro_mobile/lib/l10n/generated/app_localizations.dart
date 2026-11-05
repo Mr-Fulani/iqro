@@ -1314,6 +1314,36 @@ abstract class AppLocalizations {
   /// **'Next surah'**
   String get nextSurah;
 
+  /// No description provided for @nextSurahHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pull up or tap'**
+  String get nextSurahHint;
+
+  /// No description provided for @nextSurahRelease.
+  ///
+  /// In en, this message translates to:
+  /// **'Let go to open surah {number}'**
+  String nextSurahRelease(String number);
+
+  /// No description provided for @quranEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End of the Quran'**
+  String get quranEnd;
+
+  /// No description provided for @quranEndNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This is the last surah — {surah}. There is none after it.'**
+  String quranEndNote(String surah);
+
+  /// No description provided for @toSurahList.
+  ///
+  /// In en, this message translates to:
+  /// **'To the list of surahs'**
+  String get toSurahList;
+
   /// No description provided for @mediaBack10.
   ///
   /// In en, this message translates to:

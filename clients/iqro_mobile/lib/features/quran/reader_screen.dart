@@ -22,6 +22,7 @@ import 'quran_models.dart';
 import '../../core/audio/playback_speed.dart';
 import 'ayah_share.dart';
 import 'mushaf_edition.dart';
+import 'next_surah.dart';
 import '../dua/dua_arabic.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/share/content_share.dart';
@@ -65,6 +66,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   /// The finger pulling a selection, in the reader's stack, for the loupe.
   Offset? _loupe;
   late final WordRangeController _words;
+  late final _nextPull = NextSurahPull(onNext: _openNextSurah);
+  var _leaving = false;
   var _showTranslation = true;
   var _showTafsir = false;
   var _selectedAyah = 1;
@@ -115,6 +118,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       ..removeListener(_onWords)
       ..dispose();
     WidgetsBinding.instance.removeObserver(this);
+    _nextPull.dispose();
     unawaited(_readingSession?.finish());
     _scrollController.dispose();
     super.dispose();
@@ -147,12 +151,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   /// The surah as plain Arabic text from [ayah]; back here, the ayah the
   /// reader stopped at comes to the top.
   Future<void> _openPlainText(List<QuranAyah> items, int ayah) async {
-    final stopped = await Navigator.of(
-      context,
-    ).push<int>(ReaderFlowScreen.route(surah: widget.surah, ayah: ayah));
+    final stopped = await Navigator.of(context).push<ReaderFlowResult>(
+      ReaderFlowScreen.route(surah: widget.surah, ayah: ayah),
+    );
     if (stopped == null || !mounted) return;
-    setState(() => _selectedAyah = stopped);
-    await _showAyah(items, stopped);
+    // The plain text moved on to a later surah: its cards open there.
+    if (stopped.surah != widget.surah) {
+      context.replace(
+        '/reader/${stopped.surah}?ayah=${stopped.ayah}'
+        '${widget.savesReadingPlace ? '' : '&from=bookmark'}',
+      );
+      return;
+    }
+    setState(() => _selectedAyah = stopped.ayah);
+    await _showAyah(items, stopped.ayah);
   }
 
   void _onSwipe(
@@ -208,6 +220,18 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       await WidgetsBinding.instance.endOfFrame;
     }
     if (mounted) await _persistPosition(target);
+  }
+
+  /// The next surah from its first ayah, rising in over this one.
+  void _openNextSurah() {
+    if (!mounted || _leaving || widget.surah >= lastSurah) return;
+    if (_words.range != null) return;
+    _leaving = true;
+    context.replace(
+      '/reader/${widget.surah + 1}?ayah=1'
+      '${widget.savesReadingPlace ? '' : '&from=bookmark'}',
+      extra: NextSurahTransition.routeExtra,
+    );
   }
 
   void _onWords() {
@@ -498,6 +522,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         if (notification is ScrollEndNotification && !_restoringPosition) {
           unawaited(_persistTopVisibleAyah(items));
         }
+        _nextPull.handle(
+          notification,
+          enabled: _words.range == null && widget.surah < lastSurah,
+        );
         return false;
       },
       child: ListView.builder(
@@ -509,10 +537,29 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           14,
           _words.range == null ? 100 : 280,
         ),
-        itemCount: items.length + 1,
+        itemCount: items.length + 2,
         itemBuilder: (context, index) {
           if (index == 0) {
             return _ReaderIntro(surah: surah, title: title);
+          }
+          if (index == items.length + 1) {
+            final surahs =
+                ref.watch(quranCatalogProvider).valueOrNull?.surahs ??
+                const <Surah>[];
+            final next = widget.surah + 1;
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: widget.surah >= lastSurah
+                  ? QuranEndCard(surah: surah)
+                  : NextSurahCard(
+                      number: next,
+                      surah: surahs
+                          .where((item) => item.number == next)
+                          .firstOrNull,
+                      progress: _nextPull.progress,
+                      onTap: _words.range == null ? _openNextSurah : null,
+                    ),
+            );
           }
           final ayah = items[index - 1];
           final audioActive =

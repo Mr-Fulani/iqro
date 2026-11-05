@@ -72,6 +72,7 @@ import type { PublishedQuranReaderPreview } from "../lib/public-content";
 import {
   editionName as localizedEditionName,
   quranAyahPath,
+  quranEditionPath,
   quranSurahPath,
   surahName as localizedSurahName,
 } from "../lib/quran-content";
@@ -90,6 +91,7 @@ import {
 import { holdInView } from "../lib/hold-in-view";
 import { WordRangeHandles, useWordSelection } from "./WordSelection";
 import { QuranPlainText } from "./QuranPlainText";
+import { LAST_SURAH, NextSurahCard, QuranEnd, usePullToNext } from "./NextSurah";
 import { ReaderSwipeReveal, useReaderSwipe, type ReaderSwipeDirection } from "./ReaderSwipe";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
@@ -1370,6 +1372,9 @@ function QuranContent() {
   useEffect(() => {
     const ayahKey = pendingTextAyah.current;
     if (viewMode !== "text" || !ayahKey || ayahKey !== selectedMushafAyah) return;
+    // Another surah's cards take the new surah's ids for a render while its
+    // own ayahs load: wait for them.
+    if (!ayahs.some((ayah) => `${ayah.surah_number}:${ayah.number}` === ayahKey)) return;
     const target = document.getElementById(`quran-ayah-${ayahKey.replace(":", "-")}`);
     if (!target) return;
     pendingTextAyah.current = null;
@@ -1501,6 +1506,66 @@ function QuranContent() {
     if (canonicalPage !== null) setCurrentPage(canonicalPage);
     setViewMode("text");
   };
+
+  // A surah from its first ayah: from the list, or the end of the one before.
+  const openSurah = (targetSurah: number) => {
+    const targetAyahKey = `${targetSurah}:1`;
+    textReadingAyah.current = targetAyahKey;
+    const canonicalPage = surahs.find((item) => item.number === targetSurah)?.first_page;
+    const targetPage = canonicalPage == null ? undefined : viewMode === "mushaf" ? sourcePageFor(targetAyahKey, canonicalPage) : canonicalPage;
+    pendingTextAyah.current = viewMode === "text" ? targetAyahKey : null;
+    pendingMushafAyah.current = viewMode === "mushaf" ? targetAyahKey : null;
+    setSelectedMushafAyah(targetAyahKey);
+    if (targetPage) {
+      setCurrentPage(targetPage);
+      queueReadingPlace({
+        pageNumber: targetPage,
+        surahNumber: targetSurah,
+        ayahNumber: 1,
+      });
+    }
+    setSelectedSurah(targetSurah);
+  };
+
+  // The end of a surah: the next one rises in from its first ayah, in the
+  // cards or in the plain text, whichever is open.
+  const [nextSurahEntering, setNextSurahEntering] = useState(false);
+  const openNextSurah = () => {
+    if (selectedSurah >= LAST_SURAH || wordRange) return;
+    clearWords();
+    setNextSurahEntering(true);
+    if (plainTextAyah !== null) setPlainTextAyah(1);
+    openSurah(selectedSurah + 1);
+    // Its start comes to the top below (nothing above its first ayah grows,
+    // so no hold, which would fight the rise).
+    pendingTextAyah.current = null;
+    if (plainTextAyah === null) {
+      // At once: a smooth scroll would still be on its way when the short
+      // «loading» page cuts it off, leaving the reader at the new surah's end.
+      window.requestAnimationFrame(() => textSurface?.scrollIntoView({ block: "start", behavior: "instant" }));
+    }
+  };
+  // It rises in once its own ayahs are there, not while they load.
+  const nextSurahRising = nextSurahEntering && !loading && ayahs[0]?.surah_number === selectedSurah;
+  useEffect(() => {
+    if (!nextSurahRising) return;
+    if (plainTextAyah === null && textSurface) {
+      // Where the text starts on the page without the rise, which already
+      // moves it down: offsets leave transforms out.
+      let top = -(parseFloat(getComputedStyle(textSurface).scrollMarginTop) || 0)
+        - (parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0);
+      for (let element: HTMLElement | null = textSurface; element; element = element.offsetParent as HTMLElement | null) {
+        top += element.offsetTop;
+      }
+      window.scrollTo({ top, behavior: "instant" });
+    }
+    const timer = window.setTimeout(() => setNextSurahEntering(false), 700);
+    return () => window.clearTimeout(timer);
+  }, [nextSurahRising, plainTextAyah, textSurface]);
+  const nextPull = usePullToNext(null, {
+    enabled: viewMode === "text" && plainTextAyah === null && !wordRange && selectedSurah < LAST_SURAH,
+    onNext: openNextSurah,
+  });
 
   // The Mushaf page of the ayah: from the switch, or turned in by a swipe.
   const openMushaf = (target: string | null, swiped = false) => {
@@ -1956,25 +2021,7 @@ function QuranContent() {
               <select
                 id="surah-navigation"
                 value={selectedSurah}
-                onChange={(event) => {
-                  const targetSurah = Number(event.target.value);
-                  const targetAyahKey = `${targetSurah}:1`;
-                  textReadingAyah.current = targetAyahKey;
-                  const canonicalPage = surahs.find((item) => item.number === targetSurah)?.first_page;
-                  const targetPage = canonicalPage == null ? undefined : viewMode === "mushaf" ? sourcePageFor(targetAyahKey, canonicalPage) : canonicalPage;
-                  pendingTextAyah.current = viewMode === "text" ? targetAyahKey : null;
-                  pendingMushafAyah.current = viewMode === "mushaf" ? targetAyahKey : null;
-                  setSelectedMushafAyah(targetAyahKey);
-                  if (targetPage) {
-                    setCurrentPage(targetPage);
-                    queueReadingPlace({
-                      pageNumber: targetPage,
-                      surahNumber: targetSurah,
-                      ayahNumber: 1,
-                    });
-                  }
-                  setSelectedSurah(targetSurah);
-                }}
+                onChange={(event) => openSurah(Number(event.target.value))}
                 disabled={surahs.length === 0}
               >
                 {surahs.map((s) => (
@@ -2274,7 +2321,7 @@ function QuranContent() {
         />
         <section
           ref={setTextSurface}
-          className="surface quran-content-surface reader-swipe-surface"
+          className={`surface quran-content-surface reader-swipe-surface${nextSurahRising ? " is-next-surah" : ""}`}
           style={{ transform: textSwipe ? `translateX(${textSwipe}px)` : undefined }}
         >
           {/* Bismillah Header */}
@@ -2291,6 +2338,7 @@ function QuranContent() {
               {t("quran.loadingAyahs")}
             </div>
           ) : ayahs.length > 0 ? (
+            <>
             <div ref={setWordArea} style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
               {ayahs.map((ayah) => {
                 const ayahKey = `${selectedSurah}:${ayah.number}`;
@@ -2481,6 +2529,20 @@ function QuranContent() {
                 );
               })}
             </div>
+            <div className="surah-end">
+              {selectedSurah >= LAST_SURAH ? (
+                <QuranEnd surah={currentSurahObj} listHref={localizedPath(locale, quranEditionPath(selectedEdition))} />
+              ) : (
+                <NextSurahCard
+                  number={selectedSurah + 1}
+                  surah={surahs.find((item) => item.number === selectedSurah + 1)}
+                  progress={nextPull}
+                  onOpen={openNextSurah}
+                  disabled={Boolean(wordRange)}
+                />
+              )}
+            </div>
+            </>
           ) : (
             <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
               {t("quran.noAyahs")}
@@ -2795,15 +2857,21 @@ function QuranContent() {
       )}
       {plainTextAyah !== null && viewMode === "text" && (
         <QuranPlainText
-          key={`${selectedSurah}:${plainTextAyah}`}
+          key={selectedSurah}
           surah={selectedSurah}
           surahName={currentSurahObj?.name_ar}
-          ayahs={ayahs}
+          // A surah's own ayahs: the next one's arrive a moment after it opens.
+          ayahs={ayahs.filter((ayah) => ayah.surah_number === selectedSurah)}
           startAyah={plainTextAyah}
           range={wordRange?.range ?? null}
           playingWord={playingWord}
           wordArea={setPlainWordArea}
           onLeave={leavePlainText}
+          thisSurah={currentSurahObj}
+          nextSurah={surahs.find((item) => item.number === selectedSurah + 1)}
+          listHref={localizedPath(locale, quranEditionPath(selectedEdition))}
+          onNextSurah={openNextSurah}
+          entering={nextSurahRising}
         />
       )}
       {wordRange && (

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import 'kashida.dart';
 import 'word_range.dart';
 
 /// The reader's ayahs on screen, so a drag that leaves one card finds the
@@ -73,6 +74,7 @@ class ReaderAyahWords extends StatefulWidget {
   }) : flowAyahs = null,
        textAlign = TextAlign.center,
        markerStyle = null,
+       kashida = false,
        marked = null;
 
   /// Several ayahs running on in one paragraph, as on a Mushaf page.
@@ -84,6 +86,7 @@ class ReaderAyahWords extends StatefulWidget {
     required this.onRange,
     this.textAlign = TextAlign.justify,
     this.markerStyle,
+    this.kashida = false,
     this.range,
     this.marked,
     this.playingWord,
@@ -111,6 +114,10 @@ class ReaderAyahWords extends StatefulWidget {
 
   /// The end markers' own style, over [style].
   final TextStyle? markerStyle;
+
+  /// Lines of a single ayah filled to both edges by drawing out the joins
+  /// between letters, as in a printed Mushaf ([kashidaLayout]).
+  final bool kashida;
 
   /// Words shown for a moment in a soft tint: the place a reader came to.
   final QuranWordRange? marked;
@@ -222,16 +229,26 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     if (range != null && range != widget.range) widget.onRange(range);
   }
 
-  TextSpan _span() {
+  TextSpan _span(double width) {
     final range = widget.range;
     final marked = widget.marked;
     final children = <InlineSpan>[];
     final words = <({QuranWord word, String text})>[];
     final offsets = <int>[];
     final texts = _texts(widget);
+    final layout = widget.kashida && texts.length == 1
+        ? kashidaLayout(
+            words: texts.single.words,
+            marker: texts.single.marker,
+            style: widget.style,
+            width: width,
+            scaler: MediaQuery.textScalerOf(context),
+          )
+        : null;
     var length = 0;
     for (final ayah in texts) {
-      for (final (index, text) in ayah.words.indexed) {
+      for (final (index, original) in ayah.words.indexed) {
+        final text = layout?.words[index] ?? original;
         final word = QuranWord(
           widget.surah,
           ayah.ayah,
@@ -242,7 +259,8 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
           final joined = selected && range!.contains(words.last.word);
           children.add(
             TextSpan(
-              text: ' ',
+              // A drawn-out line ends where the layout ended it.
+              text: layout?.breaks.contains(index - 1) ?? false ? '\n' : ' ',
               style: joined
                   ? const TextStyle(backgroundColor: wordRangeSelectionColor)
                   : null,
@@ -359,7 +377,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     builder: (context, constraints) {
       _painter?.dispose();
       final painter = TextPainter(
-        text: _span(),
+        text: _span(constraints.maxWidth),
         textAlign: widget.textAlign,
         textDirection: TextDirection.rtl,
         textScaler: MediaQuery.textScalerOf(context),
@@ -367,7 +385,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
       _painter = painter;
       final handles = _handles();
       return Semantics(
-        label: _words.map((item) => item.text).join(' '),
+        label: _texts(widget).expand((ayah) => ayah.words).join(' '),
         textDirection: TextDirection.rtl,
         child: RawGestureDetector(
           gestures: <Type, GestureRecognizerFactory>{

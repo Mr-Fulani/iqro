@@ -677,6 +677,25 @@ class AppLocalizationsTr extends AppLocalizations {
   String get nextSurah => 'Sonraki sure';
 
   @override
+  String get nextSurahHint => 'Yukarı çekin veya dokunun';
+
+  @override
+  String nextSurahRelease(String number) {
+    return '$number. sureyi açmak için bırakın';
+  }
+
+  @override
+  String get quranEnd => 'Kur’an’ın sonu';
+
+  @override
+  String quranEndNote(String surah) {
+    return 'Bu son sure — $surah. Sonrası yok.';
+  }
+
+  @override
+  String get toSurahList => 'Sure listesine';
+
+  @override
   String get mediaBack10 => '10 saniye geri';
 
   @override

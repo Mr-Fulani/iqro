@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { Surah } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
+import { kashidaLayout, type KashidaLayout } from "../lib/kashida";
 import { ayahTextParts, sameWord, wordKey, wordRangeContains, type QuranWord, type QuranWordRange } from "../lib/word-range";
 import { ReaderSwipeReveal, useReaderSwipe } from "./ReaderSwipe";
 import { WordRangeHandles } from "./WordSelection";
+import { LAST_SURAH, NextSurahCard, QuranEnd, usePullToNext } from "./NextSurah";
 
 export const PLAIN_TEXT_SIZE_KEY = "iqro_plain_text_size";
 const DEFAULT_SIZE = 40;
@@ -30,7 +33,9 @@ function readSize() {
  * translation and buttons in the way. It turns in over the text from the
  * ayah a swipe to the right started on; a swipe back to the left turns it
  * away and hands back the ayah at the top of the screen. Word selection works
- * as in the text: the page passes its words area in `wordArea`.
+ * as in the text: the page passes its words area in `wordArea`. Lines reach
+ * both edges by drawn-out joins (lib/kashida.ts). At the end of the surah the
+ * next one opens, rising in (`entering`).
  */
 export function QuranPlainText({
   surah,
@@ -41,6 +46,11 @@ export function QuranPlainText({
   playingWord,
   wordArea,
   onLeave,
+  thisSurah,
+  nextSurah,
+  listHref,
+  onNextSurah,
+  entering = false,
 }: {
   surah: number;
   surahName?: string;
@@ -50,6 +60,11 @@ export function QuranPlainText({
   playingWord: QuranWord | null;
   wordArea: (element: HTMLElement | null) => void;
   onLeave: (ayah: number) => void;
+  thisSurah?: Surah;
+  nextSurah?: Surah;
+  listHref: string;
+  onNextSurah: () => void;
+  entering?: boolean;
 }) {
   const { t } = useI18n();
   const [size, setSize] = useState(DEFAULT_SIZE);
@@ -59,6 +74,8 @@ export function QuranPlainText({
   const [leaving, setLeaving] = useState(false);
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
+  const [lineWidth, setLineWidth] = useState(0);
+  const [fontsReady, setFontsReady] = useState(false);
   const placing = useRef(true);
   const current = useRef(startAyah);
 
@@ -96,9 +113,15 @@ export function QuranPlainText({
     if (!body) return;
     // The text reflows when the Arabic font arrives, the size changes or the
     // screen turns: the ayah at the top stays there.
-    const keep = new ResizeObserver(() => placeAt(current.current));
+    const keep = new ResizeObserver(() => {
+      setLineWidth(body.clientWidth);
+      placeAt(current.current);
+    });
     keep.observe(body);
-    void document.fonts?.ready.then(() => placeAt(current.current));
+    void document.fonts?.ready.then(() => {
+      setFontsReady(true);
+      placeAt(current.current);
+    });
     return () => keep.disconnect();
   }, [placeAt, scroller]);
 
@@ -179,6 +202,36 @@ export function QuranPlainText({
     }
   };
 
+  const pull = usePullToNext(scroller, {
+    enabled: !range && !leaving && surah < LAST_SURAH,
+    onNext: onNextSurah,
+  });
+
+  // Each ayah's lines, drawn out to both edges in the page's own font.
+  const layouts = useMemo(() => {
+    const body = scroller?.firstElementChild;
+    const out = new Map<number, KashidaLayout>();
+    if (!body || !lineWidth || !fontsReady) return out;
+    const context = document.createElement("canvas").getContext("2d");
+    if (!context) return out;
+    context.font = `${size}px ${getComputedStyle(body).fontFamily}`;
+    context.direction = "rtl";
+    const widths = new Map<string, number>();
+    const measure = (text: string) => {
+      let width = widths.get(text);
+      if (width === undefined) widths.set(text, width = context.measureText(text).width);
+      return width;
+    };
+    for (const item of ayahs) {
+      const words = ayahTextParts(surah, item.number, item.text_uthmani).flatMap((part) => part.words ?? []);
+      out.set(item.number, kashidaLayout(words, lineWidth, measure, {
+        marker: `\u00A0\uFD3F${arabicNumber.format(item.number)}\uFD3E`,
+        fontSize: size,
+      }));
+    }
+    return out;
+  }, [ayahs, fontsReady, lineWidth, scroller, size, surah]);
+
   const first = ayahs[0];
   const opening = first ? ayahTextParts(surah, first.number, first.text_uthmani).find((part) => !part.words)?.text : undefined;
   const page = ayahs.find((item) => item.number === ayah)?.pages[0];
@@ -186,7 +239,7 @@ export function QuranPlainText({
   return (
     <div
       ref={setRoot}
-      className={`plain-text-reader${leaving ? " is-leaving" : ""}`}
+      className={`plain-text-reader${leaving ? " is-leaving" : ""}${entering ? " is-next" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label={t("quran.plainText")}
@@ -219,12 +272,14 @@ export function QuranPlainText({
               <p className="plain-text-ayah quran-arabic-text" dir="rtl" key={item.id} data-ayah={item.number}>
                 {ayahTextParts(surah, item.number, item.text_uthmani)
                   .flatMap((part) => part.words ?? [])
-                  .map((text, index) => {
+                  .map((original, index) => {
                     const at = { surah, ayah: item.number, position: index + 1 };
                     const selected = wordRangeContains(range, at);
+                    const layout = layouts.get(item.number);
+                    const text = layout?.words[index] ?? original;
                     return (
                       <span key={index}>
-                        {index > 0 && " "}
+                        {index > 0 && (layout?.breaks.has(index - 1) ? <br /> : " ")}
                         <span
                           className={`quran-word${selected ? " is-word-selected" : ""}${selected && sameWord(at, playingWord) ? " is-word-playing" : ""}${marked === item.number ? " is-word-marked" : ""}`}
                           data-word-key={wordKey(at)}
@@ -241,6 +296,22 @@ export function QuranPlainText({
                 </span>
               </p>
             ))}
+            {ayahs.length > 0 && (
+              <div className="plain-text-end">
+                {surah >= LAST_SURAH ? (
+                  <QuranEnd surah={thisSurah} paper listHref={listHref} />
+                ) : (
+                  <NextSurahCard
+                    number={surah + 1}
+                    surah={nextSurah}
+                    progress={pull}
+                    onOpen={onNextSurah}
+                    paper
+                    disabled={Boolean(range)}
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
         <p className="plain-text-place" data-testid="plain-text-place">

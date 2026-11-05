@@ -25,6 +25,7 @@ import '../features/plan/plan_screen.dart';
 import '../features/prayer/prayer_screen.dart';
 import '../features/prayer/prayer_calendar_screen.dart';
 import '../features/quran/mushaf_screen.dart';
+import '../features/quran/next_surah.dart';
 import '../features/quran/reader_page_turn.dart';
 import '../features/quran/reader_screen.dart';
 import '../features/reminders/reminders_screen.dart';
@@ -104,15 +105,35 @@ GoRouter createRouter({required bool onboardingComplete}) {
       ),
       GoRoute(
         path: '/reader/:surah',
-        builder: (context, state) => AudioNavigationBoundary(
-          section: AudioNavigationSection.quran,
-          child: ReaderScreen(
-            surah: int.tryParse(state.pathParameters['surah'] ?? '') ?? 1,
-            initialAyah:
-                int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
-            savesReadingPlace: state.uri.queryParameters['from'] != 'bookmark',
-          ),
-        ),
+        pageBuilder: (context, state) {
+          final child = AudioNavigationBoundary(
+            section: AudioNavigationSection.quran,
+            child: ReaderScreen(
+              surah: int.tryParse(state.pathParameters['surah'] ?? '') ?? 1,
+              initialAyah:
+                  int.tryParse(state.uri.queryParameters['ayah'] ?? '') ?? 1,
+              savesReadingPlace:
+                  state.uri.queryParameters['from'] != 'bookmark',
+            ),
+          );
+          // The end of a surah opens the next one rising from below.
+          if (state.extra == NextSurahTransition.routeExtra) {
+            return CustomTransitionPage<void>(
+              key: state.pageKey,
+              name: state.name,
+              child: child,
+              transitionDuration: const Duration(milliseconds: 450),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      NextSurahTransition(animation: animation, child: child),
+            );
+          }
+          return MaterialPage<void>(
+            key: state.pageKey,
+            name: state.name,
+            child: child,
+          );
+        },
       ),
       GoRoute(
         path: '/mushaf',
