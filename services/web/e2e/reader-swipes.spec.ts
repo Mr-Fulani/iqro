@@ -66,7 +66,9 @@ for (const layout of layouts) {
       await expect(page.getByTestId("plain-text-place")).toHaveText("Аят ٥ · стр. ١");
       // Only the Arabic: no translation, no ayah buttons, no close button.
       await expect(reader.locator(".ayah-translation, .ayah-action-buttons")).toHaveCount(0);
-      await expect(reader.getByRole("button")).toHaveCount(1);
+      // The size and, at the end, the next surah's card: nothing else.
+      await expect(reader.getByRole("button")).toHaveCount(2);
+      await expect(reader.getByTestId("next-surah-card")).toHaveCount(1);
       await expect(reader.locator('[data-word-key="1:5:1"]')).toHaveClass(/is-word-marked/);
       await expect(reader.locator('[data-word-key="1:4:1"]')).not.toHaveClass(/is-word-marked/);
 

@@ -13,17 +13,23 @@ import '../../core/theme/iqro_theme.dart';
 import '../dua/dua_arabic.dart';
 import 'ayah_action_sheet.dart';
 import 'mushaf_paper.dart';
+import 'next_surah.dart';
 import 'quran_models.dart';
 import 'reader_page_turn.dart';
 import 'reader_words.dart';
 import 'word_range.dart';
 
+/// Where the plain text was left: the surah, which the end of one may have
+/// moved on, and the ayah at the top of the screen.
+typedef ReaderFlowResult = ({int surah, int ayah});
+
 /// The surah as plain Arabic text, running on as on a Mushaf page, in a
 /// size the reader picks: for those who find the Mushaf too small and the
 /// cards, translation and buttons in the way. A swipe to the right on the
 /// reader opens it at the ayah under the finger; a swipe back to the left,
-/// or the back button, returns that ayah at the top of the screen.
-class ReaderFlowScreen extends ConsumerStatefulWidget {
+/// or the back button, returns that ayah at the top of the screen. At the
+/// end of a surah the next one rises in from below.
+class ReaderFlowScreen extends StatefulWidget {
   const ReaderFlowScreen({
     required this.surah,
     required this.initialAyah,
@@ -33,30 +39,97 @@ class ReaderFlowScreen extends ConsumerStatefulWidget {
   final int surah;
   final int initialAyah;
 
-  /// Turns in from the left, the way the finger went; pops with the ayah at
-  /// the top of the screen.
-  static Route<int> route({required int surah, required int ayah}) =>
-      PageRouteBuilder<int>(
-        transitionDuration: const Duration(milliseconds: 450),
-        reverseTransitionDuration: const Duration(milliseconds: 400),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            ReaderFlowScreen(surah: surah, initialAyah: ayah),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-            ReaderPageTurn(
-              animation: animation,
-              hinge: ReaderPageHinge.left,
-              child: child,
-            ),
-      );
+  /// Turns in from the left, the way the finger went; pops with the surah
+  /// and the ayah at the top of the screen.
+  static Route<ReaderFlowResult> route({
+    required int surah,
+    required int ayah,
+  }) => PageRouteBuilder<ReaderFlowResult>(
+    transitionDuration: const Duration(milliseconds: 450),
+    reverseTransitionDuration: const Duration(milliseconds: 400),
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        ReaderFlowScreen(surah: surah, initialAyah: ayah),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        ReaderPageTurn(
+          animation: animation,
+          hinge: ReaderPageHinge.left,
+          child: child,
+        ),
+  );
 
   @override
-  ConsumerState<ReaderFlowScreen> createState() => _ReaderFlowScreenState();
+  State<ReaderFlowScreen> createState() => _ReaderFlowScreenState();
+}
+
+class _ReaderFlowScreenState extends State<ReaderFlowScreen> {
+  late var _surah = widget.surah;
+  late var _initialAyah = widget.initialAyah;
+
+  void _next() {
+    if (_surah >= lastSurah) return;
+    setState(() {
+      _surah += 1;
+      _initialAyah = 1;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 450),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      // The surah that ends goes up and fades, the next rises from below.
+      transitionBuilder: (child, animation) {
+        if (still) return FadeTransition(opacity: animation, child: child);
+        final incoming = child.key == ValueKey<int>(_surah);
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: incoming ? const Offset(0, 1) : const Offset(0, -.3),
+            end: Offset.zero,
+          ).animate(animation),
+          child: incoming
+              ? child
+              : FadeTransition(opacity: animation, child: child),
+        );
+      },
+      layoutBuilder: (current, previous) =>
+          Stack(children: <Widget>[...previous, ?current]),
+      child: _FlowPage(
+        key: ValueKey<int>(_surah),
+        surah: _surah,
+        initialAyah: _initialAyah,
+        onNext: _next,
+        onLeave: (ayah) =>
+            Navigator.of(context).pop((surah: _surah, ayah: ayah)),
+      ),
+    );
+  }
+}
+
+class _FlowPage extends ConsumerStatefulWidget {
+  const _FlowPage({
+    required this.surah,
+    required this.initialAyah,
+    required this.onNext,
+    required this.onLeave,
+    super.key,
+  });
+
+  final int surah;
+  final int initialAyah;
+  final VoidCallback onNext;
+  final ValueChanged<int> onLeave;
+
+  @override
+  ConsumerState<_FlowPage> createState() => _FlowPageState();
 }
 
 /// The ayah numbers on the paper: the app's gold, apart from the ink.
 const _markerColor = Color(0xFF9A6D22);
 
-class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
+class _FlowPageState extends ConsumerState<_FlowPage> {
   final _scrollController = ScrollController();
   final _viewportKey = GlobalKey();
   final _stackKey = GlobalKey();
@@ -64,6 +137,7 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
   final _wordRegistry = ReaderWordRegistry();
   final _selectionBounds = ValueNotifier<Rect?>(null);
   late final WordRangeController _words;
+  late final _nextPull = NextSurahPull(onNext: _openNext);
   Offset? _loupe;
   late var _ayah = widget.initialAyah;
   QuranWordRange? _marked;
@@ -91,6 +165,7 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
     _words
       ..removeListener(_onWords)
       ..dispose();
+    _nextPull.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -296,7 +371,11 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
     });
   }
 
-  void _leave() => Navigator.of(context).pop(_ayah);
+  void _leave() => widget.onLeave(_ayah);
+
+  void _openNext() {
+    if (_words.range == null && widget.surah < lastSurah) widget.onNext();
+  }
 
   Future<void> _showMore(List<QuranAyah> items) async {
     final start = _words.range?.start;
@@ -452,10 +531,9 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
         : splitDuaArabic(
             first.textUthmani,
           ).where((part) => part.opening).firstOrNull?.text;
-    final surah = ref
-        .watch(quranCatalogProvider)
-        .valueOrNull
-        ?.surahs
+    final surahs =
+        ref.watch(quranCatalogProvider).valueOrNull?.surahs ?? const <Surah>[];
+    final surah = surahs
         .where((item) => item.number == widget.surah)
         .firstOrNull;
     return LayoutBuilder(
@@ -489,6 +567,11 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
                         // A jump to keep the place reports nothing new.
                         if (!_jumping) _schedulePlaceUpdate();
                       }
+                      _nextPull.handle(
+                        notification,
+                        enabled:
+                            _words.range == null && widget.surah < lastSurah,
+                      );
                       return false;
                     },
                     child: ListView.builder(
@@ -500,7 +583,7 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
                         side,
                         _words.range == null ? 32 : 280,
                       ),
-                      itemCount: items.length + 1,
+                      itemCount: items.length + 2,
                       itemBuilder: (context, index) {
                         if (index == 0) {
                           return _FlowHeader(
@@ -509,6 +592,24 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
                             size: size,
                             style: style,
                           );
+                        }
+                        if (index == items.length + 1) {
+                          return widget.surah >= lastSurah
+                              ? QuranEndCard(surah: surah, paper: true)
+                              : NextSurahCard(
+                                  number: widget.surah + 1,
+                                  surah: surahs
+                                      .where(
+                                        (item) =>
+                                            item.number == widget.surah + 1,
+                                      )
+                                      .firstOrNull,
+                                  progress: _nextPull.progress,
+                                  onTap: _words.range == null
+                                      ? _openNext
+                                      : null,
+                                  paper: true,
+                                );
                         }
                         final ayah = items[index - 1];
                         // Each ayah a paragraph of its own, a blank line
@@ -532,6 +633,7 @@ class _ReaderFlowScreenState extends ConsumerState<ReaderFlowScreen> {
                             ],
                             textAlign: TextAlign.start,
                             markerStyle: const TextStyle(color: _markerColor),
+                            kashida: true,
                             style: style,
                             registry: _wordRegistry,
                             range: _words.range,

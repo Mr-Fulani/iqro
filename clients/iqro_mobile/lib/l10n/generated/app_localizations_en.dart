@@ -682,6 +682,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextSurah => 'Next surah';
 
   @override
+  String get nextSurahHint => 'Pull up or tap';
+
+  @override
+  String nextSurahRelease(String number) {
+    return 'Let go to open surah $number';
+  }
+
+  @override
+  String get quranEnd => 'End of the Quran';
+
+  @override
+  String quranEndNote(String surah) {
+    return 'This is the last surah — $surah. There is none after it.';
+  }
+
+  @override
+  String get toSurahList => 'To the list of surahs';
+
+  @override
   String get mediaBack10 => 'Back 10 seconds';
 
   @override

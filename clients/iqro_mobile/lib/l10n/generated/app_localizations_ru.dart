@@ -687,6 +687,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get nextSurah => 'Следующая сура';
 
   @override
+  String get nextSurahHint => 'Потяните вверх или нажмите';
+
+  @override
+  String nextSurahRelease(String number) {
+    return 'Отпустите — откроется сура $number';
+  }
+
+  @override
+  String get quranEnd => 'Конец Корана';
+
+  @override
+  String quranEndNote(String surah) {
+    return 'Это последняя сура — $surah. Дальше перехода нет.';
+  }
+
+  @override
+  String get toSurahList => 'К списку сур';
+
+  @override
   String get mediaBack10 => 'Назад на 10 секунд';
 
   @override

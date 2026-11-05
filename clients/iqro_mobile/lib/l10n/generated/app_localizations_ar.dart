@@ -672,6 +672,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get nextSurah => 'السورة التالية';
 
   @override
+  String get nextSurahHint => 'اسحب للأعلى أو اضغط';
+
+  @override
+  String nextSurahRelease(String number) {
+    return 'اترك لفتح السورة $number';
+  }
+
+  @override
+  String get quranEnd => 'خاتمة القرآن';
+
+  @override
+  String quranEndNote(String surah) {
+    return 'هذه آخر سورة — $surah. لا سورة بعدها.';
+  }
+
+  @override
+  String get toSurahList => 'إلى قائمة السور';
+
+  @override
   String get mediaBack10 => 'رجوع 10 ثوانٍ';
 
   @override
