@@ -93,9 +93,11 @@ access token scope и rollback проходят отдельный deployment re
   импорт CDN contract evidence реализованы; production gateway больше не имеет локального
   `/media/` fallback.
 - API сохраняет один default asset для обратной совместимости и отдаёт список renditions;
-  автоматический выбор качества клиентом по сети/настройке ещё не реализован.
-- До deployment остаётся provision R2 bucket/custom domain/CORS и фактическая загрузка принятого
-  media corpus; managed recitation publication блокируется без origin upload и CDN evidence.
+  в приложении качество выбирается в плеере (economy, standard, high, по умолчанию `auto`,
+  настройка `audio_quality`).
+- В production используются R2 и custom domain `media.iqro.forum`. Managed recitation publication
+  по-прежнему блокируется без origin upload и CDN evidence. Сохранность объектов в прежнем
+  R2 bucket отдельно не проверена ([backup-recovery-architecture.md](../backup-recovery-architecture.md)).
 - Для disaster recovery нужен inventory/versioning policy и независимая проверка восстановления;
   PostgreSQL dump не является резервной копией media.
 

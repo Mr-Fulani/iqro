@@ -1,6 +1,8 @@
 # Роадмап разделения аудиосценариев
 
-Статус: implementation in progress; этапы 0–5 завершены
+Статус на 06.11.2026: этапы 0–5 завершены. Этап 6: Android проверяется на устройстве и в
+закрытом тестировании Google Play (1.0.5), iOS на устройстве не проверялся. Этап 7: рабочей
+версии в Play пока нет.
 
 Дата начала: 2026-09-21
 
@@ -83,8 +85,10 @@ adapter/resolver с единым стабильным идентификатор
 | Mushaf | экранное, без global resume | Нет либо временная политика |
 | Memorization | только состояние плана/экрана | Нет |
 
-Общими остаются `PlaybackCore`, source resolver, clipping, speed, repeat и обработка
-interruption. `PlaybackCoordinator` отвечает за ownership каналов. Если один физический
+Общими остаются source resolver, clipping, speed, repeat и обработка interruption. Отдельных
+`PlaybackCore` и `PlaybackCoordinator` нет: по ADR
+([2026-09-21](adr/2026-09-21-audio-roles-and-playback-channels.md)) это один `AudioController`
+с каналами `AudioPlaybackChannel { listening, mushaf, memorization }`. Если один физический
 player не позволяет сохранить независимый Media Session widget, contextual playback должен
 использовать lazy foreground player без дублирования бизнес-логики.
 

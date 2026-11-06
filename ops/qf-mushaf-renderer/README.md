@@ -1,5 +1,14 @@
 # Pinned Quran.Foundation Mushaf pixel renderer
 
+Сейчас сайт и приложение рисуют все 13 макетов Quran.Foundation официальными шрифтами или
+изображениями слов прямо с CDN источника; готовые WebP-страницы для этого не нужны
+([Мусхафы Quran.Foundation](../../docs/quran-foundation-mushafs.md)). Renderer ниже — запасной
+путь для release-пакета заранее отрендеренных страниц.
+
+В этой же папке лежит `build_qul_layouts.py`: генератор структуры строк QUL для всех 13
+макетов, которую backend применяет при отображении. Запуск и источники —
+[правила отображения QUL](../../services/backend/docs/qul-page-layout.md).
+
 Этот executable реализует JSON contract backend-команды
 `prepare_qf_mushaf_native_pages`. Он предназначен только для release-пакета, в котором уже
 есть официально разрешённые fonts, точная page/word geometry, декоративные page backgrounds и

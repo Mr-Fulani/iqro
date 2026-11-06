@@ -6,6 +6,8 @@ Sign-off — это воспроизводимое письменное реше
 
 ## Web MVP package
 
+Исторический план до запуска (август 2026). Сайт уже работает; текущие источники Мусхафа — [quran-foundation-mushafs.md](../quran-foundation-mushafs.md).
+
 1. Для официального page-art/text пакета отправить
    [запрос в King Fahd Complex](kfgqpc-production-files-request.md). Ответ и исходный upstream
    artifact сохраняются как закрытое release evidence; сторонний PDF из текущей `1.0.2` не

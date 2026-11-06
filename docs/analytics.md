@@ -76,7 +76,7 @@ Google Signals и персонализация рекламы в GA выключ
 | `audio_play` | плеер реально заиграл (раз на запуск) | `kind` (surah/ayah/range), `surah`, `reciter` |
 | `lesson_complete` | урок отмечен изученным (тематические курсы, таджвид, намаз) | `course`, `lesson` |
 | `share` | «Поделиться» прошло или ссылка/текст скопированы | `content_type` (ayah/dua/course), `method` (native/copy_text/copy_link) |
-| `login` | вход по коду из письма | `method` |
+| `login` | вход по коду из письма или через Google | `method` (email/google) |
 
 В приложении `surah_open` срабатывает и в текстовой читалке, и в мусхафе; `lesson_complete`
 для намаза уходит с `course: salah`, как на сайте; `share` — только когда в системном меню

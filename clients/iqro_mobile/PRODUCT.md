@@ -4,7 +4,7 @@
 
 ## Platform
 
-android
+android, ios (one Flutter codebase; iOS builds in CI but is not verified on a device)
 
 ## Product Purpose
 
@@ -12,15 +12,15 @@ IQRO provides Quran reading and daily religious practice tools in a Flutter appl
 
 ## Capabilities and Constraints
 
-Existing implementation: Mushaf and text reading, saved ayahs, audio reciters and playback, daily reading plans, reading after prayer, memorization, prayer schedules, Hijri calendar, duas, reminders, offline downloads, account and guest use. Labels support Russian, English, Arabic and Turkish. Use real account-scoped data and existing routes; do not invent completed goals or available content.
+Existing implementation: Mushaf and text reading (plain Arabic text, word and passage playback, next-surah card), saved ayahs, audio reciters and playback, daily reading plans, reading after prayer, memorization, prayer schedules, Qibla, Hijri calendar, duas, salah course, tajweed and thematic courses, announcements, home-screen widgets, reminders, offline downloads, account and guest use. Labels support Russian, English, Arabic and Turkish. Use real account-scoped data and existing routes; do not invent completed goals or available content.
 
 ## Brand Commitments
 
-Keep the IQRO name and existing emerald and gold identity. Both light and dark themes must remain usable. The current scope is Home composition and the overflowing Hijri calendar card in More.
+Keep the IQRO name and existing emerald and gold identity. Both light and dark themes must remain usable.
 
 ## Operating Context
 
-The user reviews installed Android APKs on a connected phone. iOS source exists but is not verified in this workflow. Tablet support and further platform strategy are not settled by this request.
+The user reviews installed Android APKs on a connected phone. iOS source exists but is not verified in this workflow. Phones and tablets are supported (tablet layouts since 27.10.2026).
 
 ## Accessibility & Inclusion
 

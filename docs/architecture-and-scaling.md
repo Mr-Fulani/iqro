@@ -109,6 +109,10 @@ API не должен предполагать, что запрос пришёл
 | `tafsirs` | Версионированные комментарии и диапазоны аятов |
 | `dua` | Сборники, дуа, источники, переводы, категории, доказательства и публикация |
 | `salah` | Курс «Обучение намазу»: версии, подпись владельца, скомпилированные документы, иллюстрации |
+| `tajweed` | Курс таджвида и цветовая разметка таджвида в тексте Корана |
+| `courses` | Тематические курсы: выпуски, подпись, видео и озвучки тем |
+| `course_feedback` | Оценки и замечания пользователей по курсам |
+| `announcements` | Новости и объявления для сайта и приложения |
 | `prayer_times` | Методы расчёта и время намаза |
 | `reminders` | Напоминания и их доставка |
 | `calendar` | Календарь Хиджры и события |
@@ -116,6 +120,8 @@ API не должен предполагать, что запрос пришёл
 | `reading` | Позиции, закладки, цели, заметки и выделения аятов, история |
 | `feedback` | Обратная связь пользователей |
 | `share_referrals` | Приглашения «Поделиться» |
+| `website` | Публичные настройки сайта, социальные профили |
+| `alerts` | Уведомления админу в Telegram |
 | `hadith` | Цель: сборники, главы, хадисы, grading и источники |
 | `library` | Цель: типизированная витрина и поиск по опубликованным read-моделям доменов |
 | `editorial` | Цель: общий workflow review/approval без владения содержимым домена |
@@ -291,9 +297,10 @@ storage раньше установленного горизонта. Точны
 
 ADR по object storage/CDN принят в
 [ADR 0001](adr/0001-managed-media-object-storage-cdn.md), по ролям аудио и каналам
-воспроизведения — в [ADR 2026-09-21](adr/2026-09-21-audio-roles-and-playback-channels.md). До широкого production launch ещё
-нужно provision'ить выбранный bucket/custom domain и загрузить принятый corpus; также нужны ADR
-по process management и pool, разделению Redis roles, API auth/BFF и локальному storage Flutter.
+воспроизведения — в [ADR 2026-09-21](adr/2026-09-21-audio-roles-and-playback-channels.md).
+Production bucket и custom domain `media.iqro.forum` работают с октября 2026 года. Ещё нужны
+ADR по process management и pool, разделению Redis roles, API auth/BFF и локальному storage
+Flutter.
 
 Переход между профилями S0–S3 подтверждается capacity/soak отчётом с workload mix для
 Flutter, web и Telegram Mini App, cache-cold/cache-warm/CDN-bypass сценариями, стоимостью

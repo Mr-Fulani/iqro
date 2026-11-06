@@ -285,9 +285,10 @@ API по-прежнему идёт через gateway. В запрос не пе
 selectors являются единственной границей, решающей, какие Quran edition/version и полные
 streamable audio releases доступны поисковому индексу.
 
-Data-driven страницы рендерятся сервером по запросу: общий layout читает request locale из
-proxy header/cookie, поэтому страницы намеренно не объявляются on-demand ISR через пустой
-`generateStaticParams`. Next.js fetch cache обновляет опубликованный Quran/audio-контент не
+Публичные страницы под `app/[locale]` отдаются через ISR: locale берётся из сегмента URL,
+`app/[locale]/layout.tsx` и страницы сур, аятов, чтецов, курсов и намаза объявляют
+`generateStaticParams` (PR #7). HTML/RSC хранится в общем web cache
+([production.md, 3.5](production.md#35-общий-nextjs-cache)). Next.js fetch cache обновляет опубликованный Quran/audio-контент не
 реже одного раза в час и помечает запросы тегами edition/surah/ayah или
 reciter/recitation/track. Публикация,
 активация и отзыв версии после commit автоматически ставят Celery-задачу
@@ -444,10 +445,11 @@ curl --fail https://example.org/ru/audio/reciters
 
 ## Legal и public contacts
 
-Web публикует locale-prefixed `/privacy`, `/terms`, `/contacts` и `/sources`. Последний маршрут
-строит актуальный список только из опубликованных Quran editions и streamable audio releases,
-показывает content version, источник, правообладателя и лицензию, но не раскрывает media URL.
-Footer и основной sitemap ссылаются на все четыре страницы.
+Web публикует locale-prefixed `/legal`, `/privacy`, `/terms`, `/cookies`, `/data-rights`,
+`/security`, `/contacts` и `/sources`. `/sources` строит актуальный список только из
+опубликованных Quran editions и streamable audio releases, показывает content version, источник,
+правообладателя и лицензию, но не раскрывает media URL. Footer и основной sitemap ссылаются на
+все восемь страниц (`components/Footer.tsx`, `app/sitemap.ts`).
 
 Production Compose не стартует без заполненных `LEGAL_ENTITY_NAME`, `LEGAL_CONTACT_EMAIL`,
 `SECURITY_CONTACT_EMAIL`, `LEGAL_POSTAL_ADDRESS`, `LEGAL_JURISDICTION` и
@@ -566,17 +568,9 @@ URL/размер/MIME и присутствие всех `MEDIA_CDN_REQUIRED_ORI
 от origin ETag и время evidence. Managed recitation не публикуется, пока хотя бы у одной rendition
 нет origin upload или CDN evidence.
 
-Подготовленные 604 страницы Мусхафа загружаются и только затем активируются одной идемпотентной
-командой:
-
-```bash
-python manage.py publish_mushaf_pages \
-  /data/mushaf/madani-hafs/1.0.0/manifest.json \
-  --upload --activate
-```
-
-В production `--activate` без `--upload` блокируется. Флаг проверяет каждую manifest-запись, но
-не заменяет выборочный public-CDN contract report и визуальную/лицензионную приёмку.
+Сканированные страницы Мусхафа больше не публикуются: команда `publish_mushaf_pages` удалена
+(коммит `5543a6cc`). Сайт и приложение рисуют 13 макетов Quran.Foundation официальными шрифтами
+или изображениями слов ([quran-foundation-mushafs.md](quran-foundation-mushafs.md)).
 
 ## Dependency и container security gate
 
