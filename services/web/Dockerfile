@@ -47,6 +47,7 @@ ENV NODE_ENV=production \
     PORT=3000
 
 RUN apk add --no-cache libstdc++ 'libcrypto3>=3.5.8-r0' 'zlib>=1.3.2-r1' \
+        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' \
     && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 --ingroup nodejs nextjs
 
