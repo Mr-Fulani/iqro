@@ -178,7 +178,7 @@ export function PrayerQibla({ latitude, longitude }: { latitude: number; longitu
   else if (compass.state === "denied") hint = `${t("prayer.qiblaCompassDenied")} ${hint}`;
 
   return (
-    <section className={`surface prayer-qibla${facing ? " is-facing" : ""}`} data-testid="prayer-qibla">
+    <section id="qibla" className={`surface prayer-qibla${facing ? " is-facing" : ""}`} data-testid="prayer-qibla">
       <div className="prayer-qibla-compass" dir="ltr">
         <svg
           viewBox="0 0 200 200"

@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { preload } from "react-dom";
 import { ReciterAvatar } from "./ReciterAvatar";
 import { TodayReadingCard } from "./TodayReadingCard";
+import { HomeSkyBand } from "./HomeSkyBand";
+import { HomeSections } from "./HomeSections";
 import { PrayerReadingPlanCard } from "./PrayerReadingPlanCard";
 import { MemorizationPlannerCard } from "./MemorizationPlannerCard";
 import { api, PrayerCalculationResponse, QuranEdition, Reciter, Surah } from "../lib/api";
@@ -49,7 +51,7 @@ export default function HomePage({
   // otherwise be fetched late and at low priority.
   preload(HERO_SLIDES[0].src, { as: "image", fetchPriority: "high" });
   const { session, isLoggedIn, isLoading: authLoading } = useAuth();
-  const { locale, t, formatDate } = useI18n();
+  const { locale, t } = useI18n();
   // Arabic names are shown after hydration so their Amiri faces do not compete
   // with the server-rendered first screen.
   const hydrated = useHydrated();
@@ -146,15 +148,6 @@ export default function HomePage({
     };
   }, [authLoading, sessionUserId]);
 
-  const formatTime = (isoString?: string) => {
-    if (!isoString) return "--:--";
-    return formatDate(isoString, {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: todayPrayer?.timezone || DEFAULT_PRAYER_LOCATION.timezone,
-    });
-  };
-
   const editionName = (edition: QuranEdition) =>
     locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
   const surahName = (surah: Surah) =>
@@ -231,7 +224,11 @@ export default function HomePage({
       <AnnouncementCard items={announcements} />
       <AnnouncementBubble />
 
+      <HomeSkyBand prayer={todayPrayer} />
+
       <TodayReadingCard />
+
+      <HomeSections />
 
       <PrayerReadingPlanCard />
 
@@ -345,62 +342,6 @@ export default function HomePage({
           </div>
         )}
       </section>
-
-      {/* Today's Prayer Times Preview */}
-      {todayPrayer && (todayPrayer.times || todayPrayer.prayer_times) && (() => {
-        const pTimes = todayPrayer.times || todayPrayer.prayer_times;
-        return (
-          <section className="surface home-prayer-schedule" data-testid="home-prayer-schedule">
-            <div className="surface-head">
-              <div>
-                <p className="eyebrow">{t("home.todaySchedule")}</p>
-                <h3 className="surface-title">{t("home.prayers")}</h3>
-              </div>
-              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                <span className="status-chip ok">
-                  {t("prayer.timezoneValue", { timezone: todayPrayer.timezone })}
-                </span>
-                <IntentPrefetchLink href={localizedPath(locale, "/prayer")} className="btn btn-secondary btn-sm">
-                  {t("home.configurePrayer")}
-                </IntentPrefetchLink>
-              </div>
-            </div>
-
-            <div className="prayer-grid">
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">الفجر</span>
-                <span className="prayer-name-ru">{t("prayer.fajr")}</span>
-                <span className="prayer-time">{formatTime(pTimes?.fajr?.local)}</span>
-              </div>
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">الشروق</span>
-                <span className="prayer-name-ru">{t("prayer.sunrise")}</span>
-                <span className="prayer-time">{formatTime(pTimes?.sunrise?.local)}</span>
-              </div>
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">الظهر</span>
-                <span className="prayer-name-ru">{t("prayer.dhuhr")}</span>
-                <span className="prayer-time">{formatTime(pTimes?.dhuhr?.local)}</span>
-              </div>
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">العصر</span>
-                <span className="prayer-name-ru">{t("prayer.asr")}</span>
-                <span className="prayer-time">{formatTime(pTimes?.asr?.local)}</span>
-              </div>
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">المغرب</span>
-                <span className="prayer-name-ru">{t("prayer.maghrib")}</span>
-                <span className="prayer-time">{formatTime(pTimes?.maghrib?.local)}</span>
-              </div>
-              <div className="prayer-time-card">
-                <span className="prayer-name-ar">العشاء</span>
-                <span className="prayer-name-ru">{t("prayer.isha")}</span>
-                <span className="prayer-time">{formatTime(pTimes?.isha?.local)}</span>
-              </div>
-            </div>
-          </section>
-        );
-      })()}
 
       {/* Featured Surahs */}
       <section className="surface">

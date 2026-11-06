@@ -2,6 +2,8 @@
   "homePrayerIn": "بعد {time}",
   "homeSavedHint": "الآيات والأدعية المحفوظة",
   "homeDownloads": "التنزيلات",
+  "homeSections": "الأقسام",
+  "homeAllSections": "كل الأقسام",
   "bookmarks": "العلامات المرجعية",
   "emptyBookmarks": "لا توجد علامات مرجعية بعد. احفظ آية باستخدام رمز العلامة المرجعية في المصحف.",
   "bookmarksLoadError": "تعذر تحميل العلامات المرجعية",

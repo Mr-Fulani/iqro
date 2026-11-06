@@ -20,6 +20,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get homeDownloads => 'İndirilenler';
 
   @override
+  String get homeSections => 'Bölümler';
+
+  @override
+  String get homeAllSections => 'Tüm bölümler';
+
+  @override
   String get bookmarks => 'Yer işaretleri';
 
   @override

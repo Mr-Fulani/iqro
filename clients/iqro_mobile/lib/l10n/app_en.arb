@@ -2,6 +2,8 @@
   "homePrayerIn": "In {time}",
   "homeSavedHint": "Saved ayahs and duas",
   "homeDownloads": "Downloads",
+  "homeSections": "Sections",
+  "homeAllSections": "All sections",
   "@homePrayerIn": {"placeholders": {"time": {"type": "String"}}},
   "bookmarks": "Bookmarks",
   "emptyBookmarks": "No bookmarks yet. Save an ayah using the bookmark icon in the reader.",

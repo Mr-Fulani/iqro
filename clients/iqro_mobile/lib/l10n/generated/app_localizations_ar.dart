@@ -20,6 +20,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeDownloads => 'التنزيلات';
 
   @override
+  String get homeSections => 'الأقسام';
+
+  @override
+  String get homeAllSections => 'كل الأقسام';
+
+  @override
   String get bookmarks => 'العلامات المرجعية';
 
   @override

@@ -19,7 +19,11 @@ import 'prayer_places.dart';
 import 'qibla_compass_sheet.dart';
 
 class PrayerScreen extends ConsumerStatefulWidget {
-  const PrayerScreen({super.key});
+  const PrayerScreen({this.openQibla = false, super.key});
+
+  /// Opened from Home's Qibla tile: the compass opens once the location is
+  /// known.
+  final bool openQibla;
 
   @override
   ConsumerState<PrayerScreen> createState() => _PrayerScreenState();
@@ -29,6 +33,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     with WidgetsBindingObserver {
   PrayerSchedule? _schedule;
   PrayerLocation? _location;
+  bool _qiblaOpened = false;
   PrayerPreferences? _preferences;
   Object? _error;
   String? _selectedMethodCode;
@@ -89,6 +94,13 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
     final locale = Localizations.localeOf(context).languageCode;
     final city = prayerCityById(_location?.cityId);
     final locationName = city?.nameFor(locale) ?? context.l10n.currentLocation;
+    if (widget.openQibla && !_qiblaOpened && _location != null) {
+      _qiblaOpened = true;
+      final location = _location!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showQibla(location, locationName);
+      });
+    }
     final qibla = _location == null
         ? null
         : qiblaBearing(
