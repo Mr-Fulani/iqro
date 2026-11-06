@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/more/more_screen.dart';
 import 'package:iqro_mobile/features/home/home_dashboard_cards.dart';
-import 'package:iqro_mobile/features/home/home_plan_walker.dart';
+import 'package:iqro_mobile/features/home/home_plan_progress.dart';
 import 'package:iqro_mobile/features/home/home_section_tiles.dart';
 import 'package:iqro_mobile/features/home/home_sky_card.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
@@ -74,7 +74,7 @@ void main() {
                                 ayah: 1,
                                 page: 587,
                                 onTap: () => actions.add('read'),
-                                footer: HomePlanWalker(
+                                footer: HomePlanProgress(
                                   achieved: 10,
                                   target: 12,
                                   metric: ReadingGoalMetric.pages,
@@ -85,21 +85,15 @@ void main() {
                               ),
                               HomeSectionTiles(
                                 tiles: [
-                                  for (final (id, art, title) in [
-                                    ('dua', 'dua', l10n.dua),
-                                    ('qibla', 'qibla', l10n.qibla),
-                                    (
-                                      'calendar',
-                                      'hijri-calendar',
-                                      l10n.hijriCalendar,
-                                    ),
-                                    ('all', 'sections', l10n.homeAllSections),
+                                  for (final (id, title) in [
+                                    ('dua', l10n.dua),
+                                    ('qibla', l10n.qibla),
+                                    ('calendar', l10n.hijriCalendar),
+                                    ('all', l10n.homeAllSections),
                                   ])
                                     HomeSectionTile(
                                       id: id,
-                                      art: art,
                                       title: title,
-                                      color: Colors.white,
                                       onTap: () => actions.add(id),
                                     ),
                                 ],

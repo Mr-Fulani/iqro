@@ -13,7 +13,7 @@ import { useI18n } from "../lib/i18n-context";
 import { PALM_HISTORY_DAYS, palmGrowthFor, palmPlanFrom } from "../lib/palm-growth";
 import { localizedPath } from "../lib/routing";
 import { PalmGrowthCard } from "./PalmGrowthCard";
-import { PlanWalker } from "./PlanWalker";
+import { PlanMark } from "./PlanMark";
 import { useOpenReplay } from "../lib/use-open-replay";
 
 const DEFAULT_TARGETS: Record<ReadingGoalMetric, number> = {
@@ -224,7 +224,7 @@ export function TodayReadingCard() {
     }
   };
 
-  // Back on the page after a while, the traveller walks the bar again.
+  // Back on the page after a while, the mark travels the bar again.
   const replay = useOpenReplay();
   const progress = today?.progress;
   const achieved = Number(progress?.achieved_amount || 0);
@@ -323,7 +323,7 @@ export function TodayReadingCard() {
                     </span>
                   </div>
                   <div className="today-progress-walk" key={replay}>
-                    <PlanWalker percent={percent} />
+                    <PlanMark percent={percent} />
                     <div
                       className="today-progress-track"
                       role="progressbar"

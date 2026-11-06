@@ -16,7 +16,7 @@ import '../prayer/prayer_repository.dart';
 import '../quran/quran_models.dart';
 import 'home_view_data.dart';
 import 'home_dashboard_cards.dart';
-import 'home_plan_walker.dart';
+import 'home_plan_progress.dart';
 import 'home_section_tiles.dart';
 import 'home_sky_card.dart';
 import 'home_dashboard_layout.dart';
@@ -102,7 +102,7 @@ class HomeScreen extends ConsumerWidget {
                 context.push('/reader/${position.surah}?ayah=${position.ayah}');
               }
             },
-      footer: HomePlanWalker(
+      footer: HomePlanProgress(
         achieved: achieved,
         target: target,
         metric: planMetric,
@@ -112,70 +112,50 @@ class HomeScreen extends ConsumerWidget {
         onTap: () => context.go('/app?tab=2'),
       ),
     );
-    final colors = context.iqroColors;
-    final mint = Theme.of(context).colorScheme.primaryContainer;
     final tiles = <HomeSectionTile>[
       HomeSectionTile(
         id: 'mushaf',
-        art: 'quran',
         title: context.l10n.mushafMode,
-        color: mint,
         onTap: () => context.push(mushafRoute),
       ),
       HomeSectionTile(
         id: 'dua',
-        art: 'dua',
         title: context.l10n.dua,
-        color: mint,
         onTap: () => context.push('/dua'),
       ),
       HomeSectionTile(
         id: 'courses',
-        art: 'courses',
         title: context.l10n.coursesTitle,
-        color: colors.sand,
         onTap: () => context.push('/courses'),
       ),
       HomeSectionTile(
         id: 'memorization',
-        art: 'memorization',
         title: context.l10n.memorization,
-        color: colors.lavender,
         onTap: () => context.push('/memorization'),
       ),
       HomeSectionTile(
         id: 'qibla',
-        art: 'qibla',
         title: context.l10n.qibla,
-        color: colors.sand,
         onTap: () => context.push('/prayer?qibla=1'),
       ),
       HomeSectionTile(
         id: 'favorites',
-        art: 'favorites',
         title: context.l10n.favorites,
-        color: colors.panelSoft,
         onTap: () => context.push('/favorites'),
       ),
       HomeSectionTile(
         id: 'calendar',
-        art: 'hijri-calendar',
         title: context.l10n.hijriCalendar,
-        color: colors.sand,
         onTap: () => context.push('/calendar'),
       ),
       HomeSectionTile(
         id: 'notes',
-        art: 'notes',
         title: context.l10n.notes,
-        color: colors.panelSoft,
         onTap: () => context.push('/notes'),
       ),
       HomeSectionTile(
         id: 'all',
-        art: 'sections',
         title: context.l10n.homeAllSections,
-        color: colors.panelSoft,
         onTap: () => context.go('/app?tab=4'),
       ),
     ];

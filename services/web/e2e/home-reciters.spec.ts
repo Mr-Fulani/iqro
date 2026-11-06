@@ -242,8 +242,9 @@ test("home prayer preview reuses the saved prayer location and profile", async (
   });
   // The sky of prayers on the home page shows the saved city's day.
   const sky = page.getByTestId("home-sky");
-  await expect(sky.getByText("05:42")).toBeVisible();
-  await expect(sky.getByText("21:15")).toBeVisible();
+  // Exact: the next prayer's time is also in the card's title.
+  await expect(sky.getByText("05:42", { exact: true })).toBeVisible();
+  await expect(sky.getByText("21:15", { exact: true })).toBeVisible();
 });
 
 test("home reciter avatars open the audio catalog with the selected reciter", async ({ page }) => {

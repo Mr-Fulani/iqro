@@ -9572,57 +9572,39 @@ html[data-word-selecting] .word-range-bar {
   font-variant-numeric: tabular-nums;
 }
 
-/* The traveller on the day's reading bar (components/PlanWalker.tsx). */
+/* The rub al-hizb mark on the day's reading bar (components/PlanMark.tsx). */
 .today-progress-walk {
   position: relative;
-  padding-top: 34px;
+  padding-top: 26px;
 }
 
 .today-progress-walk .today-progress-track > span {
   animation: plan-fill 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s both;
 }
 
-.plan-walker {
+.plan-mark {
   position: absolute;
-  top: 0;
-  width: 26px;
-  height: 34px;
-  margin-inline-start: -13px;
-  animation: plan-walk 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s both;
+  top: 1px;
+  width: 24px;
+  height: 24px;
+  margin-inline-start: -12px;
+  line-height: 0;
+  rotate: 90deg;
+  animation: plan-mark-travel 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s both;
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.18));
 }
 
-.plan-walker svg {
-  display: block;
-  animation: plan-bob 0.21s ease-in-out 0.5s 10 alternate;
+.plan-mark-square {
+  fill: var(--panel);
+  stroke: #c49647;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
 }
 
-[dir="rtl"] .plan-walker svg {
-  transform: scaleX(-1);
-}
-
-.plan-walker-robe {
-  fill: var(--primary);
-}
-
-.plan-walker-leg path,
-.plan-walker-arm {
+.plan-mark-ring {
   fill: none;
-  stroke: var(--primary);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-}
-
-.plan-walker-leg {
-  transform-box: view-box;
-  transform-origin: 13px 23px;
-}
-
-.plan-walker-leg-a {
-  animation: plan-step-a 0.42s ease-in-out 0.5s 5 alternate;
-}
-
-.plan-walker-leg-b {
-  animation: plan-step-b 0.42s ease-in-out 0.5s 5 alternate;
+  stroke: #c49647;
+  stroke-width: 1.4;
 }
 
 @keyframes plan-fill {
@@ -9631,37 +9613,14 @@ html[data-word-selecting] .word-range-bar {
   }
 }
 
-@keyframes plan-walk {
+@keyframes plan-mark-travel {
   from {
     inset-inline-start: 0;
+    rotate: 0deg;
   }
 }
 
-@keyframes plan-bob {
-  to {
-    translate: 0 -1.2px;
-  }
-}
-
-@keyframes plan-step-a {
-  from {
-    rotate: -24deg;
-  }
-  to {
-    rotate: 22deg;
-  }
-}
-
-@keyframes plan-step-b {
-  from {
-    rotate: 22deg;
-  }
-  to {
-    rotate: -24deg;
-  }
-}
-
-/* Home: the sections as large tiles with the shared art, as in the app. */
+/* Home: the sections as calm tiles with the shared line icons, as in the app. */
 .home-sections {
   display: grid;
   gap: 12px;
@@ -9682,15 +9641,16 @@ html[data-word-selecting] .word-range-bar {
   display: grid;
   justify-items: center;
   align-content: start;
-  gap: 8px;
-  padding: 12px 6px;
+  gap: 9px;
+  padding: 14px 6px 12px;
   border-radius: 20px;
+  border: 1px solid var(--border);
   color: var(--text-primary);
   text-align: center;
   text-decoration: none;
   font-weight: 600;
   line-height: 1.2;
-  background: #efeee8;
+  background: var(--panel);
   transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
@@ -9704,30 +9664,19 @@ html[data-word-selecting] .word-range-bar {
   outline-offset: 2px;
 }
 
-.home-section-tile.is-mint {
-  background: #d9eee7;
-}
-
-.home-section-tile.is-sand {
-  background: #f5ead5;
-}
-
-.home-section-tile.is-lavender {
-  background: #ece8f6;
-}
-
 .home-section-art {
   display: grid;
   place-items: center;
-  width: 62px;
-  height: 62px;
-  border-radius: 18px;
-  background: rgba(255, 253, 248, 0.8);
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  color: var(--primary);
+  background: var(--primary-subtle);
 }
 
-.home-section-art .dua-time-icon {
-  width: 46px;
-  height: 46px;
+.home-section-icon {
+  width: 30px;
+  height: 30px;
 }
 
 @media (min-width: 900px) {
@@ -9738,10 +9687,7 @@ html[data-word-selecting] .word-range-bar {
 
 @media (prefers-reduced-motion: reduce) {
   .today-progress-walk .today-progress-track > span,
-  .plan-walker,
-  .plan-walker svg,
-  .plan-walker-leg-a,
-  .plan-walker-leg-b {
+  .plan-mark {
     animation: none;
   }
 

@@ -9,11 +9,12 @@ import '../plan/palm_growth_view.dart';
 import '../plan/plan_repository.dart';
 import 'home_open_replay.dart';
 
-/// The day's reading goal under "Continue reading": on every opening a
-/// traveller with a book walks along the bar to today's progress, towards
+/// The day's reading goal under "Continue reading": on every opening the
+/// rub al-hizb mark (۞, which marks the quarters of a hizb in the Mushaf)
+/// travels along the bar to today's progress, turning a quarter turn, towards
 /// the palm that grows with the plan.
-class HomePlanWalker extends StatefulWidget {
-  const HomePlanWalker({
+class HomePlanProgress extends StatefulWidget {
+  const HomePlanProgress({
     required this.achieved,
     required this.target,
     required this.metric,
@@ -33,22 +34,20 @@ class HomePlanWalker extends StatefulWidget {
   final PalmGrowth? palm;
 
   @override
-  State<HomePlanWalker> createState() => _HomePlanWalkerState();
+  State<HomePlanProgress> createState() => _HomePlanProgressState();
 }
 
-class _HomePlanWalkerState extends State<HomePlanWalker>
+class _HomePlanProgressState extends State<HomePlanProgress>
     with
         SingleTickerProviderStateMixin,
         WidgetsBindingObserver,
-        HomeOpenReplay<HomePlanWalker> {
-  // Starts half a second after the sun, then walks for 2.2 seconds.
+        HomeOpenReplay<HomePlanProgress> {
+  // Starts half a second after the sun, then travels for 2.2 seconds.
   static const _delay = .185;
-  static const _total = Duration(milliseconds: 2700);
-  static const _stepMs = 420.0;
 
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: _total,
+    duration: const Duration(milliseconds: 2700),
   );
 
   @override
@@ -58,7 +57,7 @@ class _HomePlanWalkerState extends State<HomePlanWalker>
   bool get openReady => !widget.loading && !widget.error;
 
   @override
-  void didUpdateWidget(HomePlanWalker oldWidget) {
+  void didUpdateWidget(HomePlanProgress oldWidget) {
     super.didUpdateWidget(oldWidget);
     playWhenReady();
   }
@@ -130,27 +129,19 @@ class _HomePlanWalkerState extends State<HomePlanWalker>
                         ],
                       ),
                       if (!widget.error) ...[
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         SizedBox(
-                          height: 44,
+                          height: 36,
                           child: AnimatedBuilder(
                             animation: _controller,
                             builder: (context, _) {
-                              final v = _controller.value;
-                              final walk = ((v - _delay) / (1 - _delay)).clamp(
-                                0.0,
-                                1.0,
+                              final travel = Curves.easeInOutCubic.transform(
+                                ((_controller.value - _delay) / (1 - _delay))
+                                    .clamp(0.0, 1.0),
                               );
-                              final progress =
-                                  share * Curves.easeInOutCubic.transform(walk);
-                              final moving =
-                                  _controller.isAnimating &&
-                                  walk > 0 &&
-                                  walk < 1;
-                              final step = v * _total.inMilliseconds / _stepMs;
-                              return _WalkerTrack(
-                                progress: progress,
-                                swing: moving ? math.sin(step * math.pi) : 0,
+                              return _MarkTrack(
+                                progress: share * travel,
+                                turn: travel * math.pi / 2,
                                 palm: widget.palm,
                               );
                             },
@@ -177,26 +168,26 @@ class _HomePlanWalkerState extends State<HomePlanWalker>
   }
 }
 
-class _WalkerTrack extends StatelessWidget {
-  const _WalkerTrack({
+class _MarkTrack extends StatelessWidget {
+  const _MarkTrack({
     required this.progress,
-    required this.swing,
+    required this.turn,
     required this.palm,
   });
 
   final double progress;
 
-  /// -1..1: how far the legs are apart while walking; 0 standing.
-  final double swing;
+  /// Rotation of the mark in radians: a quarter turn over the journey.
+  final double turn;
   final PalmGrowth? palm;
 
   static const _palmSize = 34.0;
-  static const _walker = Size(26, 34);
+  static const _mark = 24.0;
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
     return LayoutBuilder(
       builder: (context, constraints) {
         final rail = constraints.maxWidth - _palmSize - 4;
@@ -207,28 +198,24 @@ class _WalkerTrack extends StatelessWidget {
             PositionedDirectional(
               start: 0,
               width: rail,
-              bottom: 6,
-              height: 8,
+              bottom: 12,
+              height: 6,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: context.iqroColors.line,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
             PositionedDirectional(
               start: 0,
               width: x,
-              bottom: 6,
-              height: 8,
+              bottom: 12,
+              height: 6,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  gradient: LinearGradient(
-                    begin: AlignmentDirectional.centerStart,
-                    end: AlignmentDirectional.centerEnd,
-                    colors: [primary, Color.lerp(primary, Colors.white, .22)!],
-                  ),
+                  color: primary,
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
@@ -246,18 +233,17 @@ class _WalkerTrack extends StatelessWidget {
                     ),
             ),
             PositionedDirectional(
-              key: const ValueKey('home-plan-walker'),
-              start: x - _walker.width / 2,
-              bottom: 12,
-              width: _walker.width,
-              height: _walker.height,
-              child: Transform.flip(
-                flipX: rtl,
+              key: const ValueKey('home-plan-mark'),
+              start: x - _mark / 2,
+              bottom: 15 - _mark / 2,
+              width: _mark,
+              height: _mark,
+              child: Transform.rotate(
+                angle: turn,
                 child: CustomPaint(
-                  painter: _WalkerPainter(
-                    swing: swing,
-                    robe: primary,
-                    outline: context.iqroColors.line,
+                  painter: _HizbMarkPainter(
+                    gold: context.iqroColors.gold,
+                    fill: theme.colorScheme.surface,
                   ),
                 ),
               ),
@@ -269,82 +255,38 @@ class _WalkerTrack extends StatelessWidget {
   }
 }
 
-/// A traveller in a robe and a white cap, a book under the arm, facing the
-/// direction of reading. Drawn on a 26 × 34 grid.
-class _WalkerPainter extends CustomPainter {
-  const _WalkerPainter({
-    required this.swing,
-    required this.robe,
-    required this.outline,
-  });
+/// ۞: two squares, one turned 45°, around a ring, as printed in the Mushaf.
+class _HizbMarkPainter extends CustomPainter {
+  const _HizbMarkPainter({required this.gold, required this.fill});
 
-  final double swing;
-  final Color robe;
-  final Color outline;
+  final Color gold;
+  final Color fill;
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.scale(size.width / 26, size.height / 34);
-    final bob = swing.abs() * 1.2;
-    canvas.translate(0, -bob);
-    final leg = Paint()
-      ..color = robe
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    const hip = Offset(13, 23);
-    for (final (dx, sign) in [(-1.0, 1.0), (1.0, -1.0)]) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final side = size.width * .58;
+    final rect = Rect.fromCenter(center: center, width: side, height: side);
+    final stroke = Paint()
+      ..color = gold
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeJoin = StrokeJoin.round;
+    final solid = Paint()..color = fill;
+    for (final angle in [0.0, math.pi / 4]) {
       canvas.save();
-      canvas.translate(hip.dx, hip.dy);
-      canvas.rotate(sign * swing * .4);
-      canvas.drawLine(Offset(dx, 0), Offset(dx * 2.5, 9), leg);
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(angle);
+      canvas.translate(-center.dx, -center.dy);
+      final square = RRect.fromRectAndRadius(rect, const Radius.circular(1));
+      canvas.drawRRect(square, solid);
+      canvas.drawRRect(square, stroke);
       canvas.restore();
     }
-    canvas.drawPath(
-      Path()
-        ..moveTo(8.5, 11.5)
-        ..quadraticBezierTo(13, 9.5, 17.5, 11.5)
-        ..lineTo(18.5, 25)
-        ..lineTo(7.5, 25)
-        ..close(),
-      Paint()..color = robe,
-    );
-    canvas.drawLine(const Offset(15, 13.5), const Offset(18.5, 17.5), leg);
-    canvas.save();
-    canvas.translate(20.5, 18.5);
-    canvas.rotate(-12 * math.pi / 180);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-3.5, -4, 7, 8),
-        const Radius.circular(1.2),
-      ),
-      Paint()..color = const Color(0xFFD5A34C),
-    );
-    canvas.drawRect(
-      const Rect.fromLTWH(-3.2, -.9, 6.4, 1.2),
-      Paint()..color = const Color(0xB3FFFDF8),
-    );
-    canvas.restore();
-    canvas.drawCircle(
-      const Offset(13, 6.6),
-      3.6,
-      Paint()..color = const Color(0xFFD9B48C),
-    );
-    final cap = Path()
-      ..moveTo(9.4, 6)
-      ..quadraticBezierTo(13, 1.4, 16.6, 6)
-      ..close();
-    canvas.drawPath(cap, Paint()..color = const Color(0xFFFFFDF8));
-    canvas.drawPath(
-      cap,
-      Paint()
-        ..color = outline
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = .6,
-    );
+    canvas.drawCircle(center, side * .19, stroke..strokeWidth = 1.4);
   }
 
   @override
-  bool shouldRepaint(_WalkerPainter old) =>
-      old.swing != swing || old.robe != robe || old.outline != outline;
+  bool shouldRepaint(_HizbMarkPainter old) =>
+      old.gold != gold || old.fill != fill;
 }

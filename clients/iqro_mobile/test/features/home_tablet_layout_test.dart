@@ -5,23 +5,24 @@ import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_screen.dart';
 import 'package:iqro_mobile/features/home/home_dashboard_cards.dart';
 import 'package:iqro_mobile/features/home/home_dashboard_layout.dart';
-import 'package:iqro_mobile/features/home/home_plan_walker.dart';
+import 'package:iqro_mobile/features/home/home_plan_progress.dart';
 import 'package:iqro_mobile/features/home/home_section_tiles.dart';
 import 'package:iqro_mobile/features/home/home_sky_card.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/prayer/prayer_repository.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
+// Ids of the shared line icons, titled as themselves.
 const _sections = [
-  'Mushaf',
-  'Dua',
-  'Courses',
-  'Memorization',
-  'Qibla',
-  'Saved',
-  'Calendar',
-  'Notes',
-  'All',
+  'mushaf',
+  'dua',
+  'courses',
+  'memorization',
+  'qibla',
+  'favorites',
+  'calendar',
+  'notes',
+  'all',
 ];
 
 Future<void> _pumpDashboard(
@@ -79,7 +80,7 @@ Future<void> _pumpDashboard(
               ayah: 1,
               page: 562,
               onTap: () {},
-              footer: HomePlanWalker(
+              footer: HomePlanProgress(
                 achieved: 4,
                 target: 10,
                 metric: ReadingGoalMetric.pages,
@@ -91,13 +92,7 @@ Future<void> _pumpDashboard(
             sections: HomeSectionTiles(
               tiles: [
                 for (final title in _sections)
-                  HomeSectionTile(
-                    id: title,
-                    art: 'quran',
-                    title: title,
-                    color: Colors.white,
-                    onTap: () {},
-                  ),
+                  HomeSectionTile(id: title, title: title, onTap: () {}),
               ],
             ),
           ),
@@ -125,36 +120,34 @@ void main() {
     expect(prayer.width, 400 - 32);
     // The day's plan sits inside the reading card.
     expect(reading.contains(plan.center), isTrue);
-    expect(_tile(tester, 'Mushaf').top, _tile(tester, 'Courses').top);
+    expect(_tile(tester, 'mushaf').top, _tile(tester, 'courses').top);
     expect(
-      _tile(tester, 'Memorization').top,
-      greaterThan(_tile(tester, 'Mushaf').bottom),
+      _tile(tester, 'memorization').top,
+      greaterThan(_tile(tester, 'mushaf').bottom),
     );
-    expect(_tile(tester, 'Mushaf').top, greaterThan(reading.bottom));
+    expect(_tile(tester, 'mushaf').top, greaterThan(reading.bottom));
   });
 
-  testWidgets('the traveller walks to the day\'s share of the plan', (
+  testWidgets('the mark travels to the day\'s share of the plan', (
     tester,
   ) async {
     await _pumpDashboard(tester, width: 400);
 
     final plan = tester.getRect(find.byKey(const ValueKey('home-plan')));
-    final walker = tester.getRect(
-      find.byKey(const ValueKey('home-plan-walker')),
-    );
+    final mark = tester.getRect(find.byKey(const ValueKey('home-plan-mark')));
     // 4 of 10 pages: well before the middle of the bar, past its start.
-    expect(walker.center.dx, greaterThan(plan.left + 40));
-    expect(walker.center.dx, lessThan(plan.center.dx));
+    expect(mark.center.dx, greaterThan(plan.left + 40));
+    expect(mark.center.dx, lessThan(plan.center.dx));
   });
 
   testWidgets('large text puts two wide tiles a row', (tester) async {
     await _pumpDashboard(tester, width: 400, scale: 1.8, height: 2400);
 
     expect(tester.takeException(), isNull);
-    expect(_tile(tester, 'Mushaf').top, _tile(tester, 'Dua').top);
+    expect(_tile(tester, 'mushaf').top, _tile(tester, 'dua').top);
     expect(
-      _tile(tester, 'Courses').top,
-      greaterThan(_tile(tester, 'Mushaf').bottom),
+      _tile(tester, 'courses').top,
+      greaterThan(_tile(tester, 'mushaf').bottom),
     );
   });
 
@@ -163,7 +156,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     for (final title in _sections) {
-      expect(_tile(tester, title).top, _tile(tester, 'Mushaf').top);
+      expect(_tile(tester, title).top, _tile(tester, 'mushaf').top);
     }
     final prayer = tester.getRect(find.byKey(const ValueKey('home-prayer')));
     expect(prayer.width, 1000 - 32);
@@ -173,8 +166,8 @@ void main() {
     await _pumpDashboard(tester, width: 400, locale: 'ar');
 
     expect(tester.takeException(), isNull);
-    expect(_tile(tester, 'Mushaf').right, 400 - 16);
-    expect(_tile(tester, 'Courses').left, 16);
+    expect(_tile(tester, 'mushaf').right, 400 - 16);
+    expect(_tile(tester, 'courses').left, 16);
   });
 
   testWidgets('a landscape tablet uses its width up to the limit', (

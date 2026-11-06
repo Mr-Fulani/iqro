@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
 
-import '../dua/dua_thematic_icon.dart';
+import '../../core/theme/iqro_theme.dart';
+import 'home_section_icon.dart';
 
-/// One section on Home: an illustration from the shared topic art (the same
-/// as on More and on the site) and its name.
+/// One section on Home: a thin-line icon from the shared set (the same as on
+/// the site) and its name.
 class HomeSectionTile {
   const HomeSectionTile({
     required this.id,
-    required this.art,
     required this.title,
-    required this.color,
     required this.onTap,
   });
 
-  /// Stable for tests and the site: `home-section-<id>`.
+  /// Stable for tests and the site: `home-section-<id>`; also the key of the
+  /// icon in `home-section-icons.json`.
   final String id;
-  final String art;
   final String title;
-  final Color color;
   final VoidCallback onTap;
 }
 
-/// The sections as large tiles: three in a row on a phone, one row of nine
-/// across a wide tablet, and two wide rows of art and name with large text.
+/// The sections as calm tiles: a light surface with a fine border and one
+/// emerald line. Three in a row on a phone, one row across a wide tablet, and
+/// two wide rows of icon and name with large text.
 class HomeSectionTiles extends StatelessWidget {
   const HomeSectionTiles({required this.tiles, super.key});
 
@@ -83,15 +82,19 @@ class _Tile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final art = Container(
-      width: wide ? 52 : 62,
-      height: wide ? 52 : 62,
-      padding: EdgeInsets.all(wide ? 6 : 8),
+      width: wide ? 44 : 56,
+      height: wide ? 44 : 56,
       decoration: BoxDecoration(
-        // The light tile keeps the mint of the art apart from tinted cards.
-        color: theme.colorScheme.surface.withValues(alpha: .8),
-        borderRadius: BorderRadius.circular(wide ? 14 : 18),
+        color: theme.colorScheme.primaryContainer.withValues(alpha: .45),
+        borderRadius: BorderRadius.circular(wide ? 13 : 16),
       ),
-      child: FittedBox(child: DuaThematicIcon(topic: tile.art)),
+      child: Center(
+        child: HomeSectionIcon(
+          section: tile.id,
+          color: theme.colorScheme.primary,
+          size: wide ? 24 : 30,
+        ),
+      ),
     );
     final title = Text(
       tile.title,
@@ -100,15 +103,18 @@ class _Tile extends StatelessWidget {
     );
     return Material(
       key: ValueKey('home-section-${tile.id}'),
-      color: tile.color,
-      borderRadius: BorderRadius.circular(20),
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: context.iqroColors.line),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: tile.onTap,
         child: Padding(
           padding: wide
               ? const EdgeInsets.all(10)
-              : const EdgeInsets.fromLTRB(6, 12, 6, 12),
+              : const EdgeInsets.fromLTRB(6, 14, 6, 12),
           child: wide
               ? Row(
                   children: [
@@ -119,7 +125,7 @@ class _Tile extends StatelessWidget {
                 )
               : Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: [art, const SizedBox(height: 8), title],
+                  children: [art, const SizedBox(height: 9), title],
                 ),
         ),
       ),

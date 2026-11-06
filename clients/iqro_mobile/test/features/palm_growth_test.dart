@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
-import 'package:iqro_mobile/features/home/home_plan_walker.dart';
+import 'package:iqro_mobile/features/home/home_plan_progress.dart';
 import 'package:iqro_mobile/features/plan/palm_growth.dart';
 import 'package:iqro_mobile/features/plan/palm_growth_view.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
@@ -277,12 +277,12 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsNothing);
     });
 
-    testWidgets('home plan walker shows the palm once the plan is loaded', (
+    testWidgets('home plan progress shows the palm once the plan is loaded', (
       tester,
     ) async {
       Widget card(PalmGrowth? palm) => _app(
         'ru',
-        HomePlanWalker(
+        HomePlanProgress(
           achieved: 2,
           target: 6,
           metric: ReadingGoalMetric.pages,
