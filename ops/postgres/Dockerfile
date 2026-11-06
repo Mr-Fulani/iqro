@@ -1,7 +1,7 @@
 FROM postgres:17.11-alpine3.24 AS upstream
 
 RUN apk add --no-cache su-exec 'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0' \
-        'libuuid>=2.42.3-r1' 'zlib>=1.3.2-r1' \
+        'libuuid>=2.42.3-r1' 'zlib>=1.3.2-r1' 'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' \
     && rm /usr/local/bin/gosu \
     && ln -s /sbin/su-exec /usr/local/bin/gosu
 
