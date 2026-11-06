@@ -66,6 +66,8 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>IQRO uses your location only while open to calculate accurate local prayer times.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>IQRO saves a picture of an ayah or du'a to Photos only when you choose Save Image.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

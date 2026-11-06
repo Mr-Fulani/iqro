@@ -14,7 +14,9 @@
   `group.forum.iqro.app`; iOS/iPadOS 15+, iPhone и iPad;
 - версия берётся из `pubspec.yaml` (`1.0.5+6` → «1.0.5», сборка 6), у виджета та же
   (это проверяет нативный тест);
-- в проекте Xcode не задана команда (`DEVELOPMENT_TEAM`): без Team ID подписать сборку нельзя;
+- подпись готова в коде (PR #217): Release подписывается вручную сертификатом Apple Distribution
+  и профилями «IQRO App Store» и «IQRO Widget App Store», Team ID подставляет workflow
+  `ios-release.yml` из переменной `APPLE_TEAM_ID`; с настоящей подписью ещё не запускался;
 - файл связи с сайтом `https://iqro.forum/.well-known/apple-app-site-association` отдаётся,
   но пустой (`"details":[]`): на проде не задан Team ID.
 
@@ -26,9 +28,9 @@
 | 2 | iPhone (и желательно iPad) с приложением TestFlight для проверки | владелец, тестировщики | неизвестно, есть ли iPhone у владельца |
 | 3 | Bundle ID, App Group, Associated Domains на портале Apple (раздел 2) | владелец | не сделано |
 | 4 | Приложение в App Store Connect (раздел 3) | владелец | не сделано |
-| 5 | Ключ App Store Connect API и секреты в GitHub (разделы 2 и 4) | владелец вводит сам | не сделано |
-| 6 | Workflow подписи и загрузки в TestFlight (раздел 4) | Claude, после согласования | не сделано |
-| 7 | Строка разрешения на сохранение в «Фото» (раздел 9, правка 1) | Claude, после согласования | не сделано |
+| 5 | Сертификат, два профиля, ключ App Store Connect API и секреты в GitHub (разделы 2 и 4) | владелец вводит сам | не сделано |
+| 6 | Workflow подписи и загрузки в TestFlight (раздел 4) | Claude | сделано в PR #217, первый запуск — после пункта 5 |
+| 7 | Строка разрешения на сохранение в «Фото» (раздел 9, правка 1) | Claude | сделано в PR #217 |
 | 8 | Team ID на проде для Universal Links: `APPLE_APP_LINK_APPLICATION_IDENTIFIERS` | основная сессия, с «да» владельца | не сделано |
 | 9 | Проверка на iPhone и iPad по [tech-debt 1.4](../tech-debt.md) | владелец и тестировщики через TestFlight | не сделано |
 | 10 | Скриншоты iPhone 6,9″ и iPad 13″ на 4 языках (раздел 7) | Claude делает, владелец утверждает | не сделано |
@@ -60,9 +62,9 @@
 | Удаление аккаунта | в приложении есть (требование 5.1.1(v)) |
 | Пожертвования | сбор средств в приложении не показывается, только на сайте (требование 3.2.2) |
 
-Найдено при аудите: **нет `NSPhotoLibraryAddUsageDescription`**. Картинка аята или ду'а уходит
+Найдено при аудите: не было `NSPhotoLibraryAddUsageDescription`. Картинка аята или ду'а уходит
 в системное меню «Поделиться», там есть «Сохранить изображение», и без этой строки iOS
-закрывает приложение. Исправление — правка 1 в разделе 9.
+закрывает приложение. Исправлено в PR #217 (правка 1 в разделе 9).
 
 ## 1. Аккаунт Apple Developer
 
@@ -83,7 +85,7 @@
 5. После одобрения: https://developer.apple.com/account → Membership details → **Team ID**
    (10 знаков). Он не секретный: его можно прислать в чат, он нужен для CI и Universal Links.
 
-## 2. Идентификаторы и ключ API
+## 2. Идентификаторы, сертификат, профили и ключ API
 
 На https://developer.apple.com/account/resources:
 
@@ -94,17 +96,30 @@
      не включать;
    - `forum.iqro.app.PrayerTimesHomeWidget`, описание «IQRO widgets». Возможность: **App Groups**
      (тот же `group.forum.iqro.app`).
-3. Сертификаты и профили вручную не создаются: при сборке в CI Xcode сам получает облачный
-   сертификат распространения и профили по ключу API (автоматическая подпись). Если это не
-   сработает, запасной путь в разделе 4.
+3. **Сертификат Apple Distribution** (Xcode не нужен, только «Связка ключей» на Mac):
+   1. «Связка ключей» → меню «Связка ключей» → «Ассистент сертификации» → «Запросить сертификат
+      у бюро сертификации»: почта `fulani.dev@gmail.com`, имя «IQRO», «Сохранён на диске».
+   2. **Certificates → +** → Apple Distribution → загрузить этот файл `.certSigningRequest` →
+      скачать `distribution.cer` и открыть двойным щелчком (сертификат встанет в «Связку ключей»).
+   3. «Связка ключей» → «Мои сертификаты» → «Apple Distribution: <имя> (<Team ID>)» → правый
+      щелчок → «Экспортировать» → формат `.p12`, придумать пароль. Файл и пароль — в
+      заблокированную заметку («IQRO сертификат Apple»), как ключ загрузки Play.
+4. **Profiles → +** → Distribution → **App Store Connect**, по одному на каждый App ID, с этим
+   сертификатом. Имена ровно такие — по ним их ищет проект Xcode:
+   - для `forum.iqro.app` — `IQRO App Store`;
+   - для `forum.iqro.app.PrayerTimesHomeWidget` — `IQRO Widget App Store`.
+
+   Скачать оба файла `.mobileprovision`.
+
+Сертификат и профили действуют год. Перед истечением их создают заново и обновляют секреты
+(раздел 4). Профили приходится пересоздавать и при новой возможности (capability) у App ID.
 
 **Ключ App Store Connect API** (https://appstoreconnect.apple.com → Users and Access →
 Integrations → App Store Connect API):
 
 1. При первом входе Account Holder нажимает «Request Access» и принимает условия (делает владелец).
-2. **Team Keys → +**: имя `IQRO CI`, роль **Admin**. Роль Admin нужна, чтобы CI сам создавал
-   облачный сертификат и профили. Ключ даёт широкий доступ, поэтому хранится только в секретах
-   GitHub.
+2. **Team Keys → +**: имя `IQRO CI`, роль **App Manager**: её хватает, чтобы загружать сборки.
+   Admin не нужен — сертификат и профили создаются вручную (выше).
 3. Скачать файл `AuthKey_<KEY_ID>.p8` — **скачивается один раз**. Записать **Key ID** и
    **Issuer ID** (вверху страницы).
 4. Копия `.p8` — в заблокированную заметку («IQRO ключ App Store Connect»), как ключ загрузки Play.
@@ -128,55 +143,80 @@ https://appstoreconnect.apple.com → Apps → **+ → New App**:
 ## 4. Сборка и загрузка без Xcode на Mac
 
 Xcode на Mac ставить не нужно. Сборка, подпись и загрузка выполняются в GitHub Actions на
-`macos-15` — там уже есть Xcode 26.3, которым собирается текущий CI. Репозиторий публичный,
-минуты macOS бесплатны. Ниже — план (правка 2 в разделе 9), кода ещё нет.
+`macos-15` с Xcode 26.3, тем же, что в обычном CI. Репозиторий публичный, минуты macOS бесплатны.
 
-Новый workflow `.github/workflows/ios-release.yml`, запуск только вручную (Actions →
-iOS release → Run workflow) из `main`:
+Workflow [`.github/workflows/ios-release.yml`](../../.github/workflows/ios-release.yml) запускается
+только вручную и только из `main`: GitHub → Actions → **iOS release** → Run workflow. Что он делает:
 
-1. checkout, Ruby и CocoaPods из `Gemfile.lock`, Flutter 3.41.4, `flutter pub get --enforce-lockfile`,
-   `pod install --deployment` — как в задаче `ios` сегодня;
-2. `flutter build ios --release --config-only` с теми же `--dart-define`, что у Android:
-   `APP_ENV=production`, `API_BASE_URL=https://iqro.forum`, `--dart-define-from-file=config/firebase.json`,
-   а при решении владельца — `SENTRY_DSN`;
-3. ключ `.p8` из секрета записывается во временный файл раннера и удаляется в конце;
-4. `xcodebuild archive` с `DEVELOPMENT_TEAM=<Team ID>`, `-allowProvisioningUpdates` и ключом API
-   (`-authenticationKeyPath`, `-authenticationKeyID`, `-authenticationKeyIssuerID`);
-5. `xcodebuild -exportArchive` с `ios/ExportOptions.plist` (`method = app-store-connect`,
-   `destination = upload`): сборка сразу уходит в App Store Connect;
-6. архив `.xcarchive` с dSYM сохраняется артефактом запуска (нужен Sentry, если его включат).
+1. проверяет, что все секреты и `APPLE_TEAM_ID` заданы, иначе сразу останавливается и пишет, каких
+   не хватает;
+2. ставит Ruby и CocoaPods из `Gemfile.lock`, Flutter 3.41.4, зависимости по lock-файлам;
+3. кладёт сертификат во временную связку ключей раннера, профили — в папку Xcode, ключ API —
+   во временный файл. В конце (и при ошибке) всё это удаляется;
+4. `flutter build ios --release --config-only` с `APP_ENV=production`,
+   `API_BASE_URL=https://iqro.forum`, `config/firebase.json` и, если задан секрет, `SENTRY_DSN`;
+5. `xcodebuild archive` с `DEVELOPMENT_TEAM` из `APPLE_TEAM_ID`; проект подписывает Release
+   вручную: `Apple Distribution` и профили `IQRO App Store` / `IQRO Widget App Store`;
+6. `xcodebuild -exportArchive` с [`ios/ExportOptions.plist`](../../clients/iqro_mobile/ios/ExportOptions.plist)
+   (`app-store-connect`, `destination = upload`) и ключом API: сборка сразу уходит в App Store
+   Connect, символы отладки — тоже;
+7. dSYM складываются артефактом запуска `iqro-ios-dsyms` на 30 дней (для Sentry, если его включат).
 
-Номер сборки берётся из `pubspec.yaml`; поле запуска `build_number` позволяет поднять его, если
-App Store Connect уже видел такой номер. Apple требует, чтобы номер сборки рос внутри одной
-версии. Номера iOS и Android независимы, но проще держать их одинаковыми.
+Номер сборки берётся из `pubspec.yaml`. Поле запуска `build_number` нужно, если App Store Connect
+уже видел такой номер: внутри одной версии номер сборки должен расти. Номера iOS и Android
+независимы, но проще держать их одинаковыми.
+
+Отладочная сборка (`make mobile-ios-run`, конфигурация Debug) по-прежнему подписывается
+автоматически; ручная подпись касается только Release. Обычный CI собирает Release без подписи
+и профилей не требует.
 
 **Секреты GitHub** (Settings → Secrets and variables → Actions). Значения вводит только владелец:
 
 | Имя | Что | Тип |
 |---|---|---|
+| `APPLE_TEAM_ID` | Team ID | variable (не секрет) |
 | `APP_STORE_CONNECT_API_KEY_ID` | Key ID ключа API | secret |
 | `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID | secret |
 | `APP_STORE_CONNECT_API_KEY_P8` | содержимое файла `AuthKey_<KEY_ID>.p8` целиком | secret |
-| `APPLE_TEAM_ID` | Team ID | variable (не секрет) |
-| `MOBILE_SENTRY_DSN` | DSN проекта `mobile`, только если включаем Sentry | secret |
+| `IOS_DISTRIBUTION_CERT_P12_BASE64` | файл `.p12` сертификата в base64 | secret |
+| `IOS_DISTRIBUTION_CERT_PASSWORD` | пароль от `.p12` | secret |
+| `IOS_PROFILE_APP_BASE64` | профиль `IQRO App Store` в base64 | secret |
+| `IOS_PROFILE_WIDGET_BASE64` | профиль `IQRO Widget App Store` в base64 | secret |
+| `MOBILE_SENTRY_DSN` | DSN проекта `mobile`, только если включаем Sentry | secret, необязательный |
 
-Ключ можно положить из Терминала, не показывая его на экране (значение не печатается):
+Из Терминала на Mac, значения на экран не выводятся (имена файлов поправить под свои):
+
+```bash
+gh variable set APPLE_TEAM_ID --repo Mr-Fulani/iqro --body ABCDE12345
+```
 
 ```bash
 gh secret set APP_STORE_CONNECT_API_KEY_P8 --repo Mr-Fulani/iqro < ~/Downloads/AuthKey_XXXXXXXXXX.p8
 ```
 
-Для ID ключа и Issuer ID: `gh secret set APP_STORE_CONNECT_API_KEY_ID --repo Mr-Fulani/iqro`
-(значение вставить, когда команда попросит). Team ID:
-`gh variable set APPLE_TEAM_ID --repo Mr-Fulani/iqro --body <TEAM_ID>`.
+```bash
+base64 -i ~/Downloads/iqro-distribution.p12 | gh secret set IOS_DISTRIBUTION_CERT_P12_BASE64 --repo Mr-Fulani/iqro
+```
 
-**Запасной путь — ручная подпись**, если облачная не заработает: владелец создаёт сертификат
-Apple Distribution (CSR делается в «Связке ключей» на Mac, без Xcode) и два профиля App Store —
-для приложения и для виджета. Тогда добавляются секреты `IOS_DISTRIBUTION_CERT_P12_BASE64`,
-`IOS_DISTRIBUTION_CERT_PASSWORD`, `IOS_PROFILE_APP_BASE64`, `IOS_PROFILE_WIDGET_BASE64`,
-а ключу API хватает роли App Manager.
+```bash
+base64 -i ~/Downloads/IQRO_App_Store.mobileprovision | gh secret set IOS_PROFILE_APP_BASE64 --repo Mr-Fulani/iqro
+```
 
-fastlane не нужен: `xcodebuild` с ключом API делает то же самое без лишних зависимостей.
+```bash
+base64 -i ~/Downloads/IQRO_Widget_App_Store.mobileprovision | gh secret set IOS_PROFILE_WIDGET_BASE64 --repo Mr-Fulani/iqro
+```
+
+Key ID, Issuer ID и пароль `.p12` — командой без значения, `gh` попросит вставить его:
+`gh secret set APP_STORE_CONNECT_API_KEY_ID --repo Mr-Fulani/iqro`, так же
+`APP_STORE_CONNECT_API_ISSUER_ID` и `IOS_DISTRIBUTION_CERT_PASSWORD`.
+
+Почему ручная подпись, а не облачная (`-allowProvisioningUpdates` при архивации): облачной нужен
+ключ с ролью Admin, а автоматическая подпись при архивации берёт профиль разработки, которому
+нужно хотя бы одно зарегистрированное устройство. Ручная подпись предсказуема и обходится ролью
+App Manager. fastlane не нужен: хватает `xcodebuild`.
+
+Если первый запуск упадёт, лог шага покажет причину; чаще всего это имя профиля, не совпадающее
+с `IQRO App Store` / `IQRO Widget App Store`, или профиль, созданный не с тем сертификатом.
 
 ## 5. TestFlight
 
@@ -312,12 +352,12 @@ iOS с Android и сайтом.
 
 ## 9. Правки в коде до первой сборки TestFlight
 
-**Ждут согласования владельца, код ещё не менялся.**
+Правки 1 и 2 согласованы владельцем и сделаны в PR #217. Правки 3–6 — по необходимости, каждую отдельно согласовать.
 
 | # | Правка | Зачем | Нужна для | Оценка |
 |---|---|---|---|---|
-| 1 | `NSPhotoLibraryAddUsageDescription` в `Info.plist`, `Info-Debug.plist` и 4 `InfoPlist.strings` + проверка в `RunnerTests` | иначе «Сохранить изображение» из «Поделиться» закрывает приложение | TestFlight | 30 мин |
-| 2 | `.github/workflows/ios-release.yml` и `ios/ExportOptions.plist` (раздел 4), Team ID из переменной `APPLE_TEAM_ID`; README приложения | подпись и загрузка в TestFlight без Xcode на Mac | TestFlight | 0,5–1 день вместе с 1–3 пробными запусками |
+| 1 | `NSPhotoLibraryAddUsageDescription` в `Info.plist`, `Info-Debug.plist` и 4 `InfoPlist.strings` + проверка в `ios_configuration_test.dart` | иначе «Сохранить изображение» из «Поделиться» закрывает приложение | TestFlight | **сделано** |
+| 2 | `.github/workflows/ios-release.yml`, `ios/ExportOptions.plist`, ручная подпись Release в `project.pbxproj` (раздел 4) | подпись и загрузка в TestFlight без Xcode на Mac | TestFlight | **сделано**; первый настоящий запуск — после секретов, возможны 1–2 исправления |
 | 3 | `NSPrivacyCollectedDataTypeCoarseLocation` (Analytics) в `PrivacyInfo.xcprivacy` | манифест совпадёт с ответами App Privacy | желательно | 15 мин |
 | 4 | Аудиосессия после интро (аудит 4.7, tech-debt 1.4) | кнопки плеера на экране блокировки | только если ошибка видна в TestFlight | 1–2 ч |
 | 5 | Снимки экрана в CI на симуляторах iPhone 6,9″ и iPad 13″, 4 языка | страница App Store | App Store, не TestFlight | ~1 день |
@@ -332,7 +372,7 @@ Apple забирает файл через свой CDN, обновление д
 Сейчас не нужны: «Войти с Apple», Google на iOS, замена `sentry` на `sentry_flutter`
 (tech-debt 1.1), push-уведомления.
 
-Минимум до первой сборки во внутреннем TestFlight: правки 1 и 2 плюс разделы 1–2 от владельца.
+До первой сборки во внутреннем TestFlight остались только шаги владельца: разделы 1–3 и секреты из раздела 4.
 
 ## 10. Перед каждым следующим выпуском
 
