@@ -9,6 +9,7 @@ import '../../core/design_system/iqro_action_grid.dart';
 import '../dua/dua_thematic_icon.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../announcements/announcement_controller.dart';
+import '../app_update/app_release_source.dart';
 import '../audio/mini_player.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -97,8 +98,31 @@ class MoreScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            const _AppVersion(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AppVersion extends ConsumerWidget {
+  const _AppVersion();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final version = ref.watch(appVersionLabelProvider).valueOrNull;
+    if (version == null) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Center(
+      key: const ValueKey('app-version'),
+      child: Text(
+        'IQRO · ${context.l10n.appVersion(version)}',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }

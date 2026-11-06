@@ -3465,6 +3465,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appUpdateRestart => 'Перезапустить';
 
   @override
+  String get appUpdateStoreText =>
+      'Откроется страница IQRO в Google Play, там нажмите «Обновить».';
+
+  @override
+  String appVersion(String version) {
+    return 'Версия $version';
+  }
+
+  @override
+  String get appUpdateOpenStore => 'Открыть Google Play';
+
+  @override
+  String get appUpdateDownloadingTitle => 'Обновление загружается';
+
+  @override
+  String get appUpdateDownloadingText =>
+      'Пользуйтесь приложением как обычно. Когда загрузка закончится, здесь появится «Перезапустить».';
+
+  @override
+  String appUpdateInstalled(String version) {
+    return 'У вас $version';
+  }
+
+  @override
   String get listenWord => 'Прослушать слово';
 
   @override

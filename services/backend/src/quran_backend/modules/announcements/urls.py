@@ -10,6 +10,7 @@ from quran_backend.modules.announcements.api import (
     AnnouncementReceiptDetailView,
     AnnouncementReceiptListView,
     AnnouncementRedirectView,
+    AppReleaseView,
 )
 
 app_name = "announcements"
@@ -24,6 +25,7 @@ urlpatterns = [
         AnnouncementRedirectView.as_view(),
         name="go",
     ),
+    path("app/release", AppReleaseView.as_view(), name="app-release"),
     path("me/announcement-receipts", AnnouncementReceiptListView.as_view(), name="receipt-list"),
     path(
         "me/announcement-receipts/<uuid:announcement_id>",

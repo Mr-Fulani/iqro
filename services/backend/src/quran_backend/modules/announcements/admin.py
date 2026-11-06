@@ -44,6 +44,7 @@ from quran_backend.modules.announcements.models import (
     AnnouncementStatus,
     AnnouncementStep,
     AnnouncementTranslation,
+    AppReleaseSettings,
 )
 from quran_backend.modules.announcements.routes import SCREENS
 from quran_backend.modules.announcements.services import (
@@ -1231,6 +1232,20 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     @admin.action(description="Сделать копию (черновик)")
     def duplicate_selected(self, request: HttpRequest, queryset: QuerySet[Announcement]) -> None:
         self._bulk(request, queryset, duplicate, lambda item, _: f"{item}: создан черновик-копия.")
+
+
+@admin.register(AppReleaseSettings)
+class AppReleaseSettingsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """One row: the newest Android build, for the app's own update check."""
+
+    list_display = ("__str__", "updated_at")
+    fields = ("android_version_code",)
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return not AppReleaseSettings.objects.exists() and super().has_add_permission(request)
+
+    def has_delete_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
+        return False
 
 
 @admin.register(AnnouncementSettings)
