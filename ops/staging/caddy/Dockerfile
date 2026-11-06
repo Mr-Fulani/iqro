@@ -4,5 +4,6 @@ FROM caddy:2.11.4-alpine
 # to unprivileged 8080/8443. Remove the unused file capability so Caddy can
 # run with every container capability dropped and no-new-privileges enabled.
 RUN apk add --no-cache libcap-utils 'zlib>=1.3.2-r1' \
+        'musl>=1.2.5-r24' 'musl-utils>=1.2.5-r24' \
     && setcap -r /usr/bin/caddy \
     && apk del libcap-utils
