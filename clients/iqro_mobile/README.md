@@ -215,8 +215,8 @@ Mobile CI закреплён на Flutter 3.41.4, проверяет lock-фай
 
 Android-сборка подписывается ключом загрузки и выходит через Google Play: внутреннее и закрытое
 тестирование, рабочей версии пока нет (см. [docs/release/google-play.md](../../docs/release/google-play.md)).
-App Store Connect и push-доставка не включены: для iOS нужны Apple certificates и
-provisioning profiles. Книги и квизы
+iOS в App Store Connect ещё не загружался, push-доставка не включена: план выпуска и что нужно
+от владельца — в [docs/release/app-store.md](../../docs/release/app-store.md). Книги и квизы
 показаны как будущие разделы. Тексты переводов/тафсира не подменяются mock-данными:
 интерфейс сообщает, когда утверждённый источник ещё не подключён.
 
