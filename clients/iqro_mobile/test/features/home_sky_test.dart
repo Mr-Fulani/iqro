@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/home/home_sky_card.dart';
 import 'package:iqro_mobile/features/prayer/prayer_repository.dart';
+import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 
 // The cases mirror services/web/lib/sky-band.test.ts, so the sun and the
 // sky stand alike on the site and in the app.
@@ -63,5 +65,49 @@ void main() {
   test('close times keep their marks but spread their labels', () {
     final spread = spreadSkyLabels([28, 60, 180, 240, 300, 330], 361, 46);
     expect(spread, [28, 74, 180, 240, 293, 339]);
+  });
+
+  testWidgets('the card keeps its height when the schedule arrives', (
+    tester,
+  ) async {
+    Future<double> heightOf({required bool loading}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: IqroTheme.light(),
+          locale: const Locale('ru'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: ListView(
+              children: [
+                HomePrayerSkyCard(
+                  key: ValueKey(loading),
+                  schedule: loading ? null : _moscow,
+                  loading: loading,
+                  clock: DateTime(2026, 11, 6, 10),
+                  onTap: () {},
+                  onQibla: () {},
+                  onReminders: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return tester
+          .getSize(
+            find
+                .descendant(
+                  of: find.byType(HomePrayerSkyCard),
+                  matching: find.byType(ClipRRect),
+                )
+                .first,
+          )
+          .height;
+    }
+
+    final loading = await heightOf(loading: true);
+    expect(await heightOf(loading: false), loading);
   });
 }

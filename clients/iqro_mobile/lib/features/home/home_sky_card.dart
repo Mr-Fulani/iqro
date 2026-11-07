@@ -373,13 +373,14 @@ class _HomePrayerSkyCardState extends State<HomePrayerSkyCard>
                                         ],
                                       ),
                                     ),
-                                    if (subtitle.isNotEmpty)
-                                      Text(
-                                        subtitle,
-                                        style: text.bodySmall?.copyWith(
-                                          color: ink.withValues(alpha: .92),
-                                        ),
+                                    // Kept while loading, so the card does
+                                    // not grow when the schedule arrives.
+                                    Text(
+                                      subtitle.isEmpty ? ' ' : subtitle,
+                                      style: text.bodySmall?.copyWith(
+                                        color: ink.withValues(alpha: .92),
                                       ),
+                                    ),
                                   ],
                                 ),
                               ),
