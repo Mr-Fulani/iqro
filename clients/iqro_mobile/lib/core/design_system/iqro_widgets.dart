@@ -10,6 +10,9 @@ extension LocalizationContext on BuildContext {
 
 /// Bottom padding of a tab inside the app shell. There the shell's tab bar,
 /// system inset included, is the bottom padding of [context].
+/// Root tabs sit above the navigation bar, whose height (with the system
+/// inset under it) [IqroPage] adds itself; the expanded mini player needs
+/// more room.
 EdgeInsetsDirectional iqroRootTabPadding(
   BuildContext context, {
   required bool playerActive,
@@ -18,8 +21,7 @@ EdgeInsetsDirectional iqroRootTabPadding(
   16,
   8,
   16,
-  MediaQuery.paddingOf(context).bottom +
-      (playerActive && !playerCollapsed ? 76 : 4),
+  playerActive && !playerCollapsed ? 76 : 4,
 );
 
 /// Widest a page's content grows in landscape, padding included.
@@ -82,8 +84,13 @@ class IqroPage extends StatelessWidget {
                     tabletContentWidth: tabletContentWidth,
                   )) /
               2;
+          // The system navigation bar (three buttons on many phones) and, on
+          // a root tab, the app's own bar: content ends above them, so the
+          // last row of a pushed screen is never cut off.
           final content = Padding(
-            padding: EdgeInsets.symmetric(horizontal: gutter),
+            padding:
+                EdgeInsets.symmetric(horizontal: gutter) +
+                EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
             child: Padding(padding: padding, child: child),
           );
           return scrollable
