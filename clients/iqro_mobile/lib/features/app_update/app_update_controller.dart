@@ -29,6 +29,7 @@ class AppUpdateState {
     this.versionCode = 0,
     this.mandatory = false,
     this.viaStore = false,
+    this.hidden = false,
   });
 
   const AppUpdateState.none() : this(AppUpdateStage.none);
@@ -39,6 +40,18 @@ class AppUpdateState {
 
   /// Known from the server, not from Play: «Обновить» opens Google Play.
   final bool viaStore;
+
+  /// «Позже» hid the card above the tab bar; the update is still there, and
+  /// More's account list keeps offering it.
+  final bool hidden;
+
+  AppUpdateState hide() => AppUpdateState(
+    stage,
+    versionCode: versionCode,
+    mandatory: mandatory,
+    viaStore: viaStore,
+    hidden: true,
+  );
 }
 
 /// What this device remembers between launches.
@@ -185,12 +198,11 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
     } else {
       switch (info.installStatus) {
         case PlayInstallStatus.downloaded:
-          next = _restartPostponed
-              ? const AppUpdateState.none()
-              : AppUpdateState(
-                  AppUpdateStage.readyToInstall,
-                  versionCode: info.versionCode,
-                );
+          next = AppUpdateState(
+            AppUpdateStage.readyToInstall,
+            versionCode: info.versionCode,
+            hidden: _restartPostponed,
+          );
         case PlayInstallStatus.pending ||
             PlayInstallStatus.downloading ||
             PlayInstallStatus.installing:
@@ -207,19 +219,18 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
           final mandatory =
               mandatoryPriority > 0 && info.priority >= mandatoryPriority;
           if (info.available && info.flexibleAllowed) {
-            next = !mandatory && saved.snoozes(info.versionCode, now)
-                ? const AppUpdateState.none()
-                : AppUpdateState(
-                    AppUpdateStage.offer,
-                    versionCode: info.versionCode,
-                    mandatory: mandatory,
-                  );
-          } else if (storeVersion != null &&
-              !saved.snoozes(storeVersion, now)) {
+            next = AppUpdateState(
+              AppUpdateStage.offer,
+              versionCode: info.versionCode,
+              mandatory: mandatory,
+              hidden: !mandatory && saved.snoozes(info.versionCode, now),
+            );
+          } else if (storeVersion != null) {
             next = AppUpdateState(
               AppUpdateStage.offer,
               versionCode: storeVersion,
               viaStore: true,
+              hidden: saved.snoozes(storeVersion, now),
             );
           } else {
             next = const AppUpdateState.none();
@@ -248,11 +259,12 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
     return installed != null && latest > installed ? latest : null;
   }
 
-  /// «Позже»: this version is not offered again for three days.
+  /// «Позже»: the card does not offer this version again for three days;
+  /// More keeps it.
   Future<void> later() async {
     final offer = state;
     if (offer.stage != AppUpdateStage.offer || offer.mandatory) return;
-    state = const AppUpdateState.none();
+    state = offer.hide();
     await _snooze(offer.versionCode);
   }
 
@@ -273,7 +285,7 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
     }
     if (offer.viaStore) {
       // Play installs it from its own page; the next check finds the new build.
-      state = const AppUpdateState.none();
+      state = offer.hide();
       await gateway.openStorePage();
       return;
     }
@@ -296,7 +308,7 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
       state = offer;
       await _save(_record.copyWith(clearAccepted: true));
     } else {
-      state = const AppUpdateState.none();
+      state = offer.hide();
       await _snooze(offer.versionCode);
     }
   }
@@ -310,11 +322,12 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
     await gateway.completeUpdate();
   }
 
-  /// «Позже» on a downloaded update: asked again on the next launch.
+  /// «Позже» on a downloaded update: the card asks again on the next launch;
+  /// More keeps «Перезапустить».
   void postponeRestart() {
     if (state.stage != AppUpdateStage.readyToInstall) return;
     _restartPostponed = true;
-    state = const AppUpdateState.none();
+    state = state.hide();
   }
 
   void _follow() {
