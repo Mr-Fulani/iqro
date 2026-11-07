@@ -131,6 +131,10 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "website.AllowedLinkSite": ("разрешённый сайт для ссылок", "Разрешённые сайты для ссылок"),
     "announcements.Announcement": ("объявление", "объявления"),
     "announcements.AnnouncementSettings": ("показ объявлений", "показ объявлений"),
+    "announcements.AppReleaseSettings": (
+        "последняя версия приложения",
+        "последняя версия приложения",
+    ),
     "share_referrals.ShareCampaign": (
         "кампания «Поделиться приложением»",
         "1. Кампании «Поделиться приложением»",
@@ -191,6 +195,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
 
 
 FIELD_LABELS: dict[str, str] = {
+    "android_version_code": "Последняя версия Android: код сборки",
     "domain": "Сайт",
     "note": "Заметка",
     "course": "Курс",

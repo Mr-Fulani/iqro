@@ -19,6 +19,7 @@ from ops.recovery.retention import (
     digest,
     keep_copies,
     make_plan,
+    prune_local_recovery,
 )
 from ops.recovery.snapshot import write_json
 
@@ -317,6 +318,80 @@ class RetentionTests(unittest.TestCase):
             apply_plan(self.config, self.store, plan, digest(plan))
         self.assertEqual(self.store.deleted, [])
         self.assertIn(self.snapshots[0], self.store.data)
+
+    def prune(self):
+        return prune_local_recovery(self.config, self.store, recovery_dir=self.recovery)
+
+    def complete_sets(self):
+        return sorted(
+            path.name
+            for path in self.recovery.iterdir()
+            if (path / "receipt.json").exists()
+        )
+
+    def test_automatic_rotation_removes_only_verified_local_sets(self):
+        remote_before = dict(self.store.data)
+        newest = sorted(self.complete_sets(), reverse=True)[:3]
+        report = self.prune()
+        self.assertEqual(len(report["removed"]), 32)
+        self.assertEqual(report["kept"], [])
+        self.assertTrue(all(item["bytes"] > 0 for item in report["removed"]))
+        self.assertEqual(sorted(newest), self.complete_sets())
+        # Incomplete attempt, database dumps and every storage object stay.
+        self.assertTrue(self.partial.exists())
+        self.assertEqual(len(list(self.backups.glob("*.dump"))), 35)
+        self.assertEqual(self.store.data, remote_before)
+        self.assertEqual(self.store.deleted, [])
+        self.assertEqual(self.prune(), {"removed": [], "kept": []})
+
+    def test_failed_job_does_not_block_local_rotation(self):
+        # 2026-11-07: jobs failed for lack of space, and that used to block cleanup.
+        write_status(
+            self.status / "recovery.json",
+            component="recovery",
+            environment=self.config.environment,
+            state="failed",
+        )
+        self.assertEqual(len(self.prune()["removed"]), 32)
+
+    def test_set_without_proof_in_storage_is_kept(self):
+        oldest = self.snapshots[-1]
+        del self.store.data[oldest]
+        second = json.loads(self.store.data[self.snapshots[-2]])
+        unique = next(
+            item["object_key"]
+            for item in second["artifacts"]
+            if item["path"] == "configuration.tar.age"
+        )
+        del self.store.data[unique]
+        report = self.prune()
+        self.assertEqual(len(report["removed"]), 30)
+        self.assertEqual(
+            {item["reason"] for item in report["kept"]},
+            {
+                "manifest is missing or different in storage",
+                "a referenced object is missing in storage",
+            },
+        )
+        self.assertEqual(len(self.complete_sets()), 5)
+
+    def test_unverifiable_newest_set_does_not_count_toward_the_three(self):
+        newest = self.recovery / max(self.complete_sets())
+        (newest / "snapshot.json").write_text("{}")
+        report = self.prune()
+        self.assertEqual(
+            report["kept"],
+            [
+                {
+                    "snapshot": newest.name,
+                    "reason": "receipt does not match the local manifest",
+                }
+            ],
+        )
+        self.assertEqual(len(report["removed"]), 31)
+        self.assertEqual(
+            len(self.complete_sets()), 4
+        )  # Three verified plus the damaged one.
 
 
 if __name__ == "__main__":

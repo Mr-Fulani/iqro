@@ -179,6 +179,10 @@ class ActiveAnnouncementsSerializer(serializers.Serializer[Any]):
     results = AnnouncementSerializer(many=True)
 
 
+class AppReleaseSerializer(serializers.Serializer[Any]):
+    android_version_code = serializers.IntegerField(min_value=0)
+
+
 class AnnouncementFeedSerializer(serializers.Serializer[Any]):
     next_cursor = serializers.CharField(allow_null=True)
     results = AnnouncementSerializer(many=True)

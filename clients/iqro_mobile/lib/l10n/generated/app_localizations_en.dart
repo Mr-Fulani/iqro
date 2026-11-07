@@ -3445,6 +3445,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appUpdateRestart => 'Restart';
 
   @override
+  String get appUpdateStoreText =>
+      'The IQRO page opens in Google Play; tap “Update” there.';
+
+  @override
+  String appVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get appUpdateOpenStore => 'Open Google Play';
+
+  @override
+  String get appUpdateDownloadingTitle => 'Downloading the update';
+
+  @override
+  String get appUpdateDownloadingText =>
+      'Keep using the app as usual. When the download finishes, “Restart” appears here.';
+
+  @override
+  String appUpdateInstalled(String version) {
+    return 'You have $version';
+  }
+
+  @override
   String get listenWord => 'Listen to the word';
 
   @override

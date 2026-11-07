@@ -6,9 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/platform/play_app_update.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/app_update/app_release_source.dart';
 import 'package:iqro_mobile/features/app_update/app_update_card.dart';
 import 'package:iqro_mobile/features/app_update/app_update_controller.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 PlayUpdateInfo _info({
@@ -50,8 +52,34 @@ class _FakeGateway implements AppUpdateGateway {
   @override
   Future<void> completeUpdate() async => completes++;
 
+  var storeOpens = 0;
+
+  @override
+  Future<bool> openStorePage() async {
+    storeOpens++;
+    return true;
+  }
+
   @override
   Stream<PlayInstallStatus> get installStatus => statuses.stream;
+}
+
+class _FakeRelease implements AppReleaseSource {
+  _FakeRelease({this.latest});
+
+  /// What the admin names; null: unknown or «не проверять».
+  int? latest;
+  final int installed = 6;
+  var asks = 0;
+
+  @override
+  Future<int?> latestAndroidVersionCode() async {
+    asks++;
+    return latest;
+  }
+
+  @override
+  Future<int?> installedVersionCode() async => installed;
 }
 
 Future<PreferencesStore> _store() async {
@@ -69,9 +97,11 @@ void main() {
     _FakeGateway gateway,
     PreferencesStore store, {
     int mandatoryPriority = 0,
+    AppReleaseSource? release,
   }) => AppUpdateController(
     gateway,
     store,
+    release: release,
     now: () => now,
     mandatoryPriority: mandatoryPriority,
   );
@@ -252,6 +282,84 @@ void main() {
       expect(gateway.checks, 1);
     });
 
+    test(
+      'Play silent, the server knows a newer build: Google Play opens',
+      () async {
+        final store = await _store();
+        final gateway = _FakeGateway(_info(available: false));
+        final updates = controller(
+          gateway,
+          store,
+          release: _FakeRelease(latest: 7),
+        );
+        await updates.checkIfDue();
+        expect(updates.state.stage, AppUpdateStage.offer);
+        expect(updates.state.viaStore, isTrue);
+        expect(updates.state.versionCode, 7);
+
+        await updates.update();
+        expect(gateway.storeOpens, 1);
+        expect(gateway.starts, 0);
+        expect(updates.state.stage, AppUpdateStage.none);
+      },
+    );
+
+    test('the server build is not newer: nothing is offered', () async {
+      final store = await _store();
+      for (final latest in <int?>[null, 5, 6]) {
+        now = now.add(const Duration(hours: 1));
+        final updates = controller(
+          _FakeGateway(_info(available: false)),
+          store,
+          release: _FakeRelease(latest: latest),
+        );
+        await updates.checkIfDue();
+        expect(updates.state.stage, AppUpdateStage.none, reason: '$latest');
+      }
+    });
+
+    test('Play\'s own offer wins and the server is not asked', () async {
+      final store = await _store();
+      final release = _FakeRelease(latest: 7);
+      final updates = controller(
+        _FakeGateway(_info()),
+        store,
+        release: release,
+      );
+      await updates.checkIfDue();
+      expect(updates.state.viaStore, isFalse);
+      expect(release.asks, 0);
+    });
+
+    test('outside Play the server is not asked either', () async {
+      final store = await _store();
+      final release = _FakeRelease(latest: 7);
+      final updates = controller(_FakeGateway(null), store, release: release);
+      await updates.checkIfDue();
+      expect(updates.state.stage, AppUpdateStage.none);
+      expect(release.asks, 0);
+    });
+
+    test('«Позже» hides the server build for three days too', () async {
+      final store = await _store();
+      final release = _FakeRelease(latest: 7);
+      final gateway = _FakeGateway(_info(available: false));
+      final updates = controller(gateway, store, release: release);
+      await updates.checkIfDue();
+      await updates.later();
+      expect(updates.state.stage, AppUpdateStage.none);
+
+      now = now.add(const Duration(days: 1));
+      final later = controller(gateway, store, release: release);
+      await later.checkIfDue();
+      expect(later.state.stage, AppUpdateStage.none);
+
+      now = now.add(const Duration(days: 2));
+      final again = controller(gateway, store, release: release);
+      await again.checkIfDue();
+      expect(again.state.viaStore, isTrue);
+    });
+
     test('a damaged record is ignored', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'iqro_app_update_v1': '{not json',
@@ -268,6 +376,7 @@ void main() {
       WidgetTester tester, {
       required PlayUpdateInfo? info,
       int mandatoryPriority = 0,
+      AppReleaseSource? release,
     }) async {
       final store = await _store();
       final gateway = _FakeGateway(info);
@@ -279,6 +388,7 @@ void main() {
                 gateway,
                 store,
                 mandatoryPriority: mandatoryPriority,
+                release: release,
               ),
             ),
           ],
@@ -309,6 +419,25 @@ void main() {
       return gateway;
     }
 
+    testWidgets('a server build says it opens Google Play', (tester) async {
+      final gateway = await pumpCard(
+        tester,
+        info: _info(available: false),
+        release: _FakeRelease(latest: 7),
+      );
+      expect(find.text('Доступна новая версия IQRO'), findsOneWidget);
+      expect(
+        find.text(
+          'Откроется страница IQRO в Google Play, там нажмите «Обновить».',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Открыть Google Play'));
+      await tester.pumpAndSettle();
+      expect(gateway.storeOpens, 1);
+      expect(find.byKey(const ValueKey('app-update')), findsNothing);
+    });
+
     testWidgets('shows nothing outside Play', (tester) async {
       await pumpCard(tester, info: null);
       expect(find.byKey(const ValueKey('app-update')), findsNothing);
@@ -325,9 +454,12 @@ void main() {
     testWidgets('«Обновить», then «Перезапустить»', (tester) async {
       final gateway = await pumpCard(tester, info: _info());
       await tester.tap(find.text('Обновить'));
-      await tester.pumpAndSettle();
+      // The loading bar never settles while Play downloads.
+      await tester.pump(const Duration(milliseconds: 100));
       expect(gateway.starts, 1);
-      expect(find.byKey(const ValueKey('app-update')), findsNothing);
+      expect(find.text('Обновление загружается'), findsOneWidget);
+      expect(find.byKey(const ValueKey('app-update-progress')), findsOneWidget);
+      expect(find.byType(FilledButton), findsNothing);
 
       gateway.statuses.add(PlayInstallStatus.downloaded);
       await tester.pumpAndSettle();
@@ -335,6 +467,18 @@ void main() {
       await tester.tap(find.text('Перезапустить'));
       await tester.pumpAndSettle();
       expect(gateway.completes, 1);
+    });
+
+    testWidgets('shows the installed version', (tester) async {
+      PackageInfo.setMockInitialValues(
+        appName: 'IQRO',
+        packageName: 'forum.iqro.app',
+        version: '1.0.5',
+        buildNumber: '6',
+        buildSignature: '',
+      );
+      await pumpCard(tester, info: _info());
+      expect(find.text('У вас 1.0.5 (6)'), findsOneWidget);
     });
 
     testWidgets('a required update has no «Позже»', (tester) async {

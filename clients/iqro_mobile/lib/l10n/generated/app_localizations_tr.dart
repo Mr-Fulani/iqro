@@ -3399,6 +3399,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get appUpdateRestart => 'Yeniden başlat';
 
   @override
+  String get appUpdateStoreText =>
+      'Google Play\'de IQRO sayfası açılır; orada Güncelle düğmesine dokunun.';
+
+  @override
+  String appVersion(String version) {
+    return 'Sürüm $version';
+  }
+
+  @override
+  String get appUpdateOpenStore => 'Google Play\'i aç';
+
+  @override
+  String get appUpdateDownloadingTitle => 'Güncelleme indiriliyor';
+
+  @override
+  String get appUpdateDownloadingText =>
+      'Uygulamayı her zamanki gibi kullanın. İndirme bitince burada «Yeniden başlat» görünür.';
+
+  @override
+  String appUpdateInstalled(String version) {
+    return 'Sizdeki sürüm: $version';
+  }
+
+  @override
   String get listenWord => 'Kelimeyi dinle';
 
   @override

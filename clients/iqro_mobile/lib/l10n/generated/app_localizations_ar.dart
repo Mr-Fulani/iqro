@@ -3415,6 +3415,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appUpdateRestart => 'إعادة التشغيل';
 
   @override
+  String get appUpdateStoreText =>
+      'ستُفتح صفحة IQRO في Google Play، اضغط هناك على «تحديث».';
+
+  @override
+  String appVersion(String version) {
+    return 'الإصدار $version';
+  }
+
+  @override
+  String get appUpdateOpenStore => 'فتح Google Play';
+
+  @override
+  String get appUpdateDownloadingTitle => 'جارٍ تنزيل التحديث';
+
+  @override
+  String get appUpdateDownloadingText =>
+      'تابع استخدام التطبيق كالمعتاد. عند انتهاء التنزيل يظهر هنا زر «إعادة التشغيل».';
+
+  @override
+  String appUpdateInstalled(String version) {
+    return 'لديك $version';
+  }
+
+  @override
   String get listenWord => 'استمع إلى الكلمة';
 
   @override

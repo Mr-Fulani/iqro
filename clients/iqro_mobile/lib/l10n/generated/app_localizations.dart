@@ -6072,6 +6072,42 @@ abstract class AppLocalizations {
   /// **'Restart'**
   String get appUpdateRestart;
 
+  /// No description provided for @appUpdateStoreText.
+  ///
+  /// In en, this message translates to:
+  /// **'The IQRO page opens in Google Play; tap “Update” there.'**
+  String get appUpdateStoreText;
+
+  /// No description provided for @appVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String appVersion(String version);
+
+  /// No description provided for @appUpdateOpenStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Google Play'**
+  String get appUpdateOpenStore;
+
+  /// No description provided for @appUpdateDownloadingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading the update'**
+  String get appUpdateDownloadingTitle;
+
+  /// No description provided for @appUpdateDownloadingText.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep using the app as usual. When the download finishes, “Restart” appears here.'**
+  String get appUpdateDownloadingText;
+
+  /// No description provided for @appUpdateInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'You have {version}'**
+  String appUpdateInstalled(String version);
+
   /// No description provided for @listenWord.
   ///
   /// In en, this message translates to:

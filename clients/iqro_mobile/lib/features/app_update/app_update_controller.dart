@@ -7,10 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../core/platform/play_app_update.dart';
 import '../../core/storage/preferences_store.dart';
+import 'app_release_source.dart';
 
 // Google Play in-app updates (docs/release/google-play.md): the card above the
 // tab bar offers a new version, Play downloads it in the background (FLEXIBLE
-// only, never IMMEDIATE), and «Перезапустить» installs it.
+// only, never IMMEDIATE), and «Перезапустить» installs it. When Play has not
+// noticed the update yet, the build named in the admin is offered instead, and
+// «Обновить» opens the app's page in Google Play.
 
 /// Updates whose Play priority reaches this value hide «Позже». 0 keeps it off;
 /// a build turns it on with --dart-define=APP_UPDATE_MANDATORY_PRIORITY=4.
@@ -25,6 +28,7 @@ class AppUpdateState {
     this.stage, {
     this.versionCode = 0,
     this.mandatory = false,
+    this.viaStore = false,
   });
 
   const AppUpdateState.none() : this(AppUpdateStage.none);
@@ -32,6 +36,9 @@ class AppUpdateState {
   final AppUpdateStage stage;
   final int versionCode;
   final bool mandatory;
+
+  /// Known from the server, not from Play: «Обновить» opens Google Play.
+  final bool viaStore;
 }
 
 /// What this device remembers between launches.
@@ -107,15 +114,18 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
   AppUpdateController(
     AppUpdateGateway this._gateway,
     PreferencesStore this._store, {
+    AppReleaseSource? release,
     DateTime Function()? now,
     this.mandatoryPriority = appUpdateMandatoryPriority,
-  }) : _now = now ?? DateTime.now,
+  }) : _release = release,
+       _now = now ?? DateTime.now,
        super(const AppUpdateState.none());
 
   /// iOS and other platforms: nothing is checked or shown.
   AppUpdateController.disabled()
     : _gateway = null,
       _store = null,
+      _release = null,
       _now = DateTime.now,
       mandatoryPriority = 0,
       super(const AppUpdateState.none());
@@ -125,6 +135,7 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
 
   final AppUpdateGateway? _gateway;
   final PreferencesStore? _store;
+  final AppReleaseSource? _release;
   final DateTime Function() _now;
   final int mandatoryPriority;
   StreamSubscription<PlayInstallStatus>? _progress;
@@ -153,8 +164,15 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
     if (recent && record.acceptedVersion == null) return;
     _checking = true;
     final PlayUpdateInfo? info;
+    // Asked only when Play itself has nothing to offer.
+    int? storeVersion;
     try {
       info = await gateway.check();
+      if (info != null &&
+          !(info.available && info.flexibleAllowed) &&
+          !_busy(info.installStatus)) {
+        storeVersion = await _newerInStore();
+      }
     } finally {
       _checking = false;
     }
@@ -188,20 +206,46 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
           saved = saved.copyWith(clearAccepted: true);
           final mandatory =
               mandatoryPriority > 0 && info.priority >= mandatoryPriority;
-          next =
-              !info.available ||
-                  !info.flexibleAllowed ||
-                  (!mandatory && saved.snoozes(info.versionCode, now))
-              ? const AppUpdateState.none()
-              : AppUpdateState(
-                  AppUpdateStage.offer,
-                  versionCode: info.versionCode,
-                  mandatory: mandatory,
-                );
+          if (info.available && info.flexibleAllowed) {
+            next = !mandatory && saved.snoozes(info.versionCode, now)
+                ? const AppUpdateState.none()
+                : AppUpdateState(
+                    AppUpdateStage.offer,
+                    versionCode: info.versionCode,
+                    mandatory: mandatory,
+                  );
+          } else if (storeVersion != null &&
+              !saved.snoozes(storeVersion, now)) {
+            next = AppUpdateState(
+              AppUpdateStage.offer,
+              versionCode: storeVersion,
+              viaStore: true,
+            );
+          } else {
+            next = const AppUpdateState.none();
+          }
       }
     }
     await _save(saved);
     if (mounted) state = next;
+  }
+
+  static bool _busy(PlayInstallStatus status) => switch (status) {
+    PlayInstallStatus.pending ||
+    PlayInstallStatus.downloading ||
+    PlayInstallStatus.downloaded ||
+    PlayInstallStatus.installing => true,
+    _ => false,
+  };
+
+  /// The admin's build when it is newer than this one, else null.
+  Future<int?> _newerInStore() async {
+    final release = _release;
+    if (release == null) return null;
+    final latest = await release.latestAndroidVersionCode();
+    if (latest == null) return null;
+    final installed = await release.installedVersionCode();
+    return installed != null && latest > installed ? latest : null;
   }
 
   /// «Позже»: this version is not offered again for three days.
@@ -225,6 +269,12 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
     final gateway = _gateway;
     final offer = state;
     if (gateway == null || _checking || offer.stage != AppUpdateStage.offer) {
+      return;
+    }
+    if (offer.viaStore) {
+      // Play installs it from its own page; the next check finds the new build.
+      state = const AppUpdateState.none();
+      await gateway.openStorePage();
       return;
     }
     _checking = true;
@@ -318,5 +368,6 @@ final appUpdateProvider =
       return AppUpdateController(
         PlayAppUpdateGateway(),
         ref.watch(preferencesStoreProvider),
+        release: ApiAppReleaseSource(ref.watch(apiClientProvider)),
       );
     });

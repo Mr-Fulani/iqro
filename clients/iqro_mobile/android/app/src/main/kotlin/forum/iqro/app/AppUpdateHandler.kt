@@ -1,7 +1,10 @@
 package forum.iqro.app
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.IntentSender
+import android.net.Uri
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
@@ -39,6 +42,7 @@ class AppUpdateHandler(
             "complete" -> manager.completeUpdate()
                 .addOnSuccessListener { result.success(null) }
                 .addOnFailureListener { result.error("unavailable", it.message, null) }
+            "openStore" -> result.success(openStore())
             else -> result.notImplemented()
         }
     }
@@ -83,6 +87,23 @@ class AppUpdateHandler(
             pendingStart = null
             result.success(false)
         }
+    }
+
+    /** This app's page in the Play Store app, or on the Play website without it. */
+    private fun openStore(): Boolean {
+        val id = activity.packageName
+        val store = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$id"))
+            .setPackage("com.android.vending")
+        val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$id"))
+        for (intent in listOf(store, web)) {
+            try {
+                activity.startActivity(intent)
+                return true
+            } catch (_: ActivityNotFoundException) {
+                // Try the next way.
+            }
+        }
+        return false
     }
 
     /** True when Play's update dialog answered; RESULT_OK means the download started. */

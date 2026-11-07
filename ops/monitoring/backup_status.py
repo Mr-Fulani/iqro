@@ -73,6 +73,7 @@ def write_status(
     environment: str,
     state: str,
     source_time: str | None = None,
+    problem: str | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     payload = {
@@ -83,6 +84,9 @@ def write_status(
         "updated_at": datetime.now(UTC).isoformat(),
         "source_time": source_time,
     }
+    if problem:
+        # Plain owner-facing reason (no secrets), repeated in the job failure alert.
+        payload["problem"] = problem
     fd, name = tempfile.mkstemp(dir=path.parent, prefix=".status-")
     temporary = Path(name)
     try:

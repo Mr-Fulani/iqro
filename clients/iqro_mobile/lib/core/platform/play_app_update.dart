@@ -53,6 +53,9 @@ abstract interface class AppUpdateGateway {
   /// Installs a downloaded update; Play restarts the app.
   Future<void> completeUpdate();
 
+  /// Opens this app's page in Google Play; false when nothing could open it.
+  Future<bool> openStorePage();
+
   Stream<PlayInstallStatus> get installStatus;
 }
 
@@ -92,6 +95,17 @@ class PlayAppUpdateGateway implements AppUpdateGateway {
       // Play keeps the downloaded update; the next start offers it again.
     } on MissingPluginException {
       // Older native shells have no update channel.
+    }
+  }
+
+  @override
+  Future<bool> openStorePage() async {
+    try {
+      return await _methods.invokeMethod<bool>('openStore') ?? false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
     }
   }
 
