@@ -37,6 +37,13 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   late Uri _previousAudioUri;
   var _backgroundWorkRequested = false;
   Timer? _cacheMaintenance;
+  Timer? _reminderRenewal;
+
+  /// Renewing the reminder plan reschedules every OS notification through
+  /// the plugin on Android's main thread, which delays the frame signal and
+  /// makes Home's opening animation stutter (about 10 frames a second on a
+  /// Redmi Note 7). It waits until the opening is over.
+  static const _reminderRenewalDelay = Duration(seconds: 8);
 
   @override
   void initState() {
@@ -162,7 +169,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
     try {
       final service = ref.read(backgroundMaintenanceProvider);
       final audio = ref.read(audioControllerProvider.notifier);
-      run = () => service.run(renewReminders: true);
+      run = () => service.run(renewReminders: false);
       restoreAudio = audio.restoreLatestIfIdle;
     } on Object catch (error, stackTrace) {
       FlutterError.reportError(
@@ -175,8 +182,27 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
       return;
     }
     // iOS only keeps a bounded future notification plan. Renew it on launch
-    // and every foreground resume; headless account mutation is intentionally
-    // disabled until it can be fenced safely across isolates.
+    // and every foreground resume, after Home's opening animation; headless
+    // account mutation is intentionally disabled until it can be fenced
+    // safely across isolates.
+    _reminderRenewal?.cancel();
+    _reminderRenewal = Timer(_reminderRenewalDelay, () {
+      if (!mounted || ref.read(activeAccountScopeKeyProvider) != key) return;
+      unawaited(
+        ref.read(reminderProvider.notifier).replan().catchError((
+          Object error,
+          StackTrace stackTrace,
+        ) {
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: error,
+              stack: stackTrace,
+              library: 'IQRO reminder renewal',
+            ),
+          );
+        }),
+      );
+    });
     unawaited(
       _maintenance.run(
         key: key,
@@ -227,6 +253,7 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     _cacheMaintenance?.cancel();
+    _reminderRenewal?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _router.routerDelegate.removeListener(_handleAudioNavigation);
     _notificationRoutes?.cancel();

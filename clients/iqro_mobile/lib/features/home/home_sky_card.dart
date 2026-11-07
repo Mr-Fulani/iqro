@@ -322,136 +322,142 @@ class _HomePrayerSkyCardState extends State<HomePrayerSkyCard>
       button: true,
       label: summary,
       onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final drawn = timeline ?? _fallback;
-          final start = drawn.startFor(now);
-          // While the schedule loads the orbit waits where the opening will
-          // start.
-          final t = timeline == null
-              ? (widget.loading ? 0.0 : 1.0)
-              : Curves.easeInOutCubic.transform(_controller.value);
-          final minute = start + (now - start) * t;
-          final palette = drawn.paletteAt(minute).dimmed(dim);
-          final ink = palette.ink;
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(22),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    palette.top,
-                    palette.middle,
-                    palette.horizon,
-                    palette.horizon,
-                  ],
-                  stops: const [0, .42, .7, 1],
+      // The sky repaints every frame of the opening; its own layer keeps the
+      // rest of Home (cards, shadows, pictures) from repainting with it.
+      child: RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            final drawn = timeline ?? _fallback;
+            final start = drawn.startFor(now);
+            // While the schedule loads the orbit waits where the opening will
+            // start.
+            final t = timeline == null
+                ? (widget.loading ? 0.0 : 1.0)
+                : Curves.easeInOutCubic.transform(_controller.value);
+            final minute = start + (now - start) * t;
+            final palette = drawn.paletteAt(minute).dimmed(dim);
+            final ink = palette.ink;
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      palette.top,
+                      palette.middle,
+                      palette.horizon,
+                      palette.horizon,
+                    ],
+                    stops: const [0, .42, .7, 1],
+                  ),
                 ),
-              ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  onTap: widget.onTap,
-                  excludeFromSemantics: true,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsetsDirectional.fromSTEB(
-                          16,
-                          12,
-                          10,
-                          0,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: ExcludeSemantics(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      context.l10n.nextPrayer,
-                                      style: text.bodySmall?.copyWith(
-                                        color: ink.withValues(alpha: .85),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    onTap: widget.onTap,
+                    excludeFromSemantics: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                            16,
+                            12,
+                            10,
+                            0,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: ExcludeSemantics(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        context.l10n.nextPrayer,
+                                        style: text.bodySmall?.copyWith(
+                                          color: ink.withValues(alpha: .85),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      title,
-                                      style: text.titleLarge?.copyWith(
-                                        color: ink,
-                                        fontWeight: FontWeight.w700,
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        title,
+                                        style: text.titleLarge?.copyWith(
+                                          color: ink,
+                                          fontWeight: FontWeight.w700,
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    // Kept while loading, so the card does
-                                    // not grow when the schedule arrives.
-                                    Text(
-                                      subtitle.isEmpty ? ' ' : subtitle,
-                                      style: text.bodySmall?.copyWith(
-                                        color: ink.withValues(alpha: .92),
+                                      // Kept while loading, so the card does
+                                      // not grow when the schedule arrives.
+                                      Text(
+                                        subtitle.isEmpty ? ' ' : subtitle,
+                                        style: text.bodySmall?.copyWith(
+                                          color: ink.withValues(alpha: .92),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            _SkyButton(
-                              key: const ValueKey('home-prayer-qibla'),
-                              icon: Icons.explore_outlined,
-                              tooltip: context.l10n.qibla,
-                              palette: palette,
-                              onPressed: widget.onQibla,
-                            ),
-                            const SizedBox(width: 6),
-                            _SkyButton(
-                              key: const ValueKey('home-prayer-reminders'),
-                              icon: Icons.notifications_none_rounded,
-                              tooltip: context.l10n.reminders,
-                              palette: palette,
-                              onPressed: widget.onReminders,
-                            ),
-                          ],
+                              _SkyButton(
+                                key: const ValueKey('home-prayer-qibla'),
+                                icon: Icons.explore_outlined,
+                                tooltip: context.l10n.qibla,
+                                palette: palette,
+                                onPressed: widget.onQibla,
+                              ),
+                              const SizedBox(width: 6),
+                              _SkyButton(
+                                key: const ValueKey('home-prayer-reminders'),
+                                icon: Icons.notifications_none_rounded,
+                                tooltip: context.l10n.reminders,
+                                palette: palette,
+                                onPressed: widget.onReminders,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      ExcludeSemantics(
-                        child: SizedBox(
-                          height: 82 + groundHeight,
-                          child: CustomPaint(
-                            painter: SkyPainter(
-                              timeline: drawn,
-                              minute: minute,
-                              palette: palette,
-                              showSun: timeline != null,
-                              labels: timeline == null ? const [] : labels,
-                              clocks: clocks,
-                              nextIndex: nextIndex,
-                              allPassed: tomorrow && minute > drawn.isha,
-                              groundHeight: groundHeight,
-                              labelScale: labelScale.toDouble(),
-                              evenly: large,
-                              rtl:
-                                  Directionality.of(context) ==
-                                  TextDirection.rtl,
-                              labelStyle: text.labelSmall ?? const TextStyle(),
+                        ExcludeSemantics(
+                          child: SizedBox(
+                            height: 82 + groundHeight,
+                            child: CustomPaint(
+                              painter: SkyPainter(
+                                timeline: drawn,
+                                minute: minute,
+                                palette: palette,
+                                showSun: timeline != null,
+                                labels: timeline == null ? const [] : labels,
+                                clocks: clocks,
+                                nextIndex: nextIndex,
+                                allPassed: tomorrow && minute > drawn.isha,
+                                groundHeight: groundHeight,
+                                labelScale: labelScale.toDouble(),
+                                evenly: large,
+                                rtl:
+                                    Directionality.of(context) ==
+                                    TextDirection.rtl,
+                                labelStyle:
+                                    text.labelSmall ?? const TextStyle(),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

@@ -25,7 +25,9 @@ class ReminderController extends StateNotifier<ReminderState> {
        _accountScope = accountScope,
        _locale = locale,
        super(const ReminderState()) {
-    if (accountScope != null) unawaited(reload());
+    // The app renews the plan itself after Home's opening animation
+    // (`IqroApp._requestMaintenance`), so the first load does not.
+    if (accountScope != null) unawaited(reload(renew: false));
   }
 
   final ReminderRepository _repository;
@@ -35,7 +37,8 @@ class ReminderController extends StateNotifier<ReminderState> {
   final AccountScopeSnapshot? _accountScope;
   final String Function() _locale;
 
-  Future<void> reload() async {
+  /// Reads the rules; [renew] also reschedules the OS notifications.
+  Future<void> reload({bool renew = true}) async {
     final scope = _accountScope;
     if (scope == null) return;
     try {
@@ -57,7 +60,7 @@ class ReminderController extends StateNotifier<ReminderState> {
         offline: result.offline,
         clearError: true,
       );
-      await replan();
+      if (renew) await replan();
     } on AccountScopeChanged {
       // This controller belongs to the disposed account generation.
     } on Object catch (error) {
