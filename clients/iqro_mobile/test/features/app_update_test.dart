@@ -8,6 +8,7 @@ import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/app_update/app_release_source.dart';
 import 'package:iqro_mobile/features/app_update/app_update_card.dart';
+import 'package:iqro_mobile/features/app_update/app_update_tile.dart';
 import 'package:iqro_mobile/features/app_update/app_update_controller.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -159,24 +160,39 @@ void main() {
       expect(updates.state.stage, AppUpdateStage.none);
     });
 
-    test('«Позже» hides this version for three days', () async {
+    test('«Позже» hides the card for three days, More keeps it', () async {
       final store = await _store();
       final gateway = _FakeGateway(_info());
       final updates = controller(gateway, store);
       await updates.checkIfDue();
       await updates.later();
-      expect(updates.state.stage, AppUpdateStage.none);
+      expect(updates.state.stage, AppUpdateStage.offer);
+      expect(updates.state.hidden, isTrue);
 
       now = now.add(const Duration(days: 2));
       final later = controller(gateway, store);
       await later.checkIfDue();
       expect(gateway.checks, 2);
-      expect(later.state.stage, AppUpdateStage.none);
+      expect(later.state.stage, AppUpdateStage.offer);
+      expect(later.state.hidden, isTrue);
 
       now = now.add(const Duration(days: 1));
       final again = controller(gateway, store);
       await again.checkIfDue();
       expect(again.state.stage, AppUpdateStage.offer);
+      expect(again.state.hidden, isFalse);
+    });
+
+    test('a hidden offer can still be accepted from More', () async {
+      final store = await _store();
+      final gateway = _FakeGateway(_info());
+      final updates = controller(gateway, store);
+      await updates.checkIfDue();
+      await updates.later();
+      await updates.update();
+      expect(gateway.starts, 1);
+      expect(updates.state.stage, AppUpdateStage.downloading);
+      expect(updates.state.hidden, isFalse);
     });
 
     test('«Позже» does not hide the next version', () async {
@@ -248,9 +264,11 @@ void main() {
       expect(next.state.stage, AppUpdateStage.readyToInstall);
 
       next.postponeRestart();
-      expect(next.state.stage, AppUpdateStage.none);
+      expect(next.state.stage, AppUpdateStage.readyToInstall);
+      expect(next.state.hidden, isTrue);
       await next.checkIfDue();
-      expect(next.state.stage, AppUpdateStage.none);
+      expect(next.state.stage, AppUpdateStage.readyToInstall);
+      expect(next.state.hidden, isTrue);
     });
 
     test('declined in Play\'s dialog counts as «Позже»', () async {
@@ -259,12 +277,12 @@ void main() {
       final updates = controller(gateway, store);
       await updates.checkIfDue();
       await updates.update();
-      expect(updates.state.stage, AppUpdateStage.none);
+      expect(updates.state.hidden, isTrue);
 
       now = now.add(const Duration(days: 1));
       final next = controller(gateway, store);
       await next.checkIfDue();
-      expect(next.state.stage, AppUpdateStage.none);
+      expect(next.state.hidden, isTrue);
     });
 
     test('a failed download clears the offer until the next check', () async {
@@ -300,7 +318,7 @@ void main() {
         await updates.update();
         expect(gateway.storeOpens, 1);
         expect(gateway.starts, 0);
-        expect(updates.state.stage, AppUpdateStage.none);
+        expect(updates.state.hidden, isTrue);
       },
     );
 
@@ -347,12 +365,13 @@ void main() {
       final updates = controller(gateway, store, release: release);
       await updates.checkIfDue();
       await updates.later();
-      expect(updates.state.stage, AppUpdateStage.none);
+      expect(updates.state.hidden, isTrue);
 
       now = now.add(const Duration(days: 1));
       final later = controller(gateway, store, release: release);
       await later.checkIfDue();
-      expect(later.state.stage, AppUpdateStage.none);
+      expect(later.state.stage, AppUpdateStage.offer);
+      expect(later.state.hidden, isTrue);
 
       now = now.add(const Duration(days: 2));
       final again = controller(gateway, store, release: release);
@@ -377,6 +396,7 @@ void main() {
       required PlayUpdateInfo? info,
       int mandatoryPriority = 0,
       AppReleaseSource? release,
+      bool withTile = false,
     }) async {
       final store = await _store();
       final gateway = _FakeGateway(info);
@@ -407,6 +427,7 @@ void main() {
                       child: const Text('check'),
                     ),
                     const AppUpdateCard(),
+                    if (withTile) const AppUpdateTile(),
                   ],
                 ),
               ),
@@ -479,6 +500,46 @@ void main() {
       );
       await pumpCard(tester, info: _info());
       expect(find.text('У вас 1.0.5 (6)'), findsOneWidget);
+    });
+
+    testWidgets('More keeps the update after «Позже»', (tester) async {
+      PackageInfo.setMockInitialValues(
+        appName: 'IQRO',
+        packageName: 'forum.iqro.app',
+        version: '1.0.6',
+        buildNumber: '7',
+        buildSignature: '',
+      );
+      final gateway = await pumpCard(tester, info: _info(), withTile: true);
+      final tile = find.byKey(const ValueKey('more-app-update'));
+      expect(tile, findsOneWidget);
+      expect(
+        find.descendant(of: tile, matching: find.text('У вас 1.0.6 (7)')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Позже'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('app-update')), findsNothing);
+      expect(tile, findsOneWidget);
+
+      await tester.tap(
+        find.descendant(of: tile, matching: find.text('Обновить')),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(gateway.starts, 1);
+      expect(
+        find.descendant(
+          of: tile,
+          matching: find.text('Обновление загружается'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('More shows nothing without an update', (tester) async {
+      await pumpCard(tester, info: _info(available: false), withTile: true);
+      expect(find.byKey(const ValueKey('more-app-update')), findsNothing);
     });
 
     testWidgets('a required update has no «Позже»', (tester) async {

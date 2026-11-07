@@ -21,7 +21,10 @@ class AppUpdateCard extends ConsumerWidget {
     final controller = ref.read(appUpdateProvider.notifier);
     final l10n = context.l10n;
     final stage = update.stage;
-    if (stage == AppUpdateStage.none) return const SizedBox.shrink();
+    // After «Позже» the update stays in More's account list only.
+    if (stage == AppUpdateStage.none || update.hidden) {
+      return const SizedBox.shrink();
+    }
     final ready = stage == AppUpdateStage.readyToInstall;
     final downloading = stage == AppUpdateStage.downloading;
     final offer = stage == AppUpdateStage.offer;

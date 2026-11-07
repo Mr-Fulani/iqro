@@ -10,6 +10,7 @@ import '../dua/dua_thematic_icon.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../announcements/announcement_controller.dart';
 import '../app_update/app_release_source.dart';
+import '../app_update/app_update_tile.dart';
 import '../audio/mini_player.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -44,6 +45,7 @@ class MoreScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
               child: Column(
                 children: <Widget>[
+                  const AppUpdateTile(),
                   IqroListTile(
                     icon: Icons.person_outline,
                     title: context.l10n.personalProfile,
