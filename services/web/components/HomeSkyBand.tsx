@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { PrayerCalculationResponse } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
@@ -33,6 +33,8 @@ const GOLD = "#F4C24E";
 /** The sun travels for the first 80%, then its glow breathes once. */
 const DURATION = 3000;
 
+const subscribe = () => () => {};
+
 type Props = { prayer: PrayerCalculationResponse | null };
 
 /**
@@ -51,6 +53,7 @@ export function HomeSkyBand({ prayer }: Props) {
   // Animation progress 0..1; null until the schedule arrives.
   const [progress, setProgress] = useState<number | null>(null);
   const replay = useOpenReplay();
+  const painted = useSyncExternalStore(subscribe, () => true, () => false);
 
   useEffect(() => {
     const element = box.current;
@@ -158,12 +161,20 @@ export function HomeSkyBand({ prayer }: Props) {
   const allPassed = next?.tomorrow === true && minute > drawn[5];
   const labelXs = spreadLabels(SKY_STOPS.map((_, index) => x(drawn[index])), width, evenly ? 0 : 46);
 
+  const background = `linear-gradient(180deg, ${palette.top} 0%, ${palette.middle} 42%, ${palette.horizon} 70%, ${palette.horizon} 100%)`;
+  // The schedule only arrives in the browser, so the HTML carries just the
+  // empty sky at its full height: leaving the loading band out keeps the home
+  // page within the first network round trip (the Lighthouse LCP budget).
+  if (!painted) {
+    return <section className="home-sky home-sky-placeholder" data-testid="home-sky" style={{ background }} />;
+  }
+
   return (
     <section
       className="home-sky"
       data-testid="home-sky"
       style={{
-        background: `linear-gradient(180deg, ${palette.top} 0%, ${palette.middle} 42%, ${palette.horizon} 70%, ${palette.horizon} 100%)`,
+        background,
         color: ink,
       }}
     >

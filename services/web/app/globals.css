@@ -9489,6 +9489,10 @@ html[data-word-selecting] .word-range-bar {
   isolation: isolate;
 }
 
+.home-sky-placeholder {
+  min-height: 185px;
+}
+
 .home-sky-link {
   position: absolute;
   inset: 0;

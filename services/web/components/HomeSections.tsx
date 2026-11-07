@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
 import { HomeSectionIcon } from "./HomeSectionIcon";
@@ -18,13 +19,19 @@ const SECTIONS = [
   { id: "notes", href: "/notes", label: "notes.title" },
 ] as const;
 
+const subscribe = () => () => {};
+
 export function HomeSections() {
   const { t, locale } = useI18n();
+  // The tiles are drawn in the browser only: they sit below the first screen,
+  // and leaving them out of the HTML keeps the home page within the first
+  // network round trip (the Lighthouse LCP budget on /ar and /tr).
+  const drawn = useSyncExternalStore(subscribe, () => true, () => false);
   return (
     <section className="home-sections" aria-labelledby="home-sections-title" data-testid="home-sections">
       <h2 id="home-sections-title" className="home-sections-title">{t("home.sections")}</h2>
       <div className="home-sections-grid">
-        {SECTIONS.map((section) => (
+        {drawn && SECTIONS.map((section) => (
           <IntentPrefetchLink
             key={section.id}
             href={localizedPath(locale, section.href)}
