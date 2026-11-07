@@ -5,8 +5,9 @@ import {
   countdown,
   minutesInZone,
   nextStop,
+  orbitAngle,
+  orbitStart,
   skyPalette,
-  skyStart,
   skyTimeline,
   skyX,
   spreadLabels,
@@ -47,10 +48,34 @@ test("the sky is night, dawn, day and sunset at the right moments", () => {
   assert.equal(skyPalette(timeline, 1300).stars, 1);
 });
 
-test("the sun starts below the horizon and the stops spread over the band", () => {
+test("the sun and the moon share one orbit through the day and the night", () => {
   const timeline = skyTimeline(times)!;
-  assert.equal(skyStart(timeline, 788), 400);
-  assert.equal(skyStart(timeline, 120), 30);
+  assert.equal(orbitAngle(timeline, 461), 0);
+  assert.equal(orbitAngle(timeline, (461 + 998) / 2), Math.PI / 2);
+  assert.equal(orbitAngle(timeline, 998), Math.PI);
+  // The middle of the night, between maghrib and the next sunrise, is the moon's top.
+  const midnight = 998 + (1440 - (998 - 461)) / 2;
+  assert.ok(Math.abs(orbitAngle(timeline, midnight) - 1.5 * Math.PI) < 1e-9);
+  assert.ok(Math.abs(orbitAngle(timeline, midnight - 1440) - 1.5 * Math.PI) < 1e-9);
+  assert.ok(orbitAngle(timeline, 460) > 1.99 * Math.PI);
+});
+
+test("the opening starts before the last sunrise or maghrib", () => {
+  const timeline = skyTimeline(times)!;
+  assert.equal(orbitStart(timeline, 788), 421);
+  assert.equal(orbitStart(timeline, 1170), 958);
+  assert.equal(orbitStart(timeline, 120), 958 - 1440);
+  assert.equal(orbitStart(timeline, 461), 421);
+  assert.equal(orbitStart(timeline, 998), 958);
+});
+
+test("the sky colours wrap around midnight", () => {
+  const timeline = skyTimeline(times)!;
+  assert.deepEqual(skyPalette(timeline, 958 - 1440), skyPalette(timeline, 958));
+});
+
+test("the stops spread over the band", () => {
+  const timeline = skyTimeline(times)!;
   assert.equal(skyX(timeline, 352, 361), 28);
   assert.equal(skyX(timeline, 1102, 361), 333);
   assert.equal(skyX(timeline, 461, 361, true), 28 + 305 / 5);

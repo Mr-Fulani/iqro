@@ -75,16 +75,42 @@ export function nextStop(timeline: SkyTimeline, now: number): { index: number; t
   return { index: 0, tomorrow: true };
 }
 
-/** Where the opening animation starts: the sun just below the horizon. */
-export function skyStart(timeline: SkyTimeline, now: number): number {
-  return Math.min(timeline[1] - 61, now - 90);
+/** A minute of the clock, wrapped into 0..1440. */
+export const wrapMinute = (minute: number) => ((minute % 1440) + 1440) % 1440;
+
+/**
+ * The sun's angle on the orbit it shares with the moon: 0 on the left
+ * horizon at sunrise, π/2 overhead, π on the right horizon at maghrib, and
+ * the night half under the ground until the next sunrise. The moon stands
+ * opposite, at angle + π, so it rises at maghrib and sets at sunrise.
+ */
+export function orbitAngle(timeline: SkyTimeline, minute: number): number {
+  const [, sunrise, , , maghrib] = timeline;
+  const day = maghrib - sunrise;
+  const since = wrapMinute(minute - sunrise);
+  return since <= day ? Math.PI * (since / day) : Math.PI + Math.PI * ((since - day) / (1440 - day));
+}
+
+/** Minutes before the last sunrise or maghrib at which the opening starts. */
+export const ORBIT_LEAD = 40;
+
+/**
+ * Where the opening animation starts: shortly before the last sunrise (by
+ * day) or maghrib (by night), so the sun and the moon change places on
+ * screen. After midnight that maghrib was yesterday's, a negative minute.
+ */
+export function orbitStart(timeline: SkyTimeline, now: number): number {
+  const [, sunrise, , , maghrib] = timeline;
+  if (now >= sunrise && now < maghrib) return sunrise - ORBIT_LEAD;
+  return maghrib - ORBIT_LEAD - (now < sunrise ? 1440 : 0);
 }
 
 const hex = (value: string) => [1, 3, 5].map((index) => parseInt(value.slice(index, index + 2), 16));
 const mix = (a: readonly number[], b: readonly number[], f: number) => a.map((value, index) => value + (b[index] - value) * f);
 const rgb = (value: readonly number[]) => `rgb(${value.map((part) => Math.round(part)).join(", ")})`;
 
-export function skyPalette(timeline: SkyTimeline, minute: number): SkyPalette {
+export function skyPalette(timeline: SkyTimeline, at: number): SkyPalette {
+  const minute = wrapMinute(at);
   const [fajr, sunrise, , , maghrib, isha] = timeline;
   const raw: [number, Key][] = [
     [fajr - 52, NIGHT],

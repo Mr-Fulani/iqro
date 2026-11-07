@@ -130,21 +130,26 @@ class _HomePlanProgressState extends State<HomePlanProgress>
                       ),
                       if (!widget.error) ...[
                         const SizedBox(height: 6),
-                        SizedBox(
-                          height: 36,
-                          child: AnimatedBuilder(
-                            animation: _controller,
-                            builder: (context, _) {
-                              final travel = Curves.easeInOutCubic.transform(
-                                ((_controller.value - _delay) / (1 - _delay))
-                                    .clamp(0.0, 1.0),
-                              );
-                              return _MarkTrack(
-                                progress: share * travel,
-                                turn: travel * math.pi / 2,
-                                palm: widget.palm,
-                              );
-                            },
+                        // The mark moves every frame of the opening; its
+                        // own layer keeps the reading card, its shadow and
+                        // the rest of Home from repainting with it.
+                        RepaintBoundary(
+                          child: SizedBox(
+                            height: 36,
+                            child: AnimatedBuilder(
+                              animation: _controller,
+                              builder: (context, _) {
+                                final travel = Curves.easeInOutCubic.transform(
+                                  ((_controller.value - _delay) / (1 - _delay))
+                                      .clamp(0.0, 1.0),
+                                );
+                                return _MarkTrack(
+                                  progress: share * travel,
+                                  turn: travel * math.pi / 2,
+                                  palm: widget.palm,
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ],
@@ -224,13 +229,16 @@ class _MarkTrack extends StatelessWidget {
               bottom: 0,
               width: _palmSize,
               height: _palmSize,
-              child: palm == null
-                  ? Icon(Icons.flag_outlined, color: primary)
-                  : PalmGrowthArt(
-                      stage: palm!.stage,
-                      mood: palm!.mood,
-                      size: _palmSize,
-                    ),
+              // The palm stands still while the mark travels to it.
+              child: RepaintBoundary(
+                child: palm == null
+                    ? Icon(Icons.flag_outlined, color: primary)
+                    : PalmGrowthArt(
+                        stage: palm!.stage,
+                        mood: palm!.mood,
+                        size: _palmSize,
+                      ),
+              ),
             ),
             PositionedDirectional(
               key: const ValueKey('home-plan-mark'),

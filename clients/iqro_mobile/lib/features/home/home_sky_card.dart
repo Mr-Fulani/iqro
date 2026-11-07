@@ -155,11 +155,31 @@ class SkyTimeline {
   double get maghrib => stops[4];
   double get isha => stops[5];
 
-  /// Where the opening animation starts: the sun just below the horizon, or
-  /// an hour and a half back for a time before dawn.
-  double startFor(double now) => math.min(sunrise - 61, now - 90);
+  /// Minutes before the last sunrise or maghrib at which the opening starts.
+  static const orbitLead = 40.0;
 
-  SkyPalette paletteAt(double minute) {
+  /// Where the opening animation starts: shortly before the last sunrise (by
+  /// day) or maghrib (by night), so the sun and the moon change places on
+  /// screen. After midnight that maghrib was yesterday's, a negative minute.
+  double startFor(double now) {
+    if (now >= sunrise && now < maghrib) return sunrise - orbitLead;
+    return maghrib - orbitLead - (now < sunrise ? 1440 : 0);
+  }
+
+  /// The sun's angle on the orbit it shares with the moon: 0 on the left
+  /// horizon at sunrise, π/2 overhead, π on the right horizon at maghrib, and
+  /// the night half under the ground until the next sunrise. The moon stands
+  /// opposite, at angle + π, so it rises at maghrib and sets at sunrise.
+  double orbitAngle(double minute) {
+    final day = maghrib - sunrise;
+    final since = (minute - sunrise) % 1440;
+    return since <= day
+        ? math.pi * since / day
+        : math.pi + math.pi * (since - day) / (1440 - day);
+  }
+
+  SkyPalette paletteAt(double at) {
+    final minute = at % 1440;
     // The same moments as the site (sky-band.ts), around the real sunrise
     // and sunset of the city.
     final keys = <(double, SkyPalette)>[
@@ -188,9 +208,9 @@ class SkyTimeline {
   }
 }
 
-/// Home's prayer card: the sky of the day with the sun on its arc from
-/// sunrise to maghrib, and the day's prayers on the ground. On every opening
-/// the sun rises from the horizon to the present time.
+/// Home's prayer card: the sky of the day with the sun and the moon on one
+/// orbit, and the day's prayers on the ground. On every opening the orbit
+/// turns from the last sunrise or maghrib to the present time.
 class HomePrayerSkyCard extends StatefulWidget {
   const HomePrayerSkyCard({
     required this.schedule,
@@ -220,7 +240,8 @@ class _HomePrayerSkyCardState extends State<HomePrayerSkyCard>
         HomeOpenReplay<HomePrayerSkyCard> {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 3000),
+    // Slow enough to see the sun and the moon change places.
+    duration: const Duration(milliseconds: 6000),
     value: 0,
   );
 
@@ -301,140 +322,142 @@ class _HomePrayerSkyCardState extends State<HomePrayerSkyCard>
       button: true,
       label: summary,
       onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final drawn = timeline ?? _fallback;
-          final start = drawn.startFor(now);
-          // The sun travels for the first 80%, then its glow breathes once.
-          // While the schedule loads the sky waits at dawn, where the sun
-          // will rise from.
-          final t = timeline == null
-              ? (widget.loading ? 0.0 : 1.0)
-              : Curves.easeInOutCubic.transform(
-                  math.min(1, _controller.value / .8),
-                );
-          final minute = start + (now - start) * t;
-          final palette = drawn.paletteAt(minute).dimmed(dim);
-          final ink = palette.ink;
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(22),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    palette.top,
-                    palette.middle,
-                    palette.horizon,
-                    palette.horizon,
-                  ],
-                  stops: const [0, .42, .7, 1],
+      // The sky repaints every frame of the opening; its own layer keeps the
+      // rest of Home (cards, shadows, pictures) from repainting with it.
+      child: RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            final drawn = timeline ?? _fallback;
+            final start = drawn.startFor(now);
+            // While the schedule loads the orbit waits where the opening will
+            // start.
+            final t = timeline == null
+                ? (widget.loading ? 0.0 : 1.0)
+                : Curves.easeInOutCubic.transform(_controller.value);
+            final minute = start + (now - start) * t;
+            final palette = drawn.paletteAt(minute).dimmed(dim);
+            final ink = palette.ink;
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      palette.top,
+                      palette.middle,
+                      palette.horizon,
+                      palette.horizon,
+                    ],
+                    stops: const [0, .42, .7, 1],
+                  ),
                 ),
-              ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  onTap: widget.onTap,
-                  excludeFromSemantics: true,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsetsDirectional.fromSTEB(
-                          16,
-                          12,
-                          10,
-                          0,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: ExcludeSemantics(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      context.l10n.nextPrayer,
-                                      style: text.bodySmall?.copyWith(
-                                        color: ink.withValues(alpha: .85),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    onTap: widget.onTap,
+                    excludeFromSemantics: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                            16,
+                            12,
+                            10,
+                            0,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: ExcludeSemantics(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        context.l10n.nextPrayer,
+                                        style: text.bodySmall?.copyWith(
+                                          color: ink.withValues(alpha: .85),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      title,
-                                      style: text.titleLarge?.copyWith(
-                                        color: ink,
-                                        fontWeight: FontWeight.w700,
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        title,
+                                        style: text.titleLarge?.copyWith(
+                                          color: ink,
+                                          fontWeight: FontWeight.w700,
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    // Kept while loading, so the card does
-                                    // not grow when the schedule arrives.
-                                    Text(
-                                      subtitle.isEmpty ? ' ' : subtitle,
-                                      style: text.bodySmall?.copyWith(
-                                        color: ink.withValues(alpha: .92),
+                                      // Kept while loading, so the card does
+                                      // not grow when the schedule arrives.
+                                      Text(
+                                        subtitle.isEmpty ? ' ' : subtitle,
+                                        style: text.bodySmall?.copyWith(
+                                          color: ink.withValues(alpha: .92),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            _SkyButton(
-                              key: const ValueKey('home-prayer-qibla'),
-                              icon: Icons.explore_outlined,
-                              tooltip: context.l10n.qibla,
-                              palette: palette,
-                              onPressed: widget.onQibla,
-                            ),
-                            const SizedBox(width: 6),
-                            _SkyButton(
-                              key: const ValueKey('home-prayer-reminders'),
-                              icon: Icons.notifications_none_rounded,
-                              tooltip: context.l10n.reminders,
-                              palette: palette,
-                              onPressed: widget.onReminders,
-                            ),
-                          ],
+                              _SkyButton(
+                                key: const ValueKey('home-prayer-qibla'),
+                                icon: Icons.explore_outlined,
+                                tooltip: context.l10n.qibla,
+                                palette: palette,
+                                onPressed: widget.onQibla,
+                              ),
+                              const SizedBox(width: 6),
+                              _SkyButton(
+                                key: const ValueKey('home-prayer-reminders'),
+                                icon: Icons.notifications_none_rounded,
+                                tooltip: context.l10n.reminders,
+                                palette: palette,
+                                onPressed: widget.onReminders,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      ExcludeSemantics(
-                        child: SizedBox(
-                          height: 82 + groundHeight,
-                          child: CustomPaint(
-                            painter: SkyPainter(
-                              timeline: drawn,
-                              minute: minute,
-                              palette: palette,
-                              showSun: timeline != null,
-                              labels: timeline == null ? const [] : labels,
-                              clocks: clocks,
-                              nextIndex: nextIndex,
-                              allPassed: tomorrow && minute > drawn.isha,
-                              groundHeight: groundHeight,
-                              labelScale: labelScale.toDouble(),
-                              evenly: large,
-                              rtl:
-                                  Directionality.of(context) ==
-                                  TextDirection.rtl,
-                              arrived: _controller.value,
-                              labelStyle: text.labelSmall ?? const TextStyle(),
+                        ExcludeSemantics(
+                          child: SizedBox(
+                            height: 82 + groundHeight,
+                            child: CustomPaint(
+                              painter: SkyPainter(
+                                timeline: drawn,
+                                minute: minute,
+                                palette: palette,
+                                showSun: timeline != null,
+                                labels: timeline == null ? const [] : labels,
+                                clocks: clocks,
+                                nextIndex: nextIndex,
+                                allPassed: tomorrow && minute > drawn.isha,
+                                groundHeight: groundHeight,
+                                labelScale: labelScale.toDouble(),
+                                evenly: large,
+                                rtl:
+                                    Directionality.of(context) ==
+                                    TextDirection.rtl,
+                                labelStyle:
+                                    text.labelSmall ?? const TextStyle(),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -500,7 +523,6 @@ class SkyPainter extends CustomPainter {
     required this.labelScale,
     required this.evenly,
     required this.rtl,
-    required this.arrived,
     required this.labelStyle,
   });
 
@@ -519,9 +541,6 @@ class SkyPainter extends CustomPainter {
   /// and sunrise keeps only its mark.
   final bool evenly;
   final bool rtl;
-
-  /// The opening animation's progress: past 0.8 the sun's glow breathes once.
-  final double arrived;
 
   /// The theme's label font, so that every script has its glyphs.
   final TextStyle labelStyle;
@@ -592,101 +611,76 @@ class SkyPainter extends CustomPainter {
         canvas.drawPath(metric.extractPath(d, d + 3), dash);
       }
     }
-    // The moon after dusk and before dawn.
-    final moon = minute > timeline.maghrib + 42
-        ? ((minute - timeline.maghrib - 42) / 90).clamp(0.0, 1.0)
-        : minute < timeline.fajr - 20
-        ? 1.0
-        : 0.0;
-    if (moon > 0) {
-      final center = Offset(width - 64, 26);
+    // The sun and the moon stand opposite each other on one orbit; whichever
+    // is under the horizon is hidden by the ground.
+    final angle = timeline.orbitAngle(minute);
+    final sun = Offset(
+      cx - rx * math.cos(angle),
+      horizon - ry * math.sin(angle),
+    );
+    final moon = Offset(
+      cx + rx * math.cos(angle),
+      horizon + ry * math.sin(angle),
+    );
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, width, horizon));
+    if (moon.dy < horizon + 12) {
       canvas.drawCircle(
-        center,
+        moon,
         24,
         Paint()
-          ..shader = ui.Gradient.radial(center, 24, [
-            const Color(0xFFFFF6DA).withValues(alpha: .35 * moon),
+          ..shader = ui.Gradient.radial(moon, 24, [
+            const Color(0xFFFFF6DA).withValues(alpha: .35),
             const Color(0x00FFF6DA),
           ]),
       );
       final crescent = Path.combine(
         PathOperation.difference,
-        Path()..addOval(Rect.fromCircle(center: center, radius: 11)),
+        Path()..addOval(Rect.fromCircle(center: moon, radius: 11)),
         Path()..addOval(
-          Rect.fromCircle(center: center + const Offset(5, -4), radius: 9.5),
+          Rect.fromCircle(center: moon + const Offset(5, -4), radius: 9.5),
         ),
       );
+      canvas.drawPath(crescent, Paint()..color = const Color(0xFFF3E7C4));
+    }
+    // By day the sun's way since sunrise is drawn in gold.
+    if (showSun && angle > 0 && angle < math.pi) {
       canvas.drawPath(
-        crescent,
-        Paint()..color = const Color(0xFFF3E7C4).withValues(alpha: moon),
+        Path()..addArc(oval, math.pi, angle),
+        Paint()
+          ..color = _gold
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.4
+          ..strokeCap = StrokeCap.round,
       );
     }
-    // The sun on its arc, rising behind the horizon or set below it.
-    if (showSun) {
-      final trail = Paint()
-        ..color = _gold
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4
-        ..strokeCap = StrokeCap.round;
-      Offset? sun;
-      var opacity = 1.0;
-      if (minute > timeline.sunrise && minute < timeline.maghrib) {
-        final sx = _x(minute, width);
-        final dx = ((sx - cx) / rx).clamp(-1.0, 1.0);
-        final angle = 2 * math.pi - math.acos(dx);
-        sun = Offset(sx, horizon + ry * math.sin(angle));
-        canvas.drawPath(Path()..addArc(oval, math.pi, angle - math.pi), trail);
-      } else {
-        final before = minute <= timeline.sunrise;
-        // Dawn shows the sun waiting at the horizon for a while; after
-        // maghrib it sinks faster.
-        final depth = before
-            ? ((timeline.sunrise - minute) / 120).clamp(0.0, 1.0)
-            : ((minute - timeline.maghrib) / 70).clamp(0.0, 1.0);
-        opacity = 1 - depth;
-        sun = Offset(before ? x0 : x1, horizon + 2 + depth * 18);
-        if (!before && opacity > .02) {
-          canvas.drawPath(
-            Path()..addArc(oval, math.pi, math.pi),
-            trail..color = _gold.withValues(alpha: .9 * opacity),
-          );
-        }
-      }
-      if (opacity > .02) {
-        final breath = arrived > .8
-            ? 1 + .45 * math.sin(math.pi * (arrived - .8) / .2)
-            : 1.0;
-        final glow = 30.0 * breath;
-        canvas.drawCircle(
-          sun,
-          glow,
-          Paint()
-            ..shader = ui.Gradient.radial(
-              sun,
-              glow,
-              [
-                const Color(0xFFFFF4C8).withValues(alpha: .95 * opacity),
-                const Color(0xFFFFE08A).withValues(alpha: .45 * opacity),
-                const Color(0x00FFE08A),
-              ],
-              const [0, .35, 1],
-            ),
-        );
-        canvas.drawCircle(
-          sun,
-          10.5,
-          Paint()..color = const Color(0xFFFFD55E).withValues(alpha: opacity),
-        );
-        canvas.drawCircle(
-          sun,
-          10.5,
-          Paint()
-            ..color = const Color(0xFFFFF3C4).withValues(alpha: opacity)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2,
-        );
-      }
+    if (sun.dy < horizon + 12) {
+      canvas.drawCircle(
+        sun,
+        30,
+        Paint()
+          ..shader = ui.Gradient.radial(
+            sun,
+            30,
+            [
+              const Color(0xFFFFF4C8).withValues(alpha: .95),
+              const Color(0xFFFFE08A).withValues(alpha: .45),
+              const Color(0x00FFE08A),
+            ],
+            const [0, .35, 1],
+          ),
+      );
+      canvas.drawCircle(sun, 10.5, Paint()..color = const Color(0xFFFFD55E));
+      canvas.drawCircle(
+        sun,
+        10.5,
+        Paint()
+          ..color = const Color(0xFFFFF3C4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
     }
+    canvas.restore();
     // Ground under the horizon.
     canvas.drawRect(
       Rect.fromLTWH(0, horizon, width, groundHeight),
@@ -803,6 +797,5 @@ class SkyPainter extends CustomPainter {
       old.allPassed != allPassed ||
       old.rtl != rtl ||
       old.evenly != evenly ||
-      old.groundHeight != groundHeight ||
-      old.arrived != arrived;
+      old.groundHeight != groundHeight;
 }
