@@ -28,6 +28,13 @@ void main() {
     );
     expect(plist, contains('<key>NSLocationWhenInUseUsageDescription</key>'));
     expect(plist, isNot(contains('NSLocationAlways')));
+    // The share sheet offers "Save Image"; iOS closes the app without it.
+    for (final file in const <String>['Info.plist', 'Info-Debug.plist']) {
+      expect(
+        File('ios/Runner/$file').readAsStringSync(),
+        contains('<key>NSPhotoLibraryAddUsageDescription</key>'),
+      );
+    }
 
     final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
     expect(appDelegate, contains('WorkmanagerPlugin.registerLaunchHandlers()'));
@@ -61,6 +68,7 @@ void main() {
       ).readAsStringSync();
       expect(copy, contains('"CFBundleDisplayName" = "IQRO";'));
       expect(copy, contains('"NSLocationWhenInUseUsageDescription"'));
+      expect(copy, contains('"NSPhotoLibraryAddUsageDescription"'));
     }
 
     final podfile = File('ios/Podfile').readAsStringSync();
