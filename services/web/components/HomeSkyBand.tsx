@@ -12,8 +12,9 @@ import {
   nextStop,
   SKY_STOPS,
   skyInk,
+  orbitAngle,
+  orbitStart,
   skyPalette,
-  skyStart,
   skyTimeline,
   skyX,
   spreadLabels,
@@ -30,17 +31,17 @@ const STARS: [number, number, number][] = [
 const SKY_HEIGHT = 82;
 const GROUND_HEIGHT = 46;
 const GOLD = "#F4C24E";
-/** The sun travels for the first 80%, then its glow breathes once. */
-const DURATION = 3000;
+/** The opening turn of the orbit: slow enough to see the sun and the moon change places. */
+const DURATION = 6000;
 
 const subscribe = () => () => {};
 
 type Props = { prayer: PrayerCalculationResponse | null };
 
 /**
- * The home page's prayer card: the sky of the day with the sun on its arc
- * from sunrise to maghrib, and the day's prayers on the ground. On every
- * opening the sun rises from the horizon to the present time, as in the app.
+ * The home page's prayer card: the sky of the day with the sun and the moon
+ * on one orbit, and the day's prayers on the ground. On every opening the
+ * orbit turns from the last sunrise or maghrib to the present time, as in the app.
  */
 export function HomeSkyBand({ prayer }: Props) {
   const { t, locale, formatDate } = useI18n();
@@ -94,9 +95,9 @@ export function HomeSkyBand({ prayer }: Props) {
   const drawn: SkyTimeline = timeline ?? FALLBACK_TIMELINE;
   // The schedule only arrives in the browser, so the city clock is safe to read here.
   const present = now ?? (timezone ? minutesInZone(timezone) : 720);
-  // While the schedule loads the sky waits at dawn, where the sun will rise from.
-  const travel = timeline ? easeInOutCubic(Math.min(1, (progress ?? 0) / 0.8)) : prayer ? 1 : 0;
-  const start = skyStart(drawn, present);
+  // While the schedule loads the orbit waits where the opening will start.
+  const travel = timeline ? easeInOutCubic(progress ?? 0) : prayer ? 1 : 0;
+  const start = orbitStart(drawn, present);
   const minute = start + (present - start) * travel;
   const palette = skyPalette(drawn, minute);
   const ink = skyInk(palette.darkness);
@@ -134,30 +135,15 @@ export function HomeSkyBand({ prayer }: Props) {
   const rx = (x1 - x0) / 2;
   const ry = Math.min(60, horizon - 14);
   const scale = width / 361;
-  let sun: { x: number; y: number; opacity: number; trail: string } | null = null;
-  if (timeline) {
-    if (minute > drawn[1] && minute < drawn[4]) {
-      const sx = x(minute);
-      const dx = Math.max(-1, Math.min(1, (sx - cx) / rx));
-      const sy = horizon - ry * Math.sqrt(1 - dx * dx);
-      sun = { x: sx, y: sy, opacity: 1, trail: `M${x0} ${horizon} A${rx} ${ry} 0 0 1 ${sx.toFixed(1)} ${sy.toFixed(1)}` };
-    } else {
-      const before = minute <= drawn[1];
-      const depth = before
-        ? Math.min(1, Math.max(0, (drawn[1] - minute) / 120))
-        : Math.min(1, Math.max(0, (minute - drawn[4]) / 70));
-      sun = {
-        x: before ? x0 : x1,
-        y: horizon + 2 + depth * 18,
-        opacity: 1 - depth,
-        trail: before ? "" : `M${x0} ${horizon} A${rx} ${ry} 0 0 1 ${x1} ${horizon}`,
-      };
-    }
-  }
-  const moon =
-    minute > drawn[4] + 42 ? Math.min(1, (minute - drawn[4] - 42) / 90) : minute < drawn[0] - 20 ? 1 : 0;
-  const breath = (progress ?? 0) > 0.8 ? 1 + 0.45 * Math.sin((Math.PI * ((progress ?? 0) - 0.8)) / 0.2) : 1;
-  const moonX = width - 64;
+  // The sun and the moon stand opposite each other on one orbit; whichever is
+  // under the horizon is hidden by the ground.
+  const angle = orbitAngle(drawn, minute);
+  const sun = { x: cx - rx * Math.cos(angle), y: horizon - ry * Math.sin(angle) };
+  const moon = { x: cx + rx * Math.cos(angle), y: horizon + ry * Math.sin(angle) };
+  const trail =
+    timeline && angle > 0 && angle < Math.PI
+      ? `M${x0} ${horizon} A${rx} ${ry} 0 0 1 ${sun.x.toFixed(1)} ${sun.y.toFixed(1)}`
+      : "";
   const allPassed = next?.tomorrow === true && minute > drawn[5];
   const labelXs = spreadLabels(SKY_STOPS.map((_, index) => x(drawn[index])), width, evenly ? 0 : 46);
 
@@ -230,9 +216,12 @@ export function HomeSkyBand({ prayer }: Props) {
               <stop offset="1" stopColor="#FFF6DA" stopOpacity="0" />
             </radialGradient>
             <mask id="home-sky-crescent">
-              <rect x={moonX - 14} y={12} width={28} height={28} fill="#fff" />
-              <circle cx={moonX + 5} cy={22} r={9.5} fill="#000" />
+              <rect x={moon.x - 14} y={moon.y - 14} width={28} height={28} fill="#fff" />
+              <circle cx={moon.x + 5} cy={moon.y - 4} r={9.5} fill="#000" />
             </mask>
+            <clipPath id="home-sky-above">
+              <rect x={0} y={0} width={width} height={horizon} />
+            </clipPath>
           </defs>
           <g transform={rtl ? `translate(${width} 0) scale(-1 1)` : undefined}>
             {palette.stars > 0.01 &&
@@ -247,21 +236,21 @@ export function HomeSkyBand({ prayer }: Props) {
               strokeWidth="1.4"
               strokeDasharray="3 5"
             />
-            {moon > 0 && (
-              <g opacity={moon}>
-                <circle cx={moonX} cy={26} r={24} fill="url(#home-sky-moon)" />
-                <circle cx={moonX} cy={26} r={11} fill="#F3E7C4" mask="url(#home-sky-crescent)" />
-              </g>
-            )}
-            {sun && sun.trail && (
-              <path d={sun.trail} fill="none" stroke={GOLD} strokeWidth="2.4" strokeLinecap="round" opacity={sun.opacity * 0.95} />
-            )}
-            {sun && sun.opacity > 0.02 && (
-              <g opacity={sun.opacity}>
-                <circle cx={sun.x} cy={sun.y} r={30 * breath} fill="url(#home-sky-glow)" />
-                <circle cx={sun.x} cy={sun.y} r={10.5} fill="#FFD55E" stroke="#FFF3C4" strokeWidth="2" />
-              </g>
-            )}
+            <g clipPath="url(#home-sky-above)">
+              {moon.y < horizon + 12 && (
+                <g>
+                  <circle cx={moon.x} cy={moon.y} r={24} fill="url(#home-sky-moon)" />
+                  <circle cx={moon.x} cy={moon.y} r={11} fill="#F3E7C4" mask="url(#home-sky-crescent)" />
+                </g>
+              )}
+              {trail && <path d={trail} fill="none" stroke={GOLD} strokeWidth="2.4" strokeLinecap="round" opacity={0.95} />}
+              {sun.y < horizon + 12 && (
+                <g>
+                  <circle cx={sun.x} cy={sun.y} r={30} fill="url(#home-sky-glow)" />
+                  <circle cx={sun.x} cy={sun.y} r={10.5} fill="#FFD55E" stroke="#FFF3C4" strokeWidth="2" />
+                </g>
+              )}
+            </g>
             <rect x={0} y={horizon} width={width} height={GROUND_HEIGHT} fill={palette.ground} />
             <line x1={0} x2={width} y1={horizon} y2={horizon} stroke={ink} strokeOpacity=".35" />
           </g>

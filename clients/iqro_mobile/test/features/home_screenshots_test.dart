@@ -325,12 +325,35 @@ void main() {
       active: const [],
       still: false,
     );
-    for (var frame = 0; frame <= 32; frame++) {
+    for (var frame = 0; frame <= 62; frame++) {
       await _capture(
         tester,
         'home-anim-${frame.toString().padLeft(2, '0')}',
         settle: false,
       );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }, skip: _directory.isEmpty);
+
+  testWidgets('the night opening: the sun sets, the moon rises', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      location: '/app?tab=0',
+      active: const [],
+      dark: true,
+      still: false,
+      clock: DateTime(2026, 11, 6, 19, 30),
+    );
+    for (var frame = 0; frame <= 62; frame++) {
+      if (frame % 10 == 0 || frame == 62) {
+        await _capture(
+          tester,
+          'home-night-anim-${frame.toString().padLeft(2, '0')}',
+          settle: false,
+        );
+      }
       await tester.pump(const Duration(milliseconds: 100));
     }
   }, skip: _directory.isEmpty);
