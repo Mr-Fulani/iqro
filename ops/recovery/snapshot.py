@@ -6,6 +6,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -31,6 +32,63 @@ from ops.postgres.offsite import (
 
 class RecoveryError(RuntimeError):
     pass
+
+
+class DiskSpaceError(RecoveryError):
+    """The disk cannot take another snapshot without starving the database and Redis."""
+
+    def __init__(self, free: int, needed: int):
+        self.free, self.needed = free, needed
+        super().__init__(
+            f"not enough disk space for a recovery snapshot: {free} bytes free, "
+            f"{needed} bytes needed"
+        )
+
+    def owner_text(self) -> str:
+        return (
+            f"мало места на диске: свободно {self.free / 1e9:.1f} ГБ, "
+            f"нужно {self.needed / 1e9:.1f} ГБ"
+        )
+
+
+# The next snapshot is assumed to be up to 10% larger than the last complete one, and
+# 15% of the disk always stays free for PostgreSQL, Redis and Docker (2026-11-07 outage).
+SNAPSHOT_GROWTH = 1.1
+DISK_RESERVE = 0.15
+SNAPSHOT_DIRECTORY = re.compile(r"[0-9]{8}T[0-9]{6}Z-[0-9a-f]{32}")
+
+
+def tree_size(path: Path) -> int:
+    total = 0
+    for parent, _directories, files in os.walk(path):
+        for name in files:
+            total += os.lstat(os.path.join(parent, name)).st_size
+    return total
+
+
+def complete_snapshots(root: Path) -> list[Path]:
+    """Local snapshot directories that finished (have a receipt), newest first."""
+    if not root.is_dir():
+        return []
+    found = [
+        path
+        for path in root.iterdir()
+        if SNAPSHOT_DIRECTORY.fullmatch(path.name)
+        and path.is_dir()
+        and not path.is_symlink()
+        and (path / "receipt.json").is_file()
+    ]
+    return sorted(found, key=lambda path: path.name, reverse=True)
+
+
+def check_free_space(root: Path) -> None:
+    """Refuse to start writing when the snapshot would eat into the disk reserve."""
+    usage = shutil.disk_usage(root)
+    latest = complete_snapshots(root)
+    expected = int(tree_size(latest[0]) * SNAPSHOT_GROWTH) if latest else 0
+    needed = expected + int(usage.total * DISK_RESERVE)
+    if usage.free < needed:
+        raise DiskSpaceError(usage.free, needed)
 
 
 def command(args: list[str], *, cwd: Path | None = None) -> str:
@@ -258,6 +316,7 @@ def build_snapshot(
 ) -> tuple[Path, dict[str, Any]]:
     root = Path(config["output_dir"]).resolve()
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    check_free_space(root)
     started = datetime.now(UTC).isoformat()
     snapshot_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex
     directory = root / snapshot_id
@@ -583,6 +642,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     status_path = None
     succeeded = False
+    problem = None
     environment = os.environ.get("BACKUP_ENVIRONMENT", "production")
     try:
         os.umask(0o077)
@@ -659,6 +719,8 @@ def main(argv: list[str] | None = None) -> int:
                 "Local release tag and manifest prepared; nothing was pushed or deployed."
             )
     except Exception as exc:
+        if isinstance(exc, DiskSpaceError):
+            problem = exc.owner_text()
         # Storage/crypto/subprocess failures must not leak credentials or plaintext in logs.
         if isinstance(exc, (RecoveryError, OffsiteBackupError)):
             print(f"ERROR: {exc}", file=sys.stderr)
@@ -675,6 +737,7 @@ def main(argv: list[str] | None = None) -> int:
                 component="recovery",
                 environment=environment,
                 state="failed",
+                problem=problem,
             )
     return 0
 

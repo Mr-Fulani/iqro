@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shutil
 import tempfile
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -25,6 +27,10 @@ TELEGRAM_KEYS = ("TELEGRAM_BOT_TOKEN", "TELEGRAM_ALERT_CHAT_ID")
 DEFAULT_ENV_FILE = "services/backend/.env.production"
 # A failure that lasts is repeated this rarely, not on every 5-minute run.
 REMIND_SECONDS = 6 * 3600
+# Disk fill (2026-11-07 outage): a warning first, the heartbeat itself fails above 90%.
+DISK_WARN_PERCENT = 80
+DISK_CRITICAL_PERCENT = 90
+RECOVERY_SET = re.compile(r"[0-9]{8}T[0-9]{6}Z-[0-9a-f]{32}")
 
 
 def read_env_file(path: Path) -> dict[str, str]:
@@ -96,6 +102,8 @@ def send(text: str, environ: Mapping[str, str] | None = None, *, timeout: float 
 def describe_problem(message: str) -> str:
     """A HeartbeatError message in the owner's words."""
     lowered = message.lower()
+    if "disk" in lowered:
+        return "Диск почти заполнен"
     if "backup" in lowered:
         return "Бэкап базы не прошёл или устарел"
     if "public target" in lowered or "readiness" in lowered:
@@ -114,6 +122,42 @@ def latest_backup_time(backup_dir: Path) -> str | None:
         return None
     newest = max(path.stat().st_mtime for path in dumps)
     return datetime.fromtimestamp(newest, tz=UTC).isoformat()
+
+
+def disk_used_percent(*paths: Path) -> float:
+    """The fullest filesystem holding these paths, counted the way df does."""
+    worst = 0.0
+    for path in paths:
+        existing = path
+        while not existing.exists() and existing != existing.parent:
+            existing = existing.parent
+        usage = shutil.disk_usage(existing)
+        worst = max(worst, 100 * usage.used / max(usage.used + usage.free, 1))
+    return worst
+
+
+def recovery_sets(backup_dir: Path) -> tuple[int, int]:
+    """Complete local recovery sets (with a receipt) and their total size in bytes."""
+    count = size = 0
+    try:
+        directories = list((backup_dir / "recovery").iterdir())
+    except OSError:
+        return 0, 0
+    for directory in directories:
+        if (
+            not RECOVERY_SET.fullmatch(directory.name)
+            or directory.is_symlink()
+            or not (directory / "receipt.json").is_file()
+        ):
+            continue
+        count += 1
+        for parent, _directories, files in os.walk(directory):
+            for name in files:
+                try:
+                    size += os.lstat(os.path.join(parent, name)).st_size
+                except OSError:
+                    pass
+    return count, size
 
 
 def state_dir(environ: Mapping[str, str]) -> Path | None:
@@ -211,14 +255,73 @@ def report_check(
         return
 
 
-def report_job_failure(component: str, environ: Mapping[str, str] | None = None) -> bool:
+def report_disk(
+    percent: float,
+    *,
+    environ: Mapping[str, str] | None = None,
+    now: datetime | None = None,
+) -> None:
+    """Warn once the disk is DISK_WARN_PERCENT full, remind every REMIND_SECONDS, say when it clears.
+
+    From DISK_CRITICAL_PERCENT the heartbeat check itself fails and report_check
+    speaks, so no second message is sent from here.
+    """
+    source = os.environ if environ is None else environ
+    directory = state_dir(source)
+    if directory is None:
+        return
+    current = now or datetime.now(UTC)
+    environment = escape(source.get("UPTIME_BACKUP_ENVIRONMENT", "production"))
+    state_path = directory / "disk-alert-state.json"
+    state = _read_json(state_path)
+    warned = bool(state.get("warning"))
+    last_alert = state.get("last_alert_at")
+    if percent < DISK_WARN_PERCENT:
+        if warned:
+            send(f"<b>✅ Сервер {environment}: диск снова заполнен на {percent:.0f}%</b>", source)
+        state = {"warning": False, "last_alert_at": None}
+    else:
+        due = not warned
+        if warned and isinstance(last_alert, str):
+            try:
+                age = (current - datetime.fromisoformat(last_alert)).total_seconds()
+            except ValueError:
+                age = REMIND_SECONDS
+            due = age >= REMIND_SECONDS
+        if due and percent < DISK_CRITICAL_PERCENT:
+            count, size = recovery_sets(Path(source.get("UPTIME_BACKUP_DIR", "./backups")))
+            prefix = "всё ещё: " if warned else ""
+            send(
+                f"<b>🟡 Сервер {environment}: {prefix}диск заполнен на {percent:.0f}%</b>\n"
+                f"Локальных наборов восстановления: {count}, {size / 1e9:.1f} ГБ "
+                "(хранятся 3 последних, лишние удаляет ночной job).\n"
+                "Проверьте: df -h и du -sh /opt/quran/backups/*",
+                source,
+            )
+            last_alert = current.isoformat()
+        state = {"warning": True, "last_alert_at": last_alert}
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        _write_json(state_path, state, 0o600)
+    except OSError:
+        return
+
+
+def report_job_failure(
+    component: str,
+    environ: Mapping[str, str] | None = None,
+    *,
+    problem: str | None = None,
+) -> bool:
     """A backup or recovery job failed: always sent, these run once a day."""
     source = os.environ if environ is None else environ
     environment = source.get("UPTIME_BACKUP_ENVIRONMENT", "production")
     unit = "quran-backup" if component == "postgres" else "quran-recovery"
     title = "Бэкап базы" if component == "postgres" else "Резервная копия медиа и кода"
+    reason = f"Причина: {escape(problem)}\n" if problem else ""
     return send(
         f"<b>🔴 {title} не прошёл ({escape(environment)})</b>\n"
+        f"{reason}"
         f"Проверьте: journalctl -u {unit}@{escape(environment)}",
         source,
     )

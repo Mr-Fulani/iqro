@@ -69,6 +69,7 @@ class BackupStatusTests(unittest.TestCase):
             with (
                 patch("ops.monitoring.heartbeat.check_target"),
                 patch("ops.monitoring.heartbeat.check_backup_freshness"),
+                patch("ops.monitoring.heartbeat.check_disk"),
                 patch("ops.monitoring.heartbeat.ping") as ping,
             ):
                 with self.assertRaisesRegex(HeartbeatError, "postgres"):

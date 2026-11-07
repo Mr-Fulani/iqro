@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -24,7 +25,13 @@ from ops.postgres.offsite import (
     load_settings,
     object_store,
 )
-from ops.recovery.snapshot import validated_artifacts, write_json
+from ops.recovery.snapshot import (
+    RecoveryError,
+    complete_snapshots,
+    tree_size,
+    validated_artifacts,
+    write_json,
+)
 
 POLICY = {"local_latest": 3, "remote_daily": 7, "remote_weekly": 4}
 SNAPSHOT_ID = re.compile(r"[0-9]{8}T[0-9]{6}Z-[0-9a-f]{32}")
@@ -404,6 +411,95 @@ def make_plan(
         "delete_bytes": sum(item["size"] for item in deletions),
         "ignored": ignored,
     }
+
+
+def _receipt_matches(settings: Settings, directory: Path) -> bool:
+    try:
+        receipt = json.loads((directory / "receipt.json").read_text())
+        manifest_path = directory / "snapshot.json"
+        return (
+            manifest_path.is_file()
+            and receipt.get("object_key")
+            == f"{settings.root_prefix}/recovery/snapshots/{directory.name}.json"
+            and receipt.get("sha256") == file_sha256(manifest_path)
+            and receipt.get("size") == manifest_path.stat().st_size
+        )
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def _missing_in_storage(
+    settings: Settings, store: ObjectStore, directory: Path, remote: dict[str, int]
+) -> str | None:
+    """None when storage holds this set's manifest and every object it references."""
+    receipt = json.loads((directory / "receipt.json").read_text())
+    head = _existing_head(settings, store, receipt["object_key"])
+    if (
+        not head
+        or head.get("ContentLength") != receipt["size"]
+        or head.get("Metadata", {}).get("sha256") != receipt["sha256"]
+    ):
+        return "manifest is missing or different in storage"
+    manifest = json.loads((directory / "snapshot.json").read_text())
+    if manifest.get("snapshot_id") != directory.name:
+        return "manifest belongs to another snapshot"
+    for record in validated_artifacts(manifest, settings):
+        if remote.get(record["object_key"]) != record["size"]:
+            return "a referenced object is missing in storage"
+    return None
+
+
+def prune_local_recovery(
+    settings: Settings, store: ObjectStore, *, recovery_dir: Path
+) -> dict[str, list[dict[str, Any]]]:
+    """Owner-approved (2026-11-07) automatic rotation of LOCAL recovery sets only.
+
+    Keeps the newest POLICY["local_latest"] sets whose receipt matches their manifest.
+    An older set is removed only when storage still holds its manifest and every
+    object it references. Storage objects, incomplete attempts, sets that fail a
+    check and unknown folders are never touched; the exact-plan flow covers them.
+    Runs regardless of the last job's status, so a failed night cannot block it.
+    The caller holds backup_lock, so no upload or approved plan runs meanwhile.
+    """
+    report: dict[str, list[dict[str, Any]]] = {"removed": [], "kept": []}
+    recovery_dir = recovery_dir.resolve()
+    if recovery_dir == Path("/"):
+        raise RetentionError("a dedicated recovery directory is required")
+    newest = 0
+    remote: dict[str, int] | None = None
+    for directory in complete_snapshots(recovery_dir):
+        if not _receipt_matches(settings, directory):
+            report["kept"].append(
+                {
+                    "snapshot": directory.name,
+                    "reason": "receipt does not match the local manifest",
+                }
+            )
+            continue
+        if newest < POLICY["local_latest"]:
+            newest += 1
+            continue
+        if remote is None:
+            remote = {
+                item["Key"]: item["Size"]
+                for page in store.get_paginator("list_objects_v2").paginate(
+                    Bucket=settings.bucket, Prefix=f"{settings.root_prefix}/recovery/"
+                )
+                for item in page.get("Contents", [])
+            }
+        try:
+            reason = _missing_in_storage(settings, store, directory, remote)
+        except (RecoveryError, ValueError, KeyError, TypeError):
+            reason = "manifest cannot be verified"
+        if reason:
+            report["kept"].append({"snapshot": directory.name, "reason": reason})
+            continue
+        size = tree_size(directory)
+        if directory.is_symlink() or directory.parent != recovery_dir:
+            raise RetentionError("snapshot directory changed; stopped")
+        shutil.rmtree(directory)
+        report["removed"].append({"snapshot": directory.name, "bytes": size})
+    return report
 
 
 def apply_plan(

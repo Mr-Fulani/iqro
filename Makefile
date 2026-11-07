@@ -420,7 +420,7 @@ recovery-release:
 
 recovery-test:
 	@command -v age >/dev/null && command -v age-keygen >/dev/null || (printf '%s\n' 'age and age-keygen are required for recovery tests.' >&2; exit 1)
-	$(RECOVERY_PYTHON) -m unittest ops.recovery.test_snapshot ops.recovery.test_retention ops.postgres.test_backup ops.postgres.test_offsite ops.monitoring.test_backup_status ops.monitoring.test_heartbeat ops.systemd.test_units
+	$(RECOVERY_PYTHON) -m unittest ops.recovery.test_snapshot ops.recovery.test_retention ops.postgres.test_backup ops.postgres.test_offsite ops.monitoring.test_backup_status ops.monitoring.test_heartbeat ops.monitoring.test_alerts ops.systemd.test_units
 
 .PHONY: recovery-retention-plan recovery-retention-apply
 recovery-retention-plan:
