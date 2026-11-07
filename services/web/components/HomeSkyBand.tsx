@@ -183,7 +183,8 @@ export function HomeSkyBand({ prayer }: Props) {
         <div className="home-sky-copy" aria-hidden="true">
           <span className="home-sky-label">{t("home.nextPrayer")}</span>
           <strong className="home-sky-title">{title}</strong>
-          {subtitle && <span className="home-sky-subtitle">{subtitle}</span>}
+          {/* The line is kept while the schedule loads, so the band does not grow. */}
+          <span className="home-sky-subtitle">{subtitle || "\u00a0"}</span>
         </div>
         <IntentPrefetchLink
           href={`${localizedPath(locale, "/prayer")}#qibla`}
