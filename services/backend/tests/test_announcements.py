@@ -41,6 +41,7 @@ from quran_backend.modules.announcements.models import (
     AnnouncementStep,
     AnnouncementTranslation,
     AnnouncementWave,
+    AppReleaseSettings,
     WaveReason,
 )
 from quran_backend.modules.announcements.services import (
@@ -1552,3 +1553,27 @@ def test_upload_rejects_formats_other_than_webp_and_jpeg(tmp_path: Path) -> None
             SimpleUploadedFile("x.png", b"\x89PNG\r\n\x1a\n" + b"0" * 32),
             uploader=RecordingUploader(tmp_path),
         )
+
+
+# The app's own update check
+
+
+@pytest.mark.django_db
+def test_app_release_is_zero_until_set_in_the_admin() -> None:
+    client = APIClient()
+    response = client.get("/api/v1/app/release")
+    assert response.status_code == 200
+    assert response.json() == {"android_version_code": 0}
+    assert response["Cache-Control"].startswith("public, max-age=300")
+
+    AppReleaseSettings.objects.create(android_version_code=7)
+    assert client.get("/api/v1/app/release").json() == {"android_version_code": 7}
+
+
+@pytest.mark.django_db
+def test_app_release_admin_keeps_a_single_row(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    assert client.get("/admin/announcements/appreleasesettings/add/").status_code == 200
+    AppReleaseSettings.objects.create(android_version_code=6)
+    assert client.get("/admin/announcements/appreleasesettings/add/").status_code == 403

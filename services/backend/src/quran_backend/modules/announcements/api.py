@@ -23,6 +23,7 @@ from quran_backend.modules.announcements.models import (
     ActionType,
     Announcement,
     AnnouncementReceipt,
+    AppReleaseSettings,
 )
 from quran_backend.modules.announcements.routes import external_url_allowed
 from quran_backend.modules.announcements.selectors import (
@@ -44,6 +45,7 @@ from quran_backend.modules.announcements.serializers import (
     AnnouncementReceiptSerializer,
     AnnouncementReceiptWriteSerializer,
     AnnouncementSerializer,
+    AppReleaseSerializer,
     announcement_payload,
 )
 from quran_backend.modules.announcements.services import (
@@ -85,6 +87,21 @@ def _decode_cursor(value: str) -> tuple[datetime, uuid.UUID]:
 
 
 @extend_schema(tags=["announcements"])
+class AppReleaseView(PublicReadOnlyViewMixin, APIView):
+    @extend_schema(
+        operation_id="app_release",
+        responses=AppReleaseSerializer,
+        description=(
+            "The newest app build in the stores, set in the admin once a release is out. "
+            "An Android app with a smaller versionCode offers the update even before "
+            "Google Play reports it. 0 means no check."
+        ),
+    )
+    def get(self, _request: Request) -> Response:
+        row = AppReleaseSettings.objects.first()
+        return Response({"android_version_code": row.android_version_code if row else 0})
+
+
 class ActiveAnnouncementsView(PublicReadOnlyViewMixin, APIView):
     @extend_schema(
         operation_id="announcements_active",

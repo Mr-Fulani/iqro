@@ -713,3 +713,39 @@ class AnnouncementSettings(BaseModel):
 
     def __str__(self) -> str:
         return "Показ объявлений: включён" if self.is_enabled else "Показ объявлений: выключен"
+
+
+class AppReleaseSettings(BaseModel):
+    """The newest app build in the stores; one row, edited in the admin.
+
+    Google Play tells an installed app about an update only after the Play Store
+    refreshes its own copy, which can take a day. The app compares its build
+    with this number and offers the update itself.
+    """
+
+    singleton = models.BooleanField(default=True, unique=True, editable=False)
+    android_version_code = models.PositiveIntegerField(
+        "Последняя версия Android: код сборки",
+        default=0,
+        help_text=(
+            "Код сборки выпуска, который уже доступен тестировщикам в Google Play: "
+            "число в скобках, например 7 для 1.0.6 (7). Приложение с меньшим кодом "
+            "покажет плашку «Доступна новая версия», даже если Play ещё не сообщил о ней сам. "
+            "Ставьте номер только после того, как выпуск опубликован. 0 — не проверять."
+        ),
+    )
+
+    class Meta:
+        db_table = "app_release_settings"
+        verbose_name = "последняя версия приложения"
+        verbose_name_plural = "Последняя версия приложения"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(singleton=True),
+                name="app_release_settings_singleton",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        code = self.android_version_code
+        return f"Android: код сборки {code}" if code else "Android: не проверять"
