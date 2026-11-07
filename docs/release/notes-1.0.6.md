@@ -4,27 +4,35 @@
 
 ```
 <ru-RU>
-• Новая плашка «Доступна новая версия IQRO»: видно, какая версия стоит у вас, обновление в одно нажатие
-• Пока обновление загружается, приложением можно пользоваться — на плашке идёт полоса загрузки
-• Номер версии теперь виден внизу экрана «Ещё»
-• Исправления
+• Новая главная: небо намаза по времени дня, солнце и луна на одной орбите, внизу все намазы
+• План на день: знак ۞ проходит по полосе до сегодняшнего прогресса
+• Крупные плитки разделов, кибла открывается одним нажатием
+• Плашка «Доступна новая версия IQRO»: видно вашу версию, обновление в одно нажатие
+• Номер версии внизу экрана «Ещё»
+• Экраны больше не уходят под кнопки навигации телефона
 </ru-RU>
 <en-US>
-• New "A new version of IQRO is available" card: see which version you have and update in one tap
-• Keep using the app while the update downloads, with a progress bar on the card
-• The version number is now shown at the bottom of the More screen
-• Fixes
+• New Home: a prayer sky that follows the time of day, the sun and the moon on one orbit, all prayers below
+• Daily plan: the ۞ mark travels along the bar to today's progress
+• Large section tiles; the qibla opens in one tap
+• "A new version of IQRO is available" card: see your version and update in one tap
+• Version number at the bottom of the More screen
+• Screens no longer slip under the phone's navigation buttons
 </en-US>
 <ar>
-• بطاقة جديدة «يتوفر إصدار جديد من IQRO»: ترى إصدارك الحالي وتحدّث بلمسة واحدة
-• استخدم التطبيق كالمعتاد أثناء تنزيل التحديث، مع شريط تقدّم على البطاقة
-• رقم الإصدار يظهر الآن أسفل شاشة «المزيد»
-• إصلاحات
+• رئيسية جديدة: سماء الصلاة تتبع وقت اليوم، والشمس والقمر على مدار واحد، وتحتها كل الصلوات
+• خطة اليوم: علامة ۞ تسير على الشريط حتى تقدّم اليوم
+• مربعات كبيرة للأقسام، والقبلة بلمسة واحدة
+• بطاقة «يتوفر إصدار جديد من IQRO»: ترى إصدارك وتحدّث بلمسة واحدة
+• رقم الإصدار أسفل شاشة «المزيد»
+• لم تعد الشاشات تختفي تحت أزرار التنقل في الهاتف
 </ar>
 <tr-TR>
-• Yeni "IQRO'nun yeni sürümü hazır" kartı: hangi sürümün yüklü olduğunu görün, tek dokunuşla güncelleyin
-• Güncelleme inerken uygulamayı kullanmaya devam edin, kartta ilerleme çubuğu görünür
-• Sürüm numarası artık "Daha" ekranının altında görünür
-• Düzeltmeler
+• Yeni ana sayfa: namaz göğü günün saatine uyar, güneş ve ay aynı yörüngede, altta tüm vakitler
+• Günlük plan: ۞ işareti çubukta bugünkü ilerlemeye kadar ilerler
+• Büyük bölüm kutuları; kıble tek dokunuşla açılır
+• "IQRO'nun yeni sürümü hazır" kartı: sürümünüzü görün, tek dokunuşla güncelleyin
+• Sürüm numarası "Daha" ekranının altında
+• Ekranlar artık telefonun gezinme düğmelerinin altında kalmıyor
 </tr-TR>
 ```
