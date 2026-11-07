@@ -13,7 +13,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-from ops.monitoring.alerts import report_check, report_job_failure
+from ops.monitoring.alerts import (
+    DISK_CRITICAL_PERCENT,
+    disk_used_percent,
+    report_check,
+    report_disk,
+    report_job_failure,
+)
 from ops.monitoring.backup_status import check_status, write_status
 
 
@@ -178,7 +184,19 @@ def ping(url: str, *, timeout: float) -> None:
         raise HeartbeatError(f"external heartbeat returned HTTP {status}")
 
 
+def check_disk(backup_dir: Path) -> float:
+    try:
+        percent = disk_used_percent(backup_dir, Path("/"))
+    except OSError as exc:
+        raise HeartbeatError("local disk usage cannot be read") from exc
+    if percent >= DISK_CRITICAL_PERCENT:
+        raise HeartbeatError(f"local disk is {percent:.0f}% full")
+    return percent
+
+
 def run(settings: Settings) -> None:
+    # First: a full disk stops PostgreSQL, Redis and the backups themselves.
+    check_disk(settings.backup_dir)
     for target in settings.targets:
         check_target(target, timeout=settings.timeout_seconds)
     check_backup_freshness(
@@ -200,6 +218,22 @@ def run(settings: Settings) -> None:
         ping(settings.success_url, timeout=settings.timeout_seconds)
 
 
+def job_problem(component: str, values: Mapping[str, str] | None = None) -> str | None:
+    """The reason a failed job left in its receipt (for example, too little disk space)."""
+    source = os.environ if values is None else values
+    directory = source.get("UPTIME_BACKUP_STATUS_DIR", "").strip()
+    if not directory:
+        return None
+    try:
+        payload = json.loads((Path(directory) / f"{component}.json").read_text())
+    except (OSError, ValueError):
+        return None
+    if not isinstance(payload, dict) or payload.get("state") != "failed":
+        return None
+    problem = payload.get("problem")
+    return problem[:300] if isinstance(problem, str) and problem else None
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Verify public endpoints and backup freshness, then ping a dead-man monitor."
@@ -217,7 +251,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.job_result and os.environ.get("SERVICE_RESULT") == "success":
         return 0
     if args.job_result:
-        report_job_failure(args.job_result)
+        problem = job_problem(args.job_result)
+        report_job_failure(args.job_result, problem=problem)
     try:
         settings = load_settings()
         if args.job_result:
@@ -227,10 +262,15 @@ def main(argv: list[str] | None = None) -> int:
                     component=args.job_result,
                     environment=settings.backup_environment,
                     state="failed",
+                    problem=problem,
                 )
             if settings.failure_url:
                 ping(settings.failure_url, timeout=settings.timeout_seconds)
             return 1
+        try:
+            report_disk(disk_used_percent(settings.backup_dir, Path("/")))
+        except OSError:
+            pass
         run(settings)
     except HeartbeatError as exc:
         try:

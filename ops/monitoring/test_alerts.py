@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import stat
 import tempfile
 import unittest
@@ -10,6 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from ops.monitoring import alerts, heartbeat
+from ops.monitoring.backup_status import write_status
 
 TOKEN = "123456:test-only-token"
 
@@ -139,6 +141,87 @@ class ReportCheckTests(unittest.TestCase):
         )
 
 
+class DiskAlertTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        root = Path(self.directory.name)
+        self.backups = root / "backups"
+        complete = self.backups / "recovery" / ("20261106T020000Z-" + "a" * 32)
+        complete.mkdir(parents=True)
+        (complete / "receipt.json").write_text("{}")
+        (complete / "media.bin").write_bytes(b"x" * 98)
+        (self.backups / "recovery" / ("20261107T020000Z-" + "b" * 32)).mkdir()
+        self.environ = {
+            "STATE_DIRECTORY": str(root / "state"),
+            "UPTIME_BACKUP_DIR": str(self.backups),
+            "TELEGRAM_BOT_TOKEN": TOKEN,
+            "TELEGRAM_ALERT_CHAT_ID": "-1",
+        }
+        self.now = datetime(2026, 11, 7, 12, tzinfo=UTC)
+
+    def _report(self, percent: float, minutes: int = 0) -> list[str]:
+        with mock.patch.object(alerts, "send", return_value=True) as send:
+            alerts.report_disk(
+                percent, environ=self.environ, now=self.now + timedelta(minutes=minutes)
+            )
+        return [call.args[0] for call in send.call_args_list]
+
+    def test_warning_reminder_and_all_clear(self) -> None:
+        self.assertEqual(self._report(70), [])
+        first = self._report(82, minutes=5)
+        self.assertEqual(len(first), 1)
+        self.assertIn("диск заполнен на 82%", first[0])
+        self.assertIn("Локальных наборов восстановления: 1", first[0])
+        self.assertEqual(self._report(84, minutes=10), [])
+        reminder = self._report(85, minutes=370)
+        self.assertEqual(len(reminder), 1)
+        self.assertIn("всё ещё", reminder[0])
+        cleared = self._report(60, minutes=375)
+        self.assertEqual(len(cleared), 1)
+        self.assertIn("✅", cleared[0])
+        self.assertEqual(self._report(60, minutes=380), [])
+
+    def test_critical_fill_is_left_to_the_failing_heartbeat(self) -> None:
+        self.assertEqual(self._report(95), [])
+        self.assertEqual(self._report(85, minutes=5), [])
+        self.assertEqual(len(self._report(50, minutes=10)), 1)
+
+    def test_heartbeat_fails_above_ninety_percent(self) -> None:
+        with (
+            mock.patch.object(heartbeat, "disk_used_percent", return_value=91.0),
+            self.assertRaisesRegex(heartbeat.HeartbeatError, "disk") as raised,
+        ):
+            heartbeat.check_disk(self.backups)
+        self.assertEqual(
+            alerts.describe_problem(str(raised.exception)), "Диск почти заполнен"
+        )
+        with mock.patch.object(heartbeat, "disk_used_percent", return_value=85.0):
+            self.assertEqual(heartbeat.check_disk(self.backups), 85.0)
+
+    def test_disk_percent_counts_like_df(self) -> None:
+        usage = shutil._ntuple_diskusage(1000, 600, 200)  # 200 reserved for root.
+        with mock.patch.object(alerts.shutil, "disk_usage", return_value=usage):
+            self.assertEqual(alerts.disk_used_percent(self.backups / "missing"), 75.0)
+
+    def test_recovery_job_reason_reaches_the_failure_alert(self) -> None:
+        status = Path(self.directory.name) / "status"
+        write_status(
+            status / "recovery.json",
+            component="recovery",
+            environment="production",
+            state="failed",
+            problem="мало места на диске: свободно 4.0 ГБ, нужно 20.0 ГБ",
+        )
+        problem = heartbeat.job_problem(
+            "recovery", {"UPTIME_BACKUP_STATUS_DIR": str(status)}
+        )
+        self.assertIn("мало места", problem)
+        with mock.patch.object(alerts, "_post", return_value=200) as post:
+            alerts.report_job_failure("recovery", self.environ, problem=problem)
+        self.assertIn("Причина: мало места", post.call_args.args[1]["text"])
+
+
 class HeartbeatAlertTests(unittest.TestCase):
     def test_failed_backup_job_is_sent_even_without_heartbeat_settings(self) -> None:
         with (
@@ -147,7 +230,7 @@ class HeartbeatAlertTests(unittest.TestCase):
             mock.patch("sys.stderr"),
         ):
             self.assertEqual(heartbeat.main(["--job-result", "postgres"]), 1)
-        job_failure.assert_called_once_with("postgres")
+        job_failure.assert_called_once_with("postgres", problem=None)
 
     def test_successful_job_sends_nothing(self) -> None:
         with (
@@ -175,6 +258,7 @@ class HeartbeatAlertTests(unittest.TestCase):
         with (
             mock.patch.object(heartbeat, "check_target"),
             mock.patch.object(heartbeat, "check_backup_freshness"),
+            mock.patch.object(heartbeat, "check_disk"),
             mock.patch.object(heartbeat, "ping") as ping,
         ):
             heartbeat.run(settings)

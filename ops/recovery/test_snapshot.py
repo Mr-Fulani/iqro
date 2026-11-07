@@ -13,11 +13,14 @@ from unittest.mock import patch
 
 from ops.postgres.offsite import OffsiteBackupError
 from ops.postgres.test_offsite import settings
+from ops.recovery import snapshot as snapshot_module
 from ops.recovery.snapshot import (
+    DiskSpaceError,
     RecoveryError,
     build_snapshot,
     capture_git,
     capture_media,
+    check_free_space,
     command,
     decrypt_config,
     encrypt_config,
@@ -111,6 +114,14 @@ class RecoveryTests(unittest.TestCase):
             self.recipient = command(["age-keygen", "-y", str(self.identity)])
         self.secret = self.root / "production.env"
         self.secret.write_text("DATABASE_PASSWORD=private-test-secret\n")
+        # The host disk must not decide the outcome: a roomy disk unless a test says otherwise.
+        self.disk = patch.object(
+            snapshot_module.shutil,
+            "disk_usage",
+            return_value=shutil._ntuple_diskusage(10**12, 10**9, 10**12 - 10**9),
+        )
+        self.disk.start()
+        self.addCleanup(self.disk.stop)
 
     def config(self):
         return {
@@ -288,9 +299,11 @@ class RecoveryTests(unittest.TestCase):
         with (
             patch("sys.argv", ["scheduled", "--config", str(config)]),
             patch("ops.recovery.scheduled.snapshot_main", return_value=0) as backup,
+            patch("ops.recovery.scheduled.prune") as prune,
         ):
             self.assertEqual(scheduled_main(), 0)
             backup.assert_called_once()
+            prune.assert_called_once()
         branches = command(["git", "branch", "--format=%(refname:short)"], cwd=mirror)
         self.assertIn("feature/test", branches)
         self.assertIn("feature/new", branches)
@@ -346,6 +359,57 @@ class RecoveryTests(unittest.TestCase):
                 self.destination, self.store, receipt, self.root / "restore-unsafe"
             )
         self.assertFalse((self.root / "outside").exists())
+
+    def previous_snapshot(self, size):
+        directory = self.root / "snapshots" / ("20261106T020000Z-" + "a" * 32)
+        directory.mkdir(parents=True)
+        (directory / "media.bin").write_bytes(b"x" * (size - 2))
+        (directory / "receipt.json").write_text("{}")  # Two bytes: total `size`.
+        incomplete = self.root / "snapshots" / ("20261107T020000Z-" + "b" * 32)
+        incomplete.mkdir()
+        (incomplete / "media.bin").write_bytes(b"x" * (size * 10))
+        return directory
+
+    def test_snapshot_does_not_start_without_room_for_it_and_the_reserve(self):
+        self.previous_snapshot(1000)
+        # Needed: 1000 * 1.1 for the next set plus 15% of a 10 000-byte disk.
+        with (
+            patch.object(
+                snapshot_module.shutil,
+                "disk_usage",
+                return_value=shutil._ntuple_diskusage(10_000, 7_500, 2_500),
+            ),
+            self.assertRaises(DiskSpaceError) as raised,
+        ):
+            build_snapshot(
+                self.config(), self.destination, self.store, self.source, self.store
+            )
+        self.assertEqual(
+            (raised.exception.free, raised.exception.needed), (2_500, 2_600)
+        )
+        self.assertIn("свободно", raised.exception.owner_text())
+        self.assertEqual(len(list((self.root / "snapshots").iterdir())), 2)
+        self.assertEqual(self.store.uploads, [])
+
+    def test_space_check_uses_last_complete_snapshot_only(self):
+        root = self.previous_snapshot(1000).parent
+        with patch.object(
+            snapshot_module.shutil,
+            "disk_usage",
+            return_value=shutil._ntuple_diskusage(10_000, 7_400, 2_600),
+        ):
+            check_free_space(root)
+        empty = self.root / "empty"
+        empty.mkdir()
+        with (
+            patch.object(
+                snapshot_module.shutil,
+                "disk_usage",
+                return_value=shutil._ntuple_diskusage(10_000, 8_600, 1_400),
+            ),
+            self.assertRaises(DiskSpaceError),
+        ):
+            check_free_space(empty)  # Only the 15% reserve, still not enough.
 
 
 if __name__ == "__main__":
