@@ -9479,3 +9479,223 @@ html[data-word-selecting] .word-range-bar {
     animation: none;
   }
 }
+
+/* Home: the sky of prayers (components/HomeSkyBand.tsx), the same band as
+   the app's Home. Colours come from lib/sky-band.ts. */
+.home-sky {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  isolation: isolate;
+}
+
+.home-sky-placeholder {
+  min-height: 185px;
+}
+
+.home-sky-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.home-sky-link:focus-visible {
+  outline: 3px solid #f4c24e;
+  outline-offset: -3px;
+}
+
+.home-sky-head {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 14px 0 16px;
+  pointer-events: none;
+}
+
+.home-sky-copy {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.home-sky-label {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.home-sky-title {
+  font-size: 1.45rem;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-sky-subtitle {
+  font-size: 0.85rem;
+  opacity: 0.92;
+}
+
+.home-sky-button {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  pointer-events: auto;
+}
+
+.home-sky-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.home-sky-button:focus-visible {
+  outline: 3px solid #f4c24e;
+  outline-offset: 2px;
+}
+
+.home-sky-art {
+  margin-top: -4px;
+  line-height: 0;
+}
+
+.home-sky-art svg {
+  display: block;
+}
+
+.home-sky-art text {
+  font-family: inherit;
+}
+
+.home-sky-time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The rub al-hizb mark on the day's reading bar (components/PlanMark.tsx). */
+.today-progress-walk {
+  position: relative;
+  padding-top: 26px;
+}
+
+.today-progress-walk .today-progress-track > span {
+  animation: plan-fill 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s both;
+}
+
+.plan-mark {
+  position: absolute;
+  top: 1px;
+  width: 24px;
+  height: 24px;
+  margin-inline-start: -12px;
+  line-height: 0;
+  rotate: 90deg;
+  animation: plan-mark-travel 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.5s both;
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.18));
+}
+
+.plan-mark-square {
+  fill: var(--panel);
+  stroke: #c49647;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.plan-mark-ring {
+  fill: none;
+  stroke: #c49647;
+  stroke-width: 1.4;
+}
+
+@keyframes plan-fill {
+  from {
+    width: 0;
+  }
+}
+
+@keyframes plan-mark-travel {
+  from {
+    inset-inline-start: 0;
+    rotate: 0deg;
+  }
+}
+
+/* Home: the sections as calm tiles with the shared line icons, as in the app. */
+.home-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.home-sections-title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.home-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.home-section-tile {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 9px;
+  padding: 14px 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  text-align: center;
+  text-decoration: none;
+  font-weight: 600;
+  line-height: 1.2;
+  background: var(--panel);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.home-section-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px -12px rgba(7, 62, 52, 0.45);
+}
+
+.home-section-tile:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.home-section-art {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  color: var(--primary);
+  background: var(--primary-subtle);
+}
+
+.home-section-icon {
+  width: 30px;
+  height: 30px;
+}
+
+@media (min-width: 900px) {
+  .home-sections-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-progress-walk .today-progress-track > span,
+  .plan-mark {
+    animation: none;
+  }
+
+  .home-section-tile {
+    transition: none;
+  }
+}

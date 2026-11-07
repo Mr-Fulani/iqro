@@ -454,8 +454,7 @@
     background: var(--panel);
   }
 
-  .home-page .prayer-reading-plan,
-  .home-prayer-schedule {
+  .home-page .prayer-reading-plan {
     background: var(--accent-gold-subtle);
     border-color: var(--accent-gold-border);
   }
@@ -799,21 +798,6 @@
   .prayer-time {
     font-variant-numeric: tabular-nums;
     font-size: 24px;
-  }
-
-  .home-prayer-schedule .prayer-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .home-prayer-schedule .prayer-time-card {
-    padding: 10px 4px;
-    gap: 3px;
-    border-color: var(--accent-gold-border);
-  }
-
-  .home-prayer-schedule .prayer-time {
-    font-size: 20px;
   }
 
   .memorization-mode-tabs .btn,

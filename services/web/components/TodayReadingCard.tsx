@@ -13,6 +13,8 @@ import { useI18n } from "../lib/i18n-context";
 import { PALM_HISTORY_DAYS, palmGrowthFor, palmPlanFrom } from "../lib/palm-growth";
 import { localizedPath } from "../lib/routing";
 import { PalmGrowthCard } from "./PalmGrowthCard";
+import { PlanMark } from "./PlanMark";
+import { useOpenReplay } from "../lib/use-open-replay";
 
 const DEFAULT_TARGETS: Record<ReadingGoalMetric, number> = {
   minutes: 5,
@@ -222,6 +224,8 @@ export function TodayReadingCard() {
     }
   };
 
+  // Back on the page after a while, the mark travels the bar again.
+  const replay = useOpenReplay();
   const progress = today?.progress;
   const achieved = Number(progress?.achieved_amount || 0);
   const goalTarget = Number(progress?.target_amount || today?.goal?.target_amount || 0);
@@ -318,15 +322,18 @@ export function TodayReadingCard() {
                       {formatNumber(achieved, { maximumFractionDigits: 2 })} / {formatNumber(goalTarget, { maximumFractionDigits: 2 })} {t(unitKey)}
                     </span>
                   </div>
-                  <div
-                    className="today-progress-track"
-                    role="progressbar"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={percent}
-                    aria-label={t("reading.goalProgress")}
-                  >
-                    <span style={{ width: `${percent}%` }} />
+                  <div className="today-progress-walk" key={replay}>
+                    <PlanMark percent={percent} />
+                    <div
+                      className="today-progress-track"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={percent}
+                      aria-label={t("reading.goalProgress")}
+                    >
+                      <span style={{ width: `${percent}%` }} />
+                    </div>
                   </div>
                   <p className="kpi-desc">
                     {progress?.is_completed

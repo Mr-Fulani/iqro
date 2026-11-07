@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart' show DateFormat, toBeginningOfSentenceCase;
 
 import '../../app/providers.dart';
-import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/design_system/iqro_animated_logo.dart';
 import '../../core/storage/preferences_store.dart';
@@ -11,14 +11,14 @@ import '../../core/theme/iqro_theme.dart';
 import '../announcements/announcement_bubble.dart';
 import '../audio/mini_player.dart';
 import '../calendar/hijri_calendar_service.dart';
-import '../calendar/calendar_catalog.dart';
-import '../dua/dua_repository.dart';
-import '../memorization/memorization_repository.dart';
 import '../plan/palm_growth.dart';
 import '../prayer/prayer_repository.dart';
 import '../quran/quran_models.dart';
 import 'home_view_data.dart';
 import 'home_dashboard_cards.dart';
+import 'home_plan_progress.dart';
+import 'home_section_tiles.dart';
+import 'home_sky_card.dart';
 import 'home_dashboard_layout.dart';
 import '../calendar/hijri_calendar_screen.dart' show hijriDateLabel;
 export 'home_dashboard_cards.dart' show HomeContinueReadingCard;
@@ -43,8 +43,6 @@ class HomeScreen extends ConsumerWidget {
     final prayerState = accountScopeKey == null
         ? const AsyncValue<PrayerSchedule?>.loading()
         : ref.watch(prayerScheduleProvider(accountScopeKey));
-    final memorizationState = ref.watch(memorizationProvider);
-    final duaState = ref.watch(duaEntriesProvider);
     final session = ref.watch(sessionProvider).valueOrNull;
     final audioController = ref.read(audioControllerProvider.notifier);
     // Select the presentation only: position ticks during playback must not
@@ -60,20 +58,11 @@ class HomeScreen extends ConsumerWidget {
     final currentSurahName =
         currentSurah?.nameFor(locale) ??
         '${context.l10n.surah} $currentSurahNumber';
-    final memorization = memorizationState.valueOrNull;
-    final memorizationPlan = memorization?.plan;
-    final memorizationSurah = memorizationPlan == null
-        ? null
-        : findSurah(catalog, memorizationPlan.startAyah.surah);
-    final dailyDua = duaForDate(duaState.valueOrNull, clock);
     final achieved = plan?.achieved ?? 0;
     final target = plan?.target ?? preferences.dailyTarget.toDouble();
     final planMetric =
         plan?.metric ?? readingMetricForDailyUnit(preferences.dailyUnit);
     final planLoading = planState.isLoading && plan == null;
-    final prayerPages =
-        plan?.prayerPages.values.fold<int>(0, (sum, item) => sum + item) ?? 0;
-    final reciter = player.reciter;
     final hijri = const HijriCalendarService().now(
       clock,
       adjustment: preferences.hijriAdjustment,
@@ -81,140 +70,100 @@ class HomeScreen extends ConsumerWidget {
           ? prayerState.valueOrNull?.timesUtc['maghrib']
           : null,
     );
-    final calendar = ref.watch(calendarCatalogProvider).valueOrNull;
-    final calendarEvents = hijri == null
-        ? ''
-        : calendar
-                  ?.forDate(hijri)
-                  .map((event) => event.title(locale))
-                  .join(' · ') ??
-              '';
-    final prayerCard = HomePrayerCard(
+    final dateLine = [
+      toBeginningOfSentenceCase(DateFormat.MMMMEEEEd(locale).format(clock)),
+      if (hijri != null) hijriDateLabel(context, hijri),
+    ].join(' · ');
+    final prayerCard = HomePrayerSkyCard(
       schedule: prayerState.valueOrNull,
       loading: prayerState.isLoading && prayerState.valueOrNull == null,
       clock: clock,
       onTap: () => context.push('/prayer'),
+      onQibla: () => context.push('/prayer?qibla=1'),
       onReminders: () => context.push('/reminders'),
     );
+    final mushafRoute = position == null
+        ? '/mushaf'
+        : '/mushaf?page=${position.page}'
+              '&surah=${position.surah}&ayah=${position.ayah}';
     final readingCard = HomeContinueReadingCard(
       surahName: position == null ? context.l10n.loading : currentSurahName,
       ayah: position?.ayah,
       page: position?.page,
       error: positionState.hasError && position == null,
-      onBookmarks: () => context.push('/favorites'),
       onTap: position == null
           ? positionState.hasError && accountScopeKey != null
                 ? () => ref.invalidate(readingPositionProvider(accountScopeKey))
                 : null
           : () {
               if (readerMode == ReaderMode.mushaf) {
-                context.push(
-                  '/mushaf?page=${position.page}'
-                  '&surah=${position.surah}&ayah=${position.ayah}',
-                );
+                context.push(mushafRoute);
               } else {
                 context.push('/reader/${position.surah}?ayah=${position.ayah}');
               }
             },
-    );
-    final planCard = HomePlanCard(
-      achieved: achieved,
-      target: target,
-      metric: planMetric,
-      loading: planLoading,
-      error: planState.hasError && plan == null,
-      palm: plan == null ? null : palmGrowthFor(plan),
-      onTap: () => context.go('/app?tab=2'),
-    );
-    final features = <Widget>[
-      HomeFeatureCard(
-        icon: Icons.schedule_outlined,
-        title: context.l10n.afterPrayer,
-        subtitle: planLoading
-            ? context.l10n.loading
-            : planState.hasError && plan == null
-            ? context.l10n.openPlan
-            : '$prayerPages ${context.l10n.pages}',
-        onTap: () => context.push('/after-prayer'),
+      footer: HomePlanProgress(
+        achieved: achieved,
+        target: target,
+        metric: planMetric,
+        loading: planLoading,
+        error: planState.hasError && plan == null,
+        palm: plan == null ? null : palmGrowthFor(plan),
+        onTap: () => context.go('/app?tab=2'),
       ),
-      HomeFeatureCard(
-        icon: Icons.school_outlined,
+    );
+    final tiles = <HomeSectionTile>[
+      HomeSectionTile(
+        id: 'mushaf',
+        title: context.l10n.mushafMode,
+        onTap: () => context.push(mushafRoute),
+      ),
+      HomeSectionTile(
+        id: 'dua',
+        title: context.l10n.dua,
+        onTap: () => context.push('/dua'),
+      ),
+      HomeSectionTile(
+        id: 'courses',
+        title: context.l10n.coursesTitle,
+        onTap: () => context.push('/courses'),
+      ),
+      HomeSectionTile(
+        id: 'memorization',
         title: context.l10n.memorization,
-        subtitle: _memorizationTitle(
-          context,
-          memorizationState,
-          memorization,
-          memorizationSurah,
-          locale,
-        ),
         onTap: () => context.push('/memorization'),
       ),
-      HomeFeatureCard(
-        icon: Icons.headphones_outlined,
-        title: context.l10n.navAudio,
-        subtitle: reciter?.nameFor(locale) ?? context.l10n.allReciters,
-        onTap: () => context.go('/app?tab=3'),
-        action: player.track == null
-            ? null
-            : IconButton.filledTonal(
-                tooltip: player.playing
-                    ? context.l10n.pause
-                    : context.l10n.play,
-                onPressed: player.buffering
-                    ? null
-                    : ref.read(audioControllerProvider).channel ==
-                              AudioPlaybackChannel.listening &&
-                          ref.read(audioControllerProvider).standalone == null
-                    ? audioController.toggle
-                    : audioController.activateListening,
-                icon: player.buffering
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        player.playing
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                      ),
-              ),
+      HomeSectionTile(
+        id: 'qibla',
+        title: context.l10n.qibla,
+        onTap: () => context.push('/prayer?qibla=1'),
       ),
-      HomeFeatureCard(
-        icon: Icons.nights_stay_outlined,
-        title: context.l10n.dua,
-        subtitle: _duaSubtitle(context, duaState, dailyDua),
-        onTap: () => dailyDua == null
-            ? context.push('/dua')
-            : context.push(duaEntryRoute(dailyDua), extra: dailyDua),
-      ),
-    ];
-    final utilities = <Widget>[
-      HomeUtilityRow(
-        icon: Icons.bookmarks_outlined,
+      HomeSectionTile(
+        id: 'favorites',
         title: context.l10n.favorites,
-        subtitle: context.l10n.homeSavedHint,
         onTap: () => context.push('/favorites'),
       ),
-      HomeUtilityRow(
-        icon: Icons.calendar_month_outlined,
+      HomeSectionTile(
+        id: 'calendar',
         title: context.l10n.hijriCalendar,
-        subtitle: [
-          if (hijri != null) hijriDateLabel(context, hijri),
-          if (calendarEvents.isNotEmpty) calendarEvents,
-        ].join(' · '),
         onTap: () => context.push('/calendar'),
       ),
-      HomeUtilityRow(
-        icon: Icons.download_outlined,
-        title: context.l10n.homeDownloads,
-        subtitle: context.l10n.offlineStorageSettingsSubtitle,
-        onTap: () => context.push('/settings/offline-storage'),
+      HomeSectionTile(
+        id: 'notes',
+        title: context.l10n.notes,
+        onTap: () => context.push('/notes'),
+      ),
+      HomeSectionTile(
+        id: 'all',
+        title: context.l10n.homeAllSections,
+        onTap: () => context.go('/app?tab=4'),
       ),
     ];
     return AnnouncementBubbleLayer(
       child: Scaffold(
         appBar: IqroTopBar(
           title: 'IQRO',
+          subtitle: dateLine,
           leading: const Padding(
             padding: EdgeInsetsDirectional.only(start: 10, end: 8),
             child: Center(child: IqroAnimatedLogo(size: 36)),
@@ -238,9 +187,17 @@ class HomeScreen extends ConsumerWidget {
           child: HomeDashboardLayout(
             prayer: prayerCard,
             reading: readingCard,
-            plan: planCard,
-            features: features,
-            utilities: utilities,
+            sections: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  context.l10n.homeSections,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                HomeSectionTiles(tiles: tiles),
+              ],
+            ),
             guest: session?.isGuest == true
                 ? IqroStatusBanner(
                     icon: Icons.shield_outlined,
@@ -255,38 +212,5 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  String _memorizationTitle(
-    BuildContext context,
-    AsyncValue<MemorizationDashboard> state,
-    MemorizationDashboard? value,
-    Surah? surah,
-    String locale,
-  ) {
-    if (state.isLoading && value == null) return context.l10n.loading;
-    final plan = value?.plan;
-    if (plan == null) return context.l10n.memorizationCreatePlan;
-    final name =
-        surah?.nameFor(locale) ??
-        '${context.l10n.surah} ${plan.startAyah.surah}';
-    return '$name ${plan.startAyah.ayah}–${plan.endAyah.ayah} · '
-        '${value!.today.completedRepetitions}/${plan.dailyRepetitions}';
-  }
-
-  String _duaSubtitle(
-    BuildContext context,
-    AsyncValue<List<DuaEntry>> state,
-    DuaEntry? entry,
-  ) {
-    if (state.isLoading && entry == null) return context.l10n.loading;
-    if (entry == null) return context.l10n.duaSubtitle;
-    if (entry.meaning.trim().isNotEmpty) return entry.meaning.trim();
-    if (entry.categoryTitle.trim().isNotEmpty) {
-      return entry.categoryTitle.trim();
-    }
-    return entry.sourceLabel.trim().isEmpty
-        ? context.l10n.duaSubtitle
-        : entry.sourceLabel.trim();
   }
 }

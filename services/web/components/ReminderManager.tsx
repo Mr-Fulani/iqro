@@ -614,7 +614,7 @@ export function ReminderManager({ variant = "all" }: { variant?: ReminderManager
   if (!isLoggedIn) return null;
 
   return (
-    <section className="surface">
+    <section className="surface" id={variant === "prayer" ? "prayer-reminders" : undefined}>
       <div className="surface-head">
         <div>
           <h3 className="surface-title">

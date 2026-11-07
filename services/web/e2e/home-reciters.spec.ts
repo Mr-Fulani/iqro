@@ -240,9 +240,11 @@ test("home prayer preview reuses the saved prayer location and profile", async (
     high_latitude_rule: "seventh_of_night",
     adjustments: { fajr: -3, isha: 2 },
   });
-  const schedule = page.getByTestId("home-prayer-schedule");
-  await expect(schedule.getByText("Часовой пояс: Europe/Istanbul")).toBeVisible();
-  await expect(schedule.getByText("05:42")).toBeVisible();
+  // The sky of prayers on the home page shows the saved city's day.
+  const sky = page.getByTestId("home-sky");
+  // Exact: the next prayer's time is also in the card's title.
+  await expect(sky.getByText("05:42", { exact: true })).toBeVisible();
+  await expect(sky.getByText("21:15", { exact: true })).toBeVisible();
 });
 
 test("home reciter avatars open the audio catalog with the selected reciter", async ({ page }) => {

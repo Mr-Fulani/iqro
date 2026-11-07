@@ -20,6 +20,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get homeDownloads => 'Загрузки';
 
   @override
+  String get homeSections => 'Разделы';
+
+  @override
+  String get homeAllSections => 'Все разделы';
+
+  @override
   String get bookmarks => 'Закладки';
 
   @override

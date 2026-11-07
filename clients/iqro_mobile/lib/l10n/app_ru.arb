@@ -2,6 +2,8 @@
   "homePrayerIn": "Через {time}",
   "homeSavedHint": "Сохранённые аяты и ду’а",
   "homeDownloads": "Загрузки",
+  "homeSections": "Разделы",
+  "homeAllSections": "Все разделы",
   "bookmarks": "Закладки",
   "emptyBookmarks": "Пока нет закладок. Сохраните аят с помощью значка закладки в Мусхафе.",
   "bookmarksLoadError": "Не удалось загрузить закладки",

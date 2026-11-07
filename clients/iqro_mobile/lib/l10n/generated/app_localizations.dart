@@ -120,6 +120,18 @@ abstract class AppLocalizations {
   /// **'Downloads'**
   String get homeDownloads;
 
+  /// No description provided for @homeSections.
+  ///
+  /// In en, this message translates to:
+  /// **'Sections'**
+  String get homeSections;
+
+  /// No description provided for @homeAllSections.
+  ///
+  /// In en, this message translates to:
+  /// **'All sections'**
+  String get homeAllSections;
+
   /// No description provided for @bookmarks.
   ///
   /// In en, this message translates to:

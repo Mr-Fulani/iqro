@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/more/more_screen.dart';
 import 'package:iqro_mobile/features/home/home_dashboard_cards.dart';
-import 'package:iqro_mobile/core/design_system/iqro_action_grid.dart';
+import 'package:iqro_mobile/features/home/home_plan_progress.dart';
+import 'package:iqro_mobile/features/home/home_section_tiles.dart';
+import 'package:iqro_mobile/features/home/home_sky_card.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/prayer/prayer_repository.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
@@ -22,6 +24,8 @@ void main() {
             addTearDown(tester.view.resetDevicePixelRatio);
             final actions = <String>[];
             final clock = DateTime(2026, 9, 14, 4, 7);
+            DateTime at(int hour, int minute) =>
+                DateTime(2026, 9, 14, hour, minute);
             await tester.pumpWidget(
               MaterialApp(
                 theme: dark ? IqroTheme.dark() : IqroTheme.light(),
@@ -43,11 +47,18 @@ void main() {
                           final l10n = AppLocalizations.of(context);
                           return Column(
                             children: [
-                              HomePrayerCard(
+                              HomePrayerSkyCard(
                                 schedule: PrayerSchedule(
                                   date: clock,
                                   timezone: 'Europe/Istanbul',
-                                  times: {'fajr': DateTime(2026, 9, 14, 5, 7)},
+                                  times: {
+                                    'fajr': at(5, 7),
+                                    'sunrise': at(6, 40),
+                                    'dhuhr': at(13, 5),
+                                    'asr': at(16, 30),
+                                    'maghrib': at(19, 20),
+                                    'isha': at(20, 40),
+                                  },
                                   timesUtc: const {},
                                   methodName: 'test',
                                   warnings: const [],
@@ -55,6 +66,7 @@ void main() {
                                 loading: false,
                                 clock: clock,
                                 onTap: () => actions.add('prayer'),
+                                onQibla: () => actions.add('qibla'),
                                 onReminders: () => actions.add('reminders'),
                               ),
                               HomeContinueReadingCard(
@@ -62,44 +74,29 @@ void main() {
                                 ayah: 1,
                                 page: 587,
                                 onTap: () => actions.add('read'),
-                                onBookmarks: () => actions.add('bookmarks'),
+                                footer: HomePlanProgress(
+                                  achieved: 10,
+                                  target: 12,
+                                  metric: ReadingGoalMetric.pages,
+                                  loading: false,
+                                  error: false,
+                                  onTap: () => actions.add('plan'),
+                                ),
                               ),
-                              HomePlanCard(
-                                achieved: 10,
-                                target: 12,
-                                metric: ReadingGoalMetric.pages,
-                                loading: false,
-                                error: false,
-                                onTap: () => actions.add('plan'),
-                              ),
-                              IqroActionGrid(
-                                children: [
-                                  HomeFeatureCard(
-                                    icon: Icons.school_outlined,
-                                    title: l10n.memorization,
-                                    subtitle: l10n.memorizationCreatePlan,
-                                    onTap: () => actions.add('memorization'),
-                                  ),
-                                  HomeFeatureCard(
-                                    icon: Icons.headphones_outlined,
-                                    title: l10n.navAudio,
-                                    subtitle: 'Ясир ад-Дусари',
-                                    onTap: () => actions.add('audio'),
-                                    action: IconButton.filledTonal(
-                                      key: const ValueKey('play'),
-                                      onPressed: () => actions.add('play'),
-                                      icon: const Icon(
-                                        Icons.play_arrow_rounded,
-                                      ),
+                              HomeSectionTiles(
+                                tiles: [
+                                  for (final (id, title) in [
+                                    ('dua', l10n.dua),
+                                    ('qibla', l10n.qibla),
+                                    ('calendar', l10n.hijriCalendar),
+                                    ('all', l10n.homeAllSections),
+                                  ])
+                                    HomeSectionTile(
+                                      id: id,
+                                      title: title,
+                                      onTap: () => actions.add(id),
                                     ),
-                                  ),
                                 ],
-                              ),
-                              HomeUtilityRow(
-                                icon: Icons.calendar_month_outlined,
-                                title: l10n.hijriCalendar,
-                                subtitle: '3 Раби ас-сани 1448',
-                                onTap: () => actions.add('calendar'),
                               ),
                             ],
                           );
@@ -111,26 +108,36 @@ void main() {
               ),
             );
             await tester.pumpAndSettle();
-            expect(find.text('05:07'), findsOneWidget);
-            final context = tester.element(find.byType(HomePrayerCard));
+            final context = tester.element(find.byType(HomePrayerSkyCard));
             final l10n = AppLocalizations.of(context);
+            expect(find.text('${l10n.fajr} 05:07'), findsOneWidget);
             expect(find.text(l10n.homePrayerIn('1:00')), findsOneWidget);
-            for (final label in [
-              l10n.read,
-              l10n.bookmarks,
-              l10n.dailyGoal,
-              l10n.hijriCalendar,
-            ]) {
-              final target = find.text(label);
+            Future<void> tap(Finder target) async {
               await tester.ensureVisible(target);
               await tester.pumpAndSettle();
               await tester.tap(target);
               await tester.pump();
             }
-            await tester.ensureVisible(find.byKey(const ValueKey('play')));
-            await tester.pumpAndSettle();
-            await tester.tap(find.byKey(const ValueKey('play')));
-            expect(actions, ['read', 'bookmarks', 'plan', 'calendar', 'play']);
+
+            await tap(find.text('${l10n.fajr} 05:07'));
+            await tap(find.byKey(const ValueKey('home-prayer-qibla')));
+            await tap(find.byKey(const ValueKey('home-prayer-reminders')));
+            await tap(find.text(l10n.read));
+            await tap(find.text(l10n.dailyGoal));
+            for (final id in ['dua', 'qibla', 'calendar', 'all']) {
+              await tap(find.byKey(ValueKey('home-section-$id')));
+            }
+            expect(actions, [
+              'prayer',
+              'qibla',
+              'reminders',
+              'read',
+              'plan',
+              'dua',
+              'qibla',
+              'calendar',
+              'all',
+            ]);
             expect(tester.takeException(), isNull);
           },
         );

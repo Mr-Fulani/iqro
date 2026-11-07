@@ -20,6 +20,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDownloads => 'Downloads';
 
   @override
+  String get homeSections => 'Sections';
+
+  @override
+  String get homeAllSections => 'All sections';
+
+  @override
   String get bookmarks => 'Bookmarks';
 
   @override

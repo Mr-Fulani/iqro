@@ -194,7 +194,11 @@ GoRouter createRouter({required bool onboardingComplete}) {
       ),
       GoRoute(
         path: '/prayer',
-        builder: (context, state) => const AppShell(child: PrayerScreen()),
+        builder: (context, state) => AppShell(
+          child: PrayerScreen(
+            openQibla: state.uri.queryParameters['qibla'] == '1',
+          ),
+        ),
       ),
       GoRoute(
         path: '/prayer/calendar',
