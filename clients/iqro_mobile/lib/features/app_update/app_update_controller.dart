@@ -61,6 +61,9 @@ class AppUpdateRecord {
     this.snoozedVersion,
     this.snoozedUntil,
     this.acceptedVersion,
+    this.offerVersion,
+    this.offerViaStore = false,
+    this.offerMandatory = false,
   });
 
   factory AppUpdateRecord.parse(String? raw) {
@@ -76,6 +79,9 @@ class AppUpdateRecord {
         snoozedVersion: map['snoozedVersion'] as int?,
         snoozedUntil: time('snoozedUntil'),
         acceptedVersion: map['acceptedVersion'] as int?,
+        offerVersion: map['offerVersion'] as int?,
+        offerViaStore: map['offerViaStore'] == true,
+        offerMandatory: map['offerMandatory'] == true,
       );
     } on Object {
       return const AppUpdateRecord();
@@ -90,6 +96,13 @@ class AppUpdateRecord {
 
   /// Set while an update the user accepted downloads or waits for a restart.
   final int? acceptedVersion;
+
+  /// The update the last check found. The app is often started anew within
+  /// [AppUpdateController.checkInterval] (MIUI drops it from memory); Play is
+  /// not asked again then, so the offer is restored from here.
+  final int? offerVersion;
+  final bool offerViaStore;
+  final bool offerMandatory;
 
   bool snoozes(int versionCode, DateTime now) {
     final version = snoozedVersion;
@@ -106,6 +119,10 @@ class AppUpdateRecord {
     DateTime? snoozedUntil,
     int? acceptedVersion,
     bool clearAccepted = false,
+    int? offerVersion,
+    bool? offerViaStore,
+    bool? offerMandatory,
+    bool clearOffer = false,
   }) => AppUpdateRecord(
     lastCheck: lastCheck ?? this.lastCheck,
     snoozedVersion: snoozedVersion ?? this.snoozedVersion,
@@ -113,6 +130,9 @@ class AppUpdateRecord {
     acceptedVersion: clearAccepted
         ? null
         : acceptedVersion ?? this.acceptedVersion,
+    offerVersion: clearOffer ? null : offerVersion ?? this.offerVersion,
+    offerViaStore: clearOffer ? false : offerViaStore ?? this.offerViaStore,
+    offerMandatory: clearOffer ? false : offerMandatory ?? this.offerMandatory,
   );
 
   String encode() => jsonEncode(<String, Object?>{
@@ -120,6 +140,9 @@ class AppUpdateRecord {
     'snoozedVersion': snoozedVersion,
     'snoozedUntil': snoozedUntil?.millisecondsSinceEpoch,
     'acceptedVersion': acceptedVersion,
+    'offerVersion': offerVersion,
+    'offerViaStore': offerViaStore,
+    'offerMandatory': offerMandatory,
   });
 }
 
@@ -174,7 +197,11 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
         last != null &&
         !now.isBefore(last) &&
         now.difference(last) < checkInterval;
-    if (recent && record.acceptedVersion == null) return;
+    if (recent && record.acceptedVersion == null) {
+      final remembered = await _rememberedOffer(record, now);
+      if (remembered != null && mounted) state = remembered;
+      return;
+    }
     _checking = true;
     final PlayUpdateInfo? info;
     // Asked only when Play itself has nothing to offer.
@@ -237,8 +264,34 @@ class AppUpdateController extends StateNotifier<AppUpdateState> {
           }
       }
     }
+    saved = next.stage == AppUpdateStage.offer
+        ? saved.copyWith(
+            offerVersion: next.versionCode,
+            offerViaStore: next.viaStore,
+            offerMandatory: next.mandatory,
+          )
+        : saved.copyWith(clearOffer: true);
     await _save(saved);
     if (mounted) state = next;
+  }
+
+  /// The last check's offer, while this build is still older than it.
+  Future<AppUpdateState?> _rememberedOffer(
+    AppUpdateRecord record,
+    DateTime now,
+  ) async {
+    final version = record.offerVersion;
+    if (version == null || state.stage != AppUpdateStage.none) return null;
+    final installed = await _release?.installedVersionCode();
+    if (installed != null && installed >= version) return null;
+    final mandatory = record.offerMandatory;
+    return AppUpdateState(
+      AppUpdateStage.offer,
+      versionCode: version,
+      viaStore: record.offerViaStore,
+      mandatory: mandatory,
+      hidden: !mandatory && record.snoozes(version, now),
+    );
   }
 
   static bool _busy(PlayInstallStatus status) => switch (status) {
