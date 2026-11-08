@@ -70,7 +70,7 @@ class _FakeRelease implements AppReleaseSource {
 
   /// What the admin names; null: unknown or «не проверять».
   int? latest;
-  final int installed = 6;
+  int installed = 6;
   var asks = 0;
 
   @override
@@ -108,6 +108,77 @@ void main() {
   );
 
   group('AppUpdateController', () {
+    test('a relaunch within 30 minutes keeps the offer', () async {
+      final store = await _store();
+      final gateway = _FakeGateway(_info(versionCode: 7));
+      final release = _FakeRelease();
+      await controller(gateway, store, release: release).checkIfDue();
+
+      // MIUI dropped the app from memory; it starts again 16 minutes later.
+      now = now.add(const Duration(minutes: 16));
+      final relaunched = controller(gateway, store, release: release);
+      await relaunched.checkIfDue();
+      expect(gateway.checks, 1);
+      expect(relaunched.state.stage, AppUpdateStage.offer);
+      expect(relaunched.state.versionCode, 7);
+      expect(relaunched.state.hidden, isFalse);
+    });
+
+    test('a remembered offer stays hidden after «Позже»', () async {
+      final store = await _store();
+      final gateway = _FakeGateway(_info(versionCode: 7));
+      final release = _FakeRelease();
+      final updates = controller(gateway, store, release: release);
+      await updates.checkIfDue();
+      await updates.later();
+
+      now = now.add(const Duration(minutes: 5));
+      final relaunched = controller(gateway, store, release: release);
+      await relaunched.checkIfDue();
+      expect(gateway.checks, 1);
+      expect(relaunched.state.stage, AppUpdateStage.offer);
+      expect(relaunched.state.hidden, isTrue);
+    });
+
+    test('a remembered offer is dropped once it is installed', () async {
+      final store = await _store();
+      final gateway = _FakeGateway(_info(versionCode: 7));
+      final release = _FakeRelease();
+      await controller(gateway, store, release: release).checkIfDue();
+
+      release.installed = 7;
+      now = now.add(const Duration(minutes: 5));
+      final updated = controller(gateway, store, release: release);
+      await updated.checkIfDue();
+      expect(gateway.checks, 1);
+      expect(updated.state.stage, AppUpdateStage.none);
+    });
+
+    test('a server offer is remembered too', () async {
+      final store = await _store();
+      final gateway = _FakeGateway(_info(available: false));
+      final release = _FakeRelease(latest: 8);
+      await controller(gateway, store, release: release).checkIfDue();
+
+      now = now.add(const Duration(minutes: 10));
+      final relaunched = controller(gateway, store, release: release);
+      await relaunched.checkIfDue();
+      expect(relaunched.state.stage, AppUpdateStage.offer);
+      expect(relaunched.state.viaStore, isTrue);
+      expect(relaunched.state.versionCode, 8);
+    });
+
+    test('no update found: nothing is remembered', () async {
+      final store = await _store();
+      final gateway = _FakeGateway(_info(available: false));
+      final release = _FakeRelease();
+      await controller(gateway, store, release: release).checkIfDue();
+      now = now.add(const Duration(minutes: 10));
+      final relaunched = controller(gateway, store, release: release);
+      await relaunched.checkIfDue();
+      expect(relaunched.state.stage, AppUpdateStage.none);
+    });
+
     test('asks Play at most once every 30 minutes, across launches', () async {
       final store = await _store();
       final gateway = _FakeGateway(_info(available: false));
