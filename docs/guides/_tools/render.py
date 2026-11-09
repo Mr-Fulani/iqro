@@ -7,6 +7,10 @@ and the numbered steps under them. README.md is written from the same file.
     python3 docs/guides/_tools/render.py docs/guides/dua-display-options
     python3 docs/guides/_tools/render.py --all
 
+A guide with a "reel" block also gets reels/: 1080x1920 (9:16) frames for
+Reels, Shorts and Stories: a cover, one frame per screenshot with its own
+steps, and a closing frame.
+
 Mark coordinates are percentages of the screenshot (x, y, w, h in 0..100).
 """
 
@@ -200,6 +204,77 @@ def card_html(folder, guide, card, index, total, stage_h=None):
 </div></body></html>"""
 
 
+REEL_CSS = """
+body { width: %(W)dpx; height: %(H)dpx; }
+.card { padding: 70px 64px 90px; }
+h1 { font-size: 66px; margin-top: 40px; }
+.lead { font-size: 34px; }
+.step { font-size: 36px; }
+.step b { width: 54px; height: 54px; font-size: 30px; }
+.steps { gap: 18px; }
+.end { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 28px; }
+.end img { width: 260px; height: 260px; }
+.end h1 { margin: 0; }
+"""
+RW, RH = 1080, 1920
+
+
+def reel_html(folder, guide, title, lead, shot=None, steps=(), stage_h=None):
+    """steps: (number, text) pairs. Without stage_h the stage is empty, as in card_html."""
+    css = CSS % {"W": RW, "H": RH} + REEL_CSS % {"W": RW, "H": RH}
+    stage = shot_html(folder, shot, stage_h - (40 if shot.get("label") else 0), RW - 128) if shot and stage_h else ""
+    step_html = "".join(f'<div class="step"><b>{n}</b><span>{html.escape(t)}</span></div>' for n, t in steps)
+    lead_html = f'<p class="lead">{html.escape(lead)}</p>' if lead else ""
+    top = (
+        f'<div class="top"><img src="{data_uri(SEAL)}"><div class="brand">IQRO<small>{html.escape(guide["title"])}</small></div></div>'
+    )
+    if shot is None:  # closing frame
+        body = (
+            f'<div class="end"><img src="{data_uri(SEAL)}"><h1>{html.escape(title)}</h1>{lead_html}</div>'
+        )
+        return f'<!doctype html><html lang="ru"><head><meta charset="utf-8"><style>{css}</style></head><body><div class="card">{body}</div></body></html>'
+    pad = "padding-top:40px;" if shot.get("label") else ""
+    return f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><style>{css}</style></head>
+<body><div class="card">{top}<h1>{html.escape(title)}</h1>{lead_html}
+<div class="stage" style="{pad}">{stage}</div><div class="steps">{step_html}</div></div></body></html>"""
+
+
+def reel_frames(guide):
+    """(file, title, lead, shot, steps) for every frame of the reel."""
+    reel = guide["reel"]
+    frames = [("0-cover.png", reel["hook"], reel.get("lead"), {"src": reel["cover"]}, ())]
+    for card in guide["cards"]:
+        stem = card["file"].rsplit(".", 1)[0].split("-", 1)[-1]
+        for k, shot in enumerate(card["shots"], 1):
+            nums = sorted({m["n"] for m in shot.get("marks", []) if m.get("n") is not None})
+            steps = [(n, card["steps"][n - 1]) for n in nums if n <= len(card.get("steps", []))]
+            suffix = f"-{k}" if len(card["shots"]) > 1 else ""
+            # the 9:16 frame is tall enough for the whole screen: no crop
+            full = {key: v for key, v in shot.items() if key not in ("crop", "exact")}
+            frames.append((f"{len(frames)}-{stem}{suffix}.png", card["title"], None, full, steps))
+    frames.append((f"{len(frames)}-end.png", reel["cta"], reel.get("cta_lead"), None, ()))
+    return frames
+
+
+def render_reel(folder, guide, page):
+    out = folder / "reels"
+    out.mkdir(exist_ok=True)
+    page.set_viewport_size({"width": RW, "height": RH})
+    for old in out.glob("*.png"):
+        old.unlink()
+    for name, title, lead, shot, steps in reel_frames(guide):
+        stage_h = None
+        if shot is not None:
+            page.set_content(reel_html(folder, guide, title, lead, shot, steps), wait_until="load")
+            stage_h = page.eval_on_selector(".stage", "e => e.clientHeight")
+        page.set_content(reel_html(folder, guide, title, lead, shot, steps, stage_h), wait_until="load")
+        png = page.screenshot(type="png")
+        im = Image.open(io.BytesIO(png)).convert("RGB").quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+        im.save(out / name, optimize=True)
+        print(out / name)
+    page.set_viewport_size({"width": W, "height": H})
+
+
 def readme(guide):
     lines = [f"# {guide['title']}", "", guide["about"], ""]
     if guide.get("where"):
@@ -208,6 +283,12 @@ def readme(guide):
         lines += [f"**Сайт и приложение:** {guide['difference']}", ""]
     for card in guide["cards"]:
         lines += [f"## {card['title']}", "", f"![{card['title']}]({card['file']})", "", card["caption"], ""]
+    if guide.get("reel"):
+        lines += ["## Для рилс и подробного рассказа", ""]
+        lines += ["- `reels/` — кадры 9:16 (1080×1920) по порядку: обложка, по кадру на каждый экран с его шагами, финальный кадр."]
+        lines += ["- `screens/` — чистые экраны без отметок, в полном размере: из них можно делать свои анимации."]
+        lines += ["- `video/` — запись экрана телефона, без звука: как это выглядит вживую.", ""]
+        lines += [f"Заголовок для ролика: **{guide['reel']['hook']}**. Текст за кадром — подписи к карточкам выше, по порядку.", ""]
     if guide.get("sources"):
         lines += ["---", "", f"Основа снимков: {guide['sources']}", ""]
     return "\n".join(lines)
@@ -225,6 +306,8 @@ def render(folder, page):
         im = Image.open(io.BytesIO(png)).convert("RGB").quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
         im.save(folder / card["file"], optimize=True)
         print(folder / card["file"])
+    if guide.get("reel"):
+        render_reel(folder, guide, page)
     (folder / "README.md").write_text(readme(guide))
 
 
