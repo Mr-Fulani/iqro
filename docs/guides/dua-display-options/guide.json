@@ -5,6 +5,13 @@
   "where": "раздел «Ду‘а» → значок настроек справа вверху (в приложении: «Ещё» → «Ду‘а»).",
   "difference": "работает одинаково. В арабском интерфейсе кнопки нет: там нет транскрипции и перевода.",
   "sources": "`docs/images/dua-display-options-2026-11-03/` (приложение на Redmi, сайт iqro.forum).",
+  "reel": {
+    "hook": "Ду‘а так, как удобно вам",
+    "lead": "Арабский, транскрипция и перевод — по выбору",
+    "cover": "../../images/dua-display-options-2026-11-03/app-1-default.jpg",
+    "cta": "IQRO — Коран, аудио и намаз",
+    "cta_lead": "Google Play · iqro.forum"
+  },
   "cards": [
     {
       "file": "1-app-open-menu.png",

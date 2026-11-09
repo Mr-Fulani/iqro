@@ -5,6 +5,13 @@
   "where": "«Ещё» → «Настройки» → «Виджеты на рабочем столе» → «Виджет плана чтения»; или значок «Добавить виджет» на экране «План».",
   "difference": "это виджет приложения (Android и iPhone). Если телефон не предлагает поставить виджет сам: нажмите и удерживайте свободное место на главном экране → «Виджеты» → IQRO (на iPhone — «+» → IQRO).",
   "sources": "`docs/images/plan-widget-2026-11-04/redmi-widget-after-tap.jpg` (Redmi).",
+  "reel": {
+    "hook": "План чтения на рабочем столе",
+    "lead": "Виджет с целью дня и пальмой",
+    "cover": "../../images/plan-widget-2026-11-04/redmi-widget-after-tap.jpg",
+    "cta": "IQRO — Коран, аудио и намаз",
+    "cta_lead": "Google Play · iqro.forum"
+  },
   "cards": [
     {
       "file": "1-plan-widget.png",
