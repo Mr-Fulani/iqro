@@ -1451,9 +1451,7 @@ final prayerScheduleProvider = FutureProvider.autoDispose
       if (scope == null || accountScopeKey(scope) != key) {
         throw const AccountScopeChanged();
       }
-      return ref
-          .watch(prayerRepositoryProvider)
-          .cachedToday(accountScope: scope);
+      return ref.watch(prayerRepositoryProvider).today(accountScope: scope);
     });
 final prayerMethodsProvider = FutureProvider<List<PrayerMethod>>((ref) {
   return ref.watch(prayerRepositoryProvider).methods();

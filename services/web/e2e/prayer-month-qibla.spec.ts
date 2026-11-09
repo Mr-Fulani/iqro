@@ -316,3 +316,19 @@ test("a refused motion permission keeps the geographic bearing and says why", as
   );
   await expect(page.getByTestId("prayer-qibla-dial")).toHaveAttribute("transform", "rotate(0 100 100)");
 });
+
+for (const locale of ["ru", "en", "ar", "tr"]) {
+  test(`all six times of a month row fit a phone without sideways scrolling (${locale})`, async ({ page }) => {
+    // On a 360 px phone only Fajr…Asr showed; nobody guessed the table scrolled.
+    await page.setViewportSize({ width: 360, height: 780 });
+    await mockPrayerApi(page);
+    await page.goto(`/${locale}/prayer`);
+    await page.getByTestId("prayer-qibla-bearing").waitFor();
+    await page.locator("#prayer-view-month").click();
+    await expect(page.locator(".prayer-month-table tbody tr").first()).toBeVisible();
+    const overflow = await page
+      .locator(".prayer-month-scroll")
+      .evaluate((element) => element.scrollWidth - element.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+}

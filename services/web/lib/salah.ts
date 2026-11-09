@@ -414,6 +414,22 @@ export function formulaAudioRange(audio: SalahFormulaAudio): { start: number; en
  * The step-level counter is shown only when no formula card already counts the
  * same number of repetitions (the ruku' tasbih, for example, counts itself).
  */
+/**
+ * Practice is the prayer alone: a step's picture, recitation, formulas and
+ * counter. A lesson that is only text («What is salah») has nothing to
+ * practise, so it gets no «Practice» switch. The app's
+ * `SalahCourseDocument.hasPractice` is the same rule.
+ */
+export function lessonHasPractice(lesson: SalahLesson, media: Record<string, unknown>): boolean {
+  return lesson.steps.some(
+    (step) =>
+      (step.media != null && media[step.media] != null) ||
+      step.audio != null ||
+      step.formulas.length > 0 ||
+      (step.repeat ?? 1) > 1,
+  );
+}
+
 export function stepRepeatTarget(step: SalahStep, formulas: Record<string, SalahFormula>): number | null {
   if (!step.repeat || step.repeat < 2) return null;
   const counted = step.formulas.some((id) => formulas[id]?.repetitions === step.repeat);

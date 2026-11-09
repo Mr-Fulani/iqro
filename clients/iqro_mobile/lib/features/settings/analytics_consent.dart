@@ -78,19 +78,22 @@ class AnalyticsConsentTile extends ConsumerWidget {
     final consent = ref.watch(analyticsProvider);
     final analytics = ref.read(analyticsProvider.notifier);
     final l10n = context.l10n;
-    return SwitchListTile.adaptive(
+    final granted = consent == AnalyticsConsent.granted;
+    void choose(bool value) => analytics.setConsent(
+      value ? AnalyticsConsent.granted : AnalyticsConsent.denied,
+    );
+    // The same row as the others in the settings card.
+    return IqroListTile(
       key: const ValueKey('analytics-consent-setting'),
-      secondary: const Icon(Icons.insights_outlined),
-      title: Text(l10n.analyticsTitle),
-      subtitle: Text(switch (consent) {
+      icon: Icons.insights_outlined,
+      title: l10n.analyticsTitle,
+      subtitle: switch (consent) {
         AnalyticsConsent.granted => l10n.analyticsStateGranted,
         AnalyticsConsent.denied => l10n.analyticsStateDenied,
         null => l10n.analyticsStateUnset,
-      }),
-      value: consent == AnalyticsConsent.granted,
-      onChanged: (value) => analytics.setConsent(
-        value ? AnalyticsConsent.granted : AnalyticsConsent.denied,
-      ),
+      },
+      trailing: Switch.adaptive(value: granted, onChanged: choose),
+      onTap: () => choose(!granted),
     );
   }
 }

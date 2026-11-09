@@ -4287,6 +4287,39 @@ input:focus, select:focus, textarea:focus {
   background: var(--primary-subtle);
 }
 
+/* A phone: all six times share the width, as in the app. The table scrolled
+   sideways and hid Maghrib and Isha; nobody guessed it scrolled. */
+@media (max-width: 480px) {
+  .prayer-month-scroll {
+    margin-inline: -12px;
+  }
+
+  .prayer-month-table th,
+  .prayer-month-table td {
+    padding: 7px 2px;
+    font-size: 12px;
+  }
+
+  .prayer-month-table thead th {
+    font-size: 11px;
+  }
+
+  /* «вс, 1» goes onto two lines rather than take a time's room. */
+  .prayer-month-table tbody th {
+    white-space: normal;
+  }
+
+  .prayer-month-table th:first-child,
+  .prayer-month-table td:first-child {
+    padding-inline-start: 6px;
+  }
+
+  .prayer-month-table th:last-child,
+  .prayer-month-table td:last-child {
+    padding-inline-end: 6px;
+  }
+}
+
 .prayer-month-today {
   display: block;
   font-size: 12px;

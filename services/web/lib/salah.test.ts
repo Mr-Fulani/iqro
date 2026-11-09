@@ -6,6 +6,7 @@ import {
   findSalahLesson,
   formulaAudioRange,
   isSalahRuling,
+  lessonHasPractice,
   nextSalahLesson,
   orderedLessons,
   parseSalahCourseDocument,
@@ -206,6 +207,12 @@ test("audio ranges come from explicit bounds or ayah segments", () => {
   assert.deepEqual(formulaAudioRange({ url: "a.mp3" }), { start: 0, end: null });
   assert.deepEqual(formulaAudioRange(course.formulas.fatiha!.audio!), { start: 0, end: 11 });
   assert.deepEqual(formulaAudioRange({ url: "a.mp3", start_ms: 1500, end_ms: 4000 }), { start: 1.5, end: 4 });
+});
+
+test("a lesson that is only text has nothing to practise", () => {
+  assert.equal(lessonHasPractice(lesson("what-is-salah"), course.media), false);
+  assert.equal(lessonHasPractice(lesson("wudu"), course.media), true);
+  assert.equal(lessonHasPractice(lesson("fajr"), course.media), true);
 });
 
 test("a step counter is shown only when no formula already counts the repeats", () => {
