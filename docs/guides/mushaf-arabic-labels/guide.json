@@ -5,6 +5,13 @@
   "where": "«Коран» → режим «Мусхаф», на каждом листе.",
   "difference": "одинаково на сайте и в приложении. В приложении номер страницы стоит в кнопке закладки внизу справа.",
   "sources": "`docs/images/mushaf-labels-size-2026-11-03/`; компьютер — сайт iqro.forum, 4 ноября 2026.",
+  "reel": {
+    "hook": "Мусхаф по-арабски",
+    "lead": "Подписи страниц и сур на арабском",
+    "cover": "../../images/mushaf-labels-size-2026-11-03/app-redmi-after.jpg",
+    "cta": "IQRO — Коран, аудио и намаз",
+    "cta_lead": "Google Play · iqro.forum"
+  },
   "cards": [
     {
       "file": "1-phone.png",

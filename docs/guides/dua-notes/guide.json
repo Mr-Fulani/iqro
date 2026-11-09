@@ -5,6 +5,13 @@
   "where": "любое ду‘а в разделе «Ду‘а», например в «Утренних азкарах».",
   "difference": "одинаково на сайте и в приложении.",
   "sources": "сайт iqro.forum, 4 ноября 2026; приложение — `docs/images/dua-text-without-brackets-2026-11-04/`.",
+  "reel": {
+    "hook": "Ду‘а без лишнего",
+    "lead": "Чистый текст без скобок и пометок",
+    "cover": "src/note-phone.jpg",
+    "cta": "IQRO — Коран, аудио и намаз",
+    "cta_lead": "Google Play · iqro.forum"
+  },
   "cards": [
     {
       "file": "1-note-under-translation.png",

@@ -275,7 +275,7 @@ def render_reel(folder, guide, page):
     page.set_viewport_size({"width": W, "height": H})
 
 
-def readme(guide):
+def readme(guide, folder):
     lines = [f"# {guide['title']}", "", guide["about"], ""]
     if guide.get("where"):
         lines += [f"**Где найти:** {guide['where']}", ""]
@@ -286,8 +286,11 @@ def readme(guide):
     if guide.get("reel"):
         lines += ["## Для рилс и подробного рассказа", ""]
         lines += ["- `reels/` — кадры 9:16 (1080×1920) по порядку: обложка, по кадру на каждый экран с его шагами, финальный кадр."]
-        lines += ["- `screens/` — чистые экраны без отметок, в полном размере: из них можно делать свои анимации."]
-        lines += ["- `video/` — запись экрана телефона, без звука: как это выглядит вживую.", ""]
+        if (folder / "screens").is_dir():
+            lines += ["- `screens/` — чистые экраны без отметок, в полном размере: из них можно делать свои анимации."]
+        if (folder / "video").is_dir():
+            lines += ["- `video/` — запись экрана телефона, без звука: как это выглядит вживую."]
+        lines += [""]
         lines += [f"Заголовок для ролика: **{guide['reel']['hook']}**. Текст за кадром — подписи к карточкам выше, по порядку.", ""]
     if guide.get("sources"):
         lines += ["---", "", f"Основа снимков: {guide['sources']}", ""]
@@ -308,7 +311,7 @@ def render(folder, page):
         print(folder / card["file"])
     if guide.get("reel"):
         render_reel(folder, guide, page)
-    (folder / "README.md").write_text(readme(guide))
+    (folder / "README.md").write_text(readme(guide, folder))
 
 
 def main(argv):

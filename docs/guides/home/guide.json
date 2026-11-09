@@ -5,6 +5,13 @@
   "where": "первый экран приложения и главная страница сайта iqro.forum.",
   "difference": "одинаково на сайте и в приложении. На компьютере плитки разделов стоят в один ряд. На сайте знак ۞ идёт по полосе в карточке «Сегодня».",
   "sources": "приложение — `clients/iqro_mobile/test/features/home_screenshots_test.dart`; сайт — локальная сборка с расписанием iqro.forum, 7 ноября 2026.",
+  "reel": {
+    "hook": "Главная IQRO",
+    "lead": "Небо намаза, план чтения и все разделы",
+    "cover": "src/site-phone.jpg",
+    "cta": "IQRO — Коран, аудио и намаз",
+    "cta_lead": "Google Play · iqro.forum"
+  },
   "cards": [
     {
       "file": "1-sky.png",

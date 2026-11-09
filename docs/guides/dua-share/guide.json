@@ -5,6 +5,13 @@
   "where": "значок «Поделиться» под каждым ду‘а.",
   "difference": "на сайте окно с картинкой и кнопками «Скопировать ссылку», «Скачать картинку», «Поделиться»; в приложении та же кнопка открывает отправку картинкой или текстом.",
   "sources": "сайт iqro.forum, 4 ноября 2026; `docs/images/dua-display-options-2026-11-03/`.",
+  "reel": {
+    "hook": "Поделитесь ду‘а",
+    "lead": "Отправьте ду‘а близким",
+    "cover": "../../images/dua-display-options-2026-11-03/web-phone-1-before.jpg",
+    "cta": "IQRO — Коран, аудио и намаз",
+    "cta_lead": "Google Play · iqro.forum"
+  },
   "cards": [
     {
       "file": "1-tap-share.png",
