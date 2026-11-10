@@ -3728,6 +3728,81 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 1px rgba(8, 94, 68, 0.36);
 }
 
+/* The first ayah of a rub al-hizb quarter the reader just reached (see
+   QuranQuarterMark): a soft tint that comes and goes with the pill. */
+.qf-mushaf-ayah-fragment.is-marked:not(.is-selected):not(.is-playing),
+.ayah-card.is-marked:not(.is-audio-active):not([data-highlight]) {
+  --quarter-tint: rgba(120, 104, 80, 0.16);
+  --quarter-edge: rgba(120, 104, 80, 0.24);
+  animation: quran-quarter-tint 2.8s ease-in-out both;
+}
+
+@keyframes quran-quarter-tint {
+  0%, 100% { background-color: transparent; box-shadow: 0 0 0 1px transparent; }
+  12%, 80% { background-color: var(--quarter-tint); box-shadow: 0 0 0 1px var(--quarter-edge); }
+}
+
+.ayah-card.is-marked:not(.is-audio-active):not([data-highlight]) {
+  animation-name: quran-quarter-card;
+}
+
+@keyframes quran-quarter-card {
+  0%, 100% { background-color: #ffffff; }
+  12%, 80% { background-color: #f1ede6; }
+}
+
+.quran-quarter-mark-region {
+  position: fixed;
+  inset-inline: 0;
+  /* Over the text, which it leaves soon; never under the bottom navigation. */
+  bottom: max(20vh, calc(var(--mobile-nav-space, 0px) + 20px), calc(env(safe-area-inset-bottom, 0px) + 28px));
+  /* Above the plain Arabic text (900), under the word bar. */
+  z-index: 910;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.quran-quarter-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 22px 7px 7px;
+  border-radius: 999px;
+  background: rgba(34, 33, 31, 0.9);
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  animation: quran-quarter-pill 2.5s ease-in-out both;
+}
+
+.quran-quarter-mark img {
+  border-radius: 50%;
+}
+
+@keyframes quran-quarter-pill {
+  0% { opacity: 0; transform: translateY(8px); }
+  10%, 82% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quran-quarter-mark,
+  .qf-mushaf-ayah-fragment.is-marked:not(.is-selected):not(.is-playing),
+  .ayah-card.is-marked:not(.is-audio-active):not([data-highlight]) {
+    animation: none;
+  }
+
+  .qf-mushaf-ayah-fragment.is-marked:not(.is-selected):not(.is-playing) {
+    background-color: rgba(120, 104, 80, 0.16);
+  }
+
+  .ayah-card.is-marked:not(.is-audio-active):not([data-highlight]) {
+    background-color: #f1ede6;
+  }
+}
+
 .qf-mushaf-ayah-fragment.is-playing {
   background: rgba(20, 145, 104, 0.4);
   color: #063d2d;

@@ -1020,6 +1020,36 @@ abstract class AppLocalizations {
   /// **'Rub al-hizb'**
   String get rubElHizb;
 
+  /// No description provided for @rubMarkJuz.
+  ///
+  /// In en, this message translates to:
+  /// **'Juz {number}'**
+  String rubMarkJuz(String number);
+
+  /// No description provided for @rubMarkHizb.
+  ///
+  /// In en, this message translates to:
+  /// **'Hizb {number}'**
+  String rubMarkHizb(String number);
+
+  /// No description provided for @rubMarkQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'¼ Hizb {number}'**
+  String rubMarkQuarter(String number);
+
+  /// No description provided for @rubMarkHalf.
+  ///
+  /// In en, this message translates to:
+  /// **'½ Hizb {number}'**
+  String rubMarkHalf(String number);
+
+  /// No description provided for @rubMarkThreeQuarters.
+  ///
+  /// In en, this message translates to:
+  /// **'¾ Hizb {number}'**
+  String rubMarkThreeQuarters(String number);
+
   /// No description provided for @page.
   ///
   /// In en, this message translates to:

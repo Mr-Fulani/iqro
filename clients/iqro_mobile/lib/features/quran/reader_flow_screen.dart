@@ -17,6 +17,7 @@ import 'next_surah.dart';
 import 'quran_models.dart';
 import 'reader_page_turn.dart';
 import 'reader_words.dart';
+import 'rub_mark.dart';
 import 'word_range.dart';
 
 /// Where the plain text was left: the surah, which the end of one may have
@@ -142,6 +143,8 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   late var _ayah = widget.initialAyah;
   QuranWordRange? _marked;
   Timer? _markTimer;
+  final _rubMark = RubMarkController();
+  var _dragged = false;
 
   /// The size while the slider moves, ahead of the saved one.
   double? _fontSize;
@@ -155,11 +158,37 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     super.initState();
     _words = WordRangeController(ref)..addListener(_onWords);
     wordRangePulling.addListener(_onWords);
+    _rubMark.addListener(_onRubMark);
+  }
+
+  void _onRubMark() => setState(() {});
+
+  /// Announces the quarter of a hizb whose first ayah the reader has
+  /// scrolled to.
+  Future<void> _markVisibleRub() async {
+    final List<QuranDivision> rubs;
+    try {
+      rubs = await ref.read(quranRubElHizbProvider.future);
+    } on Object {
+      return;
+    }
+    if (!mounted) return;
+    _rubMark.reached(
+      rubVisibleIn(
+        surah: widget.surah,
+        rubs: rubs,
+        viewportKey: _viewportKey,
+        ayahKeys: _ayahKeys,
+      ),
+    );
   }
 
   @override
   void dispose() {
     _markTimer?.cancel();
+    _rubMark
+      ..removeListener(_onRubMark)
+      ..dispose();
     wordRangePulling.removeListener(_onWords);
     _selectionBounds.dispose();
     _words
@@ -562,6 +591,13 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
                       if (notification.depth != 0) return false;
+                      if (notification is ScrollStartNotification &&
+                          notification.dragDetails != null) {
+                        _dragged = true;
+                      }
+                      if (notification is ScrollEndNotification && _dragged) {
+                        unawaited(_markVisibleRub());
+                      }
                       if (notification is ScrollUpdateNotification) {
                         if (_words.range != null) _reportBounds();
                         // A jump to keep the place reports nothing new.
@@ -612,6 +648,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                 );
                         }
                         final ayah = items[index - 1];
+                        final words = ayahWords(ayah);
                         // Each ayah a paragraph of its own, a blank line
                         // between them.
                         return Padding(
@@ -626,7 +663,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                             ayahs: <ReaderAyahText>[
                               ReaderAyahText(
                                 ayah: ayah.number,
-                                words: ayahWords(ayah),
+                                words: words,
                                 marker:
                                     '\u00A0﴿${arabicIndicDigits(ayah.number)}﴾',
                               ),
@@ -637,7 +674,21 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                             style: style,
                             registry: _wordRegistry,
                             range: _words.range,
-                            marked: _marked,
+                            // The ayah a quarter of a hizb starts at, while
+                            // it is announced.
+                            marked:
+                                _marked ??
+                                (_rubMark.mark?.startAyah.ayah == ayah.number &&
+                                        words.isNotEmpty
+                                    ? QuranWordRange.between(
+                                        QuranWord(widget.surah, ayah.number, 1),
+                                        QuranWord(
+                                          widget.surah,
+                                          ayah.number,
+                                          words.length,
+                                        ),
+                                      )
+                                    : null),
                             playingWord: _words.playingWord,
                             onRange: (range) => _selectWords(items, range),
                             onDrag: _followWordDrag,
@@ -656,6 +707,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                     ),
                   ),
                 if (_loupe case final point?) WordRangeLoupe(point: point),
+                RubMarkToast(controller: _rubMark),
               ],
             ),
           ),

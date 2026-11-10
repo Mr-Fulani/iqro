@@ -116,6 +116,47 @@ for (const layout of layouts) {
   });
 }
 
+test.describe("the plain text announces a quarter of a hizb", () => {
+  test.use(layouts[0].use);
+
+  test("a scroll to the quarter's first ayah shows the pill, and again after coming back", async ({ page }) => {
+    // The page loads the quarters with these lists, which the test API lacks.
+    await page.route(/\/api\/v1\/quran\/editions\/madani-hafs\/(juz|hizb)(\?.*)?$/, (route) => route.fulfill({ json: [] }));
+    await page.route(/\/api\/v1\/quran\/editions\/madani-hafs\/rub-el-hizb(\?.*)?$/, (route) => route.fulfill({ json: [{
+      number: 1, hizb_number: 1, quarter_number: 1,
+      start_ayah: { id: "quarter-start", surah: 1, number: 1 },
+      end_ayah: { id: "quarter-end", surah: 1, number: 7 },
+      start_page: 1, end_page: 1,
+    }] }));
+    await openText(page);
+    await swipeAyah(page, 5, 1);
+    const reader = plainText(page);
+    await expect(reader).toBeVisible();
+    const mark = page.getByTestId("quran-quarter-mark");
+    const first = reader.locator('[data-word-key="1:1:1"]');
+    // Larger letters, so that the quarter's ayah is off screen from the end.
+    await reader.locator(".plain-text-body").evaluate((body) => { (body as HTMLElement).style.fontSize = "72px"; });
+    const scroll = (top: number) => reader.locator(".plain-text-scroll").evaluate((sheet, to) => {
+      sheet.scrollTop = to < 0 ? sheet.scrollHeight : to;
+    }, top);
+    await scroll(-1);
+    await expect(first).not.toBeInViewport();
+    await page.waitForTimeout(600);
+    await expect(mark).toHaveCount(0);
+
+    await scroll(0);
+    await expect(page.getByRole("status").filter({ hasText: "Джуз 1" })).toBeVisible();
+    await expect(first).toHaveClass(/is-word-marked/);
+    await expect(mark).toHaveCount(0, { timeout: 5_000 });
+    await expect(first).not.toHaveClass(/is-word-marked/);
+
+    await scroll(-1);
+    await page.waitForTimeout(600);
+    await scroll(0);
+    await expect(page.getByRole("status").filter({ hasText: "Джуз 1" })).toBeVisible();
+  });
+});
+
 test.describe("text swipes leave other gestures alone", () => {
   test.use(layouts[0].use);
 

@@ -78,6 +78,8 @@ type QuranFoundationMushafPageProps = {
   surahs: SurahIdentity[];
   selectedAyahKey: string | null;
   playingAyahKey: string | null;
+  /** The ayah a new rub al-hizb quarter starts at, tinted for a moment. */
+  markedAyahKey?: string | null;
   /** Highlight color key per `surah:ayah`, from the user's ayah annotations. */
   highlightColors?: Record<string, string>;
   /** Spoken highlight and note state per `surah:ayah`. */
@@ -260,6 +262,7 @@ export function QuranFoundationMushafPageView({
   surahs,
   selectedAyahKey,
   playingAyahKey,
+  markedAyahKey = null,
   highlightColors,
   annotationLabels,
   onSelectAyah,
@@ -491,6 +494,7 @@ export function QuranFoundationMushafPageView({
                   "qf-mushaf-ayah-fragment",
                   ayahKey && selectedAyahKey === ayahKey ? "is-selected" : "",
                   ayahKey && playingAyahKey === ayahKey ? "is-playing" : "",
+                  ayahKey && markedAyahKey === ayahKey ? "is-marked" : "",
                 ].filter(Boolean).join(" ");
                 const style = { fontFamily: `"${fontFamily}", serif` };
                 const reference = ayahKey ? parseVerseKey(ayahKey) : null;

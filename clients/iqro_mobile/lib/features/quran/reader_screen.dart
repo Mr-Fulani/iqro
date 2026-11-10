@@ -31,6 +31,7 @@ import 'surah_open_reporter.dart';
 import 'reader_flow_screen.dart';
 import 'reader_page_turn.dart';
 import 'reader_words.dart';
+import 'rub_mark.dart';
 import 'word_range.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
@@ -84,6 +85,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   var _contentRestoreScheduled = false;
   var _restoringPosition = false;
   var _readerWasDragged = false;
+  final _rubMark = RubMarkController();
   int? _lastPersistedAyah;
   AccountScopeKey? _accountKey;
   var _audioRequest = 0;
@@ -97,6 +99,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     _words = WordRangeController(ref)..addListener(_onWords);
     wordRangePulling.addListener(_onWords);
     _selectedAyah = widget.initialAyah;
+    _rubMark.addListener(_onRubMark);
     _initialAccountScope = ref.read(localDatabaseProvider).accountScope.current;
     _accountKey = _initialAccountScope == null
         ? null
@@ -119,9 +122,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       ..dispose();
     WidgetsBinding.instance.removeObserver(this);
     _nextPull.dispose();
+    _rubMark
+      ..removeListener(_onRubMark)
+      ..dispose();
     unawaited(_readingSession?.finish());
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onRubMark() {
+    if (mounted) setState(() {});
   }
 
   /// The Mushaf page of [ayah], else of the selected ayah. A swipe sends
@@ -481,6 +491,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                         ),
                       ),
                     if (_loupe case final point?) WordRangeLoupe(point: point),
+                    RubMarkToast(controller: _rubMark),
                   ],
                 ),
               ),
@@ -521,6 +532,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         }
         if (notification is ScrollEndNotification && !_restoringPosition) {
           unawaited(_persistTopVisibleAyah(items));
+          if (_readerWasDragged) unawaited(_markVisibleRub());
         }
         _nextPull.handle(
           notification,
@@ -573,6 +585,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
               ayah: ayah,
               selected: ayah.number == _selectedAyah,
               highlightColorKey: highlightColors[ayah.number],
+              marked:
+                  _rubMark.mark?.startAyah ==
+                  QuranAyahReference(
+                    id: '',
+                    surah: ayah.surahNumber,
+                    ayah: ayah.number,
+                  ),
               audioActive: audioActive,
               audioPlaying: audioActive && audio.playing,
               audioLoading: _audioLoadingAyah == ayah.number,
@@ -718,6 +737,26 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     }
     if (first == null || last == null || count == 0) return null;
     return (first: first, last: last, extent: height / count);
+  }
+
+  /// Announces the quarter of a hizb whose first ayah the reader has
+  /// scrolled to, once it is fairly in view.
+  Future<void> _markVisibleRub() async {
+    final List<QuranDivision> rubs;
+    try {
+      rubs = await ref.read(quranRubElHizbProvider.future);
+    } on Object {
+      return;
+    }
+    if (!mounted) return;
+    _rubMark.reached(
+      rubVisibleIn(
+        surah: widget.surah,
+        rubs: rubs,
+        viewportKey: _viewportKey,
+        ayahKeys: _ayahKeys,
+      ),
+    );
   }
 
   Future<void> _persistTopVisibleAyah(List<QuranAyah> items) async {
@@ -1418,6 +1457,7 @@ class ReaderAyahCard extends StatelessWidget {
     required this.ayah,
     required this.selected,
     required this.highlightColorKey,
+    this.marked = false,
     required this.audioActive,
     required this.audioPlaying,
     required this.audioLoading,
@@ -1447,6 +1487,9 @@ class ReaderAyahCard extends StatelessWidget {
   final QuranAyah ayah;
   final bool selected;
   final String? highlightColorKey;
+
+  /// A quarter of a hizb starts at this ayah and is being announced.
+  final bool marked;
   final bool audioActive;
   final bool audioPlaying;
   final bool audioLoading;
@@ -1500,9 +1543,14 @@ class ReaderAyahCard extends StatelessWidget {
       child: IqroCard(
         onTap: onSelected,
         padding: const EdgeInsets.fromLTRB(18, 22, 18, 14),
-        color: highlightColorKey == null
-            ? null
-            : ayahHighlightCardColor(context, highlightColorKey),
+        color: highlightColorKey != null
+            ? ayahHighlightCardColor(context, highlightColorKey)
+            : marked
+            ? Color.alphaBlend(
+                scheme.onSurface.withValues(alpha: .08),
+                scheme.surface,
+              )
+            : null,
         borderColor: audioActive
             ? scheme.tertiary
             : selected

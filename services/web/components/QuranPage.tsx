@@ -91,6 +91,8 @@ import {
 import { holdInView } from "../lib/hold-in-view";
 import { WordRangeHandles, useWordSelection } from "./WordSelection";
 import { QuranPlainText } from "./QuranPlainText";
+import { QuranQuarterMark } from "./QuranQuarterMark";
+import { quarterMarkMessage, quarterStartingIn, quarterStartKey } from "../lib/quran-marks";
 import { LAST_SURAH, NextSurahCard, QuranEnd, usePullToNext } from "./NextSurah";
 import { ReaderSwipeReveal, useReaderSwipe, type ReaderSwipeDirection } from "./ReaderSwipe";
 
@@ -129,6 +131,8 @@ const PRAYER_READING_PRAYERS = new Set<PrayerReadingPrayer>([
   "isha",
 ]);
 
+/** How long a reached quarter's pill and ayah tint stay, fade included. */
+const QUARTER_MARK_MS = 2500;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const TRANSLATION_PREFERENCE_KEY_PREFIX = "iqro_quran_translation_v2";
@@ -429,6 +433,33 @@ function QuranContent() {
   const [juz, setJuz] = useState<Juz[]>([]);
   const [hizb, setHizb] = useState<Hizb[]>([]);
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
+  // A new rub al-hizb quarter the reader reached: a pill with its name and a
+  // tint on its first ayah, for a moment. It is announced again each time the
+  // reader comes back to it, but not while it stays in view.
+  const [quarterMark, setQuarterMark] = useState<RubElHizb | null>(null);
+  const lastQuarterMark = useRef<number | null>(null);
+  const quarterMarkTimer = useRef<number | undefined>(undefined);
+  const quarterMarkPage = useRef<number | null>(null);
+  const reachQuarter = useCallback((quarter: RubElHizb | null, announce: boolean) => {
+    if (!quarter) {
+      lastQuarterMark.current = null;
+      return;
+    }
+    if (quarter.number === lastQuarterMark.current) return;
+    lastQuarterMark.current = quarter.number;
+    if (!announce) return;
+    window.clearTimeout(quarterMarkTimer.current);
+    setQuarterMark(quarter);
+    quarterMarkTimer.current = window.setTimeout(() => setQuarterMark(null), QUARTER_MARK_MS);
+  }, []);
+  useEffect(() => () => window.clearTimeout(quarterMarkTimer.current), []);
+  // The plain text reports the ayahs whose start a scroll left in view.
+  const reachPlainQuarter = useCallback((verseKeys: string[]) => {
+    reachQuarter(quarterStartingIn(rubElHizbRef.current, verseKeys), true);
+  }, [reachQuarter]);
+  // Read by the text's scroll listener, which must not restart when they load.
+  const rubElHizbRef = useRef<RubElHizb[]>([]);
+  useEffect(() => { rubElHizbRef.current = rubElHizb; }, [rubElHizb]);
   const [currentPage, setCurrentPage] = useState<number>(
     deepLinkPage || 1,
   );
@@ -538,6 +569,27 @@ function QuranContent() {
     ? (selectedMushafAyah && mushafVerseKeys.includes(selectedMushafAyah) ? selectedMushafAyah : mushafVerseKeys[0] ?? null)
     : selectedMushafAyah?.startsWith(`${selectedSurah}:`) ? selectedMushafAyah : `${selectedSurah}:1`;
   const currentAyah = ayahs.find((ayah) => `${ayah.surah_number}:${ayah.number}` === currentAyahKey);
+  // A turned Mushaf page that starts a quarter announces it; the page the
+  // reader opened on does not.
+  useEffect(() => {
+    if (viewMode !== "mushaf") {
+      quarterMarkPage.current = null;
+      return;
+    }
+    if (!foundationMushafPage || rubElHizb.length === 0) return;
+    const page = foundationMushafPage.page_number;
+    if (quarterMarkPage.current === page) return;
+    const turned = quarterMarkPage.current !== null;
+    quarterMarkPage.current = page;
+    reachQuarter(quarterStartingIn(rubElHizb, mushafVerseKeys), turned);
+  }, [foundationMushafPage, mushafVerseKeys, reachQuarter, rubElHizb, viewMode]);
+  const markedQuarterKey = quarterMark ? quarterStartKey(quarterMark) : null;
+  const quarterMarkLabel = quarterMark
+    ? (() => {
+      const message = quarterMarkMessage(quarterMark);
+      return t(message.key, message.variables);
+    })()
+    : null;
   const [resolvedCanonicalPage, setResolvedCanonicalPage] = useState<{ key: string; page: number } | null>(null);
   const canonicalPage = viewMode === "text" ? currentPage :
     (currentAyah?.pages.includes(currentPage) ? currentPage : currentAyah?.pages[0])
@@ -1414,6 +1466,13 @@ function QuranContent() {
           })
           .filter((candidate): candidate is { ayah: Ayah; distance: number } => Boolean(candidate))
           .sort((left, right) => left.distance - right.distance)[0]?.ayah;
+        // A quarter whose first ayah the reader scrolled into view.
+        reachQuarter(quarterStartingIn(rubElHizbRef.current, ayahs
+          .filter((ayah) => {
+            const rect = document.getElementById(`quran-ayah-${ayah.surah_number}-${ayah.number}`)?.getBoundingClientRect();
+            return rect !== undefined && rect.bottom > 0 && rect.top < window.innerHeight;
+          })
+          .map((ayah) => `${ayah.surah_number}:${ayah.number}`)), true);
         const pageNumber = visibleAyah?.pages[0];
         if (!visibleAyah || pageNumber === undefined) return;
         textReadingAyah.current = `${visibleAyah.surah_number}:${visibleAyah.number}`;
@@ -1439,7 +1498,7 @@ function QuranContent() {
       window.removeEventListener("keydown", markScrollIntent);
       window.removeEventListener("scroll", rememberVisibleAyah);
     };
-  }, [ayahs, queueReadingPlace, viewMode]);
+  }, [ayahs, queueReadingPlace, reachQuarter, viewMode]);
 
   const selectWords = useCallback((range: QuranWordRange) => {
     // The highest position on the page or in the surah stands for a whole ayah.
@@ -2360,7 +2419,7 @@ function QuranContent() {
                   <article
                     key={ayah.id}
                     id={`quran-ayah-${selectedSurah}-${ayah.number}`}
-                    className={`ayah-card${playingMushafAyah === ayahKey ? " is-audio-active" : ""}${selectedMushafAyah === ayahKey ? " is-navigation-target" : ""}`}
+                    className={`ayah-card${playingMushafAyah === ayahKey ? " is-audio-active" : ""}${selectedMushafAyah === ayahKey ? " is-navigation-target" : ""}${markedQuarterKey === ayahKey ? " is-marked" : ""}`}
                     data-highlight={annotation?.color_key}
                   >
                     <div className="ayah-header">
@@ -2607,6 +2666,7 @@ function QuranContent() {
                       surahs={surahs}
                       selectedAyahKey={selectedMushafAyah}
                       playingAyahKey={playingMushafAyah}
+                      markedAyahKey={markedQuarterKey}
                       highlightColors={ayahHighlightColors}
                       annotationLabels={ayahAnnotationLabels}
                       onSelectAyah={handleSelectMushafAyah}
@@ -2867,6 +2927,8 @@ function QuranContent() {
           playingWord={playingWord}
           wordArea={setPlainWordArea}
           onLeave={leavePlainText}
+          onSettle={reachPlainQuarter}
+          markedAyah={quarterMark?.start_ayah.surah === selectedSurah ? quarterMark.start_ayah.number : null}
           thisSurah={currentSurahObj}
           nextSurah={surahs.find((item) => item.number === selectedSurah + 1)}
           listHref={localizedPath(locale, quranEditionPath(selectedEdition))}
@@ -2898,6 +2960,8 @@ function QuranContent() {
           onPlayingWord={setPlayingWord}
         />
       )}
+      {/* Inside the reader layout, so it also shows in full screen. */}
+      <QuranQuarterMark label={quarterMarkLabel} />
     </MushafReaderLayout>
   );
 }
