@@ -1696,7 +1696,7 @@ function QuranContent() {
     },
   });
   // A moment after the text first opens, a hand shows that it can be swiped.
-  const swipeHint = useReaderSwipeHint(viewMode === "text" && !wordRange && plainTextAyah === null && ayahs.length > 0);
+  const swipeHint = useReaderSwipeHint(textSurface, viewMode === "text" && !wordRange && plainTextAyah === null && ayahs.length > 0);
   const textShift = textSwipe || (swipeHint?.offset ?? 0);
 
   // The ayah's menu, from an ayah number or «⋯» on the selection bar: the

@@ -171,18 +171,19 @@ export type ReaderSwipeHintState = { offset: number; opacity: number };
 
 /**
  * Shows on a touch screen that the text can be swiped: a moment after it is
- * `ready`, once a visit and `READER_SWIPE_HINT_LIMIT` times in all, the text
+ * `ready` and lies across the middle of the screen, once a visit and `READER_SWIPE_HINT_LIMIT` times in all, the text
  * moves by the returned offset to the right, then to the left. Any touch ends
  * it at once. With reduced motion the offset stays 0 and the hint only stands
  * for a while.
  */
-export function useReaderSwipeHint(ready: boolean): ReaderSwipeHintState | null {
+export function useReaderSwipeHint(element: HTMLElement | null, ready: boolean): ReaderSwipeHintState | null {
   const [hint, setHint] = useState<ReaderSwipeHintState | null>(null);
   const offered = useRef(false);
 
   useEffect(() => {
-    if (!ready || offered.current || !touchReader()) return;
+    if (!element || !ready || offered.current || !touchReader()) return;
     let frame = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     let still: ReturnType<typeof setTimeout> | undefined;
     const end = () => {
       cancelAnimationFrame(frame);
@@ -191,9 +192,16 @@ export function useReaderSwipeHint(ready: boolean): ReaderSwipeHintState | null 
       window.removeEventListener("touchstart", end, true);
       setHint(null);
     };
-    const timer = setTimeout(() => {
+    const offer = () => {
       const shown = readSwipeHint();
-      if (document.visibilityState !== "visible" || shown >= READER_SWIPE_HINT_LIMIT) return;
+      if (shown >= READER_SWIPE_HINT_LIMIT) return;
+      // The settings above the text, or another tab: wait for the text itself.
+      const { top, bottom } = element.getBoundingClientRect();
+      const middle = window.innerHeight / 2;
+      if (document.visibilityState !== "visible" || top > middle || bottom < middle) {
+        timer = setTimeout(offer, READER_SWIPE_HINT_DELAY_MS);
+        return;
+      }
       offered.current = true;
       writeSwipeHint(shown + 1);
       window.addEventListener("pointerdown", end, true);
@@ -216,12 +224,13 @@ export function useReaderSwipeHint(ready: boolean): ReaderSwipeHintState | null 
         frame = requestAnimationFrame(step);
       };
       frame = requestAnimationFrame(step);
-    }, READER_SWIPE_HINT_DELAY_MS);
+    };
+    timer = setTimeout(offer, READER_SWIPE_HINT_DELAY_MS);
     return () => {
       clearTimeout(timer);
       end();
     };
-  }, [ready]);
+  }, [element, ready]);
 
   return hint;
 }

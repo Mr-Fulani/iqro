@@ -9153,6 +9153,14 @@ html[data-word-selecting] .word-range-bar {
   touch-action: pan-y pinch-zoom;
 }
 
+/* The text pulled aside must not widen the page: a phone would lay the page
+   out wider, and what is fixed to the screen (the strip, the hint) would
+   slip aside. */
+html:has(.reader-swipe-surface),
+html:has(.reader-swipe-surface) body {
+  overflow-x: clip;
+}
+
 .reader-swipe-reveal {
   position: fixed;
   z-index: 40;
