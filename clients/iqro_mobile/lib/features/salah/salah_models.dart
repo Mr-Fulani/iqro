@@ -99,6 +99,17 @@ class SalahCourseDocument {
     final key = step.media;
     return key == null ? null : media[key];
   }
+
+  /// Practice is the prayer alone: a step's picture, recitation, formulas
+  /// and counter. A lesson that is only text («What is salah») has nothing
+  /// to practise, and its «Practice» tab showed the step titles alone.
+  bool hasPractice(SalahLesson lesson) => lesson.steps.any(
+    (step) =>
+        stepMedia(step) != null ||
+        step.audio != null ||
+        stepFormulas(step).isNotEmpty ||
+        (step.repeat ?? 1) > 1,
+  );
 }
 
 @immutable

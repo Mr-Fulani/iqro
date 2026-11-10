@@ -17,6 +17,7 @@ import 'package:iqro_mobile/features/courses/course_progress_store.dart';
 import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/salah/salah_3d.dart';
+import 'package:iqro_mobile/features/salah/salah_display.dart';
 import 'package:iqro_mobile/features/salah/salah_home_screen.dart';
 import 'package:iqro_mobile/features/salah/salah_lesson_screen.dart';
 import 'package:iqro_mobile/features/salah/salah_models.dart';
@@ -327,6 +328,30 @@ void main() {
     router.go('/salah/lesson/fajr/step/fajr.r1.fatiha');
     await tester.pumpAndSettle();
     expect(find.text('Шаг 2 из 5'), findsOneWidget);
+  });
+
+  testWidgets('a lesson with nothing to practise has no «Practice» tab', (
+    tester,
+  ) async {
+    await _pump(tester, location: '/salah/lesson/fajr');
+    expect(find.text('Практика'), findsOneWidget);
+
+    await _pump(tester, location: '/salah/lesson/what-is-salah');
+    expect(find.text('Обучение'), findsNothing);
+    expect(find.text('Практика'), findsNothing);
+
+    // Practice chosen in another lesson still shows this one's text.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    );
+    container.read(salahDisplayProvider.notifier).state = container
+        .read(salahDisplayProvider)
+        .copyWith(mode: SalahMode.practice);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('salah-instruction-what-is-salah.intro')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('swipes follow the reading direction', (tester) async {

@@ -45,7 +45,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   void _reload(AccountScopeSnapshot scope, AccountScopeKey key, String locale) {
     if (!_isCurrent(scope, key, locale)) return;
     final generation = ++_requestGeneration;
-    setState(() => _data = _load(scope, locale, generation));
+    setState(() {
+      _data = _load(scope, locale, generation);
+    });
   }
 
   bool _isCurrent(
@@ -150,9 +152,12 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                       )) {
                                         return;
                                       }
-                                      context.push(
+                                      _openAndReload(
                                         '/reader/${item['surah']}?ayah=${item['ayah']}'
                                         '&from=bookmark',
+                                        scope: boundScope,
+                                        key: boundKey,
+                                        locale: locale,
                                       );
                                     },
                                     child: ListTile(
@@ -182,9 +187,12 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                             )) {
                                               return;
                                             }
-                                            context.push(
+                                            _openAndReload(
                                               duaEntryRoute(entry),
                                               extra: entry,
+                                              scope: boundScope,
+                                              key: boundKey,
+                                              locale: locale,
                                             );
                                           }
                                         : null,
@@ -233,6 +241,19 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
         ),
       ),
     );
+  }
+
+  /// The reader and the dua page can add or remove favorites: the list is
+  /// read again on the way back, or it kept showing the old items.
+  Future<void> _openAndReload(
+    String route, {
+    required AccountScopeSnapshot scope,
+    required AccountScopeKey key,
+    required String locale,
+    Object? extra,
+  }) async {
+    await context.push<Object?>(route, extra: extra);
+    _reload(scope, key, locale);
   }
 
   Future<void> _removeUnavailableFavorite({

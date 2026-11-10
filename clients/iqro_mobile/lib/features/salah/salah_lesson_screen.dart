@@ -158,6 +158,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
   late AudioController _audio;
 
   List<SalahStep> get _steps => widget.lesson.steps;
+  bool get _hasPractice => widget.document.hasPractice(widget.lesson);
 
   @override
   void initState() {
@@ -300,10 +301,13 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
         top: false,
         child: Column(
           children: <Widget>[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: _ModeSwitch(),
-            ),
+            if (_hasPractice)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: _ModeSwitch(),
+              )
+            else
+              const SizedBox(height: 4),
             ValueListenableBuilder<int>(
               valueListenable: _pager.index,
               builder: (context, index, _) => _LessonHeader(
@@ -330,6 +334,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
                   step: _steps[index],
                   showMedia: index == 0,
                   showSources: index == _steps.length - 1,
+                  learnOnly: !_hasPractice,
                   audioOwner: _audioOwner,
                   visual: _StepVisualState(
                     index: index,
@@ -541,6 +546,7 @@ class _StepPage extends ConsumerWidget {
     required this.step,
     required this.showMedia,
     required this.showSources,
+    required this.learnOnly,
     required this.audioOwner,
     required this.visual,
     super.key,
@@ -557,12 +563,16 @@ class _StepPage extends ConsumerWidget {
 
   /// The last step ends with the lesson's «Sources», as on the site.
   final bool showSources;
+
+  /// A lesson with nothing to practise is always shown in «Learn».
+  final bool learnOnly;
   final Object audioOwner;
   final _StepVisualState visual;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final display = ref.watch(salahDisplayProvider);
+    final chosen = ref.watch(salahDisplayProvider);
+    final display = learnOnly ? chosen.copyWith(mode: SalahMode.learn) : chosen;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final media = document.stepMedia(step);

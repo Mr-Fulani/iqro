@@ -11,6 +11,7 @@ import { localizedPath } from "../lib/routing";
 import {
   formulaAudioRange,
   isSalahRuling,
+  lessonHasPractice,
   readSalahProgress,
   recordSalahStep,
   resumeStepIndex,
@@ -218,7 +219,9 @@ export function SalahStepPlayer({
   const step = steps[index]!;
   const scenes = useMemo(() => salahStepScenes(steps, media), [media, steps]);
   const three = useSalah3D(scenes[index] ?? null, scenes.some(Boolean), index);
-  const practice = display.mode === "practice";
+  // A lesson that is only text («What is salah») has nothing to practise: no switch, always «Learn».
+  const hasPractice = useMemo(() => lessonHasPractice(lesson, media), [lesson, media]);
+  const practice = hasPractice && display.mode === "practice";
   const isLast = index === steps.length - 1;
   const section = useRef<HTMLElement>(null);
 
@@ -455,19 +458,21 @@ export function SalahStepPlayer({
       data-testid="salah-player"
     >
       <div className="salah-player-toolbar">
-        <div className="salah-mode-switch" role="group" aria-label={t("salah.mode")}>
-          {(["learn", "practice"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={`btn btn-sm ${display.mode === mode ? "btn-primary" : "btn-secondary"}`}
-              aria-pressed={display.mode === mode}
-              onClick={() => updateDisplay({ mode })}
-            >
-              {mode === "learn" ? t("salah.modeLearn") : t("salah.modePractice")}
-            </button>
-          ))}
-        </div>
+        {hasPractice ? (
+          <div className="salah-mode-switch" role="group" aria-label={t("salah.mode")}>
+            {(["learn", "practice"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={`btn btn-sm ${display.mode === mode ? "btn-primary" : "btn-secondary"}`}
+                aria-pressed={display.mode === mode}
+                onClick={() => updateDisplay({ mode })}
+              >
+                {mode === "learn" ? t("salah.modeLearn") : t("salah.modePractice")}
+              </button>
+            ))}
+          </div>
+        ) : null}
         {!practice ? (
           <div className="salah-text-toggles">
             <label>

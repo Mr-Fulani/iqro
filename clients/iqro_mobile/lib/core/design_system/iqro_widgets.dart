@@ -282,6 +282,9 @@ class IqroStatusBanner extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Column(
+              // Centered on an empty screen (no notes yet) the banner stays
+              // a compact card instead of a block as tall as the screen.
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(title, style: Theme.of(context).textTheme.titleSmall),

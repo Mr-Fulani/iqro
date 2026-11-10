@@ -574,6 +574,21 @@ class PrayerRepository {
         : null;
   }
 
+  /// Today's times for the home screen. The stored schedule is yesterday's
+  /// on the first start of a new day (or after a reinstall restored the
+  /// data): the home sky then said «not calculated yet» until the prayer
+  /// screen was opened. Calculate it as that screen does, from the stored
+  /// place and method; without them there is nothing to show yet.
+  Future<PrayerSchedule?> today({AccountScopeSnapshot? accountScope}) async {
+    final scope = accountScope ?? await _database.captureAccount();
+    final cached = await cachedToday(accountScope: scope);
+    if (cached != null) return cached;
+    final method = await selectedMethod(accountScope: scope);
+    if (method == null) return null;
+    _database.ensureCurrent(scope);
+    return calculateForStoredLocation(method: method, accountScope: scope);
+  }
+
   Future<PrayerSchedule> calculateForCurrentLocation({
     required PrayerMethod method,
     AccountScopeSnapshot? accountScope,

@@ -244,6 +244,17 @@ test("formula cards play audio, count repetitions and switch text and modes", as
   await expect(page.getByRole("button", { name: "Практика" })).toHaveAttribute("aria-pressed", "true");
 });
 
+test("a lesson that is only text has no «Practice» switch, even after practice elsewhere", async ({ page }) => {
+  await openLesson(page, "/ru/salah/fajr");
+  await page.getByRole("button", { name: "Практика" }).click();
+  await expect(page.getByRole("button", { name: "Практика" })).toHaveAttribute("aria-pressed", "true");
+
+  await openLesson(page, "/ru/salah/what-is-salah");
+  await expect(page.getByRole("button", { name: "Практика" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Обучение" })).toHaveCount(0);
+  await expect(page.locator(".salah-step:not([hidden]) .salah-instruction")).toBeVisible();
+});
+
 test("step notes open from «?» and «!» and close with Escape, a click outside or another step", async ({ page }) => {
   await openLesson(page, "/ru/salah/fajr#fajr.r1.ruku");
   const step = page.locator(".salah-step:not([hidden])");

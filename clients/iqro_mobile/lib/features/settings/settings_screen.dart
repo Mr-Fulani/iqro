@@ -48,29 +48,9 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             IqroCard(
               padding: const EdgeInsets.all(10),
-              child: SegmentedButton<ThemeMode>(
-                segments: <ButtonSegment<ThemeMode>>[
-                  ButtonSegment(
-                    value: ThemeMode.system,
-                    icon: const Icon(Icons.brightness_auto_outlined),
-                    label: Text(context.l10n.systemTheme),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.light,
-                    icon: const Icon(Icons.light_mode_outlined),
-                    label: Text(context.l10n.lightTheme),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.dark,
-                    icon: const Icon(Icons.dark_mode_outlined),
-                    label: Text(context.l10n.darkTheme),
-                  ),
-                ],
-                selected: <ThemeMode>{preferences.themeMode},
-                showSelectedIcon: false,
-                onSelectionChanged: (value) => ref
-                    .read(appPreferencesProvider.notifier)
-                    .setTheme(value.first),
+              child: _ThemeModeSwitch(
+                mode: preferences.themeMode,
+                onChanged: ref.read(appPreferencesProvider.notifier).setTheme,
               ),
             ),
             const SizedBox(height: 22),
@@ -84,14 +64,21 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               child: Column(
                 children: <Widget>[
-                  SwitchListTile.adaptive(
-                    secondary: const Icon(Icons.vibration_rounded),
-                    title: Text(context.l10n.readerHaptics),
-                    subtitle: Text(context.l10n.readerHapticsHint),
-                    value: preferences.readerHaptics,
-                    onChanged: ref
+                  // The same row as the others in this card, with a switch.
+                  IqroListTile(
+                    key: const Key('settings-reader-haptics'),
+                    icon: Icons.vibration_rounded,
+                    title: context.l10n.readerHaptics,
+                    subtitle: context.l10n.readerHapticsHint,
+                    trailing: Switch.adaptive(
+                      value: preferences.readerHaptics,
+                      onChanged: ref
+                          .read(appPreferencesProvider.notifier)
+                          .setReaderHaptics,
+                    ),
+                    onTap: () => ref
                         .read(appPreferencesProvider.notifier)
-                        .setReaderHaptics,
+                        .setReaderHaptics(!preferences.readerHaptics),
                   ),
                   const Divider(height: 1),
                   IqroListTile(
@@ -164,6 +151,69 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// System, light, dark. The icons go when a label would not fit beside its
+/// icon on one line: «Системная» broke into «Системн / ая» on a phone.
+class _ThemeModeSwitch extends StatelessWidget {
+  const _ThemeModeSwitch({required this.mode, required this.onChanged});
+
+  final ThemeMode mode;
+  final ValueChanged<ThemeMode> onChanged;
+
+  // The Material 3 segment: 12 dp padding on each side, an 18 dp icon and
+  // an 8 dp gap before the label, a 1 dp border.
+  static const _segmentPadding = 24.0 + 2;
+  static const _iconSpace = 18.0 + 8;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final options = <(ThemeMode, IconData, String)>[
+      (ThemeMode.system, Icons.brightness_auto_outlined, l10n.systemTheme),
+      (ThemeMode.light, Icons.light_mode_outlined, l10n.lightTheme),
+      (ThemeMode.dark, Icons.dark_mode_outlined, l10n.darkTheme),
+    ];
+    final style = Theme.of(context).textTheme.labelLarge;
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final room = constraints.maxWidth / options.length - _segmentPadding;
+        final withIcons = options.every((option) {
+          final painter = TextPainter(
+            text: TextSpan(text: option.$3, style: style),
+            textScaler: scaler,
+            textDirection: direction,
+            maxLines: 1,
+          )..layout();
+          final fits = painter.width + _iconSpace <= room;
+          painter.dispose();
+          return fits;
+        });
+        // Full width as before, with or without the icons.
+        final button = SegmentedButton<ThemeMode>(
+          key: const Key('settings-theme'),
+          segments: <ButtonSegment<ThemeMode>>[
+            for (final (value, icon, label) in options)
+              ButtonSegment(
+                value: value,
+                icon: withIcons ? Icon(icon) : null,
+                tooltip: withIcons ? null : label,
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(label, maxLines: 1, softWrap: false),
+                ),
+              ),
+          ],
+          selected: <ThemeMode>{mode},
+          showSelectedIcon: false,
+          onSelectionChanged: (value) => onChanged(value.first),
+        );
+        return SizedBox(width: double.infinity, child: button);
+      },
     );
   }
 }

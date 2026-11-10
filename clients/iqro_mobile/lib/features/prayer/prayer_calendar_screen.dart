@@ -98,7 +98,7 @@ class _PrayerCalendarScreenState extends ConsumerState<PrayerCalendarScreen> {
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: _schedules.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) => _PrayerCalendarDay(
+                  itemBuilder: (context, index) => PrayerCalendarDay(
                     schedule: _schedules[index],
                     locale: locale,
                   ),
@@ -159,8 +159,12 @@ class _PrayerCalendarScreenState extends ConsumerState<PrayerCalendarScreen> {
   }
 }
 
-class _PrayerCalendarDay extends StatelessWidget {
-  const _PrayerCalendarDay({required this.schedule, required this.locale});
+class PrayerCalendarDay extends StatelessWidget {
+  const PrayerCalendarDay({
+    required this.schedule,
+    required this.locale,
+    super.key,
+  });
 
   final PrayerSchedule schedule;
   final String locale;
@@ -195,34 +199,42 @@ class _PrayerCalendarDay extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: <Widget>[
-                for (final code in _calendarPrayerCodes)
-                  SizedBox(
-                    width: 76,
+          // All six times share the card's width: a phone showed only four
+          // and nobody guessed the row scrolled sideways. A long name or a
+          // large font scales down instead of being cut off.
+          Row(
+            children: <Widget>[
+              for (final code in _calendarPrayerCodes)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      key: ValueKey<String>('prayer-calendar-$code'),
                       children: <Widget>[
-                        Text(
-                          _calendarPrayerName(context, code),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _calendarPrayerName(context, code),
+                            maxLines: 1,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                         ),
                         const SizedBox(height: 3),
-                        Text(
-                          schedule.times[code] == null
-                              ? '—'
-                              : DateFormat.Hm().format(schedule.times[code]!),
-                          style: Theme.of(context).textTheme.titleMedium,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            schedule.times[code] == null
+                                ? '—'
+                                : DateFormat.Hm().format(schedule.times[code]!),
+                            maxLines: 1,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                         ),
                       ],
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ],
       ),
