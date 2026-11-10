@@ -17,8 +17,8 @@ export default function GlobalError({
     <html lang="ru">
       <body style={{ margin: 0, background: "#f4f7f6", color: "#17211e", fontFamily: "system-ui, sans-serif" }}>
         <main style={{ width: "min(680px, calc(100% - 32px))", margin: "10vh auto", padding: 32, border: "1px solid #d8e2de", borderRadius: 20, background: "#fff" }}>
-          <title>Ошибка загрузки | Quran Platform</title>
-          <p style={{ color: "#047857", fontWeight: 800 }}>Quran Platform</p>
+          <title>Ошибка загрузки | IQRO</title>
+          <p style={{ color: "#047857", fontWeight: 800 }}>IQRO</p>
           <h1>Не удалось загрузить приложение</h1>
           <p>Произошла временная ошибка. Повторите запрос.</p>
           {error.digest && <p style={{ color: "#64748b", fontSize: 13 }}>ID: {error.digest}</p>}

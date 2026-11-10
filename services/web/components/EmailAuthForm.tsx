@@ -68,7 +68,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
     <div className="surface" style={{ maxWidth: 540, margin: "24px auto" }}>
       <div className="surface-head" style={{ marginBottom: 16 }}>
         <div>
-          <p className="eyebrow">Quran Platform Auth</p>
+          <p className="eyebrow">IQRO</p>
           <h1 className="surface-title">{title}</h1>
         </div>
       </div>

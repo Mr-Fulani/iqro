@@ -757,7 +757,10 @@ class _AsyncDuaEntries extends StatelessWidget {
                       bottom: 10,
                     ),
                     child: Text(
-                      entry.categoryTitle,
+                      duaDisplayTitle(
+                        entry.categoryTitle,
+                        Localizations.localeOf(context).languageCode,
+                      ),
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
@@ -1431,7 +1434,8 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
         await controller.loadStandalone(
           id: id,
           url: asset.url,
-          title: '${entry.categoryTitle} · #${entry.sourceNumber}',
+          title:
+              '${duaDisplayTitle(entry.categoryTitle, locale)} · #${entry.sourceNumber}',
           album: album,
           contentType: 'dua',
           artist: _duaAudioReader(asset, locale),

@@ -92,7 +92,7 @@ test("course and lesson pages render on the server and unknown lessons are 404",
   const lesson = await request.get("/ru/tajweed/idgham-without-ghunnah");
   expect(lesson.ok()).toBe(true);
   const html = await lesson.text();
-  expect(html).toContain("· Таджвид | Quran Platform</title>");
+  expect(html).toContain("· Таджвид | IQRO</title>");
   expect(html).toContain("Как читать");
   expect(html).toContain("الإدغام بغير غنة");
   expect(html).not.toContain("noindex");

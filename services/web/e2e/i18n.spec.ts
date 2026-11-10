@@ -69,7 +69,7 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expect(page).toHaveURL("/en/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-  await expect(page).toHaveTitle("Account sign-in | Quran Platform");
+  await expect(page).toHaveTitle("Account sign-in | IQRO");
   await expect(page.getByRole("heading", { name: "Account sign-in" })).toBeVisible();
   await expectHeaderWithoutOverlap(page);
 
@@ -81,7 +81,7 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expect(page).toHaveURL("/ar/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page).toHaveTitle("تسجيل الدخول | Quran Platform");
+  await expect(page).toHaveTitle("تسجيل الدخول | IQRO");
   await expect(page.getByRole("heading", { name: "تسجيل الدخول" })).toBeVisible();
   await expectHeaderWithoutOverlap(page);
 
@@ -225,7 +225,7 @@ test("a dua is shared as the app's picture through Web Share", async ({ page }) 
   // the page, in its title and on the card alike.
   const chapter = "Слова поминания при пробуждении ото сна";
   const title = `${chapter} · #1`;
-  await expect(page).toHaveTitle(`${title} | Quran Platform`);
+  await expect(page).toHaveTitle(`${title} | IQRO`);
   await expect(page.getByRole("heading", { level: 1, name: chapter, exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Поделиться ду’а", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Поделиться ду’а" });

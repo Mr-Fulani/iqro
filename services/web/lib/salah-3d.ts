@@ -64,6 +64,9 @@ export function nextSalahSceneSpeed(speed: SalahSceneSpeed): SalahSceneSpeed {
  * The scene on the current step plays its pose once and holds the last frame. `run` changes
  * whenever the pose should play from its start: on every new step and on «Replay».
  */
+/** One press of a turn button, in radians: an eighth of a full turn. */
+export const SALAH_SCENE_TURN = Math.PI / 4;
+
 export type SalahScenePlayback = { playing: boolean; ended: boolean; run: number };
 export type SalahScenePlaybackEvent = "step" | "replay" | "toggle" | "ended";
 

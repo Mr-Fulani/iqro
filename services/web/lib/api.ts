@@ -1,5 +1,5 @@
 /**
- * Quran Platform - Typed API Client
+ * IQRO - Typed API Client
  * Compatible with Django backend specification and DRF serializers.
  */
 

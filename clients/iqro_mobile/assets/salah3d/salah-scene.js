@@ -1637,6 +1637,8 @@
       pause: function () { frozen = true; },
       setSpeed: function (v) { opts.speed = +v || 1; },
       resetCamera: function () { onDbl(); },
+      // a button's turn: the same as dragging the figure sideways
+      turn: function (angle) { CAM.az += angle; lastInteract = performance.now(); manualUntil = lastInteract + 8000; kick(); },
       setCamera: function (o) { manualUntil = Infinity; for (var k in o) { CAM[k] = o[k]; cur[k] = o[k]; } curT.copy(CAM.target); renderOnce(); },
       renderPose: function (name) { frozen = true; showProps(name.indexOf('wudu') === 0, /^wudu(Hands|Take|Arm)/.test(name)); rig.apply(getPose(name, rig)); updateShadows(); placeCamera(); SHARED.uLight.value.copy(lightW).transformDirection(camera.matrixWorldInverse); draw(); return rig.J; },
       joints: rig.J,

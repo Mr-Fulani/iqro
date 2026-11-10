@@ -6,7 +6,7 @@
      {"type":"ENDED"}                       the step's movement has played and holds its last frame
      {"type":"ERROR","code":"NO_WEBGL" | "SCRIPTS_NOT_LOADED" | "MOUNT_FAILED" | "CONTEXT_LOST"}
    App -> page: salah.show(pose, speed, view), salah.play(), salah.pause(), salah.replay(),
-   salah.setSpeed(0.5|0.75|1), salah.resetCamera(), salah.dispose(). The full view plays the
+   salah.setSpeed(0.5|0.75|1), salah.resetCamera(), salah.turn(radians), salah.dispose(). The full view plays the
    pose's movement once (play() does not restart it, replay() does); the hand and back views
    loop their own short cycle. */
 (function () {
@@ -43,6 +43,7 @@
     replay: function () { call('replay'); },
     setSpeed: function (v) { call('setSpeed', [0.5, 0.75, 1].indexOf(v) >= 0 ? v : 1); },
     resetCamera: function () { call('resetCamera'); },
+    turn: function (angle) { call('turn', +angle || 0); },
     dispose: function () { var s = scene; scene = null; if (s) s.dispose(); }
   };
   send({ type: 'LOADED' });
