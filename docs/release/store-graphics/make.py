@@ -2,7 +2,8 @@
 
     python3 docs/release/store-graphics/make.py
 
-The screens in src/ come from the app's screenshot tests (run from clients/iqro_mobile):
+mushaf, audio and prayer in src/ are screenshots of the test app on a phone, status bar cut off.
+home, courses and more come from the app's screenshot tests (run from clients/iqro_mobile):
   flutter test test/features/home_screenshots_test.dart --plain-name "store:" --dart-define=SCREENSHOT_DIR=…
   flutter test test/features/course_screenshots_test.dart --plain-name "catalog with the site covers" --dart-define=SCREENSHOT_DIR=…
 """
@@ -16,10 +17,38 @@ HERE = Path(__file__).resolve().parent
 SEAL = HERE.parents[2] / "services/web/public/iqro-wax-seal.png"
 
 CAPTIONS = {
-    "ru": ("Время намаза и чтение на сегодня", "Курсы: намаз и таджвид по шагам", "Всё для ежедневной практики"),
-    "en": ("Prayer times and today’s reading", "Courses: prayer and tajweed step by step", "Everything for daily practice"),
-    "ar": ("مواقيت الصلاة وورد اليوم", "دورات: الصلاة والتجويد خطوة بخطوة", "كل ما تحتاجه لعبادتك اليومية"),
-    "tr": ("Namaz vakitleri ve günün okuması", "Kurslar: adım adım namaz ve tecvid", "Günlük ibadet için her şey"),
+    "ru": (
+        "Время намаза и чтение на сегодня",
+        "Мусхаф с цветами таджвида",
+        "Известные чтецы и весь Коран подряд",
+        "Время намаза по вашему городу",
+        "Курсы: намаз и таджвид по шагам",
+        "Всё для ежедневной практики",
+    ),
+    "en": (
+        "Prayer times and today’s reading",
+        "Mushaf with tajweed colours",
+        "Renowned reciters and the whole Quran",
+        "Prayer times for your city",
+        "Courses: prayer and tajweed step by step",
+        "Everything for daily practice",
+    ),
+    "ar": (
+        "مواقيت الصلاة وورد اليوم",
+        "مصحف بألوان التجويد",
+        "قرّاء مشهورون والقرآن كاملًا",
+        "مواقيت الصلاة لمدينتك",
+        "دورات: الصلاة والتجويد خطوة بخطوة",
+        "كل ما تحتاجه لعبادتك اليومية",
+    ),
+    "tr": (
+        "Namaz vakitleri ve günün okuması",
+        "Tecvid renkli Mushaf",
+        "Tanınmış kâriler ve Kur’an’ın tamamı",
+        "Şehrinize göre namaz vakitleri",
+        "Kurslar: adım adım namaz ve tecvid",
+        "Günlük ibadet için her şey",
+    ),
 }
 TAGLINES = {
     "ru": "Коран, аудио и намаз",
@@ -27,7 +56,7 @@ TAGLINES = {
     "ar": "القرآن والتلاوة والصلاة",
     "tr": "Kur’an, ses ve namaz",
 }
-SCREENS = ("home", "courses", "more")
+SCREENS = ("home", "mushaf", "audio", "prayer", "courses", "more")
 FONT = '-apple-system, "SF Pro Display", "SF Arabic", "Geeza Pro", "Helvetica Neue", Arial, sans-serif'
 
 
