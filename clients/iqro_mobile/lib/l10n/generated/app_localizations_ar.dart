@@ -521,6 +521,31 @@ class AppLocalizationsAr extends AppLocalizations {
   String get rubElHizb => 'ربع الحزب';
 
   @override
+  String rubMarkJuz(String number) {
+    return 'الجزء $number';
+  }
+
+  @override
+  String rubMarkHizb(String number) {
+    return 'الحزب $number';
+  }
+
+  @override
+  String rubMarkQuarter(String number) {
+    return 'ربع الحزب $number';
+  }
+
+  @override
+  String rubMarkHalf(String number) {
+    return 'نصف الحزب $number';
+  }
+
+  @override
+  String rubMarkThreeQuarters(String number) {
+    return 'ثلاثة أرباع الحزب $number';
+  }
+
+  @override
   String get page => 'الصفحة';
 
   @override

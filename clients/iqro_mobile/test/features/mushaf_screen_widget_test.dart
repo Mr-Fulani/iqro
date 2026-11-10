@@ -23,8 +23,10 @@ import 'package:iqro_mobile/features/quran/mushaf_edition.dart';
 import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 import 'package:iqro_mobile/features/quran/mushaf_reciter_sheet.dart';
 import 'package:iqro_mobile/features/quran/mushaf_screen.dart';
+import 'package:iqro_mobile/features/quran/native_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
+import 'package:iqro_mobile/features/quran/rub_mark.dart';
 import 'package:iqro_mobile/features/tajweed/tajweed_models.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
@@ -92,6 +94,61 @@ void main() {
     for (var page = current - 2; page <= current + 2; page++) {
       expect(pageBuilds[page], 1, reason: 'page $page was rebuilt');
     }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a turned page announces the quarter of a hizb that starts '
+      'on it and highlights its first ayah', (tester) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async => null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    // Every test page holds 5:84 and 5:85; a quarter starts at 5:85.
+    await _pump(tester, rubs: const <QuranDivision>[_rub51]);
+    await tester.pump(const Duration(milliseconds: 100));
+    QuranAyahReference? selected() => tester
+        .widget<NativeMushafPage>(find.byType(NativeMushafPage).first)
+        .selectedAyah;
+    Future<void> turn(Offset by) async {
+      await tester.fling(find.byType(PageView), by, 1500);
+      for (var frame = 0; frame < 20; frame++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    double toastOpacity() => tester
+        .widget<AnimatedOpacity>(
+          find
+              .ancestor(
+                of: find.byKey(const ValueKey('rub-mark-toast')),
+                matching: find.byType(AnimatedOpacity),
+              )
+              .first,
+        )
+        .opacity;
+
+    // Opening the Mushaf announces nothing.
+    expect(find.byKey(const ValueKey('rub-mark-toast')), findsNothing);
+
+    await turn(const Offset(300, 0));
+    expect(find.text('½ Хизб 13'), findsOneWidget);
+    expect(selected(), const QuranAyahReference(id: '', surah: 5, ayah: 85));
+
+    await tester.pump(rubMarkDuration);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(toastOpacity(), 0);
+    expect(selected(), isNull);
+
+    // Back over the same quarter: it is not announced twice in a row.
+    await turn(const Offset(-300, 0));
+    expect(toastOpacity(), 0);
+    expect(selected(), isNull);
     expect(tester.takeException(), isNull);
   });
 
@@ -636,6 +693,7 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   bool savesReadingPlace = true,
   bool tajweed = false,
   bool pageNames = false,
+  List<QuranDivision> rubs = const <QuranDivision>[],
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(360, 800);
@@ -710,6 +768,7 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
           (ref) async =>
               pageNames ? const <QuranDivision>[_juz7] : <QuranDivision>[],
         ),
+        quranRubElHizbProvider.overrideWith((ref) async => rubs),
         audioRepositoryProvider.overrideWithValue(audio),
         audioControllerProvider.overrideWith((ref) => controller),
         recitersProvider.overrideWith((ref) async => <Reciter>[_reciter]),
@@ -742,6 +801,16 @@ const _maida = Surah(
   nameRu: 'Аль-Маида',
   ayahCount: 120,
   revelationType: 'medinan',
+);
+
+const _rub51 = QuranDivision(
+  number: 51,
+  startAyah: QuranAyahReference(id: '', surah: 5, ayah: 85),
+  endAyah: QuranAyahReference(id: '', surah: 5, ayah: 108),
+  startPage: 122,
+  endPage: 124,
+  hizbNumber: 13,
+  quarterNumber: 3,
 );
 
 const _juz7 = QuranDivision(

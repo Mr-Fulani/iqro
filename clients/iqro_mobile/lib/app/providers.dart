@@ -680,6 +680,11 @@ final quranJuzProvider = FutureProvider<List<QuranDivision>>((ref) {
   return ref.watch(quranRepositoryProvider).juz();
 });
 
+/// The 240 quarters of a hizb, whose starts the readers announce.
+final quranRubElHizbProvider = FutureProvider<List<QuranDivision>>((ref) {
+  return ref.watch(quranRepositoryProvider).rubElHizb();
+});
+
 /// Published catalog of Mushaf editions. A fresh local copy (under an hour
 /// old) answers without the network; only a missing or expired copy triggers
 /// a request, during which [cachedMushafRenditionsProvider] keeps the screen
