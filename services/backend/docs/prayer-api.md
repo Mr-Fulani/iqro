@@ -38,7 +38,8 @@ high-latitude/polar правила, поправок или одной из оп
 - `GET /api/v1/prayer/methods` — опубликованный каталог методов;
 - `POST /api/v1/prayer/calculate` — расписание на один день.
 
-Полный машинный контракт публикуется в OpenAPI по `/api/schema`.
+Полный машинный контракт публикуется в OpenAPI по `/api/schema` (локально; в production адрес
+закрыт, см. `DJANGO_API_DOCS_ENABLED` в README бэкенда).
 
 ### Каталог методов
 

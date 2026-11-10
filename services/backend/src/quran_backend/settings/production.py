@@ -23,6 +23,9 @@ if DATABASES["default"]["CONN_MAX_AGE"] != 0:
         "DATABASE_CONN_MAX_AGE must be 0 because the production backend runs under ASGI"
     )
 
+# The API description is for development: closed to the public unless asked for.
+API_DOCS_ENABLED = env_bool("DJANGO_API_DOCS_ENABLED", False)
+
 SECRET_KEY = required_env("DJANGO_SECRET_KEY")
 QURAN_INSTALLATION_HASH_KEY = required_env("QURAN_INSTALLATION_HASH_KEY")
 QURAN_GUEST_CREDENTIAL_HASH_KEY = required_env("QURAN_GUEST_CREDENTIAL_HASH_KEY")

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from functools import wraps
+from typing import Any
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import Http404, HttpRequest
+from django.http.response import HttpResponseBase
 from django.urls import include, path
 from django.views.decorators.cache import cache_page
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -10,6 +16,19 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from quran_backend.admin_localization import configure_russian_admin
 
 configure_russian_admin()
+
+
+def docs_only(view: Callable[..., HttpResponseBase]) -> Callable[..., HttpResponseBase]:
+    """The schema and Swagger exist only where API_DOCS_ENABLED is on."""
+
+    @wraps(view)
+    def guarded(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
+        if not settings.API_DOCS_ENABLED:
+            raise Http404
+        return view(request, *args, **kwargs)
+
+    return guarded
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -40,14 +59,16 @@ urlpatterns = [
     path("api/v1/", include("quran_backend.modules.courses.urls")),
     path(
         "api/schema",
-        cache_page(settings.OPENAPI_SCHEMA_CACHE_SECONDS)(SpectacularAPIView.as_view())
-        if settings.OPENAPI_SCHEMA_CACHE_SECONDS
-        else SpectacularAPIView.as_view(),
+        docs_only(
+            cache_page(settings.OPENAPI_SCHEMA_CACHE_SECONDS)(SpectacularAPIView.as_view())
+            if settings.OPENAPI_SCHEMA_CACHE_SECONDS
+            else SpectacularAPIView.as_view()
+        ),
         name="openapi-schema",
     ),
     path(
         "api/docs",
-        SpectacularSwaggerView.as_view(url_name="openapi-schema"),
+        docs_only(SpectacularSwaggerView.as_view(url_name="openapi-schema")),
         name="swagger-ui",
     ),
 ]

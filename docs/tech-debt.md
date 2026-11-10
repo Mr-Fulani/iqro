@@ -125,8 +125,9 @@ Threads [@iqro.forum](https://www.threads.net/@iqro.forum).
 - Кэшировать `/_next/static` на gateway.
 - Метрики nginx и Next.
 - Сжимать записи web-кэша в Redis и добавить `limit_conn` на gateway (аудит 1.1, 1.4).
-- Закрыть `/api/schema` и `/api/docs` в production (аудит 2.5): сейчас они кэшируются, но
-  открыты всем.
+- Закрыто 11.11.2026 (вступит в силу после выкладки): `/api/schema` и `/api/docs` в production
+  и на staging отвечают 404 (аудит 2.5). Открыть на время можно переменной
+  `DJANGO_API_DOCS_ENABLED=true`.
 
 ### API (аудит 2.2–2.5)
 

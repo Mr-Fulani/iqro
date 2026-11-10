@@ -627,6 +627,8 @@ FEEDBACK_MAX_MESSAGES_PER_TICKET = int(os.getenv("QURAN_FEEDBACK_MAX_MESSAGES_PE
 # The schema is public and takes 0.3-0.8 s of CPU to generate (about 300 KB);
 # it only changes with a deploy. Local settings turn the cache off.
 OPENAPI_SCHEMA_CACHE_SECONDS = non_negative_env_int("OPENAPI_SCHEMA_CACHE_SECONDS", 3600)
+# /api/schema and /api/docs answer 404 when off; production turns them off by default.
+API_DOCS_ENABLED = env_bool("DJANGO_API_DOCS_ENABLED", True)
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Quran Platform API",
