@@ -27,6 +27,8 @@ import {
 } from "../lib/salah";
 import { salahStepScenes } from "../lib/salah-3d";
 import { trackEvent } from "../lib/analytics";
+import { trackCourseEvent } from "../lib/course-feedback";
+import { useLessonOpened } from "./courses/useLessonOpened";
 import { type Salah3D, useSalah3D } from "./SalahStep3D";
 import { SalahStepNotes } from "./SalahStepNotes";
 import { StepNav } from "./StepNav";
@@ -224,6 +226,7 @@ export function SalahStepPlayer({
   const practice = hasPractice && display.mode === "practice";
   const isLast = index === steps.length - 1;
   const section = useRef<HTMLElement>(null);
+  useLessonOpened(SALAH_COURSE_SLUG, lesson.slug);
 
   // Open on the linked step, else where the visitor left off.
   useEffect(() => {
@@ -306,7 +309,12 @@ export function SalahStepPlayer({
   }, []);
 
   const finish = () => {
-    writeSalahProgress(recordSalahStep(readSalahProgress(), lesson.slug, step.slug, courseVersion, { completed: true }));
+    const progress = readSalahProgress();
+    // Counted when the lesson is not yet completed on this device, as in a thematic course.
+    if (progress.lessons[lesson.slug]?.status !== "completed") {
+      trackCourseEvent({ course: SALAH_COURSE_SLUG, lesson: lesson.slug, event: "lesson_completed" });
+    }
+    writeSalahProgress(recordSalahStep(progress, lesson.slug, step.slug, courseVersion, { completed: true }));
     setCompleted(true);
     trackEvent("lesson_complete", { course: "salah", lesson: lesson.slug });
   };

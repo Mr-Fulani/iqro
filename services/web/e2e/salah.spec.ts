@@ -18,6 +18,13 @@ async function openLesson(page: Page, path: string) {
   await expect(page.getByTestId("salah-player")).toHaveAttribute("aria-busy", "false");
 }
 
+/** The counters of «Статистика курсов» queued on this page view, sent when the page is left. */
+async function sentCourseEvents(page: Page) {
+  const request = page.waitForRequest((item) => item.url().endsWith("/api/v1/courses/events") && item.method() === "POST");
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
+  return ((await request).postDataJSON() as { events: { course: string; lesson: string; event: string }[] }).events;
+}
+
 async function storedProgress(page: Page) {
   return page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) || "null"), progressKey);
 }
@@ -390,6 +397,11 @@ test("progress resumes the lesson, restarts a missing step and keeps completion"
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Урок пройден" })).toBeVisible();
   expect((await storedProgress(page)).lessons.fajr.status).toBe("completed");
+  // Opening and finishing are counted like a thematic course's (docs/courses/README.md, «События статистики»).
+  expect(await sentCourseEvents(page)).toEqual([
+    { course: "hanbali-umdah", lesson: "fajr", event: "lesson_opened" },
+    { course: "hanbali-umdah", lesson: "fajr", event: "lesson_completed" },
+  ]);
 
   await openLesson(page, "/ru/salah/fajr");
   await expect(counter(page)).toHaveText("Шаг 1 из 5 · Ракаат 1");

@@ -19,7 +19,7 @@
       <tbody>
       {% for row in report.rows %}
         <tr>
-          <td><a href="{{ row.url }}?days={{ report.days }}">{{ row.course }}</a>{% if row.course.hidden_at %} <span class="ca-quiet">(скрыт)</span>{% elif not row.course.live_release_id %} <span class="ca-quiet">(не опубликован)</span>{% endif %}</td>
+          <td><a href="{{ row.url }}?days={{ report.days }}">{{ row.title }}</a>{% if row.course.hidden_at %} <span class="ca-quiet">(скрыт)</span>{% elif row.course and not row.course.live_release_id %} <span class="ca-quiet">(не опубликован)</span>{% endif %}</td>
           <td class="num">{{ row.opened }}</td>
           <td class="num">{{ row.completed }}</td>
           <td class="num">{{ row.started }}</td>

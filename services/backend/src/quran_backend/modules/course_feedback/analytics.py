@@ -14,7 +14,11 @@ from quran_backend.modules.course_feedback.models import (
     CourseRating,
     CourseStatEvent,
 )
-from quran_backend.modules.courses.models import COURSE_LANGUAGES, Course
+from quran_backend.modules.course_feedback.services import (
+    builtin_snapshot_lessons,
+    live_builtin_versions,
+)
+from quran_backend.modules.courses.models import COURSE_LANGUAGES, BuiltInCourse, Course
 from quran_backend.modules.feedback.models import FeedbackTicket
 
 PERIODS = (7, 30, 90)
@@ -55,9 +59,35 @@ def course_lessons(course: Course) -> list[dict[str, str]]:
     return [{"slug": lesson.slug, "title": str(lesson)} for lesson in course.lessons.all()]
 
 
-def course_report(course: Course, days: int, today: date | None = None) -> dict[str, Any]:
+def builtin_lessons(kind: str) -> list[dict[str, str]]:
+    """Lessons of the published prayer or tajweed course, in its own order."""
+    lessons: dict[str, dict[str, str]] = {}
+    for _slug, version_id in live_builtin_versions(kind):
+        for lesson in builtin_snapshot_lessons(kind, version_id):
+            slug = lesson["slug"]
+            lessons.setdefault(slug, {"slug": slug, "title": lesson["title"].get("ru") or slug})
+    return list(lessons.values())
+
+
+def builtin_slugs(kind: str) -> list[str]:
+    """The slugs the clients send for the prayer or the tajweed course."""
+    return [slug for slug, _version in live_builtin_versions(kind)]
+
+
+def course_report(course: Course | str, days: int, today: date | None = None) -> dict[str, Any]:
+    """The report of a course of the catalog, or of a built-in one by its BuiltInCourse value."""
     start = since(days, today)
-    stats = CourseDailyStat.objects.filter(course=course, date__gte=start)
+    if isinstance(course, str):
+        stats = CourseDailyStat.objects.filter(builtin=course, date__gte=start)
+        lessons = builtin_lessons(course)
+        slugs = builtin_slugs(course)
+        # The built-in courses have no rating form.
+        rated = None
+    else:
+        stats = CourseDailyStat.objects.filter(course=course, date__gte=start)
+        lessons = course_lessons(course)
+        slugs = [course.slug]
+        rated = ratings(course, start)
     counts: dict[tuple[str, str], int] = {}
     platforms: dict[str, dict[str, int]] = {}
     for row in stats.values("lesson", "platform", "event").annotate(total=Sum("count")):
@@ -66,7 +96,6 @@ def course_report(course: Course, days: int, today: date | None = None) -> dict[
         by_platform = platforms.setdefault(row["platform"], {})
         by_platform[row["event"]] = by_platform.get(row["event"], 0) + row["total"]
 
-    lessons = course_lessons(course)
     known = {lesson["slug"] for lesson in lessons}
     removed = sorted({lesson for lesson, _event in counts} - known)
     lessons += [{"slug": slug, "title": f"{slug} (темы нет в курсе)"} for slug in removed]
@@ -129,9 +158,9 @@ def course_report(course: Course, days: int, today: date | None = None) -> dict[
             }
             for platform, values in sorted(platforms.items())
         ],
-        "ratings": ratings(course, start),
+        "ratings": rated,
         "reports": FeedbackTicket.objects.filter(
-            context__course_slug=course.slug, created_at__date__gte=start
+            context__course_slug__in=slugs, created_at__date__gte=start
         ).count(),
     }
 
@@ -192,20 +221,24 @@ def summary(days: int, today: date | None = None) -> dict[str, Any]:
     """Every course in one table: how far students get, how they rate it, what they report."""
     start = since(days, today)
     courses = list(Course.objects.select_related("live_release").prefetch_related("lessons"))
-    lessons = {course.pk: course_lessons(course) for course in courses}
+    lessons: dict[Any, list[dict[str, str]]] = {
+        **{kind: builtin_lessons(kind) for kind in BuiltInCourse.values},
+        **{course.pk: course_lessons(course) for course in courses},
+    }
     events: dict[Any, dict[str, int]] = {}
     first_last: dict[Any, dict[str, int]] = {}
     for row in (
         CourseDailyStat.objects.filter(date__gte=start)
-        .values("course_id", "lesson", "event")
+        .values("course_id", "builtin", "lesson", "event")
         .annotate(total=Sum("count"))
     ):
-        totals = events.setdefault(row["course_id"], {})
+        key = row["course_id"] or row["builtin"]
+        totals = events.setdefault(key, {})
         totals[row["event"]] = totals.get(row["event"], 0) + row["total"]
-        slugs = [lesson["slug"] for lesson in lessons.get(row["course_id"], [])]
+        slugs = [lesson["slug"] for lesson in lessons.get(key, [])]
         if not slugs:
             continue
-        edges = first_last.setdefault(row["course_id"], {"started": 0, "finished": 0})
+        edges = first_last.setdefault(key, {"started": 0, "finished": 0})
         if row["lesson"] == slugs[0] and row["event"] == CourseStatEvent.LESSON_OPENED:
             edges["started"] += row["total"]
         if row["lesson"] == slugs[-1] and row["event"] == CourseStatEvent.LESSON_COMPLETED:
@@ -223,15 +256,23 @@ def summary(days: int, today: date | None = None) -> dict[str, Any]:
         .annotate(total=Count("id"))
         .values_list("context__course_slug", "total")
     )
+    # The prayer and the tajweed course first, then the catalog.
+    entries: list[tuple[Any, str, Course | None, list[str]]] = [
+        (kind, label, None, builtin_slugs(kind)) for kind, label in BuiltInCourse.choices
+    ]
+    entries += [(course.pk, str(course), course, [course.slug]) for course in courses]
     rows = []
-    for course in courses:
-        values = events.get(course.pk, {})
-        edges = first_last.get(course.pk, {"started": 0, "finished": 0})
+    for key, title, course, slugs in entries:
+        values = events.get(key, {})
+        edges = first_last.get(key, {"started": 0, "finished": 0})
         helpful = values.get(CourseStatEvent.LESSON_HELPFUL, 0)
         votes = helpful + values.get(CourseStatEvent.LESSON_NOT_HELPFUL, 0)
-        rating = rated.get(course.pk, {"count": 0, "average": None})
+        rating = rated.get(key, {"count": 0, "average": None})
         rows.append(
             {
+                "key": key,
+                "title": title,
+                # None for the built-in courses.
                 "course": course,
                 "opened": values.get(CourseStatEvent.LESSON_OPENED, 0),
                 "completed": values.get(CourseStatEvent.LESSON_COMPLETED, 0),
@@ -242,7 +283,7 @@ def summary(days: int, today: date | None = None) -> dict[str, Any]:
                 "votes": votes,
                 "rating_count": rating["count"],
                 "rating_average": rating["average"],
-                "reports": reported.get(course.slug, 0),
+                "reports": sum(reported.get(slug, 0) for slug in slugs),
             }
         )
     return {"days": days, "periods": PERIODS, "since": start, "rows": rows}

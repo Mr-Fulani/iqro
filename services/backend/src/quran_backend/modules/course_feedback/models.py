@@ -15,7 +15,7 @@ from django.db import models
 
 from quran_backend.modules.announcements.models import PLATFORMS
 from quran_backend.modules.core.models import BaseModel
-from quran_backend.modules.courses.models import COURSE_LANGUAGES, Course
+from quran_backend.modules.courses.models import COURSE_LANGUAGES, BuiltInCourse, Course
 
 MAX_COMMENT_CHARS = 1000
 
@@ -33,7 +33,11 @@ class CourseDailyStat(models.Model):
     """Daily sums only: no person, device, address or cookie is ever stored."""
 
     date = models.DateField()
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="daily_stats")
+    # A course of the catalog, or one of the built-in courses: exactly one of the two.
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, related_name="daily_stats", null=True, blank=True
+    )
+    builtin = models.CharField(max_length=16, choices=BuiltInCourse.choices, blank=True, default="")
     # The slug, not a key: a lesson removed from the course keeps its history.
     lesson = models.SlugField(max_length=64)
     platform = models.CharField(max_length=8, choices=[(code, code) for code in PLATFORMS])
@@ -46,6 +50,16 @@ class CourseDailyStat(models.Model):
             models.UniqueConstraint(
                 fields=("date", "course", "lesson", "platform", "event"),
                 name="course_daily_stat_unique",
+            ),
+            models.UniqueConstraint(
+                fields=("date", "builtin", "lesson", "platform", "event"),
+                condition=models.Q(course__isnull=True),
+                name="course_daily_stat_builtin_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(course__isnull=False, builtin="")
+                | (models.Q(course__isnull=True) & ~models.Q(builtin="")),
+                name="course_daily_stat_one_course",
             ),
         ]
         indexes = [models.Index(fields=("course", "date"), name="course_daily_stat_course_idx")]

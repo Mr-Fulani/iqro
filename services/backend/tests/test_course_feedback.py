@@ -24,6 +24,8 @@ from quran_backend.modules.course_feedback.throttling import (
 from quran_backend.modules.courses.models import Course
 from quran_backend.modules.courses.services import hide_course
 from quran_backend.modules.feedback.models import FeedbackTicket
+from quran_backend.modules.salah.models import SalahCourse, SalahCourseVersion
+from quran_backend.modules.tajweed.models import TajweedCourse, TajweedCourseVersion
 from tests.test_courses import owner, ramadan, release_course  # noqa: F401 - fixtures by name
 
 EVENTS = "/api/v1/courses/events"
@@ -53,7 +55,91 @@ def _event(lesson: str, event: str, course: str = "ramadan") -> dict[str, str]:
     return {"course": course, "lesson": lesson, "event": event}
 
 
+@pytest.fixture
+def builtin(owner: User) -> None:
+    """The published prayer and tajweed courses, under the slugs their clients send."""
+    for course_model, version_model, slug, lessons in (
+        (SalahCourse, SalahCourseVersion, "hanbali-umdah", ("wudu", "fajr")),
+        (TajweedCourse, TajweedCourseVersion, "tajweed", ("izhar", "iqlab")),
+    ):
+        course: Any = course_model.objects.create(slug=slug)
+        extra = {"methodology": "hanbali"} if course_model is SalahCourse else {}
+        course.active_version = version_model.objects.create(
+            course=course,
+            version="2026-11-01",
+            schema_version=1,
+            snapshot={
+                "lessons": [
+                    {"slug": lesson, "title": {"ru": f"Урок {lesson}"}} for lesson in lessons
+                ]
+            },
+            checksum_sha256="0" * 64,
+            status="published",
+            published_at=timezone.now(),
+            reviewed_by=owner,
+            reviewed_at=timezone.now(),
+            **extra,
+        )
+        course.save()
+
+
 # Events ------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_events_of_the_builtin_courses_are_counted(
+    live: Course, builtin: None, api_client: APIClient
+) -> None:
+    response = api_client.post(
+        EVENTS,
+        {
+            "platform": "web",
+            "events": [
+                _event("wudu", "lesson_opened", course="hanbali-umdah"),
+                _event("wudu", "lesson_opened", course="hanbali-umdah"),
+                _event("fajr", "lesson_completed", course="hanbali-umdah"),
+                _event("izhar", "video_started", course="tajweed"),
+                _event("no-such-lesson", "lesson_opened", course="hanbali-umdah"),
+                # A lesson of the other course is not a lesson of this one.
+                _event("izhar", "lesson_opened", course="hanbali-umdah"),
+                _event("smysl-posta", "lesson_opened"),
+            ],
+        },
+        format="json",
+    )
+    api_client.post(
+        EVENTS,
+        {"platform": "web", "events": [_event("wudu", "lesson_opened", course="hanbali-umdah")]},
+        format="json",
+    )
+
+    assert response.json() == {"accepted": 5}
+    counts = {
+        (row.builtin, row.lesson, row.event): row.count
+        for row in CourseDailyStat.objects.filter(course=None)
+    }
+    assert counts == {
+        ("salah", "wudu", "lesson_opened"): 3,
+        ("salah", "fajr", "lesson_completed"): 1,
+        ("tajweed", "izhar", "video_started"): 1,
+    }
+    assert CourseDailyStat.objects.get(course=live).builtin == ""
+
+
+@pytest.mark.django_db
+def test_events_of_an_unpublished_builtin_course_are_dropped(
+    builtin: None, api_client: APIClient
+) -> None:
+    SalahCourse.objects.update(active_version=None)
+
+    response = api_client.post(
+        EVENTS,
+        {"platform": "ios", "events": [_event("wudu", "lesson_opened", course="hanbali-umdah")]},
+        format="json",
+    )
+
+    assert response.json() == {"accepted": 0}
+    assert not CourseDailyStat.objects.exists()
 
 
 @pytest.mark.django_db
@@ -93,7 +179,16 @@ def test_events_keep_only_daily_sums_of_visible_lessons(
         ("namerenie", "android", "lesson_helpful"): 1,
     }
     stored = {field.name for field in CourseDailyStat._meta.get_fields()}
-    assert stored == {"id", "date", "course", "lesson", "platform", "event", "count"}
+    assert stored == {
+        "id",
+        "date",
+        "course",
+        "builtin",
+        "lesson",
+        "platform",
+        "event",
+        "count",
+    }
 
 
 @pytest.mark.django_db
@@ -401,7 +496,7 @@ def test_summary_shows_how_far_students_get(live: Course) -> None:
     _stat(live, "taraviikh", "lesson_completed", 4)
     Course.objects.create(slug="draft", title_ru="Черновик")
 
-    rows = {row["course"].slug: row for row in summary(30)["rows"]}
+    rows = {row["course"].slug: row for row in summary(30)["rows"] if row["course"]}
 
     assert (rows["ramadan"]["started"], rows["ramadan"]["finished"]) == (10, 4)
     assert rows["ramadan"]["finished_share"] == 40
@@ -435,6 +530,69 @@ def test_admin_pages_show_analytics_to_permitted_staff(live: Course, owner: User
     assert "Аналитика: Рамадан" in body
     assert "Спасибо за курс" in body
     assert "Где чаще бросают" in body
+
+
+def _builtin_stat(kind: str, lesson: str, event: str, count: int) -> None:
+    CourseDailyStat.objects.create(
+        date=timezone.localdate(),
+        builtin=kind,
+        lesson=lesson,
+        platform="android",
+        event=event,
+        count=count,
+    )
+
+
+@pytest.mark.django_db
+def test_summary_and_report_include_the_builtin_courses(live: Course, builtin: None) -> None:
+    _stat(live, "smysl-posta", "lesson_opened", 10)
+    _builtin_stat("salah", "wudu", "lesson_opened", 6)
+    _builtin_stat("salah", "fajr", "lesson_completed", 3)
+    _builtin_stat("tajweed", "izhar", "lesson_opened", 2)
+
+    rows = summary(30)["rows"]
+    report = course_report("salah", 30)
+
+    assert [row["title"] for row in rows] == ["Обучение намазу", "Таджвид", "Рамадан"]
+    assert (rows[0]["opened"], rows[0]["started"], rows[0]["finished"]) == (6, 6, 3)
+    assert rows[0]["finished_share"] == 50
+    assert (rows[1]["opened"], rows[1]["completed"]) == (2, 0)
+    assert rows[2]["opened"] == 10
+    assert [(row["slug"], row["title"]) for row in report["lessons"]] == [
+        ("wudu", "Урок wudu"),
+        ("fajr", "Урок fajr"),
+    ]
+    assert report["totals"] == {"opened": 6, "started": 6, "finished": 3, "finished_share": 50}
+    assert report["ratings"] is None
+    assert [row["label"] for row in report["platforms"]] == ["Android"]
+
+
+@pytest.mark.django_db
+def test_admin_pages_show_the_builtin_courses(builtin: None, owner: User) -> None:
+    _builtin_stat("salah", "wudu", "lesson_opened", 6)
+    _builtin_stat("tajweed", "iqlab", "lesson_completed", 4)
+    client = Client()
+    client.force_login(owner)
+
+    overview = client.get("/admin/course_feedback/courseanalytics/").content.decode()
+    salah = client.get("/admin/course_feedback/courseanalytics/salah/change/")
+    tajweed = client.get("/admin/course_feedback/courseanalytics/tajweed/change/?days=7")
+
+    assert "/admin/course_feedback/courseanalytics/salah/change/" in overview
+    assert "Обучение намазу" in overview
+    assert "Таджвид" in overview
+    assert salah.status_code == 200
+    body = salah.content.decode()
+    assert "Аналитика: Обучение намазу" in body
+    assert "Урок wudu" in body
+    assert "?course=hanbali-umdah" in body
+    assert "Открыть курс в редакторе" not in body
+    assert "Оценки и комментарии" not in body
+    assert "Урок iqlab" in tajweed.content.decode()
+    assert client.get("/admin/course_feedback/courseanalytics/nope/change/").status_code in {
+        302,
+        404,
+    }
 
 
 @pytest.mark.django_db

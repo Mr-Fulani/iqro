@@ -11,6 +11,7 @@ import '../../core/audio/audio_controller.dart';
 import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/course_feedback.dart';
 import '../courses/course_models.dart' show NoteBlock;
 import '../courses/course_notes_view.dart';
 import '../courses/course_sources.dart';
@@ -179,12 +180,20 @@ class _TajweedLessonPlayerState extends ConsumerState<TajweedLessonPlayer>
   late List<String> _steps;
   var _finishing = false;
   var _completed = false;
+  late final CourseEventQueue _events;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _audio = ref.read(audioControllerProvider.notifier);
+    // The counters of «Статистика курсов», as a thematic course sends them.
+    _events = ref.read(courseEventQueueProvider);
+    _events.add(
+      widget.courseSlug,
+      widget.lesson.slug,
+      CourseEvent.lessonOpened,
+    );
     _sound = TajweedCourseSound(
       audio: _controller,
       repository: ref.read(audioRepositoryProvider),
@@ -218,6 +227,7 @@ class _TajweedLessonPlayerState extends ConsumerState<TajweedLessonPlayer>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stopAudio();
+    unawaited(_events.flush());
     _sound.dispose();
     _pager.dispose();
     super.dispose();
@@ -440,15 +450,28 @@ class _TajweedLessonPlayerState extends ConsumerState<TajweedLessonPlayer>
     _finishing = true;
     _stopAudio();
     final sync = ref.read(tajweedProgressSyncProvider);
+    final store = ref.read(tajweedCourseProgressStoreProvider);
     try {
-      await ref
-          .read(tajweedCourseProgressStoreProvider)
-          .complete(
-            course: widget.courseSlug,
-            lesson: widget.lesson.slug,
-            stepSlug: _steps[_pager.index.value],
-            contentVersion: widget.document.course.version,
-          );
+      // Counted when the lesson is not yet completed on this device.
+      final before = await store.read(widget.courseSlug);
+      if (before.statusOf(widget.lesson.slug) !=
+          TajweedLessonStatus.completed) {
+        _events.add(
+          widget.courseSlug,
+          widget.lesson.slug,
+          CourseEvent.lessonCompleted,
+        );
+      }
+    } on Object {
+      // Counters are best effort.
+    }
+    try {
+      await store.complete(
+        course: widget.courseSlug,
+        lesson: widget.lesson.slug,
+        stepSlug: _steps[_pager.index.value],
+        contentVersion: widget.document.course.version,
+      );
     } on Object {
       // The lesson still ends; the next visit records it again.
     }
@@ -780,12 +803,20 @@ class _IntroPage extends StatelessWidget {
         if (lesson.media.isNotEmpty)
           LessonMediaView(
             media: lesson.media,
-            videoBuilder: (context, video) => LessonVideo(
-              course: courseSlug,
-              lesson: lesson.slug,
-              lessonTitle: lesson.title,
-              video: video,
-              language: language,
+            videoBuilder: (context, video) => Consumer(
+              builder: (context, ref, _) => LessonVideo(
+                course: courseSlug,
+                lesson: lesson.slug,
+                lessonTitle: lesson.title,
+                video: video,
+                language: language,
+                onStarted: () => ref
+                    .read(courseEventQueueProvider)
+                    .add(courseSlug, lesson.slug, CourseEvent.videoStarted),
+                onWatched: () => ref
+                    .read(courseEventQueueProvider)
+                    .add(courseSlug, lesson.slug, CourseEvent.videoFinished),
+              ),
             ),
           ),
         _stepTitle(context, context.l10n.tajweedCourseRule),

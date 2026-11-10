@@ -13,6 +13,7 @@ import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/course_feedback.dart';
 import '../courses/course_sources.dart';
 import '../courses/lesson_media_view.dart';
 import '../courses/lesson_video_player.dart';
@@ -156,6 +157,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
   final _audioOwner = Object();
   // Kept for dispose, when ref can no longer be read.
   late AudioController _audio;
+  late final CourseEventQueue _events;
 
   List<SalahStep> get _steps => widget.lesson.steps;
   bool get _hasPractice => widget.document.hasPractice(widget.lesson);
@@ -165,6 +167,13 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _audio = ref.read(audioControllerProvider.notifier);
+    // The counters of «Статистика курсов», as a thematic course sends them.
+    _events = ref.read(courseEventQueueProvider);
+    _events.add(
+      widget.courseSlug,
+      widget.lesson.slug,
+      CourseEvent.lessonOpened,
+    );
     final initial = widget.initialIndex.clamp(0, _steps.length - 1);
     _pager = IqroStepController(initialIndex: initial);
     unawaited(_record(initial));
@@ -194,6 +203,7 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stopAudio();
+    unawaited(_events.flush());
     _pager.dispose();
     _three.dispose();
     super.dispose();
@@ -259,15 +269,27 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     if (_finishing) return;
     _finishing = true;
     final message = context.l10n.salahLessonCompleted;
+    final store = ref.read(salahProgressStoreProvider);
     try {
-      await ref
-          .read(salahProgressStoreProvider)
-          .complete(
-            course: widget.courseSlug,
-            lesson: widget.lesson.slug,
-            stepSlug: _steps.last.slug,
-            contentVersion: widget.document.course.version,
-          );
+      // Counted when the lesson is not yet completed on this device.
+      final before = await store.read(widget.courseSlug);
+      if (before.statusOf(widget.lesson.slug) != SalahLessonStatus.completed) {
+        _events.add(
+          widget.courseSlug,
+          widget.lesson.slug,
+          CourseEvent.lessonCompleted,
+        );
+      }
+    } on Object {
+      // Counters are best effort.
+    }
+    try {
+      await store.complete(
+        course: widget.courseSlug,
+        lesson: widget.lesson.slug,
+        stepSlug: _steps.last.slug,
+        contentVersion: widget.document.course.version,
+      );
     } on Object {
       // The lesson still closes; the next visit records it again.
     }
@@ -596,6 +618,12 @@ class _StepPage extends ConsumerWidget {
                 lessonTitle: lesson.title,
                 video: video,
                 language: document.course.language,
+                onStarted: () => ref
+                    .read(courseEventQueueProvider)
+                    .add(courseSlug, lesson.slug, CourseEvent.videoStarted),
+                onWatched: () => ref
+                    .read(courseEventQueueProvider)
+                    .add(courseSlug, lesson.slug, CourseEvent.videoFinished),
               ),
             ),
           if (media != null) ...<Widget>[

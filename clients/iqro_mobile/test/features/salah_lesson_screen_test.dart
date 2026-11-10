@@ -28,6 +28,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'course_test_data.dart' show FakeCourseFeedbackGateway;
 import 'lesson_media_test_data.dart';
 import 'lesson_video_test_data.dart';
 import 'salah_models_test.dart' show salahFixture;
@@ -74,6 +75,15 @@ void main() {
     );
     expect(find.text('Урок пройден'), findsOneWidget);
     expect(find.text('1 из 3 уроков'), findsOneWidget);
+    // The counters of «Статистика курсов» leave when the lesson closes.
+    expect(harness.feedback.events, [
+      {'course': 'hanbali-umdah', 'lesson': 'fajr', 'event': 'lesson_opened'},
+      {
+        'course': 'hanbali-umdah',
+        'lesson': 'fajr',
+        'event': 'lesson_completed',
+      },
+    ]);
     semantics.dispose();
   });
 
@@ -975,12 +985,13 @@ class _Positions implements CourseProgressStore {
 }
 
 class _Harness {
-  _Harness(this.store, this.images, this.engine, this.audio);
+  _Harness(this.store, this.images, this.engine, this.audio, this.feedback);
 
   final _MemoryProgressStore store;
   final List<String> images;
   final _SilentAudioEngine engine;
   final AudioController audio;
+  final FakeCourseFeedbackGateway feedback;
 }
 
 Future<_Harness> _pump(
@@ -1031,6 +1042,7 @@ Future<_Harness> _pump(
     ],
   );
   addTearDown(router.dispose);
+  final feedback = FakeCourseFeedbackGateway();
   await tester.pumpWidget(
     ProviderScope(
       // A new scope per pump: the display mode resets with it.
@@ -1049,6 +1061,7 @@ Future<_Harness> _pump(
         )),
         salahCourseProvider.overrideWith((ref, slug) async => document),
         salahProgressStoreProvider.overrideWithValue(store),
+        courseFeedbackGatewayProvider.overrideWithValue(feedback),
         salahOfflineRepositoryProvider.overrideWithValue(
           offline ?? _MemoryOfflineRepository(),
         ),
@@ -1099,7 +1112,7 @@ Future<_Harness> _pump(
     router.push(location);
     await tester.pumpAndSettle();
   }
-  return _Harness(store, images, engine, audio);
+  return _Harness(store, images, engine, audio, feedback);
 }
 
 final _transparentPng = base64Decode(

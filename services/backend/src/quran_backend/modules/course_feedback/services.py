@@ -7,6 +7,7 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
+from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
@@ -15,7 +16,17 @@ from django.db.models import F
 from django.utils import timezone
 
 from quran_backend.modules.course_feedback.models import CourseDailyStat, CourseRating
-from quran_backend.modules.courses.models import Course, CourseRelease
+from quran_backend.modules.courses.models import BuiltInCourse, Course, CourseRelease
+from quran_backend.modules.salah.models import (
+    SalahCourse,
+    SalahCourseVersion,
+    SalahPublicationStatus,
+)
+from quran_backend.modules.tajweed.models import (
+    TajweedCourse,
+    TajweedCourseStatus,
+    TajweedCourseVersion,
+)
 
 # A release never changes, so its lesson list may stay cached for long.
 LESSONS_CACHE_SECONDS = 24 * 60 * 60
@@ -45,6 +56,51 @@ def live_courses(slugs: Iterable[str]) -> dict[str, LiveCourse]:
     return found
 
 
+@dataclass(frozen=True)
+class LiveBuiltIn:
+    kind: str
+    lessons: tuple[str, ...]
+
+
+def live_builtin_versions(kind: str) -> list[tuple[str, int]]:
+    """(course slug, published version) of the prayer or the tajweed courses."""
+    if kind == BuiltInCourse.SALAH:
+        courses: Any = SalahCourse.objects.filter(
+            active_version__status=SalahPublicationStatus.PUBLISHED
+        )
+    else:
+        courses = TajweedCourse.objects.filter(active_version__status=TajweedCourseStatus.PUBLISHED)
+    return list(courses.order_by("slug").values_list("slug", "active_version_id"))
+
+
+def builtin_snapshot_lessons(kind: str, version_id: object) -> list[dict[str, Any]]:
+    model: Any = SalahCourseVersion if kind == BuiltInCourse.SALAH else TajweedCourseVersion
+    snapshot = model.objects.values_list("snapshot", flat=True).get(pk=version_id)
+    return list(snapshot.get("lessons", []))
+
+
+def live_builtin_courses(slugs: Iterable[str]) -> dict[str, LiveBuiltIn]:
+    """«Обучение намазу» and «Таджвид» by the slugs their clients send."""
+    wanted = set(slugs)
+    found: dict[str, LiveBuiltIn] = {}
+    if not wanted:
+        return found
+    for kind in BuiltInCourse.values:
+        for slug, version_id in live_builtin_versions(kind):
+            if slug not in wanted or slug in found:
+                continue
+            # A published version never changes either.
+            key = f"course_feedback:lessons:{kind}:{version_id}"
+            lessons = cache.get(key)
+            if lessons is None:
+                lessons = tuple(
+                    lesson["slug"] for lesson in builtin_snapshot_lessons(kind, version_id)
+                )
+                cache.set(key, lessons, LESSONS_CACHE_SECONDS)
+            found[slug] = LiveBuiltIn(kind=kind, lessons=tuple(lessons))
+    return found
+
+
 def record_events(
     *,
     platform: str,
@@ -54,20 +110,23 @@ def record_events(
     """Add (course, lesson, event) to the daily sums of visible courses; return accepted.
 
     Events of unknown or hidden courses and of lessons outside the live release
-    are dropped.
+    are dropped. The prayer and the tajweed course count like a course of the catalog.
     """
     events = list(events)
-    courses = live_courses(course for course, _lesson, _event in events)
+    slugs = {course for course, _lesson, _event in events}
+    courses = live_courses(slugs)
+    builtin = live_builtin_courses(slugs - courses.keys())
     day = today or timezone.localdate()
-    totals = Counter(
-        (courses[course].id, lesson, event)
-        for course, lesson, event in events
-        if course in courses and lesson in courses[course].lessons
-    )
-    for (course_id, lesson, event), count in totals.items():
+    totals: Counter[tuple[str, object, str, str]] = Counter()
+    for course, lesson, event in events:
+        if course in courses and lesson in courses[course].lessons:
+            totals["course_id", courses[course].id, lesson, event] += 1
+        elif course in builtin and lesson in builtin[course].lessons:
+            totals["builtin", builtin[course].kind, lesson, event] += 1
+    for (field, value, lesson, event), count in totals.items():
         lookup = {
             "date": day,
-            "course_id": course_id,
+            field: value,
             "lesson": lesson,
             "platform": platform,
             "event": event,
