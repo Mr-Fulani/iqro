@@ -804,7 +804,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     _lastPersistedAyah = null;
     await _persistPosition(ayah, accountScope: scope);
     if (!_isCurrentAccount(scope) || !mounted) return;
-    await showModalBottomSheet<void>(
+    await showIqroSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: false,
@@ -1124,7 +1124,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       );
     }
 
-    await showModalBottomSheet<void>(
+    await showIqroSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,

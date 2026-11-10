@@ -1103,7 +1103,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   Future<void> _showBookmarks() async {
     final scope = _database.accountScope.current;
     if (scope == null || !_isCurrentAccount(scope)) return;
-    final selection = await showModalBottomSheet<QuranAyahReference>(
+    final selection = await showIqroSheet<QuranAyahReference>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -1261,7 +1261,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       final hizb = results[2] as List<QuranDivision>?;
       final rubElHizb = results[3] as List<QuranDivision>?;
       final reference = _selectedAyah ?? _pageReference;
-      final selection = await showModalBottomSheet<QuranQuickJumpSelection>(
+      final selection = await showIqroSheet<QuranQuickJumpSelection>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
@@ -1509,7 +1509,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       var breakdown = false;
       var memorize = false;
       VoidCallback? leave;
-      await showModalBottomSheet<void>(
+      await showIqroSheet<void>(
         context: context,
         isScrollControlled: true,
         useSafeArea: false,

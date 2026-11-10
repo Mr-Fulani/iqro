@@ -1351,7 +1351,7 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
     );
   }
 
-  Future<void> _showSource(BuildContext context) => showModalBottomSheet<void>(
+  Future<void> _showSource(BuildContext context) => showIqroSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,

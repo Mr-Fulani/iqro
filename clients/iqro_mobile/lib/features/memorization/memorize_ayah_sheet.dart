@@ -17,7 +17,7 @@ Future<void> showMemorizeAyahSheet(
   BuildContext context, {
   required int surah,
   required int ayah,
-}) => showModalBottomSheet<void>(
+}) => showIqroSheet<void>(
   context: context,
   isScrollControlled: true,
   showDragHandle: true,

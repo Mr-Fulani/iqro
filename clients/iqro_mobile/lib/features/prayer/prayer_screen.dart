@@ -641,7 +641,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
 
   Future<void> _openCalculationSettings(PrayerMethod method) async {
     final current = _preferences ?? PrayerPreferences.defaultsFor(method);
-    final result = await showModalBottomSheet<PrayerPreferences>(
+    final result = await showIqroSheet<PrayerPreferences>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -764,7 +764,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
 
   Future<void> _selectCity(PrayerMethod method) async {
     final locale = Localizations.localeOf(context).languageCode;
-    final city = await showModalBottomSheet<PrayerCity>(
+    final city = await showIqroSheet<PrayerCity>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -815,7 +815,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
   }
 
   Future<void> _showQibla(PrayerLocation location, String locationName) =>
-      showModalBottomSheet<void>(
+      showIqroSheet<void>(
         context: context,
         useSafeArea: true,
         isScrollControlled: true,
@@ -865,7 +865,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
         return;
       }
       final isApple = defaultTargetPlatform == TargetPlatform.iOS;
-      await showModalBottomSheet<void>(
+      await showIqroSheet<void>(
         context: context,
         useSafeArea: true,
         builder: (context) => Padding(

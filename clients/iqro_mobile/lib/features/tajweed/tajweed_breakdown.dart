@@ -65,7 +65,7 @@ Future<void> showTajweedBreakdown(
   required TajweedReference reference,
   required TajweedAyah ayah,
   TajweedRecitation? recitation,
-}) => showModalBottomSheet<void>(
+}) => showIqroSheet<void>(
   context: context,
   isScrollControlled: true,
   useSafeArea: true,

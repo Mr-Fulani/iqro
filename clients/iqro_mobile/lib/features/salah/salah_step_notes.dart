@@ -53,7 +53,7 @@ Future<void> showSalahNote(
   BuildContext context,
   SalahStepNote note,
   String label,
-) => showModalBottomSheet<void>(
+) => showIqroSheet<void>(
   context: context,
   showDragHandle: true,
   useSafeArea: true,

@@ -39,7 +39,7 @@ Future<void> showTajweedSheet(
   required TajweedSelection selection,
   TajweedRecitation? recitation,
   ValueChanged<TajweedWordSelection>? onSelectWord,
-}) => showModalBottomSheet<void>(
+}) => showIqroSheet<void>(
   context: context,
   isScrollControlled: true,
   useSafeArea: true,

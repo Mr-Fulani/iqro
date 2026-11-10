@@ -782,7 +782,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   }
 
   Future<void> _chooseHighlightColor() async {
-    final selected = await showModalBottomSheet<String>(
+    final selected = await showIqroSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
@@ -877,7 +877,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
   }
 
   Future<void> _editNote() async {
-    final result = await showModalBottomSheet<_NoteEditorResult>(
+    final result = await showIqroSheet<_NoteEditorResult>(
       context: context,
       isScrollControlled: true,
       useSafeArea: false,

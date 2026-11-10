@@ -134,7 +134,7 @@ class _HomeWidgetsSettingsCardState
       return;
     }
     // Launchers without pinning, and iOS: say where widgets are added.
-    await showModalBottomSheet<void>(
+    await showIqroSheet<void>(
       context: context,
       useSafeArea: true,
       builder: (context) => Padding(
