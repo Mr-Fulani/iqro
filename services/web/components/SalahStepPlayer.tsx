@@ -15,6 +15,7 @@ import {
   readSalahProgress,
   recordSalahStep,
   resumeStepIndex,
+  SALAH_COURSE_SLUG,
   type SalahFormula,
   type SalahFormulaAudio,
   type SalahLessonBundle,
