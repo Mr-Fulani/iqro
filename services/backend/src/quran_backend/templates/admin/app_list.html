@@ -1,13 +1,18 @@
 {% load i18n %}
 {% comment %}
-Django's admin/app_list.html with two additions for the sections of the home
-page and the sidebar (quran_backend/admin_site.py): a section has no page of
-its own, and its models come in groups under the name of their app.
+Django's admin/app_list.html with additions for the sections of the home page
+and the sidebar (quran_backend/admin_site.py): a section has no page of its
+own, shows its main tables openly and folds the rest under «Служебные таблицы»,
+where models come in groups under the name of their app.
 {% endcomment %}
 {% if app_list %}
   <style>
     .module tr.iqro-group th { padding: 10px 8px 4px; background: var(--darkened-bg); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
     .module tr.iqro-group th a:link, .module tr.iqro-group th a:visited { color: var(--body-quiet-color); }
+    .module tr.iqro-hint td { padding: 6px 8px; background: var(--darkened-bg); color: var(--body-quiet-color); font-size: 0.8125rem; }
+    .module details.iqro-service > summary { padding: 8px; cursor: pointer; color: var(--body-quiet-color); font-size: 0.8125rem; border-bottom: 1px solid var(--hairline-color); }
+    .module details.iqro-service > table { width: 100%; }
+    .module details.iqro-service tr[class^="model-"] th { padding-left: 20px; }
   </style>
   {% for app in app_list %}
     <div class="app-{{ app.app_label }} module{% if app.app_url and app.app_url in request.path|urlencode %} current-app{% endif %}">
@@ -26,45 +31,37 @@ its own, and its models come in groups under the name of their app.
             <th scope="col">{% translate 'Change or view list link' %}</th>
           </tr>
         </thead>
+        {% if app.hint and show_changelinks %}
+          <tr class="iqro-hint"><td colspan="3">{{ app.hint }}</td></tr>
+        {% endif %}
         {% for model in app.models %}
-          {% if model.group %}{% ifchanged model.group %}
-            <tr class="iqro-group">
-              <th scope="rowgroup" colspan="3">
-                {% if model.group_url %}<a href="{{ model.group_url }}">{{ model.group }}</a>{% else %}{{ model.group }}{% endif %}
-              </th>
-            </tr>
-          {% endifchanged %}{% endif %}
-          {% with model_name=model.object_name|lower %}
-            <tr class="model-{{ model_name }}{% if model.admin_url in request.path|urlencode %} current-model{% endif %}">
-              <th scope="row" id="{{ app.app_label }}-{{ model_name }}">
-                {% if model.admin_url %}
-                  <a href="{{ model.admin_url }}"{% if model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{{ model.name }}</a>
-                {% else %}
-                  {{ model.name }}
-                {% endif %}
-              </th>
-
-              {% if model.add_url %}
-                <td><a href="{{ model.add_url }}" class="addlink" aria-describedby="{{ app.app_label }}-{{ model_name }}">{% translate 'Add' %}</a></td>
-              {% else %}
-                <td></td>
-              {% endif %}
-
-              {% if model.admin_url and show_changelinks %}
-                {% if model.view_only %}
-                  <td><a href="{{ model.admin_url }}" class="viewlink" aria-describedby="{{ app.app_label }}-{{ model_name }}">{% translate 'View' %}</a></td>
-                {% else %}
-                  <td><a href="{{ model.admin_url }}" class="changelink" aria-describedby="{{ app.app_label }}-{{ model_name }}">{% translate 'Change' %}</a></td>
-                {% endif %}
-              {% elif show_changelinks %}
-                <td></td>
-              {% endif %}
-            </tr>
-          {% endwith %}
+          {% if not model.service %}{% include "admin/iqro/model_row.html" %}{% endif %}
         {% endfor %}
       </table>
+      {% if app.service_count %}
+        <details class="iqro-service">
+          <summary>Служебные таблицы{% if show_changelinks %} — заходить редко{% endif %} ({{ app.service_count }})</summary>
+          <table>
+            {% for model in app.models %}
+              {% if model.service %}{% include "admin/iqro/model_row.html" %}{% endif %}
+            {% endfor %}
+          </table>
+        </details>
+      {% endif %}
     </div>
   {% endfor %}
+  <script>
+    // Service tables stay folded unless the open page is one of them or the sidebar filter is in use.
+    document.querySelectorAll("details.iqro-service").forEach(function (details) {
+      if (details.querySelector(".current-model")) details.open = true;
+    });
+    document.addEventListener("input", function (event) {
+      if (event.target.id !== "nav-filter" || !event.target.value) return;
+      document.querySelectorAll("#nav-sidebar details.iqro-service").forEach(function (details) {
+        details.open = true;
+      });
+    });
+  </script>
 {% else %}
   <p>{% translate 'You don’t have permission to view or edit anything.' %}</p>
 {% endif %}

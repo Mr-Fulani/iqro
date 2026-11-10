@@ -39,7 +39,7 @@ INLINE_HELP = (
     "значок «?» с пояснением. Внутри можно **жирный** и арабский, но не скобки. "
     "[текст](/quran/2:255) — ссылка на раздел: /quran/2, /quran/2:255, /courses/курс/тема, "
     "/dua/…, /tajweed/урок. [текст](https://sunnah.com/…) — на сайт из «Разрешённых сайтов "
-    "для ссылок» (Сайт и настройки)."
+    "для ссылок» (Сайт и приглашения)."
 )
 
 
@@ -88,7 +88,9 @@ class LinkChecker:
             return f"«{href}»: внешние ссылки — только https://"
         host = link_host(parts.hostname or "")
         if host not in self.hosts():
-            return f"сайта {host} нет в «Разрешённых сайтах для ссылок» (раздел «Сайт и настройки»)"
+            return (
+                f"сайта {host} нет в «Разрешённых сайтах для ссылок» (раздел «Сайт и приглашения»)"
+            )
         return None
 
     def _course(self, slug: str, lesson: str | None) -> str | None:

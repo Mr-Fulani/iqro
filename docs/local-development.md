@@ -108,7 +108,7 @@ docker compose --env-file services/backend/.env exec backend python manage.py cr
 ```
 
 Вход — http://localhost:8000/admin/. Курс намаза импортируется черновиком и становится
-виден после подписи и публикации в админке («Обучение намазу» → «Версии курса»):
+виден после подписи и публикации в админке («Обучение» → «Намаз: версии курса»):
 
 ```bash
 docker compose --env-file services/backend/.env exec backend python manage.py import_salah_course

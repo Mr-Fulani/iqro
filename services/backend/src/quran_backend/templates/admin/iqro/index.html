@@ -1,5 +1,5 @@
 {% extends "admin/index.html" %}
-{% comment %}The admin home: «Требует внимания» above the sections (quran_backend/admin_attention.py).{% endcomment %}
+{% comment %}The admin home: «Требует внимания» and «Каждый день» above the sections (admin_attention.py, admin_site.py).{% endcomment %}
 
 {% block content %}
 <div id="content-main" class="app-list">
@@ -21,6 +21,22 @@
           </tr>
         {% endfor %}
       </table>
+    </div>
+  {% endif %}
+  {% if tiles %}
+    <style>
+      .iqro-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 30px; }
+      .iqro-tiles h2 { grid-column: 1 / -1; margin: 0; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--body-quiet-color); }
+      .iqro-tiles a { display: block; padding: 12px 14px; border: 1px solid var(--hairline-color); border-top: 3px solid var(--primary); background: var(--body-bg); }
+      .iqro-tiles a:hover, .iqro-tiles a:focus { background: var(--darkened-bg); text-decoration: none; }
+      .iqro-tiles strong { display: block; font-size: 1.0625rem; }
+      .iqro-tiles span { font-size: 0.8125rem; color: var(--body-quiet-color); }
+    </style>
+    <div class="iqro-tiles">
+      <h2>Каждый день</h2>
+      {% for tile in tiles %}
+        <a href="{{ tile.url }}"><strong>{{ tile.title }}</strong><span>{{ tile.hint }}</span></a>
+      {% endfor %}
     </div>
   {% endif %}
   {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}

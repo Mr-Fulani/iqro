@@ -39,11 +39,12 @@ def test_admin_index_uses_russian_project_labels() -> None:
     assert response.status_code == 200
     assert response.headers["Content-Language"] == "ru"
     assert "Управление платформой" in body
-    assert "Обратная связь" in body
-    assert "Обращения пользователей" in body
+    assert "Обращения и отзывы" in body
+    assert "Ответы на обращения" in body
+    assert "Группы доступа сотрудников" in body
     assert "Аудио Корана" in body
     assert "Время намаза" in body
-    assert "Настройки сайта" in body
+    assert "Сайт и приглашения" in body
     assert "Социальные сети" in body
 
 
@@ -54,7 +55,7 @@ def test_every_project_admin_model_and_field_has_a_russian_label() -> None:
     assert all(
         field.name in FIELD_LABELS for model in project_models for field in model._meta.fields
     )
-    assert FeedbackTicket._meta.verbose_name_plural == "обращения пользователей"
+    assert FeedbackTicket._meta.verbose_name_plural == "обращения"
     assert FeedbackTicket._meta.get_field("public_id").verbose_name == "Номер обращения"
     with translation.override("ru"):
         assert FeedbackTicket._meta.get_field("category").flatchoices[0] == (
