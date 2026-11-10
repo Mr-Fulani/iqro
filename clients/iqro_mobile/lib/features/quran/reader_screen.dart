@@ -491,12 +491,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                         ),
                       ),
                     if (_loupe case final point?) WordRangeLoupe(point: point),
-                    PositionedDirectional(
-                      start: 24,
-                      end: 24,
-                      bottom: 24 + MediaQuery.paddingOf(context).bottom,
-                      child: Center(child: RubMarkToast(controller: _rubMark)),
-                    ),
+                    RubMarkToast(controller: _rubMark),
                   ],
                 ),
               ),
@@ -754,27 +749,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       return;
     }
     if (!mounted) return;
-    final viewportBox = _viewportKey.currentContext?.findRenderObject();
-    if (viewportBox is! RenderBox || !viewportBox.hasSize) return;
-    final viewportTop = viewportBox.localToGlobal(Offset.zero).dy;
-    final viewportBottom = viewportTop + viewportBox.size.height;
-    final shown = <QuranAyahReference>[];
-    for (final rub in rubs) {
-      if (rub.startAyah.surah != widget.surah) continue;
-      final box = _ayahKeys[rub.startAyah.ayah]?.currentContext
-          ?.findRenderObject();
-      if (box is! RenderBox || !box.hasSize) continue;
-      final top = box.localToGlobal(Offset.zero).dy;
-      final bottom = top + box.size.height;
-      final visible =
-          bottom.clamp(viewportTop, viewportBottom) -
-          top.clamp(viewportTop, viewportBottom);
-      // Half the card, or enough of a long one to read its first lines.
-      if (visible >= (box.size.height * .5).clamp(36, 160)) {
-        shown.add(rub.startAyah);
-      }
-    }
-    _rubMark.reached(rubStartingIn(shown, rubs));
+    _rubMark.reached(
+      rubVisibleIn(
+        surah: widget.surah,
+        rubs: rubs,
+        viewportKey: _viewportKey,
+        ayahKeys: _ayahKeys,
+      ),
+    );
   }
 
   Future<void> _persistTopVisibleAyah(List<QuranAyah> items) async {

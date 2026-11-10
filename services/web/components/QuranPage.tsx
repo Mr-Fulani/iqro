@@ -434,14 +434,18 @@ function QuranContent() {
   const [hizb, setHizb] = useState<Hizb[]>([]);
   const [rubElHizb, setRubElHizb] = useState<RubElHizb[]>([]);
   // A new rub al-hizb quarter the reader reached: a pill with its name and a
-  // tint on its first ayah, for a moment. The same quarter is not announced
-  // twice in a row, so turning back and forth over its page stays quiet.
+  // tint on its first ayah, for a moment. It is announced again each time the
+  // reader comes back to it, but not while it stays in view.
   const [quarterMark, setQuarterMark] = useState<RubElHizb | null>(null);
   const lastQuarterMark = useRef<number | null>(null);
   const quarterMarkTimer = useRef<number | undefined>(undefined);
   const quarterMarkPage = useRef<number | null>(null);
   const reachQuarter = useCallback((quarter: RubElHizb | null, announce: boolean) => {
-    if (!quarter || quarter.number === lastQuarterMark.current) return;
+    if (!quarter) {
+      lastQuarterMark.current = null;
+      return;
+    }
+    if (quarter.number === lastQuarterMark.current) return;
     lastQuarterMark.current = quarter.number;
     if (!announce) return;
     window.clearTimeout(quarterMarkTimer.current);
@@ -449,6 +453,10 @@ function QuranContent() {
     quarterMarkTimer.current = window.setTimeout(() => setQuarterMark(null), QUARTER_MARK_MS);
   }, []);
   useEffect(() => () => window.clearTimeout(quarterMarkTimer.current), []);
+  // The plain text reports the ayahs whose start a scroll left in view.
+  const reachPlainQuarter = useCallback((verseKeys: string[]) => {
+    reachQuarter(quarterStartingIn(rubElHizbRef.current, verseKeys), true);
+  }, [reachQuarter]);
   // Read by the text's scroll listener, which must not restart when they load.
   const rubElHizbRef = useRef<RubElHizb[]>([]);
   useEffect(() => { rubElHizbRef.current = rubElHizb; }, [rubElHizb]);
@@ -2919,6 +2927,8 @@ function QuranContent() {
           playingWord={playingWord}
           wordArea={setPlainWordArea}
           onLeave={leavePlainText}
+          onSettle={reachPlainQuarter}
+          markedAyah={quarterMark?.start_ayah.surah === selectedSurah ? quarterMark.start_ayah.number : null}
           thisSurah={currentSurahObj}
           nextSurah={surahs.find((item) => item.number === selectedSurah + 1)}
           listHref={localizedPath(locale, quranEditionPath(selectedEdition))}
@@ -2951,7 +2961,7 @@ function QuranContent() {
         />
       )}
       {/* Inside the reader layout, so it also shows in full screen. */}
-      <QuranQuarterMark label={plainTextAyah === null ? quarterMarkLabel : null} />
+      <QuranQuarterMark label={quarterMarkLabel} />
     </MushafReaderLayout>
   );
 }

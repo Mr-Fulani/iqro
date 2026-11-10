@@ -18,6 +18,7 @@ import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
 import 'package:iqro_mobile/features/quran/reader_page_turn.dart';
 import 'package:iqro_mobile/features/quran/reader_screen.dart';
+import 'package:iqro_mobile/features/quran/rub_mark.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,6 +55,46 @@ void main() {
     expect(find.byKey(const ValueKey('reader-flow')), findsNothing);
     expect(find.byKey(const ValueKey('reader-open-mushaf')), findsOneWidget);
     expect(app.quran.saved.last, reached);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the plain Arabic text announces a quarter of a hizb each time '
+      'the reader scrolls to its first ayah', (tester) async {
+    await _pump(tester, rubs: const <QuranDivision>[_rub2]);
+    await _swipe(tester, await _card(tester, 3), 220);
+    expect(find.byKey(const ValueKey('reader-flow')), findsOneWidget);
+    // Opening the text announces nothing.
+    expect(find.byKey(const ValueKey('rub-mark-toast')), findsNothing);
+
+    Future<void> scrollTo(bool Function() done, double dy) async {
+      for (var step = 0; step < 30 && !done(); step++) {
+        await tester.dragFrom(const Offset(180, 500), Offset(0, dy));
+        await tester.pumpAndSettle();
+      }
+      expect(done(), isTrue);
+    }
+
+    bool announced() => tester
+        .widgetList<AnimatedOpacity>(
+          find.ancestor(
+            of: find.text('¼ Хизб 1'),
+            matching: find.byType(AnimatedOpacity),
+          ),
+        )
+        .any((toast) => toast.opacity == 1);
+
+    await scrollTo(announced, -200);
+    await tester.pump(rubMarkDuration);
+    await tester.pumpAndSettle();
+    expect(announced(), isFalse);
+
+    // Away from the ayah and back to it: announced again.
+    await scrollTo(() => _placeAyah(tester) > 24, -400);
+    await tester.pump(rubMarkDuration);
+    expect(announced(), isFalse);
+    await scrollTo(announced, 200);
+    await tester.pump(rubMarkDuration);
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
@@ -180,6 +221,7 @@ class _App {
 Future<_App> _pump(
   WidgetTester tester, {
   Size size = const Size(360, 800),
+  List<QuranDivision> rubs = const <QuranDivision>[],
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -227,6 +269,7 @@ Future<_App> _pump(
           (ref) => AudioController(engine: _Engine()),
         ),
         ayahsProvider.overrideWith((ref, surah) async => _ayahs),
+        quranRubElHizbProvider.overrideWith((ref) async => rubs),
         quranCatalogProvider.overrideWith(
           (ref) async =>
               const QuranCatalog(surahs: <Surah>[_baqara], fromCache: true),
@@ -244,6 +287,17 @@ Future<_App> _pump(
   await tester.pumpAndSettle();
   return app;
 }
+
+// The second quarter of the first hizb, at 2:14 for the test.
+const _rub2 = QuranDivision(
+  number: 2,
+  startAyah: QuranAyahReference(id: '', surah: 2, ayah: 14),
+  endAyah: QuranAyahReference(id: '', surah: 2, ayah: 20),
+  startPage: 1,
+  endPage: 1,
+  hizbNumber: 1,
+  quarterNumber: 2,
+);
 
 const _baqara = Surah(
   id: '2',

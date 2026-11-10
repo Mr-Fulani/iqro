@@ -3754,8 +3754,10 @@ input:focus, select:focus, textarea:focus {
 .quran-quarter-mark-region {
   position: fixed;
   inset-inline: 0;
-  bottom: max(calc(var(--mobile-nav-space, 0px) + 20px), calc(env(safe-area-inset-bottom, 0px) + 28px));
-  z-index: 240;
+  /* Over the text, which it leaves soon; never under the bottom navigation. */
+  bottom: max(20vh, calc(var(--mobile-nav-space, 0px) + 20px), calc(env(safe-area-inset-bottom, 0px) + 28px));
+  /* Above the plain Arabic text (900), under the word bar. */
+  z-index: 910;
   display: flex;
   justify-content: center;
   pointer-events: none;
@@ -3772,7 +3774,7 @@ input:focus, select:focus, textarea:focus {
   font-size: 17px;
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
-  animation: quran-quarter-pill 2.8s ease-in-out both;
+  animation: quran-quarter-pill 2.5s ease-in-out both;
 }
 
 .quran-quarter-mark img {

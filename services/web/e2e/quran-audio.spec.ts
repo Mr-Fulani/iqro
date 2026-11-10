@@ -1250,15 +1250,19 @@ test("a turned Mushaf page that starts a quarter announces it and tints its ayah
   await expect(mark).toHaveCount(0, { timeout: 5_000 });
   await expect(page.locator(".qf-mushaf-ayah-fragment.is-marked")).toHaveCount(0);
 
-  // Back and forth over the same quarter stays quiet.
+  // Leaving the page and coming back announces the quarter again.
   await pageJump.fill("128");
   await pageJump.press("Enter");
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+  await expect(mark).toHaveCount(0);
   await pageJump.fill("151");
   await pageJump.press("Enter");
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
-  await page.waitForTimeout(500);
-  await expect(mark).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "½ Хизб 14" })).toBeVisible();
+  // Over the text, a fifth of the window up.
+  const box = (await mark.boundingBox())!;
+  const height = page.viewportSize()!.height;
+  expect(height - (box.y + box.height)).toBeGreaterThanOrEqual(height * 0.2 - 1);
 });
 
 test("after-prayer reader resumes the Mushaf and saves the actual page count once", async ({ page }) => {

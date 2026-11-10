@@ -461,13 +461,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                 },
               ),
             ),
-            // Above the page number at the foot of the page.
-            PositionedDirectional(
-              start: 24,
-              end: 24,
-              bottom: 64 + MediaQuery.paddingOf(context).bottom,
-              child: Center(child: RubMarkToast(controller: _rubMark)),
-            ),
+            RubMarkToast(controller: _rubMark),
             PositionedDirectional(
               start: 12,
               end: 12,

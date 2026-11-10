@@ -145,7 +145,8 @@ void main() {
     expect(toastOpacity(), 0);
     expect(selected(), isNull);
 
-    // Back over the same quarter: it is not announced twice in a row.
+    // The test's next page holds the same quarter, so it never left view
+    // and is not announced again.
     await turn(const Offset(-300, 0));
     expect(toastOpacity(), 0);
     expect(selected(), isNull);

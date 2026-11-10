@@ -38,7 +38,7 @@ void main() {
     expect(rubStartingIn(const [], rubs), isNull);
   });
 
-  testWidgets('a quarter is announced once until another one is', (
+  testWidgets('a quarter is announced again once the reader comes back', (
     tester,
   ) async {
     final controller = RubMarkController();
@@ -51,13 +51,17 @@ void main() {
     await tester.pump(rubMarkDuration);
     expect(controller.mark, isNull);
 
+    // Still in view: nothing new to say.
     controller.reached(first);
     expect(controller.mark, isNull);
 
-    controller.reached(second);
-    expect(controller.mark, second);
+    // Left it and came back.
+    controller.reached(null);
     controller.reached(first);
     expect(controller.mark, first);
+
+    controller.reached(second);
+    expect(controller.mark, second);
     await tester.pump(rubMarkDuration);
   });
 }
