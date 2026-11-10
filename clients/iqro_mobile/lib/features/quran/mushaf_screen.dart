@@ -32,6 +32,7 @@ import 'quick_jump_sheet.dart';
 import 'quran_screen.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
+import 'rub_mark.dart';
 import 'surah_open_reporter.dart';
 import 'word_range.dart';
 
@@ -134,11 +135,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
   late final QuranRepository _quranRepository;
   late final LatestAsyncWorkQueue<_PendingPositionSave> _positionSaves;
   late final WordRangeController _words;
+  final _rubMark = RubMarkController();
+  // The ayah a quarter of a hizb starts at, highlighted while it is announced.
+  QuranAyahReference? _rubMarkedAyah;
 
   @override
   void initState() {
     super.initState();
     _words = WordRangeController(ref)..addListener(_onWords);
+    _rubMark.addListener(_onRubMark);
     _database = ref.read(localDatabaseProvider);
     _quranRepository = ref.read(quranRepositoryProvider);
     _positionSaves = LatestAsyncWorkQueue<_PendingPositionSave>(
@@ -246,8 +251,39 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
       subscription.close();
     }
     _pageController.dispose();
+    _rubMark
+      ..removeListener(_onRubMark)
+      ..dispose();
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
+  }
+
+  /// Highlights the ayah a quarter starts at while it is announced, unless
+  /// the reader has selected an ayah, and clears it after.
+  void _onRubMark() {
+    final ayah = _rubMark.mark?.startAyah;
+    if (ayah != null) {
+      if (_selectedAyah != null) return;
+      setState(() => _selectedAyah = _rubMarkedAyah = ayah);
+    } else if (_rubMarkedAyah != null) {
+      setState(() {
+        if (_selectedAyah == _rubMarkedAyah) _selectedAyah = null;
+        _rubMarkedAyah = null;
+      });
+    }
+  }
+
+  /// Announces the quarter of a hizb that starts on [page], once the page
+  /// and the quarters are known; offline without them nothing is shown.
+  Future<void> _markRub(int page) async {
+    try {
+      final rubs = await ref.read(quranRubElHizbProvider.future);
+      final pageData = await ref.read(mushafPageProvider(page).future);
+      if (!mounted || page != _currentPage) return;
+      _rubMark.reached(rubStartingIn(pageData.ayahReferences, rubs));
+    } on Object {
+      // The announcement is a courtesy; reading goes on without it.
+    }
   }
 
   @override
@@ -426,6 +462,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                 },
               ),
             ),
+            RubMarkToast(controller: _rubMark),
             PositionedDirectional(
               start: 12,
               end: 12,
@@ -1197,6 +1234,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     _queuePagePositionSave(page, accountScope: _pageTransitionScope);
     _zoomControllers.removeWhere((key, value) => (key - page).abs() > 2);
     _prefetchAdjacentPages(page);
+    unawaited(_markRub(page));
   }
 
   static const _prefetchRadius = 2;

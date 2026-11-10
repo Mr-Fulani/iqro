@@ -1221,6 +1221,51 @@ test("displayed source page saves canonical position before server debounce and 
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
 });
 
+test("a turned Mushaf page that starts a quarter announces it and tints its ayah", async ({ page }) => {
+  // The half of hizb 14 starts at 7:1, on page 151; the page it opens on starts none.
+  await page.route("**/api/v1/quran/editions/madani-hafs/rub-el-hizb", (route) => route.fulfill({ json: [{
+    ...rubElHizb[54],
+    start_ayah: { id: ayahs[0].id, surah: 7, number: 1 },
+    start_page: 151,
+    end_page: 152,
+  }] }));
+  await page.route("**/api/v1/quran/foundation/mushafs/5/pages/151", (route) =>
+    route.fulfill({ json: { ...foundationPage(5, 151), verse_mapping: { "7": "1" },
+      words: foundationPage(5, 151).words.filter((word) => word.verse_id === 1) } }),
+  );
+  await page.goto("/ru/quran?surah=6");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+  const mark = page.getByTestId("quran-quarter-mark");
+  await expect(mark).toHaveCount(0);
+
+  const pageJump = page.getByRole("spinbutton", { name: /Страница Мусхафа/ });
+  await pageJump.fill("151");
+  await pageJump.press("Enter");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
+  await expect(page.getByRole("status").filter({ hasText: "½ Хизб 14" })).toBeVisible();
+  await expect(mark.locator("img")).toHaveAttribute("src", "/iqro-wax-seal-128.webp");
+  await expect(page.locator(".qf-mushaf-ayah-fragment.is-marked")).not.toHaveCount(0);
+  // The pill and the tint go by themselves and never take a tap.
+  expect(await mark.evaluate((element) => getComputedStyle(element.parentElement!).pointerEvents)).toBe("none");
+  await expect(mark).toHaveCount(0, { timeout: 5_000 });
+  await expect(page.locator(".qf-mushaf-ayah-fragment.is-marked")).toHaveCount(0);
+
+  // Leaving the page and coming back announces the quarter again.
+  await pageJump.fill("128");
+  await pageJump.press("Enter");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
+  await expect(mark).toHaveCount(0);
+  await pageJump.fill("151");
+  await pageJump.press("Enter");
+  await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
+  await expect(page.getByRole("status").filter({ hasText: "½ Хизб 14" })).toBeVisible();
+  // Over the text, a fifth of the window up. The region, not the pill,
+  // which slides in and out.
+  const bottom = await mark.evaluate((element) => element.parentElement!.getBoundingClientRect().bottom);
+  const height = page.viewportSize()!.height;
+  expect(height - bottom).toBeGreaterThanOrEqual(height * 0.2 - 1);
+});
+
 test("after-prayer reader resumes the Mushaf and saves the actual page count once", async ({ page }) => {
   let checkInPayload: Record<string, unknown> | null = null;
   const automaticSessionPayloads: Record<string, unknown>[] = [];

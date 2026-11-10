@@ -50,6 +50,8 @@ export function QuranPlainText({
   mushaf,
   versePages,
   onLeave,
+  onSettle,
+  markedAyah = null,
   thisSurah,
   nextSurah,
   listHref,
@@ -67,6 +69,10 @@ export function QuranPlainText({
   mushaf: QuranFoundationMushaf | null;
   versePages: Record<string, number[]> | null;
   onLeave: (ayah: number) => void;
+  /** After a scroll of the reader's own: the ayahs that begin on screen. */
+  onSettle?: (verseKeys: string[]) => void;
+  /** An ayah to tint for as long as it is given. */
+  markedAyah?: number | null;
   thisSurah?: Surah;
   nextSurah?: Surah;
   listHref: string;
@@ -172,6 +178,31 @@ export function QuranPlainText({
     scroller.addEventListener("scroll", update, { passive: true });
     return () => scroller.removeEventListener("scroll", update);
   }, [scroller, surah, word]);
+
+  // Once a scroll of the reader's own stops: the ayahs whose first word is
+  // on screen. Placing the text at its ayah is not such a scroll.
+  useEffect(() => {
+    if (!scroller || !onSettle) return;
+    let timer: number | undefined;
+    const settle = () => {
+      if (placing.current) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const area = scroller.getBoundingClientRect();
+        onSettle([...scroller.querySelectorAll<HTMLElement>('[data-word-key$=":1"]')]
+          .filter((first) => {
+            const rect = first.getBoundingClientRect();
+            return rect.bottom > area.top && rect.top < area.bottom;
+          })
+          .map((first) => (first.dataset.wordKey ?? "").split(":").slice(0, 2).join(":")));
+      }, 350);
+    };
+    scroller.addEventListener("scroll", settle, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      scroller.removeEventListener("scroll", settle);
+    };
+  }, [onSettle, scroller]);
 
   const leave = useCallback(() => {
     if (leaving) return;
@@ -309,7 +340,7 @@ export function QuranPlainText({
                       <span key={index}>
                         {index > 0 && (layout?.breaks.has(index - 1) ? <br /> : " ")}
                         <span
-                          className={`quran-word${selected ? " is-word-selected" : ""}${selected && sameWord(at, playingWord) ? " is-word-playing" : ""}${marked === item.number ? " is-word-marked" : ""}`}
+                          className={`quran-word${selected ? " is-word-selected" : ""}${selected && sameWord(at, playingWord) ? " is-word-playing" : ""}${marked === item.number || markedAyah === item.number ? " is-word-marked" : ""}`}
                           data-word-key={wordKey(at)}
                           style={glyph && mushafScriptWordStyle(glyph)}
                         >
