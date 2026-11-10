@@ -1259,10 +1259,11 @@ test("a turned Mushaf page that starts a quarter announces it and tints its ayah
   await pageJump.press("Enter");
   await expect(page.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "151");
   await expect(page.getByRole("status").filter({ hasText: "½ Хизб 14" })).toBeVisible();
-  // Over the text, a fifth of the window up.
-  const box = (await mark.boundingBox())!;
+  // Over the text, a fifth of the window up. The region, not the pill,
+  // which slides in and out.
+  const bottom = await mark.evaluate((element) => element.parentElement!.getBoundingClientRect().bottom);
   const height = page.viewportSize()!.height;
-  expect(height - (box.y + box.height)).toBeGreaterThanOrEqual(height * 0.2 - 1);
+  expect(height - bottom).toBeGreaterThanOrEqual(height * 0.2 - 1);
 });
 
 test("after-prayer reader resumes the Mushaf and saves the actual page count once", async ({ page }) => {
