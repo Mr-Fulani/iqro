@@ -4,6 +4,13 @@
 > воспроизведение, экран блокировки, офлайн-пакеты с проверкой SHA-256, локальный намаз и
 > уведомления), добавлены ду‘а, курс намаза и другое — см. сводку в начале
 > [roadmap.md](roadmap.md). Актуальный список открытого — [tech-debt.md](tech-debt.md).
+>
+> **Правка 10.11.2026.** Строки матрицы 2, 7, 9, 10, 12, 13 и шесть критериев приёмки, которые
+> описывали отсутствующий Flutter-клиент, приведены к сегодняшнему состоянию и помечены
+> «обновлено 10.11.2026»; счётчики в «Кратком итоге» пересчитаны. Остальной текст — снимок
+> на 29.08.2026: цифры тестов, «Доказательная база», «Исправления» и backlog не переписывались.
+> В строке 18 с тех пор появились production на https://iqro.forum, offsite-бэкап и оповещения
+> в Telegram; открытое по эксплуатации — в [tech-debt.md](tech-debt.md).
 
 Дата актуализации: 29 августа 2026 года
 
@@ -37,8 +44,8 @@ content/license/religious, monitoring, offsite backup, security и rollback gate
 
 | Срез | Готово | Частично | Нет | Внешний gate |
 |---|---:|---:|---:|---:|
-| 18 P0-групп | 3 | 11 | 4 | 0 |
-| 36 критериев приёмки | 10 | 14 | 10 | 2 |
+| 18 P0-групп | 5 | 10 | 3 | 0 |
+| 36 критериев приёмки | 15 | 11 | 8 | 2 |
 
 Сильная часть текущего baseline — канонический Quran dataset, публичное Quran/audio API,
 гостевая и verified-email сессии, transactional guest merge, позиции/закладки, надёжная
@@ -85,18 +92,18 @@ runtime. Основной незакрытый объём находится в 
 | # | Требование P0 | Статус | Реализовано | Для полного P0 не хватает |
 |---:|---|:---:|---|---|
 | 1 | Гостевой режим и единый аккаунт | 🟡 | Guest bootstrap, passwordless verified email, linking/reauth, transactional guest merge, device-bound rotation, HttpOnly web BFF, session restore, device inventory/selective revoke, logout-all и self-service deletion с grace period | Identity unlink/change safeguards и дополнительные OAuth providers |
-| 2 | RU/EN/AR и RTL | 🟡 | Backend и web поддерживают RU/EN/AR/TR: типизированный каталог, browser-language negotiation, cookie/account persistence, language switch, динамические `lang`/`dir`, арабский RTL и локализованные product/error flows | Нет Flutter и Telegram Mini App parity |
+| 2 | RU/EN/AR и RTL | 🟡 | Backend и web поддерживают RU/EN/AR/TR: типизированный каталог, browser-language negotiation, cookie/account persistence, language switch, динамические `lang`/`dir`, арабский RTL и локализованные product/error flows. Flutter-клиент переведён на RU/EN/AR/TR с RTL (обновлено 10.11.2026) | Нет Telegram Mini App parity |
 | 3 | Мадинский Мусхаф Хафс, 604 страницы | ✅ | Versioned dataset, 114/6 236/604/30, source lock, checksums, 604 WebP assets | До публичного релиза всё ещё нужен религиозно-редакционный и лицензионный sign-off |
 | 4 | Навигация по page/surah/ayah/juz/hizb/rub | ✅ | Dataset/model/API/web поддерживают 30 джузов, 60 хизбов, 240 четвертей и точный переход по аяту/странице/суре | — |
 | 5 | Интерактивные области аятов | 🟡 | 12 346 сегментов, полный structural audit 604 страниц, группировка сегментов, E2E 6:2 и viewport matrix | Нужна ручная религиозно-редакционная приёмка curated сложных страниц |
 | 6 | Позиции, закладки, история, цели, серии | ✅ | Position, bookmarks, revisioned manual/automatic reading sessions, daily goals, progress, streaks, after-prayer check-ins и web-календарь 7/30/90 дней с исправлением истории | — |
-| 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable logical tracks и economy/standard/high renditions, compatible default asset, 114 surah tracks, ayah timings, R2/CDN ADR, create-only S3 upload и CDN evidence gate | Не доказаны три полностью лицензированных multi-quality релиза; production R2/CDN ещё не provisioned и corpus не загружен; нет transcoding, управляемой offline-установки, клиентского quality policy и redistribution pipeline |
+| 7 | Несколько чтецов, streaming и offline audio | 🟡 | QF catalog/sync, immutable logical tracks и economy/standard/high renditions, compatible default asset, 114 surah tracks, ayah timings, R2/CDN ADR, create-only S3 upload и CDN evidence gate. Production R2 и `media.iqro.forum` работают, каталоги Quran Foundation и MP3Quran (221 чтец), офлайн-пакеты аудио в приложении с проверкой SHA-256 (обновлено 10.11.2026) | Нет зафиксированного лицензионного и религиозного sign-off на аудио; нет transcoding |
 | 8 | Repeat/range/pause/speed/sleep timer | ✅ | Web: повтор аята и суры/диапазона, диапазоны аятов, паузы 0–5 с, скорость 0,5–2,0×, таймер после аята или 5–60 минут; persistent dock сохраняет трек и позицию, ставя playback на паузу при route navigation | — |
-| 9 | Flutter background playback/media controls | ❌ | — | Flutter workspace и platform audio service отсутствуют |
-| 10 | Offline packages и восстановление sync | 🟡 | Idempotent push/pull, conflicts, cursors, full resync, tombstones и web durable outbox для reading/bookmarks/reminders | Нет package domain/manifest API, resumable installer, локального entity cache и полноценного offline Flutter-клиента |
+| 9 | Flutter background playback/media controls | 🟡 | Flutter: фоновое воспроизведение, audio focus и управление с экрана блокировки в разделе «Аудио» (обновлено 10.11.2026) | Кнопки next/prev и stop, медиа-сессия для аудио Мусхафа, ду‘а и заучивания — [tech-debt.md](tech-debt.md), раздел 3 |
+| 10 | Offline packages и восстановление sync | ✅ | Idempotent push/pull, conflicts, cursors, full resync, tombstones и web durable outbox для reading/bookmarks/reminders. Офлайн-пакеты Мусхафа, аудио и картинок курса: manifest, докачка по Range, SHA-256, атомарная активация, управление местом; локальная база и durable outbox во Flutter (обновлено 10.11.2026) | — |
 | 11 | Переводы и тафсиры | 🟡 | Независимые versioned models/API/UI, locale-filtered provider catalogs, сноски и все проверенные ресурсы активных языков синхронизированы на staging | До публичного production нужен религиозно-редакционный sign-off выбранных Tafsir editions |
-| 12 | Намаз, методы, мазхаб, поправки | 🟡 | Versioned methods/releases, engine, golden cases, privacy-safe profile, high-latitude/polar rules и полный web profile UI | Flutter local parity и региональный content review отсутствуют |
-| 13 | Локальные уведомления и напоминания | 🟡 | Prayer/reading/review rules, revisions, retention и sync; web Web Push исполняет все три типа при закрытой вкладке, пять намазов включаются отдельными ежедневными тумблерами, location хранится только после opt-in на device subscription, а profile/timezone/location перепланируют очередь | Нет полностью offline/native Flutter scheduler; Web Push требует сеть |
+| 12 | Намаз, методы, мазхаб, поправки | 🟡 | Versioned methods/releases, engine, golden cases, privacy-safe profile, high-latitude/polar rules и полный web profile UI. Flutter считает время намаза локально, есть календарь на месяц, кибла и виджеты (обновлено 10.11.2026) | Региональный content review отсутствует |
+| 13 | Локальные уведомления и напоминания | ✅ | Prayer/reading/review rules, revisions, retention и sync; web Web Push исполняет все три типа при закрытой вкладке, пять намазов включаются отдельными ежедневными тумблерами, location хранится только после opt-in на device subscription, а profile/timezone/location перепланируют очередь. Flutter планирует напоминания о намазе с азаном локально, без сети (обновлено 10.11.2026) | Web Push по-прежнему требует сеть |
 | 14 | Управляемая реклама | ❌ | Только feedback context/category для жалобы на рекламу | Нет campaign/creative/placement/frequency cap/moderation/kill-switch домена |
 | 15 | Внешние donation links | ❌ | Только feedback category для жалобы на ссылку | Нет allowlist, safe redirect, admin workflow и клиентского placement |
 | 16 | Feedback и editorial workflow | 🟡 | Tickets, immutable context/messages/audit, SLA routing, operator admin и web reporter thread с close/reopen | Нет безопасных attachments, user notifications и editorial change request/review/approval workflow |
@@ -113,26 +120,26 @@ runtime. Основной незакрытый объём находится в 
 | Assets и канонические данные прошли integrity pipeline | ✅ | Source lock, per-file/asset SHA-256, builder/import/publication tests |
 | Переход к любой суре, аяту, джузу и странице | ✅ | API и web UI покрывают все четыре адресации, а также hizb/rub |
 | Стабильный выбор области на поддерживаемых размерах | 🟡 | Structural sweep и viewport matrix пройдены; остаётся ручная content acceptance |
-| Позиция восстанавливается локально и на другом устройстве | 🟡 | Backend cross-device revisions/sync реализованы; registered cross-client flow отсутствует |
+| Позиция восстанавливается локально и на другом устройстве | ✅ | Backend revisions/sync, сайт и Flutter синхронизируют позицию между устройствами (обновлено 10.11.2026) |
 
 ### Аудио
 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
 | Минимум три полностью лицензированных чтеца | ⏸ | API не ограничивает количество, но production rights/sign-off не зафиксирован в репозитории |
-| Stream/offline/repeat/range/speed/pause/timer | 🟡 | Streaming и все перечисленные режимы плеера есть на web; управляемый offline installer отсутствует |
-| Flutter background/lock-screen controls | ❌ | Flutter отсутствует |
+| Stream/offline/repeat/range/speed/pause/timer | ✅ | Режимы плеера есть на сайте и в приложении; офлайн-пакеты аудио ставятся в приложении (обновлено 10.11.2026) |
+| Flutter background/lock-screen controls | 🟡 | Фон и экран блокировки работают в «Аудио»; next/prev, stop и контекстное аудио открыты (обновлено 10.11.2026) |
 | Корректное восстановление после interruption | 🟡 | Web сохраняет курсор при pause/waiting, явно возобновляет его и покрыт E2E; native audio focus/device tests отсутствуют |
-| Повреждённый файл не устанавливается | ❌ | Checksums присутствуют в контракте, но client package installer отсутствует |
+| Повреждённый файл не устанавливается | ✅ | Установщик пакетов в приложении проверяет SHA-256 до активации (обновлено 10.11.2026) |
 
 ### Намаз и напоминания
 
 | Критерий | Статус | Обоснование |
 |---|:---:|---|
-| Method/asr/timezone/high-latitude/adjustments доступны | 🟡 | Backend и web profile UI закрывают полный контракт; Flutter local parity отсутствует |
+| Method/asr/timezone/high-latitude/adjustments доступны | ✅ | Backend, web profile UI и локальный расчёт во Flutter (обновлено 10.11.2026) |
 | Результаты совпадают с golden cases | ✅ | Есть engine golden tests и pinned config/tzdb metadata |
 | Координаты не логируются и не сохраняются без consent | ✅ | Calculate request redaction тестируется; `PrayerProfile` не содержит location fields, а округлённые координаты появляются только в device Web Push subscription после отдельного browser permission |
-| Локальные уведомления работают offline | 🟡 | Web Push доставляет prayer/review при закрытой вкладке и независимо добавляет предложение чтения после намаза; отдельное ежедневное reading-напоминание отключено, Web Push требует сеть, полноценный offline scheduler остаётся задачей Flutter |
+| Локальные уведомления работают offline | ✅ | Flutter планирует напоминания о намазе локально; Web Push на сайте требует сеть (обновлено 10.11.2026) |
 | Timezone/location change перепланирует уведомления | 🟡 | Web-подписка обновляет IANA timezone при открытии кабинета; location можно обновить явно, а изменение prayer profile перепланирует серверную очередь; native reschedule отсутствует |
 
 ### Синхронизация
