@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,6 +66,7 @@ void main() {
     for (final key in <String>[
       'mushaf-zoom',
       'mushaf-bookmarks',
+      'mushaf-edition',
       'mushaf-notes',
     ]) {
       await tester.ensureVisible(find.byKey(ValueKey(key)));
@@ -72,6 +75,69 @@ void main() {
     // «Сейчас играет» led to the Audio tab's player, not the Mushaf's.
     expect(find.byKey(const ValueKey('mushaf-now-playing')), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the ayah menu opens the choice of the Mushaf', (tester) async {
+    const shots = String.fromEnvironment('SCREENSHOT_DIR');
+    if (shots.isNotEmpty) {
+      // For docs/guides/mushaf-script-in-text: the real interface fonts.
+      final fonts =
+          '${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts';
+      for (final (family, file) in [
+        ('Roboto', 'Roboto-Regular.ttf'),
+        ('Roboto', 'Roboto-Medium.ttf'),
+        ('MaterialIcons', 'MaterialIcons-Regular.otf'),
+      ]) {
+        await (FontLoader(family)..addFont(
+              Future.value(
+                ByteData.sublistView(File('$fonts/$file').readAsBytesSync()),
+              ),
+            ))
+            .load();
+      }
+    }
+    await _pump(tester);
+    await _tapAyah(tester, .35);
+    await _openAyahMenu(tester);
+    final choose = find.byKey(const ValueKey('mushaf-edition'));
+    await tester.ensureVisible(choose);
+    await tester.pump();
+    expect(
+      find.descendant(of: choose, matching: find.text('Выберите Мусхаф')),
+      findsOneWidget,
+    );
+    if (shots.isNotEmpty) {
+      // The seal of the item decodes outside the fake clock.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)),
+      );
+      await tester.pump();
+      final view = tester.binding.renderViews.first;
+      final bytes = await tester.runAsync(() async {
+        final image = await (view.debugLayer! as OffsetLayer).toImage(
+          view.paintBounds,
+          pixelRatio: 3,
+        );
+        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        return data!.buffer.asUint8List();
+      });
+      File('$shots/app-mushaf-menu.png')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(bytes!);
+    }
+    await tester.tap(choose);
+    for (var frame = 0; frame < 4; frame++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    // The menu has closed; the sheet of editions is open.
+    expect(choose, findsNothing);
+    expect(find.text('Выберите Мусхаф'), findsOneWidget);
+    expect(
+      find.text('Нажмите на страницу, чтобы рассмотреть её'),
+      findsOneWidget,
+    );
+    // The sheet's offline card has no storage in this harness.
+    tester.takeException();
   });
 
   testWidgets('a swipe reuses the data of the ±2 page window', (tester) async {

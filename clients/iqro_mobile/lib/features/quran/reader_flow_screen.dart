@@ -13,6 +13,7 @@ import '../../core/theme/iqro_theme.dart';
 import '../dua/dua_arabic.dart';
 import 'ayah_action_sheet.dart';
 import 'mushaf_paper.dart';
+import 'mushaf_script.dart';
 import 'next_surah.dart';
 import 'quran_models.dart';
 import 'reader_page_turn.dart';
@@ -142,6 +143,10 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   late var _ayah = widget.initialAyah;
   QuranWordRange? _marked;
   Timer? _markTimer;
+
+  /// The ayahs drawn in the plain font, not yet in the Mushaf's script.
+  final _plainAyahs = <int>{};
+  var _dragged = false;
 
   /// The size while the slider moves, ahead of the saved one.
   double? _fontSize;
@@ -445,11 +450,12 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     );
     final size = _fontSize ?? saved;
     final items = ayahs.valueOrNull ?? const <QuranAyah>[];
-    final page = items
-        .where((item) => item.number == _ayah)
-        .firstOrNull
-        ?.pages
-        .firstOrNull;
+    final versePages = ref.watch(mushafVersePagesProvider).valueOrNull;
+    final current = items.where((item) => item.number == _ayah).firstOrNull;
+    final page = current == null
+        ? null
+        : mushafPageOfAyah(versePages, widget.surah, _ayah, current.pages);
+    final language = Localizations.localeOf(context).languageCode;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -485,7 +491,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                       onRetry: () =>
                           ref.invalidate(ayahsProvider(widget.surah)),
                     ),
-                    data: (items) => _text(items, size),
+                    data: (items) => _text(items, size, versePages),
                   ),
                 ),
                 SizedBox(
@@ -495,8 +501,8 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                         ? null
                         : Text(
                             context.l10n.readerPlainTextPlace(
-                              arabicIndicDigits(_ayah),
-                              arabicIndicDigits(page),
+                              readerDigits(language, _ayah),
+                              readerDigits(language, page),
                             ),
                             key: const ValueKey('reader-flow-place'),
                             style: Theme.of(context).textTheme.labelMedium
@@ -512,7 +518,11 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     );
   }
 
-  Widget _text(List<QuranAyah> items, double size) {
+  Widget _text(
+    List<QuranAyah> items,
+    double size,
+    Map<String, List<int>>? versePages,
+  ) {
     _schedulePlace(items);
     final theme = Theme.of(context);
     final style = theme.textTheme.headlineMedium?.copyWith(
@@ -522,6 +532,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       fontSize: size,
       height: 2,
     );
+    int? pageOf(QuranAyah ayah) =>
+        mushafPageOfAyah(versePages, widget.surah, ayah.number, ayah.pages);
+    final language = Localizations.localeOf(context).languageCode;
     final first = items.firstOrNull;
     // Every surah but al-Fatiha and at-Tawba opens with the basmala, which
     // is not counted as its first ayah: it stands on its own line.
@@ -562,6 +575,10 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
                       if (notification.depth != 0) return false;
+                      if (notification is ScrollStartNotification &&
+                          notification.dragDetails != null) {
+                        _dragged = true;
+                      }
                       if (notification is ScrollUpdateNotification) {
                         if (_words.range != null) _reportBounds();
                         // A jump to keep the place reports nothing new.
@@ -612,6 +629,63 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                 );
                         }
                         final ayah = items[index - 1];
+                        final words = ayahWords(ayah);
+                        final page = pageOf(ayah);
+                        final pageEnded =
+                            index > 1 &&
+                            page != null &&
+                            page != pageOf(items[index - 2]);
+                        final text = Consumer(
+                          builder: (context, ref, _) {
+                            final script = watchMushafAyahScript(
+                              ref,
+                              surah: widget.surah,
+                              ayah: ayah.number,
+                              wordCount: words.length,
+                            );
+                            // The Mushaf's script reflows the text when it
+                            // arrives: the ayah at the top stays there.
+                            // Once the reader scrolls, pages load ahead of
+                            // the screen and move nothing on it.
+                            if (script == null) {
+                              _plainAyahs.add(ayah.number);
+                            } else if (_plainAyahs.remove(ayah.number) &&
+                                !_dragged) {
+                              _keepPlace();
+                            }
+                            return ReaderAyahWords.flow(
+                              key: ValueKey('reader-flow-ayah-${ayah.number}'),
+                              surah: widget.surah,
+                              ayahs: <ReaderAyahText>[
+                                ReaderAyahText(
+                                  ayah: ayah.number,
+                                  words: words,
+                                  marker:
+                                      '\u00A0﴿${arabicIndicDigits(ayah.number)}﴾',
+                                  spans: script?.words,
+                                  markerSpan: script == null
+                                      ? null
+                                      : TextSpan(
+                                          children: <InlineSpan>[
+                                            const TextSpan(text: '\u00A0'),
+                                            ?script.marker,
+                                          ],
+                                        ),
+                                ),
+                              ],
+                              textAlign: TextAlign.start,
+                              markerStyle: const TextStyle(color: _markerColor),
+                              kashida: true,
+                              style: style,
+                              registry: _wordRegistry,
+                              range: _words.range,
+                              marked: _marked,
+                              playingWord: _words.playingWord,
+                              onRange: (range) => _selectWords(items, range),
+                              onDrag: _followWordDrag,
+                            );
+                          },
+                        );
                         // Each ayah a paragraph of its own, a blank line
                         // between them.
                         return Padding(
@@ -620,28 +694,24 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                             GlobalKey.new,
                           ),
                           padding: EdgeInsets.only(bottom: size * .9),
-                          child: ReaderAyahWords.flow(
-                            key: ValueKey('reader-flow-ayah-${ayah.number}'),
-                            surah: widget.surah,
-                            ayahs: <ReaderAyahText>[
-                              ReaderAyahText(
-                                ayah: ayah.number,
-                                words: ayahWords(ayah),
-                                marker:
-                                    '\u00A0﴿${arabicIndicDigits(ayah.number)}﴾',
-                              ),
-                            ],
-                            textAlign: TextAlign.start,
-                            markerStyle: const TextStyle(color: _markerColor),
-                            kashida: true,
-                            style: style,
-                            registry: _wordRegistry,
-                            range: _words.range,
-                            marked: _marked,
-                            playingWord: _words.playingWord,
-                            onRange: (range) => _selectWords(items, range),
-                            onDrag: _followWordDrag,
-                          ),
+                          child: pageEnded
+                              ? Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: <Widget>[
+                                    ReaderPageBreak(
+                                      key: ValueKey(
+                                        'reader-flow-page-end-${page - 1}',
+                                      ),
+                                      paper: true,
+                                      label:
+                                          '${context.l10n.page} ${readerDigits(language, page - 1)}',
+                                    ),
+                                    SizedBox(height: size * .5),
+                                    text,
+                                  ],
+                                )
+                              : text,
                         );
                       },
                     ),
