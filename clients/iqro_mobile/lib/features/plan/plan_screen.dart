@@ -304,7 +304,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
           ),
         );
       } else {
-        await showModalBottomSheet<void>(
+        await showIqroSheet<void>(
           context: context,
           useSafeArea: true,
           builder: (context) => Padding(
@@ -331,7 +331,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     AccountScopeSnapshot scope,
     DailyPlan current,
   ) async {
-    final draft = await showModalBottomSheet<_GoalDraft>(
+    final draft = await showIqroSheet<_GoalDraft>(
       context: context,
       isScrollControlled: true,
       builder: (context) => _GoalEditor(current: current),
@@ -363,7 +363,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     AccountScopeSnapshot scope,
     ReadingGoalMetric metric,
   ) async {
-    final value = await showModalBottomSheet<int>(
+    final value = await showIqroSheet<int>(
       context: context,
       builder: (context) => SafeArea(
         child: Padding(
@@ -411,7 +411,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     ReadingSession session,
   ) async {
     if (_busySessionId != null) return;
-    final draft = await showModalBottomSheet<_ManualEntryDraft>(
+    final draft = await showIqroSheet<_ManualEntryDraft>(
       context: context,
       isScrollControlled: true,
       builder: (context) => _ManualEntryEditor(session: session),

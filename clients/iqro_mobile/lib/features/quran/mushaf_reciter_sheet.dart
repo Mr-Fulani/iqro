@@ -15,7 +15,7 @@ Future<Recitation?> showMushafReciterSheet(
   BuildContext context, {
   required List<Recitation> recitations,
   String? selectedId,
-}) => showModalBottomSheet<Recitation>(
+}) => showIqroSheet<Recitation>(
   context: context,
   isScrollControlled: true,
   useSafeArea: true,

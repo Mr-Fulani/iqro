@@ -186,7 +186,7 @@ class RemindersScreen extends ConsumerWidget {
     final accountScope = database.accountScope.current;
     if (accountScope == null) return;
     final controller = ref.read(reminderProvider.notifier);
-    await showModalBottomSheet<void>(
+    await showIqroSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -313,7 +313,7 @@ class _ReviewReminderCard extends ConsumerWidget {
     return IqroCard(
       onTap: accountScope == null
           ? null
-          : () => showModalBottomSheet<void>(
+          : () => showIqroSheet<void>(
               context: context,
               isScrollControlled: true,
               useSafeArea: true,

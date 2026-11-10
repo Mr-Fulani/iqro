@@ -65,7 +65,7 @@ class FeedbackScreen extends ConsumerWidget {
   }
 
   Future<void> _createTicket(BuildContext context, WidgetRef ref) async {
-    final created = await showModalBottomSheet<FeedbackTicket>(
+    final created = await showIqroSheet<FeedbackTicket>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,

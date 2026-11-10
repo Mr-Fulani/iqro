@@ -441,7 +441,7 @@ class NoteMarkButton extends StatelessWidget {
 /// The note in a bottom sheet: a tap outside, a swipe down, «Close» or Esc
 /// closes it.
 Future<void> showNoteMark(BuildContext context, NoteMark mark) =>
-    showModalBottomSheet<void>(
+    showIqroSheet<void>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,

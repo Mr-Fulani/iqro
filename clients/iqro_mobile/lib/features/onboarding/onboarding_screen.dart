@@ -250,7 +250,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   Future<void> _chooseCity() async {
     final method = _method;
     if (method == null || _locating) return;
-    final city = await showModalBottomSheet<PrayerCity>(
+    final city = await showIqroSheet<PrayerCity>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,

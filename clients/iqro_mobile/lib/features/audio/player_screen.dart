@@ -442,7 +442,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     List<PlayerBackground> backgrounds,
     String currentId,
   ) async {
-    final selected = await showModalBottomSheet<String>(
+    final selected = await showIqroSheet<String>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -517,7 +517,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         )
         .toList(growable: false);
     if (people.isEmpty || allowed.isEmpty) return;
-    final selection = await showModalBottomSheet<_ReciterSelection>(
+    final selection = await showIqroSheet<_ReciterSelection>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -706,7 +706,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     }
     final locale = Localizations.localeOf(context).languageCode;
     final reciterName = player.reciter?.nameFor(locale) ?? '';
-    final choice = await showModalBottomSheet<_QueueChoice>(
+    final choice = await showIqroSheet<_QueueChoice>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -758,7 +758,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     if (surah == null || current.channel != AudioPlaybackChannel.listening) {
       return;
     }
-    final selected = await showModalBottomSheet<Recitation>(
+    final selected = await showIqroSheet<Recitation>(
       context: context,
       useSafeArea: true,
       builder: (context) => _RecitationVariantSheet(
@@ -881,7 +881,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   ) async {
     final scope = ref.read(localDatabaseProvider).accountScope.current;
     if (scope == null || !_isCurrentController(scope, controller)) return;
-    final speed = await showModalBottomSheet<double>(
+    final speed = await showIqroSheet<double>(
       context: context,
       builder: (context) => SafeArea(
         child: Padding(
@@ -924,7 +924,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         .where(supportedAudioQualityPreferences.contains)
         .toSet()
         .toList(growable: false);
-    final selection = await showModalBottomSheet<String>(
+    final selection = await showIqroSheet<String>(
       context: context,
       useSafeArea: true,
       builder: (context) => _AudioQualitySheet(
@@ -990,7 +990,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   ) async {
     final scope = ref.read(localDatabaseProvider).accountScope.current;
     if (scope == null || !_isCurrentController(scope, controller)) return;
-    final minutes = await showModalBottomSheet<int>(
+    final minutes = await showIqroSheet<int>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
@@ -1040,7 +1040,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       (state.rangeStartAyah ?? minimum).clamp(minimum, maximum).toDouble(),
       (state.rangeEndAyah ?? maximum).clamp(minimum, maximum).toDouble(),
     );
-    final selected = await showModalBottomSheet<List<int>>(
+    final selected = await showIqroSheet<List<int>>(
       context: context,
       useSafeArea: true,
       builder: (context) => StatefulBuilder(

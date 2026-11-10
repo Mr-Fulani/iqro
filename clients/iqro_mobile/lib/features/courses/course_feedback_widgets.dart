@@ -362,7 +362,7 @@ class LessonReportButton extends StatelessWidget {
       alignment: AlignmentDirectional.centerStart,
       child: TextButton.icon(
         key: const ValueKey('course-lesson-report'),
-        onPressed: () => showModalBottomSheet<void>(
+        onPressed: () => showIqroSheet<void>(
           context: context,
           showDragHandle: true,
           isScrollControlled: true,

@@ -24,6 +24,37 @@ EdgeInsetsDirectional iqroRootTabPadding(
   playerActive && !playerCollapsed ? 76 : 4,
 );
 
+/// [showModalBottomSheet] whose content ends above the system navigation bar
+/// (three buttons on many phones), the way [IqroPage] does for screens. The
+/// sheet's own colour still runs under the bar. Content sees no bottom
+/// padding, so a sheet that already wraps itself in [SafeArea] is not padded
+/// twice; with the keyboard open the inset is zero and the sheet pads for
+/// the keyboard itself.
+Future<T?> showIqroSheet<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool isScrollControlled = false,
+  bool useSafeArea = false,
+  bool? showDragHandle,
+  Color? backgroundColor,
+  Color? barrierColor,
+}) => showModalBottomSheet<T>(
+  context: context,
+  isScrollControlled: isScrollControlled,
+  useSafeArea: useSafeArea,
+  showDragHandle: showDragHandle,
+  backgroundColor: backgroundColor,
+  barrierColor: barrierColor,
+  builder: (context) => Padding(
+    padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+    child: MediaQuery.removePadding(
+      context: context,
+      removeBottom: true,
+      child: Builder(builder: builder),
+    ),
+  ),
+);
+
 /// Widest a page's content grows in landscape, padding included.
 const iqroLandscapeContentWidth = 640.0;
 

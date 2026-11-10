@@ -177,7 +177,7 @@ The frontmatter records only explicit overrides. Inherited weight, line height, 
 
 ## Layout
 
-The verified operating context is an Android phone; tablets use `iqroTabletShortestSide` (600) and capped content widths (`iqroLandscapeContentWidth` 640, `homeTabletContentWidth` 1100). `IqroPage` wraps content in `SafeArea(bottom: false)` and normally a vertical `SingleChildScrollView`; dragging dismisses the keyboard. Default directional insets are defined in frontmatter. Root tabs add 76 logical pixels to the bottom safe area while the mini-player is expanded, otherwise 4, through `iqroRootTabPadding`.
+The verified operating context is an Android phone; tablets use `iqroTabletShortestSide` (600) and capped content widths (`iqroLandscapeContentWidth` 640, `homeTabletContentWidth` 1100). `IqroPage` wraps content in `SafeArea(bottom: false)` and normally a vertical `SingleChildScrollView`; dragging dismisses the keyboard. Default directional insets are defined in frontmatter. Root tabs add 76 logical pixels to the bottom safe area while the mini-player is expanded, otherwise 4, through `iqroRootTabPadding`. Every modal bottom sheet opens through `showIqroSheet`, never `showModalBottomSheet` directly: the sheet's content ends above the system navigation bar (three buttons on many phones) while its colour runs under the bar, and with the keyboard open only the keyboard is padded for.
 
 `IqroTopBar` has a height of 64, or 72 with a subtitle. Its title and subtitle each occupy one line with ellipsis. List rows have a minimum height of 64. Buttons have a minimum size of 48 × 52, not a fixed text-clipping height.
 

@@ -324,7 +324,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
 
   Future<void> _showMushafPicker(BuildContext context) async {
     ref.invalidate(mushafRenditionsProvider);
-    await showModalBottomSheet<void>(
+    await showIqroSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -427,7 +427,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
       final hizb = results[2] as List<QuranDivision>?;
       final rubElHizb = results[3] as List<QuranDivision>?;
       if (!context.mounted) return;
-      final selection = await showModalBottomSheet<QuranQuickJumpSelection>(
+      final selection = await showIqroSheet<QuranQuickJumpSelection>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,

@@ -381,7 +381,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     final start = _words.range?.start;
     final ayah = items.where((item) => item.number == start?.ayah).firstOrNull;
     if (ayah == null) return;
-    await showModalBottomSheet<void>(
+    await showIqroSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: false,
@@ -410,7 +410,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     );
     // A sheet on a phone; on a tablet a panel by the button.
     if (MediaQuery.sizeOf(context).shortestSide < 600) {
-      await showModalBottomSheet<void>(
+      await showIqroSheet<void>(
         context: context,
         barrierColor: Colors.black12,
         builder: (context) => SafeArea(child: panel),
