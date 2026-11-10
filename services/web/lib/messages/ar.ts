@@ -878,6 +878,7 @@ const ar: Messages = {
   "quran.toSurahList": "إلى قائمة السور",
   "quran.nextSurahAyahs": "{count} آية",
   "quran.plainText": "النص العربي",
+  "quran.swipeHint": "اسحب يمينًا للنص العربي ويسارًا للمصحف",
   "quran.plainTextPlace": "الآية {ayah} · ص {page}",
   "quran.plainTextSize": "حجم النص العربي",
   "quran.plainTextReset": "إعادة الضبط",

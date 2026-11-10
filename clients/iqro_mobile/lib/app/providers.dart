@@ -345,6 +345,13 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> markPlayerHintLearned() =>
       _set(state.copyWith(playerHintsShown: miniPlayerHintLimit));
 
+  Future<void> noteReaderSwipeHint() => _set(
+    state.copyWith(readerSwipeHintsShown: state.readerSwipeHintsShown + 1),
+  );
+
+  Future<void> markReaderSwipeHintLearned() =>
+      _set(state.copyWith(readerSwipeHintsShown: readerSwipeHintLimit));
+
   Future<void> setDailyReadingGoal({
     required DailyUnit unit,
     required int target,

@@ -104,6 +104,121 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a moment after the text first opens a hand pulls it right, '
+      'then left, naming what lies each way, and goes', (tester) async {
+    final app = await _pump(tester);
+    expect(_hint, findsNothing);
+
+    await tester.pump(readerSwipeHintDelay);
+    await tester.pump();
+    expect(tester.widget<Text>(_hint).data, _hintText);
+    expect(app.preferences.readerSwipeHintsShown, 1);
+
+    // A third of the way through the page stands pulled to the right.
+    await tester.pump(readerSwipeHintDuration * .3);
+    expect(_shift(tester), greaterThan(104));
+    expect(find.text('Арабский текст'), findsOneWidget);
+    expect(tester.getCenter(_hand).dx, greaterThan(180));
+
+    await tester.pump(readerSwipeHintDuration * .45);
+    expect(_shift(tester), lessThan(-104));
+    expect(find.text('Мусхаф'), findsOneWidget);
+    expect(tester.getCenter(_hand).dx, lessThan(180));
+
+    await tester.pumpAndSettle();
+    expect(_hint, findsNothing);
+    expect(_shift(tester), 0);
+    // It opened nothing.
+    expect(find.byKey(const ValueKey('reader-flow')), findsNothing);
+    expect(app.mushaf, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the swipe hint reads the same way in Arabic: a swipe is not '
+      'mirrored', (tester) async {
+    await _pump(tester, locale: const Locale('ar'), theme: IqroTheme.dark());
+    await tester.pump(readerSwipeHintDelay);
+    await tester.pump();
+    expect(
+      tester.widget<Text>(_hint).data,
+      'اسحب يمينًا للنص العربي ويسارًا للمصحف',
+    );
+    await tester.pump(readerSwipeHintDuration * .3);
+    expect(_shift(tester), greaterThan(104));
+    expect(find.text('النص العربي'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a touch ends the swipe hint at once', (tester) async {
+    await _pump(tester);
+    await tester.pump(readerSwipeHintDelay);
+    await tester.pump(readerSwipeHintDuration * .3);
+    expect(_hint, findsOneWidget);
+
+    final finger = await tester.startGesture(const Offset(180, 300));
+    await tester.pump();
+    expect(_hint, findsNothing);
+    // The page slides back; the finger opens nothing.
+    await finger.cancel();
+    await tester.pumpAndSettle();
+    expect(_shift(tester), 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the swipe hint comes three times at most, and never after a '
+      'swipe', (tester) async {
+    var app = await _pump(
+      tester,
+      stored: const <String, Object>{'reader_swipe_hint_count': 2},
+    );
+    await tester.pump(readerSwipeHintDelay);
+    await tester.pump();
+    expect(_hint, findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(app.preferences.readerSwipeHintsShown, readerSwipeHintLimit);
+
+    await tester.pumpWidget(const SizedBox());
+    app = await _pump(
+      tester,
+      stored: const <String, Object>{'reader_swipe_hint_count': 3},
+    );
+    await tester.pump(readerSwipeHintDelay);
+    await tester.pump();
+    expect(_hint, findsNothing);
+
+    // The reader swipes before the hint: it has nothing to teach.
+    await tester.pumpWidget(const SizedBox());
+    app = await _pump(tester);
+    await _swipe(tester, await _card(tester, 3), -220);
+    expect(app.mushaf, isNotNull);
+    expect(app.preferences.readerSwipeHintsShown, readerSwipeHintLimit);
+    await tester.pump(readerSwipeHintDelay);
+    await tester.pump();
+    expect(_hint, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('with animations off the swipe hint stands still and the text '
+      'does not move', (tester) async {
+    await _pump(tester, reducedMotion: true);
+    await tester.pump(readerSwipeHintDelay);
+    await tester.pump();
+    expect(_hint, findsOneWidget);
+    expect(_hand, findsOneWidget);
+    final hand = tester.getCenter(_hand);
+
+    await tester.pump(readerSwipeHintStill ~/ 2);
+    expect(_hint, findsOneWidget);
+    expect(_shift(tester), 0);
+    expect(tester.getCenter(_hand), hand);
+
+    await tester.pump(readerSwipeHintStill ~/ 2);
+    await tester.pump();
+    expect(_hint, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a swipe left turns to the Mushaf page of the ayah under the '
       'finger', (tester) async {
     final app = await _pump(tester);
@@ -434,6 +549,24 @@ int _placeAyah(WidgetTester tester) {
   return int.parse(_place(tester).split(' ')[1]);
 }
 
+const _hintText = 'Свайп вправо — арабский текст, влево — Мусхаф';
+final _hint = find.byKey(const ValueKey('reader-swipe-hint'));
+final _hand = find.byKey(const ValueKey('reader-swipe-hint-hand'));
+
+/// How far the text stands pulled aside.
+double _shift(WidgetTester tester) => tester
+    .widget<Transform>(
+      find
+          .descendant(
+            of: find.byType(ReaderSwipeArea),
+            matching: find.byType(Transform),
+          )
+          .first,
+    )
+    .transform
+    .getTranslation()
+    .x;
+
 Future<void> _swipe(
   WidgetTester tester,
   Offset start,
@@ -467,12 +600,14 @@ Future<_App> _pump(
   List<Override> overrides = const <Override>[],
   _Quran? repository,
   List<QuranDivision> rubs = const <QuranDivision>[],
+  Map<String, Object> stored = const <String, Object>{},
+  bool reducedMotion = false,
 }) async {
   tester.view.devicePixelRatio = pixelRatio;
   tester.view.physicalSize = size;
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
-  SharedPreferences.setMockInitialValues(<String, Object>{});
+  SharedPreferences.setMockInitialValues(stored);
   final store = PreferencesStore(await SharedPreferences.getInstance());
   final database = _Database();
   final quran = repository ?? _Quran();
@@ -529,6 +664,12 @@ Future<_App> _pump(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: router,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: reducedMotion),
+            child: child!,
+          ),
         ),
       ),
     ),

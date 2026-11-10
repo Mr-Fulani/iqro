@@ -28,6 +28,8 @@ class ReaderSwipeArea extends StatefulWidget {
     this.left,
     this.enabled = true,
     this.background,
+    this.hint,
+    this.onHintEnd,
     super.key,
   });
 
@@ -44,6 +46,13 @@ class ReaderSwipeArea extends StatefulWidget {
   /// The direction, and where the finger first touched, in global terms.
   final void Function(ReaderSwipeDirection direction, Offset start) onSwipe;
 
+  /// Once this caption is given, the page shows that it can be swiped: a
+  /// hand pulls it a little to the right, then to the left, uncovering what
+  /// lies each way, and [onHintEnd] follows. A touch ends it at once. With
+  /// animations off the hand and the caption only stand for a while.
+  final String? hint;
+  final VoidCallback? onHintEnd;
+
   @override
   State<ReaderSwipeArea> createState() => _ReaderSwipeAreaState();
 }
@@ -51,16 +60,121 @@ class ReaderSwipeArea extends StatefulWidget {
 /// The strip along each side where a swipe belongs to the system.
 const readerSwipeEdge = 24.0;
 
+/// The swipe hint: to the right, a pause, back, to the left, a pause, back.
+const readerSwipeHintDuration = Duration(milliseconds: 3600);
+
+/// How long the still hint stands when animations are off.
+const readerSwipeHintStill = Duration(seconds: 4);
+
+/// The page's place through the hint, as a share of the pull: 1 is fully to
+/// the right, -1 to the left.
+final _hintPath = TweenSequence<double>(<TweenSequenceItem<double>>[
+  TweenSequenceItem(tween: ConstantTween(0), weight: 3),
+  TweenSequenceItem(
+    tween: Tween<double>(
+      begin: 0,
+      end: 1,
+    ).chain(CurveTween(curve: Curves.easeInOutCubic)),
+    weight: 6,
+  ),
+  TweenSequenceItem(tween: ConstantTween(1), weight: 5),
+  TweenSequenceItem(
+    tween: Tween<double>(
+      begin: 1,
+      end: 0,
+    ).chain(CurveTween(curve: Curves.easeInOutCubic)),
+    weight: 4,
+  ),
+  TweenSequenceItem(
+    tween: Tween<double>(
+      begin: 0,
+      end: -1,
+    ).chain(CurveTween(curve: Curves.easeInOutCubic)),
+    weight: 6,
+  ),
+  TweenSequenceItem(tween: ConstantTween(-1), weight: 5),
+  TweenSequenceItem(
+    tween: Tween<double>(
+      begin: -1,
+      end: 0,
+    ).chain(CurveTween(curve: Curves.easeInOutCubic)),
+    weight: 4,
+  ),
+  TweenSequenceItem(tween: ConstantTween(0), weight: 3),
+]);
+
 class _ReaderSwipeAreaState extends State<ReaderSwipeArea>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final _slide = AnimationController.unbounded(vsync: this);
+  late final _hint = AnimationController(
+    vsync: this,
+    duration: readerSwipeHintDuration,
+    // The hint is asked for only with animations on: it runs at full length.
+    animationBehavior: AnimationBehavior.preserve,
+  );
+  Timer? _hintStill;
+  var _hinting = false;
   Offset? _start;
   var _pulled = 0.0;
 
   @override
+  void initState() {
+    super.initState();
+    _hint.addListener(() {
+      if (!_hinting || !_hint.isAnimating) return;
+      final width = context.size?.width ?? 0;
+      // Far enough for the strip under the page to name where it leads.
+      _slide.value = _hintPath.evaluate(_hint) * math.min(width * .36, 150);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.hint != null && !_hinting) _startHint();
+  }
+
+  @override
+  void didUpdateWidget(ReaderSwipeArea oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.hint != null && oldWidget.hint == null) _startHint();
+    if (widget.hint == null && _hinting) _stopHint();
+  }
+
+  @override
   void dispose() {
+    _hintStill?.cancel();
+    _hint.dispose();
     _slide.dispose();
     super.dispose();
+  }
+
+  void _startHint() {
+    if (_hinting) return;
+    _hinting = true;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _hintStill = Timer(readerSwipeHintStill, _endHint);
+      return;
+    }
+    unawaited(
+      _hint.forward(from: 0).whenComplete(() {
+        if (mounted && _hinting) _endHint();
+      }),
+    );
+  }
+
+  void _stopHint() {
+    _hinting = false;
+    _hintStill?.cancel();
+    _hintStill = null;
+    _hint.stop();
+    if (_slide.value != 0 && _start == null) _slideBack();
+  }
+
+  void _endHint() {
+    if (!_hinting) return;
+    setState(_stopHint);
+    widget.onHintEnd?.call();
   }
 
   bool _allows(Offset global) {
@@ -107,6 +221,14 @@ class _ReaderSwipeAreaState extends State<ReaderSwipeArea>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    return Listener(
+      // Any touch ends the hint, before the gesture is told apart.
+      onPointerDown: (_) => _endHint(),
+      child: _area(context, scheme),
+    );
+  }
+
+  Widget _area(BuildContext context, ColorScheme scheme) {
     return RawGestureDetector(
       gestures: <Type, GestureRecognizerFactory>{
         if (widget.enabled)
@@ -129,7 +251,7 @@ class _ReaderSwipeAreaState extends State<ReaderSwipeArea>
               ),
       },
       child: AnimatedBuilder(
-        animation: _slide,
+        animation: Listenable.merge(<Listenable>[_slide, _hint]),
         child: widget.child,
         builder: (context, child) {
           final offset = _slide.value;
@@ -173,12 +295,166 @@ class _ReaderSwipeAreaState extends State<ReaderSwipeArea>
                   ),
                 ),
               ),
+              if (_hinting)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: _SwipeHint(
+                      caption: widget.hint ?? '',
+                      offset: offset,
+                      shown: _hint.isAnimating
+                          ? (math.min(_hint.value, 1 - _hint.value) * 14)
+                                .clamp(0, 1)
+                                .toDouble()
+                          : 1,
+                    ),
+                  ),
+                ),
             ],
           );
         },
       ),
     );
   }
+}
+
+/// A hand with its forefinger out, moving with the page it pulls, and under
+/// it the words on what a swipe opens.
+class _SwipeHint extends StatelessWidget {
+  const _SwipeHint({
+    required this.caption,
+    required this.offset,
+    required this.shown,
+  });
+
+  final String caption;
+  final double offset;
+  final double shown;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // A light hand with a dark outline in both themes: it lies on the text.
+    final dark = scheme.brightness == Brightness.dark;
+    return Opacity(
+      opacity: shown,
+      // Below the middle, where the strip under the page names its target.
+      child: Align(
+        alignment: const Alignment(0, .6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Transform.translate(
+              // The finger leads the page a little, as a real one does.
+              offset: Offset(offset * 1.15, 0),
+              child: CustomPaint(
+                key: const ValueKey('reader-swipe-hint-hand'),
+                size: const Size(72, 84),
+                painter: _SwipeHandPainter(
+                  skin: dark ? scheme.onSurface : scheme.surface,
+                  line: dark ? scheme.surface : scheme.onSurface,
+                  touch: scheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.inverseSurface,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: const <BoxShadow>[
+                    BoxShadow(color: Color(0x33000000), blurRadius: 16),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      caption,
+                      key: const ValueKey('reader-swipe-hint'),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: scheme.onInverseSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The hand, drawn on a 48 by 56 grid: the same outline as the site's
+/// (services/web/components/ReaderSwipe.tsx), with a ring where it touches.
+class _SwipeHandPainter extends CustomPainter {
+  const _SwipeHandPainter({
+    required this.skin,
+    required this.line,
+    required this.touch,
+  });
+
+  final Color skin;
+  final Color line;
+  final Color touch;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 48, size.height / 56);
+    const tip = Offset(21.5, 8);
+    canvas
+      ..drawCircle(tip, 7.5, Paint()..color = touch.withValues(alpha: .25))
+      ..drawCircle(
+        tip,
+        7.5,
+        Paint()
+          ..color = touch
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1,
+      );
+    Radius round(double radius) => Radius.circular(radius);
+    final hand = Path()
+      ..moveTo(18, 7)
+      ..relativeArcToPoint(const Offset(7, 0), radius: round(3.5))
+      ..relativeLineTo(0, 14)
+      ..relativeArcToPoint(const Offset(6.4, 0), radius: round(3.2))
+      ..relativeLineTo(0, 2)
+      ..relativeArcToPoint(const Offset(6, 0), radius: round(3))
+      ..relativeLineTo(0, 2)
+      ..relativeArcToPoint(const Offset(5.6, 0), radius: round(2.8))
+      ..relativeLineTo(0, 12)
+      ..relativeCubicTo(0, 9, -6, 15, -14, 15)
+      ..relativeLineTo(-3, 0)
+      ..relativeCubicTo(-5, 0, -8, -3, -11, -8)
+      ..relativeLineTo(-7, -10)
+      ..relativeCubicTo(-1.5, -2.5, 0, -5, 2.5, -5.5)
+      ..relativeCubicTo(2, -.4, 3.5, .5, 5, 2)
+      ..relativeLineTo(2.5, 2.5)
+      ..close();
+    canvas
+      ..drawShadow(hand, const Color(0x66000000), 3, false)
+      ..drawPath(hand, Paint()..color = skin)
+      ..drawPath(
+        hand,
+        Paint()
+          ..color = line
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6
+          ..strokeJoin = StrokeJoin.round,
+      );
+  }
+
+  @override
+  bool shouldRepaint(_SwipeHandPainter old) =>
+      old.skin != skin || old.line != line || old.touch != touch;
 }
 
 class _SwipeTargetLabel extends StatelessWidget {

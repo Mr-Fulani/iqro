@@ -894,6 +894,12 @@ abstract class AppLocalizations {
   /// **'Arabic text'**
   String get readerPlainText;
 
+  /// No description provided for @readerSwipeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe right for the Arabic text, left for the Mushaf'**
+  String get readerSwipeHint;
+
   /// No description provided for @readerPlainTextPlace.
   ///
   /// In en, this message translates to:

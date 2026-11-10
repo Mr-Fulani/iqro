@@ -97,7 +97,14 @@ import { QuranPlainText } from "./QuranPlainText";
 import { QuranQuarterMark } from "./QuranQuarterMark";
 import { quarterMarkMessage, quarterStartingIn, quarterStartKey } from "../lib/quran-marks";
 import { LAST_SURAH, NextSurahCard, QuranEnd, usePullToNext } from "./NextSurah";
-import { ReaderSwipeReveal, useReaderSwipe, type ReaderSwipeDirection } from "./ReaderSwipe";
+import {
+  ReaderSwipeHint,
+  ReaderSwipeReveal,
+  markReaderSwipeHintLearned,
+  useReaderSwipe,
+  useReaderSwipeHint,
+  type ReaderSwipeDirection,
+} from "./ReaderSwipe";
 
 // Loaded on first use so the reader's initial bundle stays within its budget.
 const AyahAnnotationDialog = dynamic(() => import("./AyahAnnotationDialog"), { ssr: false });
@@ -1676,6 +1683,7 @@ function QuranContent() {
     right: true,
     left: true,
     onSwipe: (direction: ReaderSwipeDirection, target) => {
+      markReaderSwipeHintLearned();
       const card = target instanceof Element ? target.closest<HTMLElement>("article.ayah-card") : null;
       const fromCard = card?.id.match(/^quran-ayah-(\d+)-(\d+)$/);
       const key = fromCard ? `${fromCard[1]}:${fromCard[2]}` : textReadingAyah.current ?? selectedMushafAyah ?? `${selectedSurah}:1`;
@@ -1687,6 +1695,9 @@ function QuranContent() {
       setPlainTextAyah(Number(key.split(":")[1]) || 1);
     },
   });
+  // A moment after the text first opens, a hand shows that it can be swiped.
+  const swipeHint = useReaderSwipeHint(viewMode === "text" && !wordRange && plainTextAyah === null && ayahs.length > 0);
+  const textShift = textSwipe || (swipeHint?.offset ?? 0);
 
   // The ayah's menu, from an ayah number or «⋯» on the selection bar: the
   // actions under the Mushaf, a sheet over the full-screen reader, the card's
@@ -2385,15 +2396,16 @@ function QuranContent() {
       {/* Content Area */}
       {viewMode === "text" ? (
         <>
+        <ReaderSwipeHint hint={swipeHint} caption={t("quran.swipeHint")} />
         <ReaderSwipeReveal
-          offset={textSwipe}
+          offset={textShift}
           right={{ icon: <span className="reader-swipe-glyph" aria-hidden="true">ع</span>, label: t("quran.plainText") }}
           left={{ icon: <span aria-hidden="true">📖</span>, label: t("quran.plainTextMushaf") }}
         />
         <section
           ref={setTextSurface}
           className={`surface quran-content-surface reader-swipe-surface${nextSurahRising ? " is-next-surah" : ""}`}
-          style={{ transform: textSwipe ? `translateX(${textSwipe}px)` : undefined }}
+          style={{ transform: textShift ? `translateX(${textShift}px)` : undefined }}
         >
           {/* Bismillah Header */}
           {selectedSurah !== 1 && selectedSurah !== 9 && (

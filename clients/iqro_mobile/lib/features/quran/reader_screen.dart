@@ -36,6 +36,9 @@ import 'reader_words.dart';
 import 'rub_mark.dart';
 import 'word_range.dart';
 
+/// The pause before the reader shows that its text can be swiped.
+const readerSwipeHintDelay = Duration(milliseconds: 1200);
+
 class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({
     required this.surah,
@@ -93,10 +96,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   var _audioRequest = 0;
   AccountScopeSnapshot? _initialAccountScope;
   ReadingSessionRecorder? _readingSession;
+  Timer? _swipeHintTimer;
+  var _swipeHint = false;
 
   @override
   void initState() {
     super.initState();
+    _swipeHintTimer = Timer(readerSwipeHintDelay, _offerSwipeHint);
     WidgetsBinding.instance.addObserver(this);
     _words = WordRangeController(ref)..addListener(_onWords);
     wordRangePulling.addListener(_onWords);
@@ -116,6 +122,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
 
   @override
   void dispose() {
+    _swipeHintTimer?.cancel();
     _audioRequest += 1;
     wordRangePulling.removeListener(_onWords);
     _selectionBounds.dispose();
@@ -134,6 +141,25 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
 
   void _onRubMark() {
     if (mounted) setState(() {});
+  }
+
+  /// Shows, a moment after the text opens, that it can be swiped: until the
+  /// reader swipes it, and [readerSwipeHintLimit] times at most.
+  void _offerSwipeHint() {
+    _swipeHintTimer = null;
+    if (!mounted) return;
+    if (!ref.read(ayahsProvider(widget.surah)).hasValue) {
+      _swipeHintTimer = Timer(readerSwipeHintDelay, _offerSwipeHint);
+      return;
+    }
+    final preferences = ref.read(appPreferencesProvider);
+    if (preferences.readerSwipeHintsShown >= readerSwipeHintLimit ||
+        _words.range != null ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+    unawaited(ref.read(appPreferencesProvider.notifier).noteReaderSwipeHint());
+    setState(() => _swipeHint = true);
   }
 
   /// The Mushaf page of [ayah], else of the selected ayah. A swipe sends
@@ -186,6 +212,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     Offset start,
   ) {
     final ayah = _ayahAt(items, start) ?? _selectedAyah;
+    _swipeHintTimer?.cancel();
+    unawaited(
+      ref.read(appPreferencesProvider.notifier).markReaderSwipeHintLearned(),
+    );
     switch (direction) {
       case ReaderSwipeDirection.right:
         unawaited(_openPlainText(items, ayah));
@@ -465,6 +495,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                 ),
                 onSwipe: (direction, start) =>
                     _onSwipe(items, surah, direction, start),
+                hint: _swipeHint ? context.l10n.readerSwipeHint : null,
+                onHintEnd: () => setState(() => _swipeHint = false),
                 child: Stack(
                   key: _stackKey,
                   children: <Widget>[

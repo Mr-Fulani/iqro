@@ -139,6 +139,7 @@
   "textMode": "Text",
   "mushafMode": "Mushaf",
   "readerPlainText": "Arabic text",
+  "readerSwipeHint": "Swipe right for the Arabic text, left for the Mushaf",
   "readerPlainTextPlace": "Ayah {ayah} · p. {page}",
   "@readerPlainTextPlace": {"placeholders": {"ayah": {"type": "String"}, "page": {"type": "String"}}},
   "selectedMushaf": "Selected Mushaf",

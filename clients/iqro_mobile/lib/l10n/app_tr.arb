@@ -137,6 +137,7 @@
   "textMode": "Metin",
   "mushafMode": "Mushaf",
   "readerPlainText": "Arapça metin",
+  "readerSwipeHint": "Sağa kaydırın: Arapça metin, sola: Mushaf",
   "readerPlainTextPlace": "Ayet {ayah} · s. {page}",
   "selectedMushaf": "Seçili Mushaf",
   "chooseMushaf": "Mushaf seçin",

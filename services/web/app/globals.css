@@ -9195,6 +9195,54 @@ html[data-word-selecting] .word-range-bar {
   font-size: 30px;
 }
 
+/* The hint that the text can be swiped: a hand that moves with the text it
+   pulls and, under it, the words on what a swipe opens. */
+.reader-swipe-hint {
+  position: fixed;
+  z-index: 41;
+  /* Below the middle, where the strip under the text names its target. */
+  inset: 30% 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 0 24px;
+  pointer-events: none;
+}
+
+.reader-swipe-hint-hand {
+  width: 72px;
+  height: 84px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+}
+
+.reader-swipe-hint-hand circle {
+  fill: color-mix(in srgb, var(--primary) 25%, transparent);
+  stroke: var(--primary);
+  stroke-width: 1;
+}
+
+.reader-swipe-hint-hand path {
+  fill: var(--panel);
+  stroke: var(--text-primary);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.reader-swipe-hint-caption {
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
 /* The surah as plain Arabic text: a sheet that turns in over the text from
    its left edge, as a page does, and turns away again. */
 .plain-text-reader {

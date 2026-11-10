@@ -461,6 +461,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerPlainText => 'Arabic text';
 
   @override
+  String get readerSwipeHint =>
+      'Swipe right for the Arabic text, left for the Mushaf';
+
+  @override
   String readerPlainTextPlace(String ayah, String page) {
     return 'Ayah $ayah · p. $page';
   }
