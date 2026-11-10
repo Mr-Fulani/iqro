@@ -609,6 +609,13 @@ Future<Map<String, Uint8List>> _pictures() async {
   return {
     '9999999999': wudu,
     'fedcba9876': prayerCover,
+    // The covers the site serves for the two built-in courses.
+    'site-salah': File(
+      '../../docs/courses/covers/salah.webp',
+    ).readAsBytesSync(),
+    'site-tajweed': File(
+      '../../docs/courses/covers/tajweed.webp',
+    ).readAsBytesSync(),
     '1111111111': scheme,
     '3333333333': niyya,
     '2222222222': banner,
@@ -671,6 +678,35 @@ void main() {
     );
     await _capture(tester, 'app-courses-catalog-empty-ru');
   }, skip: _directory.isEmpty);
+
+  // The catalog as it is on the site today: the two built-in courses with
+  // their covers (docs/courses/covers), on every language.
+  for (final locale in const ['ru', 'en', 'ar', 'tr']) {
+    testWidgets('catalog with the site covers in $locale', (tester) async {
+      Map<String, Object?> cover(String name) => {
+        'cover': {
+          'url': 'https://media.iqro.forum/courses/covers/site-$name.webp',
+          'thumb_url':
+              'https://media.iqro.forum/courses/covers/site-$name-640.webp',
+          'width': 1280,
+          'height': 720,
+        },
+      };
+      await _pump(
+        tester,
+        location: '/courses',
+        locale: locale,
+        remote: FakeCourseGateway(
+          list: {
+            'language': locale,
+            'courses': <Object?>[],
+            'built_in': {'salah': cover('salah'), 'tajweed': cover('tajweed')},
+          },
+        ),
+      );
+      await _capture(tester, 'app-courses-catalog-covers-$locale');
+    }, skip: _directory.isEmpty);
+  }
 
   testWidgets('catalog offline', (tester) async {
     await _pump(
