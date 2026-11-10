@@ -56,7 +56,7 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
     );
     final header = <Widget>[
       IqroCard(
-        onTap: () => _showMushafPicker(context),
+        onTap: () => showMushafPicker(context, ref),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -320,97 +320,6 @@ class _QuranScreenState extends ConsumerState<QuranScreen> {
     }
     if (!mounted) return;
     _openPosition(mode, surah.number, ayah, page);
-  }
-
-  Future<void> _showMushafPicker(BuildContext context) async {
-    ref.invalidate(mushafRenditionsProvider);
-    await showIqroSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: .9,
-        minChildSize: .5,
-        builder: (context, scrollController) => Consumer(
-          builder: (context, sheetRef, _) {
-            final current = sheetRef.watch(selectedMushafIdentityProvider);
-            final catalog = sheetRef.watch(mushafRenditionsProvider);
-            final isProduction = sheetRef.read(appConfigProvider).isProduction;
-            return ListView(
-              controller: scrollController,
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 20),
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(4, 4, 4, 4),
-                  child: Text(
-                    context.l10n.chooseMushaf,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 16),
-                  child: Text(
-                    context.l10n.mushafPickerHint,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-                ...catalog.when(
-                  loading: () => <Widget>[
-                    const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: IqroLoading(),
-                    ),
-                  ],
-                  error: (_, _) => <Widget>[
-                    ListTile(
-                      title: Text(context.l10n.networkError),
-                      trailing: IconButton(
-                        tooltip: context.l10n.retry,
-                        icon: const Icon(Icons.refresh),
-                        onPressed: () =>
-                            sheetRef.invalidate(mushafRenditionsProvider),
-                      ),
-                    ),
-                  ],
-                  data: (editions) {
-                    final available = editions
-                        .where(
-                          (edition) =>
-                              edition.availableIn(isProduction: isProduction),
-                        )
-                        .toList();
-                    return <Widget>[
-                      if (available.isEmpty)
-                        ListTile(title: Text(context.l10n.mushafCatalogEmpty))
-                      else
-                        MushafEditionGrid(
-                          editions: available,
-                          selected: current,
-                          onSelect: (edition) => _selectMushaf(
-                            context,
-                            edition.identity.preference,
-                          ),
-                        ),
-                    ];
-                  },
-                ),
-                const Divider(height: 28),
-                const OfflineMushafCard(),
-                const SizedBox(height: 12),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Future<void> _selectMushaf(BuildContext context, String? value) async {
-    if (value == null) return;
-    await ref.read(appPreferencesProvider.notifier).setMushafVariant(value);
-    if (context.mounted) Navigator.of(context).pop();
   }
 
   Future<void> _showQuickJump(BuildContext context) async {
@@ -738,4 +647,93 @@ class _SurahRow extends StatelessWidget {
       onTap: onTap,
     );
   }
+}
+
+/// The sheet of Mushaf editions: from the Quran tab and from the Mushaf's
+/// own menu. The choice also sets the script of the text readers.
+Future<void> showMushafPicker(BuildContext context, WidgetRef ref) async {
+  ref.invalidate(mushafRenditionsProvider);
+  await showIqroSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (context) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: .9,
+      minChildSize: .5,
+      builder: (context, scrollController) => Consumer(
+        builder: (context, sheetRef, _) {
+          final current = sheetRef.watch(selectedMushafIdentityProvider);
+          final catalog = sheetRef.watch(mushafRenditionsProvider);
+          final isProduction = sheetRef.read(appConfigProvider).isProduction;
+          return ListView(
+            controller: scrollController,
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 20),
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(4, 4, 4, 4),
+                child: Text(
+                  context.l10n.chooseMushaf,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 16),
+                child: Text(
+                  context.l10n.mushafPickerHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              ...catalog.when(
+                loading: () => <Widget>[
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: IqroLoading(),
+                  ),
+                ],
+                error: (_, _) => <Widget>[
+                  ListTile(
+                    title: Text(context.l10n.networkError),
+                    trailing: IconButton(
+                      tooltip: context.l10n.retry,
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () =>
+                          sheetRef.invalidate(mushafRenditionsProvider),
+                    ),
+                  ),
+                ],
+                data: (editions) {
+                  final available = editions
+                      .where(
+                        (edition) =>
+                            edition.availableIn(isProduction: isProduction),
+                      )
+                      .toList();
+                  return <Widget>[
+                    if (available.isEmpty)
+                      ListTile(title: Text(context.l10n.mushafCatalogEmpty))
+                    else
+                      MushafEditionGrid(
+                        editions: available,
+                        selected: current,
+                        onSelect: (edition) async {
+                          await ref
+                              .read(appPreferencesProvider.notifier)
+                              .setMushafVariant(edition.identity.preference);
+                          if (context.mounted) Navigator.of(context).pop();
+                        },
+                      ),
+                  ];
+                },
+              ),
+              const Divider(height: 28),
+              const OfflineMushafCard(),
+              const SizedBox(height: 12),
+            ],
+          );
+        },
+      ),
+    ),
+  );
 }

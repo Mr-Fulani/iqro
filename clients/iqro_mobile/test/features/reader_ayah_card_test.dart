@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/quran/mushaf_paper.dart';
+import 'package:iqro_mobile/features/quran/mushaf_script.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/reader_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
@@ -15,6 +17,7 @@ void main() {
     required String text,
     bool active = false,
     ThemeData? theme,
+    MushafAyahScript? script,
   }) async {
     shared = 0;
     sharedFrom = null;
@@ -27,6 +30,7 @@ void main() {
         home: Scaffold(
           body: SingleChildScrollView(
             child: ReaderAyahCard(
+              script: script,
               ayah: QuranAyah(
                 id: '$surah:1',
                 surahNumber: surah,
@@ -71,6 +75,57 @@ void main() {
       ),
     );
   }
+
+  testWidgets('a tajweed Mushaf font lies on paper in the dark theme, the '
+      'basmala stays above it', (tester) async {
+    const script = MushafAyahScript(
+      words: <TextSpan>[
+        TextSpan(
+          text: 'ﱁ',
+          style: TextStyle(fontFamily: 'qf-page-2'),
+        ),
+      ],
+      marker: TextSpan(
+        text: 'ﱂ',
+        style: TextStyle(fontFamily: 'qf-page-2'),
+      ),
+      colored: true,
+    );
+    bool paper() => tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .any(
+          (box) => (box.decoration as BoxDecoration).color == mushafPaperColor,
+        );
+    const text = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ الٓمٓ';
+
+    await pump(tester, surah: 2, text: text, script: script);
+    final ayah = tester.widget<Text>(
+      find.byKey(const ValueKey('reader-ayah-1')),
+    );
+    expect(ayah.textSpan!.toPlainText(), 'ﱁ\u00A0ﱂ');
+    expect(find.text('بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'), findsOneWidget);
+    expect(paper(), isFalse);
+
+    await pump(
+      tester,
+      surah: 2,
+      text: text,
+      script: script,
+      theme: IqroTheme.dark(),
+    );
+    // The theme changes over a moment.
+    await tester.pumpAndSettle();
+    expect(paper(), isTrue);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('reader-ayah-1')))
+          .textSpan!
+          .style!
+          .color,
+      mushafInkColor,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('the basmala before a surah stands on its own line', (
     tester,

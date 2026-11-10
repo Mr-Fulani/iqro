@@ -122,7 +122,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('reader-flow-place'))).data,
-      'Аят ١ · стр. ٣',
+      'Аят 1 · стр. 3',
     );
     // The new surah's own title at the top.
     expect(find.text('سُورَةُ آل عمران'), findsOneWidget);

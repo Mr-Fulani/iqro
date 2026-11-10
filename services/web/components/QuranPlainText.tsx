@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { Surah } from "../lib/api";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { QuranFoundationMushaf, Surah } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
 import { kashidaLayout, type KashidaLayout } from "../lib/kashida";
+import { mushafPageEnds, readerDigits } from "../lib/mushaf-script";
 import { ayahTextParts, sameWord, wordKey, wordRangeContains, type QuranWord, type QuranWordRange } from "../lib/word-range";
 import { ReaderSwipeReveal, useReaderSwipe } from "./ReaderSwipe";
 import { WordRangeHandles } from "./WordSelection";
+import { mushafScriptWordContent, mushafScriptWordStyle, useMushafScript } from "./useMushafScript";
 import { LAST_SURAH, NextSurahCard, QuranEnd, usePullToNext } from "./NextSurah";
 
 export const PLAIN_TEXT_SIZE_KEY = "iqro_plain_text_size";
@@ -45,6 +47,8 @@ export function QuranPlainText({
   range,
   playingWord,
   wordArea,
+  mushaf,
+  versePages,
   onLeave,
   onSettle,
   markedAyah = null,
@@ -61,6 +65,9 @@ export function QuranPlainText({
   range: QuranWordRange | null;
   playingWord: QuranWord | null;
   wordArea: (element: HTMLElement | null) => void;
+  /** The selected Mushaf and its pages of each ayah: the text is written as it writes it. */
+  mushaf: QuranFoundationMushaf | null;
+  versePages: Record<string, number[]> | null;
   onLeave: (ayah: number) => void;
   /** After a scroll of the reader's own: the ayahs that begin on screen. */
   onSettle?: (verseKeys: string[]) => void;
@@ -72,7 +79,7 @@ export function QuranPlainText({
   onNextSurah: () => void;
   entering?: boolean;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [size, setSize] = useState(DEFAULT_SIZE);
   const [ayah, setAyah] = useState(startAyah);
   const [marked, setMarked] = useState<number | null>(startAyah);
@@ -84,6 +91,10 @@ export function QuranPlainText({
   const [fontsReady, setFontsReady] = useState(false);
   const placing = useRef(true);
   const current = useRef(startAyah);
+  const scrolled = useRef(false);
+  const ayahScript = useMushafScript(mushaf, versePages, surah, ayahs.length, scroller, scroller);
+  const pageOf = (item: PlainAyah) => versePages?.[`${surah}:${item.number}`]?.[0] ?? item.pages[0];
+  const pageEnds = mushafPageEnds(ayahs.map(pageOf));
 
   useEffect(() => { setSize(readSize()); }, []);
   useEffect(() => {
@@ -119,8 +130,13 @@ export function QuranPlainText({
     if (!body) return;
     // The text reflows when the Arabic font arrives, the size changes or the
     // screen turns: the ayah at the top stays there.
+    let width = body.clientWidth;
     const keep = new ResizeObserver(() => {
       setLineWidth(body.clientWidth);
+      // Once the reader scrolls, the Mushaf's pages load ahead of the screen:
+      // only a turned screen moves the text under them then.
+      if (scrolled.current && body.clientWidth === width) return;
+      width = body.clientWidth;
       placeAt(current.current);
     });
     keep.observe(body);
@@ -137,6 +153,7 @@ export function QuranPlainText({
     if (!scroller) return;
     const update = () => {
       if (placing.current) return;
+      scrolled.current = true;
       const words = [...scroller.querySelectorAll<HTMLElement>("[data-word-key]")];
       const top = scroller.scrollTop + 4;
       let low = 0;
@@ -265,7 +282,8 @@ export function QuranPlainText({
 
   const first = ayahs[0];
   const opening = first ? ayahTextParts(surah, first.number, first.text_uthmani).find((part) => !part.words)?.text : undefined;
-  const page = ayahs.find((item) => item.number === ayah)?.pages[0];
+  const currentAyah = ayahs.find((item) => item.number === ayah);
+  const page = currentAyah && pageOf(currentAyah);
 
   return (
     <div
@@ -299,14 +317,24 @@ export function QuranPlainText({
             {surahName && <p className="plain-text-surah" dir="rtl">{`سُورَةُ ${surahName}`}</p>}
             {opening && <p className="plain-text-opening" dir="rtl">{opening}</p>}
             {/* Each ayah a paragraph of its own, a blank line between them. */}
-            {ayahs.map((item) => (
-              <p className="plain-text-ayah quran-arabic-text" dir="rtl" key={item.id} data-ayah={item.number}>
-                {ayahTextParts(surah, item.number, item.text_uthmani)
-                  .flatMap((part) => part.words ?? [])
-                  .map((original, index) => {
+            {ayahs.map((item, itemIndex) => {
+              const words = ayahTextParts(surah, item.number, item.text_uthmani).flatMap((part) => part.words ?? []);
+              const script = ayahScript(item.number, words.length);
+              // Glyphs of a Mushaf font are not letters to draw out.
+              const layout = script ? undefined : layouts.get(item.number);
+              const pageEnd = pageEnds[itemIndex];
+              return (
+              <Fragment key={item.id}>
+              {pageEnd !== null && (
+                <div className="reader-page-end is-paper" data-testid="plain-text-page-end">
+                  <span>{t("common.page", { page: readerDigits(locale, pageEnd) })}</span>
+                </div>
+              )}
+              <p className="plain-text-ayah quran-arabic-text" dir="rtl" data-ayah={item.number} data-script-ayah={item.number}>
+                {words.map((original, index) => {
                     const at = { surah, ayah: item.number, position: index + 1 };
                     const selected = wordRangeContains(range, at);
-                    const layout = layouts.get(item.number);
+                    const glyph = script?.words[index];
                     const text = layout?.words[index] ?? original;
                     return (
                       <span key={index}>
@@ -314,19 +342,22 @@ export function QuranPlainText({
                         <span
                           className={`quran-word${selected ? " is-word-selected" : ""}${selected && sameWord(at, playingWord) ? " is-word-playing" : ""}${marked === item.number || markedAyah === item.number ? " is-word-marked" : ""}`}
                           data-word-key={wordKey(at)}
+                          style={glyph && mushafScriptWordStyle(glyph)}
                         >
                           <WordRangeHandles range={range} word={at} />
-                          {text}
+                          {glyph ? mushafScriptWordContent(glyph) : text}
                         </span>
                       </span>
                     );
                   })}
                 {"\u00A0"}
-                <span className="ayah-end-marker" aria-hidden="true">
-                  {`\uFD3F${arabicNumber.format(item.number)}\uFD3E`}
+                <span className="ayah-end-marker" aria-hidden="true" style={script?.end ? mushafScriptWordStyle(script.end) : undefined}>
+                  {script?.end ? mushafScriptWordContent(script.end) : `\uFD3F${arabicNumber.format(item.number)}\uFD3E`}
                 </span>
               </p>
-            ))}
+              </Fragment>
+              );
+            })}
             {ayahs.length > 0 && (
               <div className="plain-text-end">
                 {surah >= LAST_SURAH ? (
@@ -346,7 +377,7 @@ export function QuranPlainText({
           </div>
         </div>
         <p className="plain-text-place" data-testid="plain-text-place">
-          {page ? t("quran.plainTextPlace", { ayah: arabicNumber.format(ayah), page: arabicNumber.format(page) }) : null}
+          {page ? t("quran.plainTextPlace", { ayah: readerDigits(locale, ayah), page: readerDigits(locale, page) }) : null}
         </p>
       </div>
       {sizeOpen && (

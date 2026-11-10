@@ -29,6 +29,7 @@ import 'mushaf_bookmarks_sheet.dart';
 import 'mushaf_reader_controls.dart';
 import 'mushaf_reciter_sheet.dart';
 import 'quick_jump_sheet.dart';
+import 'quran_screen.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
 import 'rub_mark.dart';
@@ -1564,6 +1565,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
               icon: Icons.bookmarks_rounded,
               title: context.l10n.bookmarks,
               onTap: () => leave = () => unawaited(_showBookmarks()),
+            ),
+            (
+              key: const ValueKey('mushaf-edition'),
+              icon: Icons.menu_book_outlined,
+              title: context.l10n.chooseMushaf,
+              onTap: () =>
+                  leave = () => unawaited(showMushafPicker(context, ref)),
             ),
             (
               key: const ValueKey('mushaf-notes'),

@@ -151,7 +151,7 @@ test.describe("the next surah on a phone", () => {
     await expect(card).toContainText("سُورَةُ البقرة");
     await card.click();
     await expect(reader.locator('[data-word-key="2:1:1"]')).toBeVisible();
-    await expect(page.getByTestId("plain-text-place")).toHaveText("Аят ١ · стр. ٢");
+    await expect(page.getByTestId("plain-text-place")).toHaveText("Аят 1 · стр. 2");
 
     // Back to the cards: on the new surah.
     const sheet = await centre(reader.locator(".plain-text-scroll"));

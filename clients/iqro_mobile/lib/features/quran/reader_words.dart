@@ -42,6 +42,8 @@ class ReaderAyahText {
     required this.words,
     this.firstPosition = 1,
     this.marker = '',
+    this.spans,
+    this.markerSpan,
   });
 
   final int ayah;
@@ -52,6 +54,11 @@ class ReaderAyahText {
 
   /// Text after the last word: the ayah's end marker.
   final String marker;
+
+  /// The words as the selected Mushaf writes them, one span for each of
+  /// [words], drawn in their place; [markerSpan] then stands for [marker].
+  final List<InlineSpan>? spans;
+  final InlineSpan? markerSpan;
 }
 
 /// The Arabic text of one ayah in the reader, word by word. A long press
@@ -67,6 +74,8 @@ class ReaderAyahWords extends StatefulWidget {
     required this.onRange,
     this.marker = '',
     this.firstPosition = 1,
+    this.spans,
+    this.markerSpan,
     this.range,
     this.playingWord,
     this.onDrag,
@@ -96,7 +105,9 @@ class ReaderAyahWords extends StatefulWidget {
        ayah = ayahs.first.ayah,
        words = const <String>[],
        firstPosition = 1,
-       marker = '';
+       marker = '',
+       spans = null,
+       markerSpan = null;
 
   final int surah;
   final int ayah;
@@ -107,6 +118,10 @@ class ReaderAyahWords extends StatefulWidget {
 
   /// Text after the last word: the ayah's end marker.
   final String marker;
+
+  /// See [ReaderAyahText.spans].
+  final List<InlineSpan>? spans;
+  final InlineSpan? markerSpan;
 
   /// Set by [ReaderAyahWords.flow]: the ayahs in place of the one above.
   final List<ReaderAyahText>? flowAyahs;
@@ -155,6 +170,8 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
           words: widget.words,
           firstPosition: widget.firstPosition,
           marker: widget.marker,
+          spans: widget.spans,
+          markerSpan: widget.markerSpan,
         ),
       ];
 
@@ -236,7 +253,9 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     final words = <({QuranWord word, String text})>[];
     final offsets = <int>[];
     final texts = _texts(widget);
-    final layout = widget.kashida && texts.length == 1
+    // Glyphs of a Mushaf font are not letters to draw out.
+    final layout =
+        widget.kashida && texts.length == 1 && texts.single.spans == null
         ? kashidaLayout(
             words: texts.single.words,
             marker: texts.single.marker,
@@ -248,7 +267,11 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     var length = 0;
     for (final ayah in texts) {
       for (final (index, original) in ayah.words.indexed) {
-        final text = layout?.words[index] ?? original;
+        final span = ayah.spans?[index];
+        final text =
+            span?.toPlainText(includeSemanticsLabels: false) ??
+            layout?.words[index] ??
+            original;
         final word = QuranWord(
           widget.surah,
           ayah.ayah,
@@ -272,7 +295,8 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
         words.add((word: word, text: text));
         children.add(
           TextSpan(
-            text: text,
+            text: span == null ? text : null,
+            children: span == null ? null : <InlineSpan>[span],
             style: selected
                 ? TextStyle(
                     backgroundColor: word == widget.playingWord
@@ -286,11 +310,16 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
         );
         length += text.length;
       }
-      if (ayah.marker.isNotEmpty) {
+      final marker =
+          ayah.markerSpan ??
+          (ayah.marker.isEmpty
+              ? null
+              : TextSpan(text: ayah.marker, style: widget.markerStyle));
+      if (marker != null) {
         // The end of the last word: the marker belongs to no word.
         if (identical(ayah, texts.last)) offsets.add(length);
-        children.add(TextSpan(text: ayah.marker, style: widget.markerStyle));
-        length += ayah.marker.length;
+        children.add(marker);
+        length += marker.toPlainText(includeSemanticsLabels: false).length;
       }
     }
     if (offsets.length == words.length) offsets.add(length);

@@ -9320,6 +9320,38 @@ html[data-word-selecting] .word-range-bar {
   background: rgba(196, 150, 71, 0.22);
 }
 
+/* The end of a Mushaf page between two ayahs of a text reader. */
+.reader-page-end {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 8px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.reader-page-end::before,
+.reader-page-end::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.reader-page-end.is-paper {
+  margin: 0 0 1.2em;
+  padding: 0;
+  color: #857154;
+  font-size: 13px;
+}
+
+.reader-page-end.is-paper::before,
+.reader-page-end.is-paper::after {
+  background: rgba(133, 113, 84, 0.45);
+}
+
 .plain-text-place {
   display: flex;
   align-items: center;

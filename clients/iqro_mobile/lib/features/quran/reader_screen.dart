@@ -22,6 +22,8 @@ import 'quran_models.dart';
 import '../../core/audio/playback_speed.dart';
 import 'ayah_share.dart';
 import 'mushaf_edition.dart';
+import 'mushaf_paper.dart';
+import 'mushaf_script.dart';
 import 'next_surah.dart';
 import '../dua/dua_arabic.dart';
 import '../../core/analytics/analytics.dart';
@@ -520,6 +522,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     presentation,
   ) {
     _schedulePositionRestore(items);
+    final versePages = ref.watch(mushafVersePagesProvider).valueOrNull;
+    int? pageOf(QuranAyah ayah) =>
+        mushafPageOfAyah(versePages, ayah.surahNumber, ayah.number, ayah.pages);
+    final language = Localizations.localeOf(context).languageCode;
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification.depth != 0) return false;
@@ -578,10 +584,17 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
               audio.active &&
               audio.surah == ayah.surahNumber &&
               audio.ayah == ayah.number;
-          return Padding(
-            key: _ayahKeys.putIfAbsent(ayah.number, GlobalKey.new),
-            padding: EdgeInsets.only(bottom: presentation.ayahSpacing),
-            child: ReaderAyahCard(
+          final page = pageOf(ayah);
+          final pageEnded =
+              index > 1 && page != null && page != pageOf(items[index - 2]);
+          final card = Consumer(
+            builder: (context, ref, _) => ReaderAyahCard(
+              script: watchMushafAyahScript(
+                ref,
+                surah: ayah.surahNumber,
+                ayah: ayah.number,
+                wordCount: ayahWords(ayah).length,
+              ),
               ayah: ayah,
               selected: ayah.number == _selectedAyah,
               highlightColorKey: highlightColors[ayah.number],
@@ -631,6 +644,24 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                   : null,
               onShare: (origin) => _share(ayah, title, origin),
             ),
+          );
+          return Padding(
+            key: _ayahKeys.putIfAbsent(ayah.number, GlobalKey.new),
+            padding: EdgeInsets.only(bottom: presentation.ayahSpacing),
+            child: pageEnded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      ReaderPageBreak(
+                        key: ValueKey('reader-page-end-${page - 1}'),
+                        label:
+                            '${context.l10n.page} ${readerDigits(language, page - 1)}',
+                      ),
+                      SizedBox(height: presentation.ayahSpacing),
+                      card,
+                    ],
+                  )
+                : card,
           );
         },
       ),
@@ -1483,6 +1514,7 @@ class ReaderAyahCard extends StatelessWidget {
     this.playingWord,
     this.onWordRange,
     this.onWordDrag,
+    this.script,
   });
   final QuranAyah ayah;
   final bool selected;
@@ -1520,12 +1552,19 @@ class ReaderAyahCard extends StatelessWidget {
   final ValueChanged<QuranWordRange>? onWordRange;
   final ValueChanged<Offset>? onWordDrag;
 
+  /// The ayah as the selected Mushaf writes it; null draws the plain text.
+  final MushafAyahScript? script;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    // A tajweed font paints black letters itself: on a dark card they need
+    // the Mushaf's paper under them.
+    final onPaper =
+        (this.script?.colored ?? false) && theme.brightness == Brightness.dark;
     final arabicStyle = theme.textTheme.headlineMedium?.copyWith(
-      color: IqroTheme.arabicInk(context),
+      color: onPaper ? mushafInkColor : IqroTheme.arabicInk(context),
       fontFamily: IqroTheme.arabicFontFamily,
       fontWeight: FontWeight.normal,
       fontSize: arabicFontSize,
@@ -1538,6 +1577,9 @@ class ReaderAyahCard extends StatelessWidget {
         ? splitDuaArabic(ayah.textUthmani)
         : <DuaArabicPart>[DuaArabicPart(ayah.textUthmani)];
     final translationText = translation?.text.trim() ?? '';
+    final script = parts.where((part) => !part.opening).length == 1
+        ? this.script
+        : null;
     return Semantics(
       selected: selected || audioActive,
       child: IqroCard(
@@ -1561,7 +1603,39 @@ class ReaderAyahCard extends StatelessWidget {
           children: <Widget>[
             for (final (index, part) in parts.indexed) ...<Widget>[
               if (index > 0) const SizedBox(height: 10),
-              if (wordRegistry != null && onWordRange != null && !part.opening)
+              if (script != null && !part.opening)
+                _onPaper(
+                  onPaper,
+                  wordRegistry != null && onWordRange != null
+                      ? ReaderAyahWords(
+                          key: ValueKey('reader-ayah-${ayah.number}'),
+                          surah: ayah.surahNumber,
+                          ayah: ayah.number,
+                          words: quranWords(part.text),
+                          spans: script.words,
+                          markerSpan: TextSpan(
+                            children: <InlineSpan>[
+                              const TextSpan(text: '\u00A0'),
+                              ?script.marker,
+                            ],
+                          ),
+                          style: arabicStyle,
+                          registry: wordRegistry!,
+                          range: wordRange,
+                          playingWord: playingWord,
+                          onRange: onWordRange!,
+                          onDrag: onWordDrag,
+                        )
+                      : Text.rich(
+                          script.span(arabicStyle),
+                          key: ValueKey('reader-ayah-${ayah.number}'),
+                          textAlign: TextAlign.center,
+                          textDirection: TextDirection.rtl,
+                        ),
+                )
+              else if (wordRegistry != null &&
+                  onWordRange != null &&
+                  !part.opening)
                 ReaderAyahWords(
                   key: part == parts.last
                       ? ValueKey('reader-ayah-${ayah.number}')
@@ -1744,6 +1818,19 @@ class ReaderAyahCard extends StatelessWidget {
     );
   }
 }
+
+Widget _onPaper(bool paper, Widget child) => paper
+    ? DecoratedBox(
+        decoration: BoxDecoration(
+          color: mushafPaperColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: child,
+        ),
+      )
+    : child;
 
 class _ReaderContentBlock extends StatelessWidget {
   const _ReaderContentBlock({

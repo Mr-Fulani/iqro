@@ -63,7 +63,7 @@ for (const layout of layouts) {
 
       const reader = plainText(page);
       await expect(reader).toBeVisible();
-      await expect(page.getByTestId("plain-text-place")).toHaveText("Аят ٥ · стр. ١");
+      await expect(page.getByTestId("plain-text-place")).toHaveText("Аят 5 · стр. 1");
       // Only the Arabic: no translation, no ayah buttons, no close button.
       await expect(reader.locator(".ayah-translation, .ayah-action-buttons")).toHaveCount(0);
       // The size and, at the end, the next surah's card: nothing else.
@@ -100,7 +100,7 @@ for (const layout of layouts) {
       await range.fill("72");
       await expect(body).toHaveCSS("font-size", "72px");
       expect(await body.evaluate((element) => (element as HTMLElement).offsetHeight)).toBeGreaterThan(before);
-      await expect(page.getByTestId("plain-text-place")).toHaveText("Аят ٣ · стр. ١");
+      await expect(page.getByTestId("plain-text-place")).toHaveText("Аят 3 · стр. 1");
 
       // A sheet on a phone, a panel by the button on a tablet.
       const panel = (await page.locator(".plain-text-size-panel").boundingBox())!;

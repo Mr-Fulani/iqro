@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   Suspense,
   lazy,
   useCallback,
@@ -16,6 +17,8 @@ import {
   type AyahPlaybackTrigger,
 } from "./MushafAudioPlayer";
 import { useMushafPages } from "./useMushafPages";
+import { mushafScriptWordContent, mushafScriptWordStyle, useMushafScript } from "./useMushafScript";
+import { mushafPageEnds, readerDigits } from "../lib/mushaf-script";
 import { useTajweed } from "./useTajweed";
 import { TajweedLegend } from "./TajweedLegend";
 import { MushafPageTurn } from "./MushafPageTurn";
@@ -1519,6 +1522,15 @@ function QuranContent() {
     setWordRange(null);
     setPlayingWord(null);
   }, []);
+  // The text is written as the selected Mushaf writes it, at its page ends.
+  const ayahScript = useMushafScript(
+    selectedFoundationMushaf, versePages, selectedSurah, ayahs.length,
+    viewMode === "text" && plainTextAyah === null ? wordArea : null,
+  );
+  const textPageEnds = useMemo(
+    () => mushafPageEnds(ayahs.map((ayah) => versePages?.[`${selectedSurah}:${ayah.number}`]?.[0] ?? ayah.pages[0])),
+    [ayahs, selectedSurah, versePages],
+  );
   useWordSelection(plainTextAyah === null ? wordArea : plainWordArea, wordRange?.range ?? null, selectWords, clearWords);
   // Words the chosen reciter has no timings of play in the teaching voice.
   const wordTimingFallback = useMemo(() => wordTimingFallbackRecitations(mushafRecitations).map((voice) => {
@@ -2399,8 +2411,9 @@ function QuranContent() {
           ) : ayahs.length > 0 ? (
             <>
             <div ref={setWordArea} style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
-              {ayahs.map((ayah) => {
+              {ayahs.map((ayah, ayahIndex) => {
                 const ayahKey = `${selectedSurah}:${ayah.number}`;
+                const pageEnd = textPageEnds[ayahIndex];
                 const isAyahActive = playingMushafAyah === ayahKey;
                 const isAyahPlaying = isAyahActive && isAudioPlaying;
                 const isAyahRepeating = isAyahActive && audioSettings.repeatMode === "ayah";
@@ -2410,14 +2423,22 @@ function QuranContent() {
                 const bookmarkAnimating = bookmarkAnimationKey === ayahKey;
                 const ayahTafsir = tafsirsByVerse[ayahKey];
                 const isTafsirExpanded = expandedTafsirVerse === ayahKey;
+                const script = ayahScript(ayah.number, ayahTextParts(selectedSurah, ayah.number, ayah.text_uthmani)
+                  .reduce((sum, part) => sum + (part.words?.length ?? 0), 0));
                 const playbackActionLabel = isAyahPlaying
                   ? t("player.pausePlayback")
                   : isAyahActive
                     ? t("player.continue")
                     : t("player.play");
                 return (
+                  <Fragment key={ayah.id}>
+                  {pageEnd !== null && (
+                    <div className="reader-page-end" data-testid="reader-page-end">
+                      <span>{t("common.page", { page: readerDigits(locale, pageEnd) })}</span>
+                    </div>
+                  )}
                   <article
-                    key={ayah.id}
+                    data-script-ayah={ayah.number}
                     id={`quran-ayah-${selectedSurah}-${ayah.number}`}
                     className={`ayah-card${playingMushafAyah === ayahKey ? " is-audio-active" : ""}${selectedMushafAyah === ayahKey ? " is-navigation-target" : ""}${markedQuarterKey === ayahKey ? " is-marked" : ""}`}
                     data-highlight={annotation?.color_key}
@@ -2511,6 +2532,7 @@ function QuranContent() {
                         if (!part.words) return <span key={partIndex}>{part.text} </span>;
                         const first = 1 + parts.slice(0, partIndex).reduce((sum, item) => sum + (item.words?.length ?? 0), 0);
                         return part.words.map((text, index) => {
+                          const glyph = script?.words[first + index - 1];
                           const word = { surah: selectedSurah, ayah: ayah.number, position: first + index };
                           const selected = wordRangeContains(wordRange?.range, word);
                           return (
@@ -2519,16 +2541,19 @@ function QuranContent() {
                               <span
                                 className={`quran-word${selected ? " is-word-selected" : ""}${selected && sameWord(word, playingWord) ? " is-word-playing" : ""}`}
                                 data-word-key={wordKey(word)}
+                                style={glyph && mushafScriptWordStyle(glyph)}
                               >
                                 <WordRangeHandles range={wordRange?.range ?? null} word={word} />
-                                {text}
+                                {glyph ? mushafScriptWordContent(glyph) : text}
                               </span>
                             </span>
                           );
                         });
                       })}
                       {"\u00A0"}
-                      <span className="ayah-end-marker" aria-hidden="true">{ayahEndMarker(ayah.number)}</span>
+                      <span className="ayah-end-marker" aria-hidden="true" style={script?.end ? mushafScriptWordStyle(script.end) : undefined}>
+                        {script?.end ? mushafScriptWordContent(script.end) : ayahEndMarker(ayah.number)}
+                      </span>
                     </p>
                     {translationEnabled && (
                       <div className="ayah-translation notranslate" translate="no">
@@ -2585,6 +2610,7 @@ function QuranContent() {
                       </div>
                     )}
                   </article>
+                  </Fragment>
                 );
               })}
             </div>
@@ -2926,6 +2952,8 @@ function QuranContent() {
           range={wordRange?.range ?? null}
           playingWord={playingWord}
           wordArea={setPlainWordArea}
+          mushaf={selectedFoundationMushaf}
+          versePages={versePages}
           onLeave={leavePlainText}
           onSettle={reachPlainQuarter}
           markedAyah={quarterMark?.start_ayah.surah === selectedSurah ? quarterMark.start_ayah.number : null}
