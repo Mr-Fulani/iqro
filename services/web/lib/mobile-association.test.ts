@@ -28,7 +28,7 @@ test("production publishes only validated configured Android fingerprints", () =
   assert.deepEqual(result[0]?.target.sha256_cert_fingerprints, [releaseFingerprint]);
 });
 
-test("Apple association exposes only the IQRO bundle, Dua and Salah paths", () => {
+test("Apple association exposes only the IQRO bundle, Dua, Salah and course paths", () => {
   const result = appleAppSiteAssociation({
     configuredApplicationIdentifiers:
       "INVALID, A1B2C3D4E5.forum.iqro.app",
@@ -54,6 +54,14 @@ test("Apple association exposes only the IQRO bundle, Dua and Salah paths", () =
             "/ar/salah/*",
             "/tr/salah",
             "/tr/salah/*",
+            "/ru/courses",
+            "/ru/courses/*",
+            "/en/courses",
+            "/en/courses/*",
+            "/ar/courses",
+            "/ar/courses/*",
+            "/tr/courses",
+            "/tr/courses/*",
           ],
         },
       ],

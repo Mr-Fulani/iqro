@@ -95,6 +95,7 @@ test("robots and sitemap publish only the current public route set", async ({ re
   expect(robots).toContain(`Sitemap: ${siteUrl}/sitemap.xml`);
   expect(robots).toContain(`Sitemap: ${siteUrl}/sitemaps/quran/sitemap.xml`);
   expect(robots).toContain(`Sitemap: ${siteUrl}/sitemaps/audio/sitemap.xml`);
+  expect(robots).toContain(`Sitemap: ${siteUrl}/sitemaps/courses/sitemap.xml`);
 
   const sitemapResponse = await request.get("/sitemap.xml");
   expect(sitemapResponse.ok()).toBe(true);
@@ -125,6 +126,15 @@ test("robots and sitemap publish only the current public route set", async ({ re
   expect(sitemap).not.toContain("/login");
   expect(sitemap).not.toContain("/register");
   expect(sitemap).not.toContain("/profile");
+});
+
+test("courses sitemap lists a course and its lessons only on its languages", async ({ request }) => {
+  const response = await request.get("/sitemaps/courses/sitemap.xml");
+  expect(response.ok()).toBe(true);
+  const sitemap = await response.text();
+  expect(sitemap).toContain(`<loc>${siteUrl}/ru/courses/ramadan</loc>`);
+  expect(sitemap).toContain(`<loc>${siteUrl}/ar/courses/ramadan/namerenie</loc>`);
+  expect(sitemap).not.toContain(`${siteUrl}/tr/courses/ramadan`);
 });
 
 test("published surah and ayah routes render indexable Quran text on the server", async ({ page, request }) => {

@@ -17,6 +17,9 @@ from django.test import override_settings
 from rest_framework.test import APIClient
 
 from quran_backend.modules.accounts.models import User
+from quran_backend.modules.announcements import services as announcement_services
+from quran_backend.modules.announcements.models import Announcement, AnnouncementTranslation
+from quran_backend.modules.announcements.routes import action_target
 from quran_backend.modules.core.editorial.diff import line_diff
 from quran_backend.modules.core.editorial.markup import parse_notes, plain_markup
 from quran_backend.modules.core.tasks import notify_web_content_change_task
@@ -819,4 +822,60 @@ def test_two_languages_make_two_documents(ramadan: Course, owner: User) -> None:
     assert arabic["course"]["title"] == "رمضان"
     assert arabic["lessons"][0]["notes"] == [
         {"type": "paragraph", "dir": "rtl", "lines": [[{"text": "بسم الله", "lang": "ar"}]]}
+    ]
+
+
+# Announcements -----------------------------------------------------------
+
+
+def _course_announcement(slug: str, *languages: str) -> Announcement:
+    announcement = Announcement.objects.create(
+        starts_at=PUBLISHED_AT,
+        action_type="course",
+        action_slug=slug,
+        audience_languages=list(languages),
+    )
+    for code in languages:
+        AnnouncementTranslation.objects.create(
+            announcement=announcement,
+            language=code,
+            title="Курс о Рамадане",
+            summary="Шесть уроков.",
+            cta_label="Открыть",
+        )
+    return announcement
+
+
+@pytest.mark.django_db
+def test_announcement_button_opens_a_published_course(ramadan: Course, owner: User) -> None:
+    _published(ramadan, owner)
+    announcement = _course_announcement("ramadan", "ru")
+
+    assert announcement_services.readiness(announcement).problems == []
+    target = action_target(announcement, "ru")
+    assert target.web_path == "/ru/courses/ramadan"
+    assert target.app_route == "/courses/ramadan"
+    assert target.external_url is None
+
+
+@pytest.mark.django_db
+def test_announcement_button_needs_the_course_on_every_language(
+    ramadan: Course, owner: User
+) -> None:
+    assert announcement_services.readiness(_course_announcement("", "ru")).problems == [
+        "Укажите slug курса."
+    ]
+    not_yet = "Курс «ramadan» не опубликован на языках: Русский."
+    assert announcement_services.readiness(_course_announcement("ramadan", "ru")).problems == [
+        not_yet
+    ]
+
+    _published(ramadan, owner)
+    assert announcement_services.readiness(
+        _course_announcement("ramadan", "ru", "en")
+    ).problems == ["Курс «ramadan» не опубликован на языках: English."]
+
+    hide_course(ramadan, owner, reason="Ошибка в уроке")
+    assert announcement_services.readiness(_course_announcement("ramadan", "ru")).problems == [
+        not_yet
     ]

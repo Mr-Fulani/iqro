@@ -141,6 +141,38 @@
                     android:scheme="https"
                     android:host="iqro.forum"
                     android:pathPrefix="/tr/salah/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:path="/ru/courses" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/ru/courses/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:path="/en/courses" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/en/courses/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:path="/ar/courses" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/ar/courses/" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:path="/tr/courses" />
+                <data
+                    android:scheme="https"
+                    android:host="iqro.forum"
+                    android:pathPrefix="/tr/courses/" />
             </intent-filter>
             <intent-filter>
                 <action android:name="es.antonborri.home_widget.action.LAUNCH" />

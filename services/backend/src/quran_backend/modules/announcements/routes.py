@@ -33,8 +33,15 @@ SCREENS: dict[str, Screen] = {
     "memorization": Screen("Заучивание", "/memorization", "/memorization"),
     "dua": Screen("Ду’а", "/dua", "/dua"),
     "salah": Screen("Обучение намазу", "/salah", "/salah"),
+    "courses": Screen("Курсы", "/courses", "/courses"),
     "calendar": Screen("Календарь", "/calendar", "/calendar"),
     "news": Screen("Что нового", "/news", "/news"),
+}
+
+# Actions that open one item by its slug: where the items live on the site and in the app.
+SLUG_ROUTES: dict[str, tuple[str, str]] = {
+    ActionType.SALAH_LESSON: ("/salah", "/salah/lesson"),
+    ActionType.COURSE: ("/courses", "/courses"),
 }
 
 
@@ -74,11 +81,12 @@ def action_target(announcement: Announcement, locale: str) -> ActionTarget:
             app_route=f"/reader/{surah}" + (f"?ayah={ayah}" if ayah else ""),
             external_url=None,
         )
-    if action == ActionType.SALAH_LESSON and announcement.action_slug:
+    if action in SLUG_ROUTES and announcement.action_slug:
+        web, app = SLUG_ROUTES[action]
         slug = announcement.action_slug
         return ActionTarget(
-            web_path=f"/{locale}/salah/{slug}",
-            app_route=f"/salah/lesson/{slug}",
+            web_path=f"/{locale}{web}/{slug}",
+            app_route=f"{app}/{slug}",
             external_url=None,
         )
     if action == ActionType.SCREEN and announcement.action_slug in SCREENS:

@@ -103,6 +103,7 @@ class ActionType(models.TextChoices):
     RECITER = "reciter", "Открыть чтеца в плеере"
     SURAH = "surah", "Открыть суру или аят"
     SALAH_LESSON = "salah_lesson", "Открыть урок курса намаза"
+    COURSE = "course", "Открыть курс"
     SCREEN = "screen", "Открыть раздел"
     EXTERNAL = "external", "Внешняя ссылка"
 
@@ -238,10 +239,10 @@ class Announcement(BaseModel):
         validators=[MinValueValidator(1), MaxValueValidator(286)],
     )
     action_slug = models.SlugField(
-        "Урок или раздел",
+        "Урок, курс или раздел",
         max_length=64,
         blank=True,
-        help_text="Slug урока курса намаза или код раздела из списка.",
+        help_text="Slug урока курса намаза, slug курса или код раздела из списка.",
     )
     action_url = models.URLField(
         "Внешняя ссылка",

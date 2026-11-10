@@ -174,7 +174,8 @@ class AnnouncementAdminForm(forms.ModelForm):  # type: ignore[type-arg]
                 "религиозные тексты». Владелец подтверждает проверку сам, когда публикует."
             ),
             "action_slug": (
-                "Урок: slug из курса намаза, например wudu. Раздел: "
+                "Урок: slug из курса намаза, например wudu. Курс: slug курса из раздела "
+                "«Курсы», например ramadan. Раздел: "
                 + ", ".join(f"{code} ({screen.label})" for code, screen in SCREENS.items())
                 + "."
             ),
