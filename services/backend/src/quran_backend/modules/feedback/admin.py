@@ -271,8 +271,15 @@ class FeedbackTicketAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def has_add_permission(self, _request: HttpRequest) -> bool:
         return False
 
-    def has_delete_permission(self, _request: HttpRequest, _obj: object | None = None) -> bool:
-        return False
+    def has_delete_permission(self, request: HttpRequest, _obj: object | None = None) -> bool:
+        # Only the owner removes a ticket; operators close it with a status instead.
+        return bool(request.user.is_superuser)
+
+    def get_deleted_objects(self, objs: Any, request: HttpRequest) -> Any:
+        # Messages, context and audit have no delete of their own, yet they go away
+        # with the ticket (database cascade), so they must not block the confirmation.
+        deleted, model_count, _perms_needed, protected = super().get_deleted_objects(objs, request)
+        return deleted, model_count, set(), protected
 
     def save_model(
         self,

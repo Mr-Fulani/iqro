@@ -160,6 +160,7 @@ runtime. Основной незакрытый объём находится в 
 | Контекст контента автоматически связан | 🟡 | Web передаёт route/app/platform context; Quran/audio/prayer coordinates пока не прикладываются автоматически |
 | Религиозная ошибка получает ускоренный SLA | ✅ | Category routing, priority и SLA deadline покрыты tests |
 | Operator reply, user notification, immutable history | 🟡 | Reply/history/audit есть; пользовательская notification delivery отсутствует |
+| Удаление обращения в админке | ✅ | Только суперпользователь (владелец): кнопка «Удалить» в обращении и действие в списке, с подтверждением. Обращение уходит целиком — с сообщениями, контекстом и журналом; факт удаления остаётся в журнале действий админки. Остальные сотрудники закрывают обращение статусом (`rejected`, `duplicate`, `closed`); сообщения, контекст и журнал по одной записи не удаляются ни у кого |
 | Ticket не меняет published content напрямую | ✅ | Feedback не имеет mutation path к Quran publication |
 
 ### Реклама и пожертвования
