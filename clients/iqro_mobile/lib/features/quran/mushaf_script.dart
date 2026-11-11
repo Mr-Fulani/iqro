@@ -138,8 +138,9 @@ MushafAyahScript? watchMushafAyahScript(
 
 /// How long a reader holds its text back for the Mushaf's script of its
 /// first screen. A page on the phone comes well within it; one that needs a
-/// slow network does not, and the text opens in the plain font.
-const mushafScriptWait = Duration(milliseconds: 600);
+/// slow network does not, and the text opens in the plain font. The first
+/// pages after a cold start take about half a second on an old phone.
+const mushafScriptWait = Duration(seconds: 1);
 
 /// Whether the script of the first screen of a reader opening at [ayah] has
 /// loaded, or will not: the screen is then drawn once, in the font it keeps.
