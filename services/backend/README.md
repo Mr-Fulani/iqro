@@ -30,7 +30,9 @@ docker compose --profile test run --rm test
 
 API гостевой авторизации, безопасной ротации токенов, позиции чтения, закладок и
 offline-sync описан в [docs/auth-and-sync.md](docs/auth-and-sync.md). Актуальный контракт
-доступен как OpenAPI 3.1 по `/api/schema`.
+доступен как OpenAPI 3.1 по `/api/schema` (Swagger — `/api/docs`) при локальной разработке. В
+production и на staging оба адреса отвечают 404; открыть их на время можно переменной окружения
+`DJANGO_API_DOCS_ENABLED=true`.
 
 Passwordless-вход по подтверждённому email, HttpOnly browser-session и транзакционное
 объединение гостевых данных описаны в

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from django.core.cache import cache, caches
+from django.test import override_settings
 from django.urls import reverse
 from drf_spectacular.generators import SchemaGenerator
 from rest_framework.test import APIClient
@@ -89,3 +90,15 @@ def test_openapi_schema_is_generated_once_then_served_from_cache(
     assert first.status_code == second.status_code == 200
     assert second.content == first.content
     assert calls == 1
+
+
+@pytest.mark.django_db
+@override_settings(API_DOCS_ENABLED=False)
+def test_schema_and_swagger_are_closed_where_docs_are_off(api_client: APIClient) -> None:
+    assert api_client.get("/api/schema").status_code == 404
+    assert api_client.get("/api/docs").status_code == 404
+
+
+@override_settings(API_DOCS_ENABLED=True)
+def test_swagger_opens_where_docs_are_on(api_client: APIClient) -> None:
+    assert api_client.get("/api/docs").status_code == 200
