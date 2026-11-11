@@ -9,6 +9,9 @@ rest of its tables folded under «Служебные таблицы». «Каж�
 Only the home page and the sidebar are grouped. App pages (/admin/<app>/),
 model URLs and permissions stay Django's own.
 
+A table may be listed in the `main` of a second section as well: it is then shown
+in both (the course statistics sit with the feedback and next to the courses).
+
 A new model lands among the service tables of its app's section by itself; list
 it in the section's `main` to show it openly. A new app needs a line in
 SECTIONS; until then it shows up in «Прочее» and test_admin_sections fails.
@@ -63,6 +66,8 @@ SECTIONS: tuple[Section, ...] = (
         ("courses", "tajweed", "salah", "quiz"),
         (
             "courses.Course",
+            # Also in «Обращения и отзывы»: people look for it next to the courses.
+            "course_feedback.CourseAnalytics",
             "courses.CourseRelease",
             "courses.LearnerProgress",
             "tajweed.TajweedCourseVersion",
@@ -165,14 +170,15 @@ def group_sections(app_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for model in app["models"]:
             label = f"{app['app_label']}.{model['object_name']}"
             key, heading = placement(app["app_label"], model["object_name"])
-            main = by_key[key].main if key in by_key else ()
-            if label in main:
-                rows[key].append(
+            shown = [section for section in SECTIONS if label in section.main]
+            for section in shown:
+                rows[section.key].append(
                     (
-                        (0, main.index(label), ""),
+                        (0, section.main.index(label), ""),
                         {**model, "service": False, "group": "", "group_url": ""},
                     )
                 )
+            if shown:
                 continue
             # Moved models go after the section's own apps.
             position = (

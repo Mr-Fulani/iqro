@@ -612,3 +612,58 @@ def test_course_editors_and_publishers_may_view_analytics() -> None:
     for name in ("Редактор курсов", "Публикатор"):
         group = Group.objects.get(name=name)
         assert group.permissions.filter(codename="view_courseanalytics").exists()
+
+
+@pytest.mark.django_db
+def test_courses_list_shows_every_course_with_its_numbers(
+    live: Course, builtin: None, owner: User
+) -> None:
+    _stat(live, "smysl-posta", "lesson_opened", 7)
+    _builtin_stat("salah", "wudu", "lesson_opened", 6)
+    _builtin_stat("tajweed", "iqlab", "lesson_completed", 4)
+    client = Client()
+    client.force_login(owner)
+
+    page = client.get("/admin/courses/course/")
+
+    assert page.status_code == 200
+    rows = page.context["all_courses"]["rows"]
+    assert [row["title"] for row in rows] == ["Обучение намазу", "Таджвид", "Рамадан"]
+    assert [(row["opened"], row["completed"]) for row in rows] == [(6, 0), (0, 4), (7, 0)]
+    body = page.content.decode()
+    assert "Все курсы и их статистика за 30 дней" in body
+    assert "встроенный курс" in body
+    assert "/admin/course_feedback/courseanalytics/salah/change/" in body
+    assert "/admin/course_feedback/courseanalytics/tajweed/change/" in body
+    assert f"/admin/course_feedback/courseanalytics/{live.pk}/change/" in body
+    assert '<a href="/admin/salah/salahcourseversion/">Править</a>' in body
+    assert '<a href="/admin/tajweed/tajweedcourseversion/">Править</a>' in body
+    assert f'<a href="/admin/courses/course/{live.pk}/change/">Править</a>' in body
+    assert '<a href="/admin/course_feedback/courseanalytics/">Полная сводка' in body
+    # The usual list of the catalog stays below, with its search.
+    assert 'id="changelist-search"' in body
+    assert client.get("/admin/courses/course/?q=ramadan").status_code == 200
+
+
+@pytest.mark.django_db
+def test_courses_list_hides_the_numbers_without_the_analytics_permission(
+    live: Course, builtin: None
+) -> None:
+    _builtin_stat("salah", "wudu", "lesson_opened", 6)
+    staff = User.objects.create_user(email="editor@example.test", status="active", is_staff=True)
+    staff.user_permissions.set(Permission.objects.filter(codename="view_course"))
+    client = Client()
+    client.force_login(staff)
+
+    page = client.get("/admin/courses/course/")
+
+    assert page.status_code == 200
+    body = page.content.decode()
+    assert "Обучение намазу" in body
+    assert "Таджвид" in body
+    assert "Открыли темы" not in body
+    assert "courseanalytics" not in body
+    # No link to the editors of the built-in courses this user may not open.
+    assert "/admin/salah/" not in body
+    assert "/admin/tajweed/" not in body
+    assert all("opened" not in row for row in page.context["all_courses"]["rows"])
