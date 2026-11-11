@@ -4,6 +4,7 @@ import { localizedPath } from "../lib/routing";
 import { absoluteSiteUrl } from "../lib/seo";
 import { QURAN_SITEMAP_INDEX_PATH } from "../lib/quran-sitemap";
 import { AUDIO_SITEMAP_INDEX_PATH } from "../lib/audio-sitemap";
+import { COURSES_SITEMAP_PATH } from "../lib/courses-sitemap";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default function robots(): MetadataRoute.Robots {
       absoluteSiteUrl("/sitemap.xml"),
       absoluteSiteUrl(QURAN_SITEMAP_INDEX_PATH),
       absoluteSiteUrl(AUDIO_SITEMAP_INDEX_PATH),
+      absoluteSiteUrl(COURSES_SITEMAP_PATH),
     ],
     host: absoluteSiteUrl("/"),
   };

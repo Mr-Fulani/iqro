@@ -310,6 +310,7 @@ export function revalidateContentChange(change: ContentChange): void {
   if (change.type === "courses.catalog.changed") {
     expireTag("courses:catalog");
     revalidatePath("/[locale]/courses", "page");
+    revalidatePath("/sitemaps/courses/sitemap.xml");
     return;
   }
 
@@ -319,6 +320,7 @@ export function revalidateContentChange(change: ContentChange): void {
     // Quizzes link to course lessons.
     expireTag("quizzes:catalog");
     revalidatePath("/[locale]/courses", "page");
+    revalidatePath("/sitemaps/courses/sitemap.xml");
     revalidatePath("/[locale]/courses/[course]", "page");
     revalidatePath("/[locale]/courses/[course]/[lesson]", "page");
     return;

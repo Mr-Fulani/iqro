@@ -73,6 +73,19 @@ String? normalizeLocalizedSalahDeepLink(Uri uri) {
   return step.isEmpty ? lesson : '$lesson/step/${Uri.encodeComponent(step)}';
 }
 
+/// Web `/{locale}/courses`, `/{locale}/courses/{course}` and
+/// `/{locale}/courses/{course}/{lesson}` are the same routes without the locale.
+String? normalizeLocalizedCoursesDeepLink(Uri uri) {
+  final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+  if (segments.length < 2 ||
+      segments.length > 4 ||
+      !_supportedWebLinkLocales.contains(segments.first) ||
+      segments[1] != 'courses') {
+    return null;
+  }
+  return '/${segments.skip(1).join('/')}';
+}
+
 GoRouter createRouter({required bool onboardingComplete}) {
   return GoRouter(
     initialLocation: onboardingComplete ? '/app' : '/onboarding',
@@ -81,7 +94,8 @@ GoRouter createRouter({required bool onboardingComplete}) {
     redirect: (context, state) =>
         homeWidgetRoute(state.uri) ??
         normalizeLocalizedDuaDeepLink(state.uri) ??
-        normalizeLocalizedSalahDeepLink(state.uri),
+        normalizeLocalizedSalahDeepLink(state.uri) ??
+        normalizeLocalizedCoursesDeepLink(state.uri),
     routes: <RouteBase>[
       GoRoute(
         path: '/onboarding',

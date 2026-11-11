@@ -1,4 +1,4 @@
-import { SUPPORTED_LOCALES } from "./i18n";
+import { SUPPORTED_LOCALES, type Locale } from "./i18n";
 import { localizedPath } from "./routing";
 import { absoluteSiteUrl } from "./seo";
 
@@ -11,18 +11,23 @@ export function xmlEscape(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-export function localizedSitemapEntry(path: string, lastModified: string): string {
-  const alternates = SUPPORTED_LOCALES.map((locale) =>
+export function localizedSitemapEntry(
+  path: string,
+  lastModified?: string,
+  locales: readonly Locale[] = SUPPORTED_LOCALES,
+): string {
+  const alternates = locales.map((locale) =>
     `<xhtml:link rel="alternate" hreflang="${locale}" href="${xmlEscape(
       absoluteSiteUrl(localizedPath(locale, path)),
     )}"/>`,
   ).join("");
   const xDefault = `<xhtml:link rel="alternate" hreflang="x-default" href="${xmlEscape(
-    absoluteSiteUrl(localizedPath("ru", path)),
+    absoluteSiteUrl(localizedPath(locales.includes("ru") ? "ru" : locales[0], path)),
   )}"/>`;
+  const lastmod = lastModified ? `<lastmod>${xmlEscape(lastModified)}</lastmod>` : "";
 
-  return SUPPORTED_LOCALES.map((locale) =>
-    `<url><loc>${xmlEscape(absoluteSiteUrl(localizedPath(locale, path)))}</loc>${alternates}${xDefault}<lastmod>${xmlEscape(lastModified)}</lastmod></url>`,
+  return locales.map((locale) =>
+    `<url><loc>${xmlEscape(absoluteSiteUrl(localizedPath(locale, path)))}</loc>${alternates}${xDefault}${lastmod}</url>`,
   ).join("");
 }
 

@@ -38,6 +38,8 @@ void main() {
       expect(manifest, contains('android:pathPrefix="/$locale/dua/"'));
       expect(manifest, contains('android:path="/$locale/salah"'));
       expect(manifest, contains('android:pathPrefix="/$locale/salah/"'));
+      expect(manifest, contains('android:path="/$locale/courses"'));
+      expect(manifest, contains('android:pathPrefix="/$locale/courses/"'));
     }
     expect(RegExp(r'android:autoVerify="true"').allMatches(manifest).length, 1);
   });
@@ -146,6 +148,42 @@ void main() {
     expect(
       normalizeLocalizedSalahDeepLink(
         Uri.parse('https://iqro.forum/fr/salah/fajr'),
+      ),
+      isNull,
+    );
+  });
+
+  test('localized web course links normalize to course routes', () {
+    for (final locale in const <String>['ru', 'en', 'ar', 'tr']) {
+      expect(
+        normalizeLocalizedCoursesDeepLink(
+          Uri.parse('https://iqro.forum/$locale/courses'),
+        ),
+        '/courses',
+      );
+      expect(
+        normalizeLocalizedCoursesDeepLink(
+          Uri.parse('https://iqro.forum/$locale/courses/ramadan'),
+        ),
+        '/courses/ramadan',
+      );
+      expect(
+        normalizeLocalizedCoursesDeepLink(
+          Uri.parse('https://iqro.forum/$locale/courses/ramadan/intention'),
+        ),
+        '/courses/ramadan/intention',
+      );
+    }
+    expect(normalizeLocalizedCoursesDeepLink(Uri.parse('/courses')), isNull);
+    expect(
+      normalizeLocalizedCoursesDeepLink(
+        Uri.parse('https://iqro.forum/fr/courses/ramadan'),
+      ),
+      isNull,
+    );
+    expect(
+      normalizeLocalizedCoursesDeepLink(
+        Uri.parse('https://iqro.forum/ru/courses/ramadan/intention/extra'),
       ),
       isNull,
     );

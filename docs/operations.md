@@ -384,7 +384,9 @@ allowlisted public JSON. Immutable media кэшируется отдельно �
 webhook.
 
 `/sitemaps/quran/sitemap.xml` ссылается на child sitemap с edition и активной content version в
-URL. `/sitemaps/audio/sitemap.xml` делает то же для каждой опубликованной декламации. Child
+URL. `/sitemaps/audio/sitemap.xml` делает то же для каждой опубликованной декламации.
+`/sitemaps/courses/sitemap.xml` — один файл с опубликованными курсами и их темами, только на
+языках выпуска каждого курса. Child
 sitemap перечисляют только доступные через public API сущности и возвращают 404 для draft,
 withdrawn, non-streaming, incomplete или уже неактивной версии. Индексы указаны в `robots.txt`.
 После публикации или отзыва контента проверьте:

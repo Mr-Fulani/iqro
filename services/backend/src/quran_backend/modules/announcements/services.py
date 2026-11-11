@@ -38,6 +38,7 @@ from quran_backend.modules.announcements.models import (
 from quran_backend.modules.announcements.routes import SCREENS, external_url_allowed
 from quran_backend.modules.core.content_revalidation import enqueue_announcements_change
 from quran_backend.modules.core.object_storage import ObjectStorageError
+from quran_backend.modules.courses.api import visible_documents
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ def readiness(announcement: Announcement, *, publisher_checks_religion: bool = F
     translations = translations_by_language(announcement)
     _check_languages(announcement, translations, result)
     steps = _check_texts(announcement, translations, result)
-    result.problems.extend(_action_problems(announcement))
+    result.problems.extend(_action_problems(announcement, result.languages))
     result.problems.extend(_channel_problems(announcement, steps))
     if announcement.needs_religious_review and announcement.religious_reviewed_at is None:
         if publisher_checks_religion:
@@ -162,7 +163,20 @@ def _check_texts(
     return steps
 
 
-def _action_problems(announcement: Announcement) -> list[str]:
+def _course_problem(slug: str, languages: list[str]) -> str | None:
+    if not slug:
+        return "Укажите slug курса."
+    missing = [
+        LANGUAGE_NAMES[code]
+        for code in languages
+        if not visible_documents(code).filter(release__course__slug=slug).exists()
+    ]
+    if missing:
+        return f"Курс «{slug}» не опубликован на языках: {', '.join(missing)}."
+    return None
+
+
+def _action_problems(announcement: Announcement, languages: list[str]) -> list[str]:
     action = announcement.action_type
     reciter = announcement.reciter
     problem = None
@@ -174,6 +188,8 @@ def _action_problems(announcement: Announcement) -> list[str]:
         problem = "Укажите номер суры."
     elif action == ActionType.SALAH_LESSON and not announcement.action_slug:
         problem = "Укажите slug урока курса намаза."
+    elif action == ActionType.COURSE:
+        problem = _course_problem(announcement.action_slug, languages)
     elif action == ActionType.SCREEN and announcement.action_slug not in SCREENS:
         problem = f"Раздел должен быть одним из: {', '.join(SCREENS)}."
     elif action == ActionType.EXTERNAL and not external_url_allowed(announcement.action_url):
