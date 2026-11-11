@@ -1,12 +1,14 @@
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/audio/premium_reciter_portrait.dart';
+import '../startup/startup_trace.dart';
 import 'listening_media_controls.dart';
 
 /// Android's media card belongs to the Audio tab, even while another section
@@ -32,6 +34,32 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
   Future<void> Function()? _skipToPrevious;
   Future<void> Function(double)? _setSpeed;
   ListeningMediaLabels Function()? _labels;
+
+  static Future<ListeningMediaService?>? _starting;
+
+  /// Starts the OS media service and the audio session on first use, after
+  /// the first screen: on a slow phone they take over a second, and no screen
+  /// needs them to open. Completes with null when they could not start; sound
+  /// still plays then, without the system media card.
+  static Future<ListeningMediaService?> ensureStarted() =>
+      _starting ??= _start();
+
+  static Future<ListeningMediaService?> _start() async {
+    try {
+      await StartupTrace.step('audio service', initialize);
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.speech());
+    } on Object catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'IQRO audio startup',
+        ),
+      );
+    }
+    return current;
+  }
 
   static Future<void> initialize() async {
     final directory = await getApplicationSupportDirectory();

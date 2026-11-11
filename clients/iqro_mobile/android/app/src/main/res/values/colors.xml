@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="iqro_launcher_background">#E6D8BF</color>
+    <!-- The launch screen. The Flutter startup screen (startup_gate.dart)
+         paints the same colours, so the handover does not flash. -->
+    <color name="iqro_launch_background">#E6D8BF</color>
 </resources>

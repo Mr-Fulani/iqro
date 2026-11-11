@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -218,6 +219,58 @@ void main() {
       expect(routes, <String>['/reader/2?ayah=3']);
     },
   );
+  group('a notification that opened the app', () {
+    final payload = jsonEncode(<String, Object?>{
+      'version': 1,
+      'owner_id': 'owner-b',
+      'generation': 7,
+      'route': '/reader/2?ayah=3',
+    });
+
+    Future<LocalDatabase> open() async {
+      final database = await _databaseWithManagedPlan(<String, Object?>{
+        'ids': <int>[81],
+        'owner_id': 'owner-b',
+        'generation': 7,
+        'in_progress': false,
+      });
+      addTearDown(database.close);
+      return LocalDatabase.forTesting(
+        database,
+        accountScope: AccountScope.forTesting('owner-b'),
+      );
+    }
+
+    test('is the initial route when the gateway is ready first', () async {
+      final gateway = NotificationGateway(
+        database: await open(),
+        initializeForTesting: () async {},
+        launchPayloadForTesting: payload,
+      );
+      await gateway.initialize();
+      expect(gateway.takeInitialRoute(), '/reader/2?ayah=3');
+    });
+
+    test('still routes when the first screen asked before the gateway was '
+        'ready', () async {
+      final plugin = Completer<void>();
+      final gateway = NotificationGateway(
+        database: await open(),
+        initializeForTesting: () => plugin.future,
+        launchPayloadForTesting: payload,
+      );
+      final routes = <String>[];
+      final subscription = gateway.routeRequests.listen(routes.add);
+      addTearDown(subscription.cancel);
+      final initialization = gateway.initialize();
+      expect(gateway.takeInitialRoute(), isNull);
+      expect(routes, isEmpty);
+      plugin.complete();
+      await initialization;
+      expect(routes, <String>['/reader/2?ayah=3']);
+      expect(gateway.takeInitialRoute(), isNull);
+    });
+  });
 }
 
 Future<Database> _databaseWithManagedPlan(Map<String, Object?> plan) async {
