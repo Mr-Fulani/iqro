@@ -2268,6 +2268,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get salah3dReplay => 'Tekrar oynat';
 
   @override
+  String get salah3dTurnLeft => 'Sola çevir';
+
+  @override
+  String get salah3dTurnRight => 'Sağa çevir';
+
+  @override
+  String get salah3dResetView => 'Görünümü sıfırla';
+
+  @override
   String get salahOfflineTitle => 'Çevrimdışı görseller';
 
   @override

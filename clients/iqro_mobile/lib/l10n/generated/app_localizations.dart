@@ -4140,6 +4140,24 @@ abstract class AppLocalizations {
   /// **'Replay'**
   String get salah3dReplay;
 
+  /// No description provided for @salah3dTurnLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn left'**
+  String get salah3dTurnLeft;
+
+  /// No description provided for @salah3dTurnRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn right'**
+  String get salah3dTurnRight;
+
+  /// No description provided for @salah3dResetView.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset view'**
+  String get salah3dResetView;
+
   /// No description provided for @salahOfflineTitle.
   ///
   /// In en, this message translates to:

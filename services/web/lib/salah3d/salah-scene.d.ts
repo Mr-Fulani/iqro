@@ -47,6 +47,8 @@ export type SalahScene = {
   replay(): void;
   setSpeed(speed: number): void;
   resetCamera(): void;
+  /** Turns the camera around the figure by an angle in radians, as a sideways drag does. */
+  turn(angle: number): void;
   dispose(): void;
 };
 

@@ -2326,6 +2326,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get salah3dReplay => 'Повторить';
 
   @override
+  String get salah3dTurnLeft => 'Повернуть влево';
+
+  @override
+  String get salah3dTurnRight => 'Повернуть вправо';
+
+  @override
+  String get salah3dResetView => 'Сбросить ракурс';
+
+  @override
   String get salahOfflineTitle => 'Картинки без интернета';
 
   @override

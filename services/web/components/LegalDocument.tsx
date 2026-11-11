@@ -19,7 +19,7 @@ export function LegalDocument({
     <article className="seo-quran-page legal-document">
       <header className="surface seo-quran-hero">
         <div>
-          <p className="eyebrow">Quran Platform</p>
+          <p className="eyebrow">IQRO</p>
           <h1>{title}</h1>
           <p>{description}</p>
           <p className="seo-content-version">{updated}</p>

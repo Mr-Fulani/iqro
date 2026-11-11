@@ -826,7 +826,7 @@ export function SegmentedAudioPlayer({
     navigator.mediaSession.metadata = new MediaMetadata({
       title: activeRequest.title,
       artist: activeRequest.artist,
-      album: activeRequest.album || "Quran Platform",
+      album: activeRequest.album || "IQRO",
     });
 
     const actions: Array<MediaSessionAction> = [
@@ -882,7 +882,7 @@ export function SegmentedAudioPlayer({
     navigator.mediaSession.metadata = new MediaMetadata({
       title: displayTitle,
       artist: activeRequest.artist,
-      album: activeRequest.album || "Quran Platform",
+      album: activeRequest.album || "IQRO",
     });
   }, [activeRequest, displayTitle]);
 

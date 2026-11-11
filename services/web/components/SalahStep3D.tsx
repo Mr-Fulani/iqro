@@ -6,6 +6,7 @@ import {
   nextSalahScenePlayback,
   nextSalahSceneSpeed,
   SALAH_SCENE_PLAYBACK,
+  SALAH_SCENE_TURN,
   type SalahSceneSpeed,
   type SalahStepScene,
 } from "../lib/salah-3d";
@@ -51,6 +52,10 @@ export type Salah3D = {
   /** Pause, play, or replay once the pose has played. */
   togglePlaying: () => void;
   cycleSpeed: () => void;
+  /** Turns the figure a step to the left (-1) or to the right (1). */
+  turn: (direction: -1 | 1) => void;
+  /** Back to the view the step opened with. */
+  resetCamera: () => void;
   /** Render once in the player; it draws into the current step's slot. */
   stage: ReactNode;
 };
@@ -68,6 +73,7 @@ export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolea
   const [ready, setReady] = useState(false);
   const [playback, dispatch] = useReducer(nextSalahScenePlayback, SALAH_SCENE_PLAYBACK);
   const [speed, setSpeed] = useState<SalahSceneSpeed>(1);
+  const [camera, setCamera] = useState({ id: 0, turn: 0 });
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
 
   // A new step plays its pose once, whether the last one was paused or had ended.
@@ -113,6 +119,9 @@ export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolea
     slot: setSlot,
     togglePlaying: () => dispatch("toggle"),
     cycleSpeed: () => setSpeed(nextSalahSceneSpeed),
+    // Dragging the figure to the right lowers the camera's azimuth; the buttons do the same.
+    turn: (direction) => setCamera(({ id }) => ({ id: id + 1, turn: -direction * SALAH_SCENE_TURN })),
+    resetCamera: () => setCamera(({ id }) => ({ id: id + 1, turn: 0 })),
     stage: active ? (
       <Suspense fallback={null}>
         <Salah3DStage
@@ -124,6 +133,7 @@ export function useSalah3D(scene: SalahStepScene | null, lessonHasScenes: boolea
           playing={playing}
           run={playback.run}
           speed={speed}
+          camera={camera}
           onReady={markReady}
           onEnded={markEnded}
           onError={fail}

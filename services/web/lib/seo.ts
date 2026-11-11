@@ -7,7 +7,7 @@ import {
 import { translate } from "./translate";
 import { localizedAlternates, localizedPath } from "./routing";
 
-export const SITE_NAME = "Quran Platform";
+export const SITE_NAME = "IQRO";
 export const LOCAL_SITE_URL = "http://localhost:3000";
 export const PUBLIC_INDEXABLE_PATHS = [
   "/",

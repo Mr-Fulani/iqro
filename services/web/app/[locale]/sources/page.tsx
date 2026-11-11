@@ -51,7 +51,7 @@ export default async function SourcesPage({ params }: { params: Promise<RoutePar
   return (
     <article className="seo-quran-page legal-document">
       <header className="surface seo-quran-hero">
-        <div><p className="eyebrow">Quran Platform</p><h1>{copy.title}</h1><p>{copy.description}</p></div>
+        <div><p className="eyebrow">IQRO</p><h1>{copy.title}</h1><p>{copy.description}</p></div>
       </header>
       <section className="surface legal-section">
         <h2 className="surface-title">{copy.quranTitle}</h2>

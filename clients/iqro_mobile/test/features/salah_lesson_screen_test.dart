@@ -179,6 +179,18 @@ void main() {
       expect(replay, findsNothing);
       expect(find.byTooltip('Остановить движение'), findsOneWidget);
 
+      // The camera buttons turn the figure and bring the view back.
+      await tester.tap(find.byTooltip('Повернуть вправо'));
+      await tester.pump();
+      expect(fake.last.camera.turn, lessThan(0));
+      await tester.tap(find.byTooltip('Повернуть влево'));
+      await tester.pump();
+      expect(fake.last.camera.turn, greaterThan(0));
+      final presses = fake.last.camera.id;
+      await tester.tap(find.byTooltip('Сбросить ракурс'));
+      await tester.pump();
+      expect(fake.last.camera, (id: presses + 1, turn: 0.0));
+
       // Paused or ended, the next step plays its own pose once.
       await tester.tap(find.byTooltip('Остановить движение'));
       await tester.pump();

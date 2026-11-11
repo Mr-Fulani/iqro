@@ -195,7 +195,8 @@ void main() {
     ) async {
       final requests = <DuaSearchQuery>[];
       final result = _entry(
-        categoryTitle: 'Server category',
+        // Some sources print chapter titles in capitals.
+        categoryTitle: 'SERVER CATEGORY',
         arabicText: 'الرحمة',
         meaning: 'Server-only result',
       );

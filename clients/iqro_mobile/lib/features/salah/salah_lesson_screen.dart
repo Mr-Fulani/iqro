@@ -840,6 +840,7 @@ class _Salah3DHostState extends ConsumerState<_Salah3DHost>
         foreground: _foreground,
         speed: three.speed,
         replayCount: three.replayCount,
+        camera: three.camera,
         onReady: three.markReady,
         onEnded: three.markEnded,
         onError: (code) {
@@ -883,6 +884,24 @@ class _Salah3DBar extends StatelessWidget {
               ),
             ),
             if (tools && three.ready) ...<Widget>[
+              IconButton(
+                key: const ValueKey('salah-3d-turn-left'),
+                tooltip: l10n.salah3dTurnLeft,
+                onPressed: () => three.turn(-1),
+                icon: const Icon(Icons.rotate_left),
+              ),
+              IconButton(
+                key: const ValueKey('salah-3d-turn-right'),
+                tooltip: l10n.salah3dTurnRight,
+                onPressed: () => three.turn(1),
+                icon: const Icon(Icons.rotate_right),
+              ),
+              IconButton(
+                key: const ValueKey('salah-3d-reset-view'),
+                tooltip: l10n.salah3dResetView,
+                onPressed: three.resetCamera,
+                icon: const Icon(Icons.center_focus_strong),
+              ),
               // Pause while the pose moves, play when paused, replay once it
               // has played.
               IconButton(

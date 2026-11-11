@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
 test("public Quran page exposes page-specific canonical and social metadata", async ({ page }) => {
   await page.goto("/ru/quran");
 
-  await expect(page).toHaveTitle("Читать Коран — Мединский Мусхаф Хафс | Quran Platform");
+  await expect(page).toHaveTitle("Читать Коран — Мединский Мусхаф Хафс | IQRO");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     /Читайте 114 сур Священного Корана/,
@@ -53,7 +53,7 @@ test("public Quran page exposes page-specific canonical and social metadata", as
 test("account routes are explicitly excluded from indexing", async ({ page }) => {
   await page.goto("/ru/login");
 
-  await expect(page).toHaveTitle("Вход в аккаунт | Quran Platform");
+  await expect(page).toHaveTitle("Вход в аккаунт | IQRO");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /nofollow/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
@@ -78,7 +78,7 @@ test("locale-prefixed routes drive language, direction, and localized navigation
 
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page).toHaveTitle("قراءة القرآن — مصحف المدينة برواية حفص | Quran Platform");
+  await expect(page).toHaveTitle("قراءة القرآن — مصحف المدينة برواية حفص | IQRO");
   await expect(page.locator('.app-menu a[href="/ar/audio"]')).toBeVisible();
 
   const unsupported = await page.request.get("/de/quran");
@@ -143,7 +143,7 @@ test("published surah and ayah routes render indexable Quran text on the server"
   expect(html).toContain("/ru/quran/madani-hafs/surah/1/ayah/1");
 
   await page.goto(surahPath);
-  await expect(page).toHaveTitle("Сура 1: Аль-Фатиха | Quran Platform");
+  await expect(page).toHaveTitle("Сура 1: Аль-Фатиха | IQRO");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Сура 1: Аль-Фатиха");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
@@ -154,7 +154,7 @@ test("published surah and ayah routes render indexable Quran text on the server"
   ).toContain("BreadcrumbList");
 
   await page.goto(`${surahPath}/ayah/1`);
-  await expect(page).toHaveTitle("Сура 1, аят 1: Аль-Фатиха | Quran Platform");
+  await expect(page).toHaveTitle("Сура 1, аят 1: Аль-Фатиха | IQRO");
   await expect(page.locator(".seo-single-ayah")).toContainText("بِسْمِ اللَّهِ");
 });
 
@@ -183,7 +183,7 @@ test("published Dua topic route is localized, indexable, and server rendered", a
   expect(html).toContain('"@type":"BreadcrumbList"');
 
   await page.goto(topicPath);
-  await expect(page).toHaveTitle("Слова поминания при пробуждении ото сна | Quran Platform");
+  await expect(page).toHaveTitle("Слова поминания при пробуждении ото сна | IQRO");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
     `${siteUrl}${topicPath}`,
@@ -219,7 +219,7 @@ test("published reciter and recitation routes render the licensed audio catalog 
   expect(catalogHtml).toContain(`/ru/audio/reciters/${reciterId}`);
 
   await page.goto(`/ru/audio/reciters/${reciterId}`);
-  await expect(page).toHaveTitle("Чтец Махер аль-Муайкли — декламации Корана | Quran Platform");
+  await expect(page).toHaveTitle("Чтец Махер аль-Муайкли — декламации Корана | IQRO");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Махер аль-Муайкли");
   await expect(page.getByRole("link", { name: /MURATTAL/ })).toHaveAttribute(
     "href",
@@ -320,7 +320,7 @@ test("legal and contact pages are localized, canonical, and linked from the foot
   expect(privacyHtml).toContain("İşlediğimiz veriler");
 
   await page.goto("/ru/contacts");
-  await expect(page).toHaveTitle("Контакты и обратная связь | Quran Platform");
+  await expect(page).toHaveTitle("Контакты и обратная связь | IQRO");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
     `${siteUrl}/ru/contacts`,
@@ -355,7 +355,7 @@ test("localized legal suite exposes working deletion and provider disclosures", 
   }
 
   await page.goto("/ru/data-rights");
-  await expect(page).toHaveTitle("Права пользователя и удаление данных | Quran Platform");
+  await expect(page).toHaveTitle("Права пользователя и удаление данных | IQRO");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
     `${siteUrl}/ru/data-rights`,

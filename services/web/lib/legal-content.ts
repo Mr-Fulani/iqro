@@ -59,13 +59,13 @@ export type LegalCopy = {
 const ru = (config: LegalConfig): LegalCopy => ({
   privacy: {
     title: "Политика конфиденциальности",
-    description: "Какие данные обрабатывает Quran Platform, зачем, как долго и как реализовать свои права.",
+    description: "Какие данные обрабатывает IQRO, зачем, как долго и как реализовать свои права.",
     updated: `Действует с ${config.effectiveDate}`,
     sections: [
       {
         title: "1. Оператор и область действия",
         paragraphs: [
-          `${config.entityName} управляет Quran Platform и выступает оператором данных. Контакт: ${config.contactEmail}. Почтовый адрес: ${config.postalAddress}.`,
+          `${config.entityName} управляет IQRO и выступает оператором данных. Контакт: ${config.contactEmail}. Почтовый адрес: ${config.postalAddress}.`,
           "Политика относится к web-версии, мобильным приложениям, Telegram Mini App и другим официальным клиентам, использующим тот же API.",
         ],
       },
@@ -153,10 +153,10 @@ const ru = (config: LegalConfig): LegalCopy => ({
   },
   terms: {
     title: "Условия использования",
-    description: "Правила использования Quran Platform, аккаунта, контента, аудио и расчётов времени намаза.",
+    description: "Правила использования IQRO, аккаунта, контента, аудио и расчётов времени намаза.",
     updated: `Действуют с ${config.effectiveDate}`,
     sections: [
-      { title: "1. Принятие условий", paragraphs: [`Quran Platform предоставляет ${config.entityName}. Используя сервис, вы принимаете эти условия и Политику конфиденциальности. Если вы не согласны, не используйте сервис.`] },
+      { title: "1. Принятие условий", paragraphs: [`IQRO предоставляет ${config.entityName}. Используя сервис, вы принимаете эти условия и Политику конфиденциальности. Если вы не согласны, не используйте сервис.`] },
       { title: "2. Назначение сервиса", paragraphs: ["Сервис помогает читать и слушать Коран, сохранять прогресс, учиться и рассчитывать время намаза. Он не заменяет решение квалифицированного религиозного авторитета. Расчётные времена зависят от координат, метода, мазхаба и локальных правил — сверяйте их с вашей мечетью."] },
       { title: "3. Аккаунт и устройства", paragraphs: ["Можно пользоваться гостевым режимом или войти по email. Вы отвечаете за доступ к email и своим устройствам, должны сообщать о подозрительной активности и не обходить ограничения безопасности. Мы можем прекратить сессии для защиты аккаунта."] },
       { title: "4. Допустимое использование", paragraphs: ["Нельзя вмешиваться в работу сервиса, обходить rate limits и права доступа, массово извлекать данные вопреки опубликованному API-контракту, распространять вредоносный код, нарушать права третьих лиц или использовать обращения для угроз и спама."] },
@@ -177,9 +177,9 @@ const ru = (config: LegalConfig): LegalCopy => ({
 const en = (config: LegalConfig): LegalCopy => {
   return {
     privacy: {
-      title: "Privacy Policy", description: "What Quran Platform processes, why, for how long, and how to exercise your rights.", updated: `Effective ${config.effectiveDate}`,
+      title: "Privacy Policy", description: "What IQRO processes, why, for how long, and how to exercise your rights.", updated: `Effective ${config.effectiveDate}`,
       sections: [
-        { title: "1. Controller and scope", paragraphs: [`${config.entityName} operates Quran Platform and is the data controller. Contact: ${config.contactEmail}. Postal address: ${config.postalAddress}.`, "This policy covers the web app, mobile apps, Telegram Mini App, and other official clients using the same API."] },
+        { title: "1. Controller and scope", paragraphs: [`${config.entityName} operates IQRO and is the data controller. Contact: ${config.contactEmail}. Postal address: ${config.postalAddress}.`, "This policy covers the web app, mobile apps, Telegram Mini App, and other official clients using the same API."] },
         { title: "2. Data we process", paragraphs: ["The data depends on the features you use."], bullets: ["installation and device identifiers, app version, language, time zone, sessions, and security events;", "email and verification state for one-time-code sign-in;", "for Sign in with Google — the name, email address, avatar link, and Google account identifier that Google provides. We keep only the email, its verification state, and the account identifier; the name and avatar are not stored;", "reading position, daily goal, after-prayer reading plan and check-ins, reading sessions, progress and reading-day streak, bookmarks, reminders, prayer settings, and sync state; when notifications are enabled, the browser push endpoint and public subscription keys; after separate location permission, device coordinates used only to calculate prayer notifications;", "support ticket subject, messages, and history;", "IP address, request ID, and minimal request logs for security, diagnostics, and abuse prevention."] },
         { title: "3. Purposes and legal bases", paragraphs: ["We process data to provide requested features, synchronize clients, authenticate users, provide support, secure the service, prevent abuse, and meet legal duties.", "Depending on the activity and applicable law, the basis is performance of the terms or steps you request, legitimate interests in a secure and reliable service, a legal obligation, or consent where required. The operator must confirm the exact basis for the launch jurisdiction."] },
         { title: "4. Cookies and local storage", paragraphs: ["Necessary HttpOnly cookies hold the refresh session and installation key; a locale cookie remembers language. localStorage holds the sync queue, a bounded queue of unsent reading sessions, operational state, and the last prayer-calculation location, method, and Asr school selected on this device, while sessionStorage holds temporary return paths and notices. These mechanisms support requested functionality and are not used for advertising profiles."] },
@@ -194,9 +194,9 @@ const en = (config: LegalConfig): LegalCopy => {
       ],
     },
     terms: {
-      title: "Terms of Use", description: "Rules for Quran Platform, accounts, content, audio, and prayer-time calculations.", updated: `Effective ${config.effectiveDate}`,
+      title: "Terms of Use", description: "Rules for IQRO, accounts, content, audio, and prayer-time calculations.", updated: `Effective ${config.effectiveDate}`,
       sections: [
-        { title: "1. Acceptance", paragraphs: [`Quran Platform is provided by ${config.entityName}. By using it, you accept these terms and the Privacy Policy. Do not use the service if you disagree.`] },
+        { title: "1. Acceptance", paragraphs: [`IQRO is provided by ${config.entityName}. By using it, you accept these terms and the Privacy Policy. Do not use the service if you disagree.`] },
         { title: "2. Purpose", paragraphs: ["The service helps users read and listen to the Quran, save progress, learn, and calculate prayer times. It does not replace a qualified religious authority. Calculations depend on coordinates, method, madhhab, and local practice; verify them with your local mosque."] },
         { title: "3. Accounts and devices", paragraphs: ["You may use guest mode or sign in by email. You are responsible for access to your email and devices, reporting suspicious activity, and not bypassing security controls. We may revoke sessions to protect an account."] },
         { title: "4. Acceptable use", paragraphs: ["Do not disrupt the service, bypass rate limits or authorization, scrape beyond the published API contract, distribute malware, infringe third-party rights, or use support channels for threats or spam."] },
@@ -216,9 +216,9 @@ const ar = (config: LegalConfig): LegalCopy => {
   return {
     ...copy,
     privacy: {
-      title: "سياسة الخصوصية", description: "البيانات التي تعالجها منصة القرآن وأغراضها ومدة حفظها وحقوق المستخدم.", updated: `سارية من ${config.effectiveDate}`,
+      title: "سياسة الخصوصية", description: "البيانات التي تعالجها IQRO وأغراضها ومدة حفظها وحقوق المستخدم.", updated: `سارية من ${config.effectiveDate}`,
       sections: [
-        { title: "1. المتحكم ونطاق السياسة", paragraphs: [`تدير ${config.entityName} منصة القرآن وهي المتحكم في البيانات. التواصل: ${config.contactEmail}. العنوان البريدي: ${config.postalAddress}.`, "تشمل هذه السياسة تطبيق الويب وتطبيقات الهاتف وتطبيق Telegram Mini App وسائر العملاء الرسميين الذين يستخدمون واجهة API نفسها."] },
+        { title: "1. المتحكم ونطاق السياسة", paragraphs: [`تدير ${config.entityName} IQRO وهي المتحكم في البيانات. التواصل: ${config.contactEmail}. العنوان البريدي: ${config.postalAddress}.`, "تشمل هذه السياسة تطبيق الويب وتطبيقات الهاتف وتطبيق Telegram Mini App وسائر العملاء الرسميين الذين يستخدمون واجهة API نفسها."] },
         { title: "2. البيانات التي نعالجها", paragraphs: ["تختلف البيانات بحسب الوظائف التي تستخدمها."], bullets: ["معرّفات التثبيت والجهاز وإصدار التطبيق واللغة والمنطقة الزمنية والجلسات وأحداث الأمن؛", "البريد الإلكتروني وحالة التحقق عند الدخول بالرمز المؤقت؛", "عند الدخول عبر Google: الاسم وعنوان البريد ورابط الصورة الرمزية ومعرّف حساب Google التي يرسلها Google. نحفظ البريد وحالة التحقق منه ومعرّف الحساب فقط، ولا نحفظ الاسم ولا الصورة الرمزية؛", "موضع القراءة والهدف اليومي وجلسات القراءة والتقدم وسلسلة الأيام المكتملة والعلامات والتذكيرات وإعدادات الصلاة وحالة المزامنة؛ وعند تفعيل الإشعارات عنوان push للمتصفح ومفاتيح الاشتراك العامة؛ وبعد إذن منفصل للموقع إحداثيات الجهاز المستخدمة فقط لحساب إشعارات الصلاة؛", "موضوع رسائل الدعم ومحتواها وسجلها؛", "عنوان IP ومعرّف الطلب وسجلات تقنية محدودة للأمن والتشخيص ومنع الإساءة."] },
         { title: "3. الأغراض والأسس القانونية", paragraphs: ["نعالج البيانات لتقديم الوظائف المطلوبة ومزامنة العملاء والتحقق من الهوية والدعم وحماية الخدمة ومنع الإساءة والوفاء بالالتزامات القانونية.", "بحسب النشاط والقانون المنطبق، يستند ذلك إلى تنفيذ الشروط أو اتخاذ خطوات بطلبك أو المصلحة المشروعة في خدمة آمنة وموثوقة أو التزام قانوني أو الموافقة عند لزومها. يجب على المشغّل اعتماد الأساس المحدد في دولة الإطلاق."] },
         { title: "4. ملفات الارتباط والتخزين المحلي", paragraphs: ["تحفظ ملفات HttpOnly الضرورية جلسة التحديث ومفتاح التثبيت، ويحفظ ملف اللغة اختيارك. يحتفظ localStorage بطابور المزامنة وطابور محدود لجلسات القراءة غير المرسلة والحالة التشغيلية وآخر موقع وطريقة حساب ومذهب عصر اختيرت على هذا الجهاز، ويحتفظ sessionStorage بمسار الرجوع والإشعارات المؤقتة. تُستخدم هذه الوسائل للوظائف المطلوبة لا لبناء ملفات إعلانية."] },
@@ -233,9 +233,9 @@ const ar = (config: LegalConfig): LegalCopy => {
       ],
     },
     terms: {
-      title: "شروط الاستخدام", description: "قواعد استخدام منصة القرآن والحساب والمحتوى والصوت ومواقيت الصلاة.", updated: `سارية من ${config.effectiveDate}`,
+      title: "شروط الاستخدام", description: "قواعد استخدام IQRO والحساب والمحتوى والصوت ومواقيت الصلاة.", updated: `سارية من ${config.effectiveDate}`,
       sections: [
-        { title: "1. قبول الشروط", paragraphs: [`تقدم ${config.entityName} منصة القرآن. باستخدام الخدمة توافق على هذه الشروط وسياسة الخصوصية. لا تستخدمها إن لم توافق.`] },
+        { title: "1. قبول الشروط", paragraphs: [`تقدم ${config.entityName} IQRO. باستخدام الخدمة توافق على هذه الشروط وسياسة الخصوصية. لا تستخدمها إن لم توافق.`] },
         { title: "2. غرض الخدمة", paragraphs: ["تساعد الخدمة على قراءة القرآن والاستماع إليه وحفظ التقدم والتعلم وحساب مواقيت الصلاة. ولا تحل محل مرجع ديني مؤهل. تعتمد الحسابات على الموقع والطريقة والمذهب والعرف المحلي؛ تحقق منها مع مسجدك المحلي."] },
         { title: "3. الحساب والأجهزة", paragraphs: ["يمكنك استخدام وضع الضيف أو الدخول بالبريد. أنت مسؤول عن حماية بريدك وأجهزتك والإبلاغ عن النشاط المشبوه وعدم تجاوز ضوابط الأمن. يجوز لنا إنهاء الجلسات لحماية الحساب."] },
         { title: "4. الاستخدام المقبول", paragraphs: ["يُحظر تعطيل الخدمة أو تجاوز حدود الطلبات والصلاحيات أو جمع البيانات خارج عقد API المنشور أو نشر البرمجيات الخبيثة أو انتهاك حقوق الغير أو استخدام الدعم للتهديد أو الرسائل المزعجة."] },
@@ -255,9 +255,9 @@ const tr = (config: LegalConfig): LegalCopy => {
   return {
     ...copy,
     privacy: {
-      title: "Gizlilik Politikası", description: "Quran Platform'un işlediği veriler, amaçlar, saklama süreleri ve haklarınız.", updated: `${config.effectiveDate} tarihinden itibaren geçerlidir`,
+      title: "Gizlilik Politikası", description: "IQRO'nun işlediği veriler, amaçlar, saklama süreleri ve haklarınız.", updated: `${config.effectiveDate} tarihinden itibaren geçerlidir`,
       sections: [
-        { title: "1. Veri sorumlusu ve kapsam", paragraphs: [`Quran Platform, ${config.entityName} tarafından işletilir ve veri sorumlusu bu kuruluştur. İletişim: ${config.contactEmail}. Posta adresi: ${config.postalAddress}.`, "Bu politika web uygulamasını, mobil uygulamaları, Telegram Mini App'i ve aynı API'yi kullanan diğer resmî istemcileri kapsar."] },
+        { title: "1. Veri sorumlusu ve kapsam", paragraphs: [`IQRO, ${config.entityName} tarafından işletilir ve veri sorumlusu bu kuruluştur. İletişim: ${config.contactEmail}. Posta adresi: ${config.postalAddress}.`, "Bu politika web uygulamasını, mobil uygulamaları, Telegram Mini App'i ve aynı API'yi kullanan diğer resmî istemcileri kapsar."] },
         { title: "2. İşlediğimiz veriler", paragraphs: ["Veri kapsamı kullandığınız özelliklere göre değişir."], bullets: ["kurulum ve cihaz tanımlayıcıları, uygulama sürümü, dil, saat dilimi, oturumlar ve güvenlik olayları;", "tek kullanımlık kodla giriş için e-posta ve doğrulama durumu;", "Google ile girişte Google'ın ilettiği ad, e-posta adresi, profil resmi bağlantısı ve Google hesap kimliği. Yalnızca e-postayı, doğrulama durumunu ve hesap kimliğini saklarız; ad ve profil resmi saklanmaz;", "okuma konumu, günlük hedef, okuma oturumları, ilerleme ve tamamlanan gün serisi, yer imleri, hatırlatıcılar, namaz ayarları ve senkronizasyon durumu; bildirimler açıldığında tarayıcı push endpoint'i ve açık abonelik anahtarları; ayrı konum izninden sonra yalnızca namaz bildirimlerini hesaplamak için kullanılan cihaz koordinatları;", "destek talebinin konusu, mesajları ve geçmişi;", "güvenlik, teşhis ve kötüye kullanımı önleme için IP adresi, istek kimliği ve sınırlı teknik kayıtlar."] },
         { title: "3. Amaçlar ve hukuki sebepler", paragraphs: ["Verileri istenen özellikleri sunmak, istemcileri eşitlemek, kimlik doğrulamak, destek vermek, hizmeti korumak, kötüye kullanımı önlemek ve hukuki yükümlülükleri yerine getirmek için işleriz.", "Faaliyete ve uygulanacak hukuka göre dayanak; koşulların ifası veya talebiniz üzerine işlem yapılması, güvenli ve güvenilir hizmete ilişkin meşru menfaat, hukuki yükümlülük ya da gerektiğinde açık rızadır. İşletmeci, yayına alınacak ülke için somut işleme şartını hukuk incelemesinde kesinleştirmelidir."] },
         { title: "4. Çerezler ve yerel depolama", paragraphs: ["Zorunlu HttpOnly çerezleri yenileme oturumunu ve kurulum anahtarını, dil çerezi ise seçiminizi saklar. localStorage senkronizasyon kuyruğunu, gönderilmemiş okuma oturumları için sınırlı bir kuyruğu, işletim durumunu ve bu cihazda seçilen son namaz hesaplama konumunu, yöntemini ve ikindi mezhebini; sessionStorage geçici dönüş yolunu ve bildirimleri tutar. Bunlar istenen işlevler içindir, reklam profili oluşturmak için kullanılmaz."] },
@@ -272,9 +272,9 @@ const tr = (config: LegalConfig): LegalCopy => {
       ],
     },
     terms: {
-      title: "Kullanım Koşulları", description: "Quran Platform, hesap, içerik, ses ve namaz vakti hesaplamalarına ilişkin kurallar.", updated: `${config.effectiveDate} tarihinden itibaren geçerlidir`,
+      title: "Kullanım Koşulları", description: "IQRO, hesap, içerik, ses ve namaz vakti hesaplamalarına ilişkin kurallar.", updated: `${config.effectiveDate} tarihinden itibaren geçerlidir`,
       sections: [
-        { title: "1. Kabul", paragraphs: [`Quran Platform, ${config.entityName} tarafından sunulur. Hizmeti kullanarak bu koşulları ve Gizlilik Politikası'nı kabul edersiniz. Kabul etmiyorsanız kullanmayın.`] },
+        { title: "1. Kabul", paragraphs: [`IQRO, ${config.entityName} tarafından sunulur. Hizmeti kullanarak bu koşulları ve Gizlilik Politikası'nı kabul edersiniz. Kabul etmiyorsanız kullanmayın.`] },
         { title: "2. Hizmetin amacı", paragraphs: ["Hizmet Kur'an okumaya ve dinlemeye, ilerlemeyi kaydetmeye, öğrenmeye ve namaz vakitlerini hesaplamaya yardımcı olur. Yetkin bir dinî merciin yerini almaz. Hesaplar konum, yöntem, mezhep ve yerel uygulamaya bağlıdır; yerel caminizle doğrulayın."] },
         { title: "3. Hesap ve cihazlar", paragraphs: ["Misafir modunu kullanabilir veya e-postayla giriş yapabilirsiniz. E-posta ve cihaz erişiminizi korumak, şüpheli etkinliği bildirmek ve güvenlik kontrollerini aşmamak sizin sorumluluğunuzdadır. Hesabı korumak için oturumları sonlandırabiliriz."] },
         { title: "4. Kabul edilebilir kullanım", paragraphs: ["Hizmeti bozamaz, hız ve yetki sınırlarını aşamaz, yayımlanmış API sözleşmesi dışında toplu veri çekemez, zararlı yazılım dağıtamaz, üçüncü kişi haklarını ihlal edemez veya destek kanallarını tehdit ve spam için kullanamazsınız."] },

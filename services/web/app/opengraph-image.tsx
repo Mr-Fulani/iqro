@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Quran Platform — read, listen, and plan";
+export const alt = "IQRO — read, listen, and plan";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -25,7 +25,7 @@ export default function OpenGraphImage() {
             Madani Mushaf · Quran Audio · Prayer
           </div>
           <div style={{ display: "flex", fontSize: 82, fontWeight: 700, marginTop: 28 }}>
-            Quran Platform
+            IQRO
           </div>
           <div style={{ display: "flex", fontSize: 36, lineHeight: 1.35, marginTop: 24, color: "#d1fae5" }}>
             Read the Quran, listen to reciters, and keep your progress synchronized.

@@ -83,6 +83,21 @@ function ReplayIcon() {
   );
 }
 
+function CameraIcon({ path }: { path: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d={path} fill="currentColor" />
+    </svg>
+  );
+}
+
+const TURN_LEFT_ICON =
+  "M7.11 8.53 5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47ZM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47Zm1.01 5.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32ZM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93Z";
+const TURN_RIGHT_ICON =
+  "M15.55 5.55 11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45ZM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02ZM13 17.9v2.02c1.39-.17 2.74-.71 3.9-1.61l-1.44-1.44c-.75.54-1.59.89-2.46 1.03Zm3.89-2.42 1.42 1.41c.9-1.16 1.45-2.5 1.62-3.89h-2.02c-.14.87-.48 1.72-1.02 2.48Z";
+const RESET_VIEW_ICON =
+  "M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4Zm-7 7H3v4c0 1.1.9 2 2 2h4v-2H5v-4ZM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2V5Zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2Zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4Z";
+
 function RepetitionCounter({ target, label }: { target: number; label: string }) {
   const { formatNumber, t } = useI18n();
   const [count, setCount] = useState(0);
@@ -165,6 +180,24 @@ function StepVisual({
           <span>{t("salah.schematic3d")}</span>
           {three?.shown && three.ready ? (
             <span className="salah-3d-tools">
+              {(
+                [
+                  ["salah.turnLeft3d", TURN_LEFT_ICON, () => three.turn(-1)],
+                  ["salah.turnRight3d", TURN_RIGHT_ICON, () => three.turn(1)],
+                  ["salah.resetView3d", RESET_VIEW_ICON, three.resetCamera],
+                ] as const
+              ).map(([label, icon, action]) => (
+                <button
+                  key={label}
+                  type="button"
+                  className="dua-icon-action"
+                  onClick={action}
+                  aria-label={t(label)}
+                  title={t(label)}
+                >
+                  <CameraIcon path={icon} />
+                </button>
+              ))}
               <button
                 type="button"
                 className="dua-icon-action"

@@ -16,6 +16,8 @@ export type Salah3DStageProps = {
   /** Changes when the pose should play from its start: a new step or a replay. */
   run: number;
   speed: number;
+  /** The last camera button pressed: `id` grows with each press; a zero `turn` resets the view. */
+  camera: { id: number; turn: number };
   onReady: () => void;
   /** The pose has played and holds its last frame. */
   onEnded: () => void;
@@ -35,6 +37,7 @@ export default function Salah3DStage({
   playing,
   run,
   speed,
+  camera,
   onReady,
   onEnded,
   onError,
@@ -94,6 +97,12 @@ export default function Salah3DStage({
   useEffect(() => {
     stage?.scene.setSpeed(speed);
   }, [speed, stage]);
+
+  useEffect(() => {
+    if (!stage || camera.id === 0) return;
+    if (camera.turn) stage.scene.turn(camera.turn);
+    else stage.scene.resetCamera();
+  }, [camera, stage]);
 
   // Runs only while moving, shown in a step and the tab is visible.
   useEffect(() => {

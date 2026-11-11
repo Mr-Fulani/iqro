@@ -36,7 +36,7 @@ test("course and lesson pages render indexable steps and Arabic on the server", 
   const lesson = await request.get("/ru/salah/fajr");
   expect(lesson.ok()).toBe(true);
   const html = await lesson.text();
-  expect(html).toContain("<title>Фаджр · Обучение намазу | Quran Platform</title>");
+  expect(html).toContain("<title>Фаджр · Обучение намазу | IQRO</title>");
   for (const title of ["Начальный такбир", "Аль-Фатиха", "Руку&#x27;", "Последний ташаххуд", "Таслим"]) {
     expect(html).toContain(title);
   }

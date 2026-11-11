@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -65,6 +66,14 @@ List<SalahMediaScene?> salahStepScenes(
 
 const salahSceneSpeeds = <double>[1, .75, .5];
 
+/// One press of a turn button, in radians: an eighth of a full turn, as
+/// SALAH_SCENE_TURN in services/web/lib/salah-3d.ts.
+const salahSceneTurn = math.pi / 4;
+
+/// The last camera button pressed: [id] grows with each press; a zero
+/// [turn] resets the view.
+typedef Salah3DCamera = ({int id, double turn});
+
 /// The lesson's 3D scene: it runs on the current step when the device can,
 /// and any failure leaves the stills for the rest of the visit. Each step
 /// plays its pose once and holds the last frame; play then replays it.
@@ -76,6 +85,7 @@ class Salah3DController extends ChangeNotifier {
   bool _ended = false;
   double _speed = 1;
   int _replayCount = 0;
+  Salah3DCamera _camera = (id: 0, turn: 0);
 
   bool get failed => _failed;
   bool get ready => _ready;
@@ -92,6 +102,20 @@ class Salah3DController extends ChangeNotifier {
 
   /// Grows whenever the current pose should play again from its start.
   int get replayCount => _replayCount;
+  Salah3DCamera get camera => _camera;
+
+  /// Turns the figure a step to the left (-1) or to the right (1). Dragging
+  /// the figure to the right lowers the camera's azimuth; so does the button.
+  void turn(int direction) {
+    _camera = (id: _camera.id + 1, turn: -direction * salahSceneTurn);
+    notifyListeners();
+  }
+
+  /// Back to the view the step opened with.
+  void resetCamera() {
+    _camera = (id: _camera.id + 1, turn: 0);
+    notifyListeners();
+  }
 
   void markReady() {
     if (_ready || _failed) return;
@@ -156,6 +180,7 @@ class Salah3DViewConfig {
     required this.foreground,
     required this.speed,
     required this.replayCount,
+    required this.camera,
     required this.onReady,
     required this.onEnded,
     required this.onError,
@@ -177,6 +202,7 @@ class Salah3DViewConfig {
 
   /// Changes when the pose should play again from its start.
   final int replayCount;
+  final Salah3DCamera camera;
   final VoidCallback onReady;
 
   /// The pose has played once and holds its last frame.
@@ -269,6 +295,10 @@ class _Salah3DWebViewState extends State<Salah3DWebView> {
     _sync();
     if (old.speed != _config.speed) _run('salah.setSpeed(${_config.speed})');
     if (old.replayCount != _config.replayCount) _run('salah.replay()');
+    if (old.camera != _config.camera) {
+      final turn = _config.camera.turn;
+      _run(turn == 0 ? 'salah.resetCamera()' : 'salah.turn($turn)');
+    }
     if (old.step != _config.step) {
       _run('salah.show(${jsonEncode(_config.step)})');
     }

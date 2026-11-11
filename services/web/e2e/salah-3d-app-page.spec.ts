@@ -34,6 +34,7 @@ test("the app page boots the scene through the bridge and follows commands", asy
     const salah = (window as unknown as { salah: Record<string, (value?: unknown) => void> }).salah;
     salah.pause();
     salah.setSpeed(0.5);
+    salah.turn(0.5);
     salah.resetCamera();
     salah.play();
     salah.show("tashahhud");

@@ -87,8 +87,13 @@ test("a pose plays once, holds its last frame and plays again on «Повтор�
 
   await expect(replayButton(step)).toBeVisible(POSE_TIMEOUT);
   await expect(canvas).toHaveAttribute("data-running", "false");
-  // The same button as pause and play, not one more: the tools are it and the speed.
-  await expect(step.locator(".salah-3d-tools button")).toHaveCount(2);
+  // The same button as pause and play, not one more: the tools are the three camera
+  // buttons, it and the speed.
+  await expect(step.locator(".salah-3d-tools button")).toHaveCount(5);
+  // A camera button turns the still figure; it settles again.
+  await step.getByRole("button", { name: "Повернуть вправо" }).click();
+  await expect.poll(() => moving(canvas), POSE_TIMEOUT).toBe(true);
+  await step.getByRole("button", { name: "Сбросить ракурс" }).click();
   // No loop: the figure holds still.
   await expect.poll(() => moving(canvas), POSE_TIMEOUT).toBe(false);
 

@@ -30,7 +30,7 @@ export default async function ContactsPage({ params }: { params: Promise<RoutePa
     <article className="seo-quran-page legal-document">
       <header className="surface seo-quran-hero">
         <div>
-          <p className="eyebrow">Quran Platform</p>
+          <p className="eyebrow">IQRO</p>
           <h1>{copy.title}</h1>
           <p>{copy.description}</p>
         </div>

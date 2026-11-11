@@ -2304,6 +2304,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salah3dReplay => 'Replay';
 
   @override
+  String get salah3dTurnLeft => 'Turn left';
+
+  @override
+  String get salah3dTurnRight => 'Turn right';
+
+  @override
+  String get salah3dResetView => 'Reset view';
+
+  @override
   String get salahOfflineTitle => 'Pictures offline';
 
   @override
