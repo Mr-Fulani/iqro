@@ -453,6 +453,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get readerPlainText => 'النص العربي';
 
   @override
+  String get readerSwipeHint => 'اسحب يمينًا للنص العربي ويسارًا للمصحف';
+
+  @override
   String readerPlainTextPlace(String ayah, String page) {
     return 'الآية $ayah · ص $page';
   }

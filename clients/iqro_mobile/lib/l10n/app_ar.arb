@@ -137,6 +137,7 @@
   "textMode": "النص",
   "mushafMode": "المصحف",
   "readerPlainText": "النص العربي",
+  "readerSwipeHint": "اسحب يمينًا للنص العربي ويسارًا للمصحف",
   "readerPlainTextPlace": "الآية {ayah} · ص {page}",
   "selectedMushaf": "المصحف المختار",
   "chooseMushaf": "اختر المصحف",

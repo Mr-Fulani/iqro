@@ -157,6 +157,69 @@ test.describe("the plain text announces a quarter of a hizb", () => {
   });
 });
 
+test.describe("the hint that the text can be swiped", () => {
+  test.use(layouts[0].use);
+
+  const hint = (page: Page) => page.getByTestId("reader-swipe-hint");
+  const shift = (page: Page) => page.locator(".reader-swipe-surface").evaluate((surface) => (
+    new DOMMatrixReadOnly(getComputedStyle(surface).transform).m41
+  ));
+
+  /** The ayahs themselves, past the reading settings above them. */
+  const toAyahs = (page: Page) => page.locator("#quran-ayah-1-4").evaluate((card) => card.scrollIntoView({ block: "center" }));
+
+  test("once the ayahs are on screen a hand pulls the text right, then left, and goes", async ({ page }) => {
+    await openText(page);
+    // The settings above the text fill the screen: nothing to swipe yet.
+    await page.waitForTimeout(2000);
+    await expect(hint(page)).toHaveCount(0);
+    await toAyahs(page);
+    await expect(hint(page)).toHaveText("Свайп вправо — арабский текст, влево — Мусхаф");
+    await expect(page.locator(".reader-swipe-reveal.is-right")).toHaveText(/Арабский текст/);
+    await expect.poll(() => shift(page)).toBeGreaterThan(100);
+    await expect(page.locator(".reader-swipe-reveal.is-left")).toHaveText(/Мусхаф/);
+    await expect.poll(() => shift(page)).toBeLessThan(-100);
+    await expect(hint(page)).toHaveCount(0);
+    expect(await shift(page)).toBe(0);
+    // It opened nothing, and is counted.
+    await expect(plainText(page)).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem("iqro_reader_swipe_hint_v1"))).toBe("1");
+  });
+
+  test("a touch ends it at once; after a swipe it never comes", async ({ page }) => {
+    await openText(page);
+    await toAyahs(page);
+    await expect(hint(page)).toBeVisible();
+    const session = await page.context().newCDPSession(page);
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 200, y: 80 }] });
+    await expect(hint(page)).toHaveCount(0, { timeout: 500 });
+    await session.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+    await session.detach();
+    expect(await shift(page)).toBe(0);
+
+    await swipeAyah(page, 5, 1);
+    await expect(plainText(page)).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("iqro_reader_swipe_hint_v1"))).toBe("3");
+    await page.reload();
+    await openText(page);
+    await toAyahs(page);
+    await page.waitForTimeout(3000);
+    await expect(hint(page)).toHaveCount(0);
+  });
+
+  test("with reduced motion it stands still and the text does not move", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await openText(page);
+    await toAyahs(page);
+    await expect(hint(page)).toBeVisible();
+    const hand = await hint(page).locator("svg").boundingBox();
+    await page.waitForTimeout(1500);
+    expect(await shift(page)).toBe(0);
+    expect(await hint(page).locator("svg").boundingBox()).toEqual(hand);
+    await expect(hint(page)).toHaveCount(0, { timeout: 5_000 });
+  });
+});
+
 test.describe("text swipes leave other gestures alone", () => {
   test.use(layouts[0].use);
 
@@ -191,5 +254,9 @@ test("a mouse on a computer turns no page", async ({ page }) => {
   await page.mouse.move(from.x + 300, from.y, { steps: 12 });
   await page.mouse.up();
   await expect(plainText(page)).toHaveCount(0);
+  // Nor is a mouse told about swipes.
+  await page.locator("#quran-ayah-1-4").evaluate((card) => card.scrollIntoView({ block: "center" }));
+  await page.waitForTimeout(3000);
+  await expect(page.getByTestId("reader-swipe-hint")).toHaveCount(0);
   await expect(page.locator(".quran-page-layout").filter({ visible: true })).not.toHaveClass(/is-mushaf-mode/);
 });

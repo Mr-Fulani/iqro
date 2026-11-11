@@ -881,6 +881,7 @@ const en: Messages = {
   "quran.toSurahList": "To the list of surahs",
   "quran.nextSurahAyahs": "{count} ayahs",
   "quran.plainText": "Arabic text",
+  "quran.swipeHint": "Swipe right for the Arabic text, left for the Mushaf",
   "quran.plainTextPlace": "Ayah {ayah} · p. {page}",
   "quran.plainTextSize": "Arabic text size",
   "quran.plainTextReset": "Reset",

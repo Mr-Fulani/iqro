@@ -884,6 +884,7 @@ const ru = {
   "quran.toSurahList": "К списку сур",
   "quran.nextSurahAyahs": "{count} аятов",
   "quran.plainText": "Арабский текст",
+  "quran.swipeHint": "Свайп вправо — арабский текст, влево — Мусхаф",
   "quran.plainTextPlace": "Аят {ayah} · стр. {page}",
   "quran.plainTextSize": "Размер арабского текста",
   "quran.plainTextReset": "Сбросить",

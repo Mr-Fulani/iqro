@@ -881,6 +881,7 @@ const tr: Messages = {
   "quran.toSurahList": "Sure listesine",
   "quran.nextSurahAyahs": "{count} ayet",
   "quran.plainText": "Arapça metin",
+  "quran.swipeHint": "Sağa kaydırın: Arapça metin, sola: Mushaf",
   "quran.plainTextPlace": "Ayet {ayah} · s. {page}",
   "quran.plainTextSize": "Arapça metin boyutu",
   "quran.plainTextReset": "Sıfırla",

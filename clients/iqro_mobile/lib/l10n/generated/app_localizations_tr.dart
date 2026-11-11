@@ -455,6 +455,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get readerPlainText => 'Arapça metin';
 
   @override
+  String get readerSwipeHint => 'Sağa kaydırın: Arapça metin, sola: Mushaf';
+
+  @override
   String readerPlainTextPlace(String ayah, String page) {
     return 'Ayet $ayah · s. $page';
   }

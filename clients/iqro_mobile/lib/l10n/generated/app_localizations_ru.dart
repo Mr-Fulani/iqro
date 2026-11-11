@@ -464,6 +464,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get readerPlainText => 'Арабский текст';
 
   @override
+  String get readerSwipeHint => 'Свайп вправо — арабский текст, влево — Мусхаф';
+
+  @override
   String readerPlainTextPlace(String ayah, String page) {
     return 'Аят $ayah · стр. $page';
   }

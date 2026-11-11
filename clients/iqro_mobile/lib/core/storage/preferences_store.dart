@@ -37,6 +37,9 @@ const supportedAudioQualityPreferences = <String>{
 /// The mini player shows that it folds at most this many times.
 const miniPlayerHintLimit = 5;
 
+/// The reader shows that its text can be swiped this many times at most.
+const readerSwipeHintLimit = 3;
+
 class AppPreferences {
   const AppPreferences({
     required this.onboardingComplete,
@@ -68,6 +71,7 @@ class AppPreferences {
     this.reminderSoundChecked = false,
     this.playerHintsShown = 0,
     this.playerHintShownAt,
+    this.readerSwipeHintsShown = 0,
   });
 
   const AppPreferences.defaults()
@@ -99,7 +103,8 @@ class AppPreferences {
       reminderAdhan = defaultReminderAdhan,
       reminderSoundChecked = false,
       playerHintsShown = 0,
-      playerHintShownAt = null;
+      playerHintShownAt = null,
+      readerSwipeHintsShown = 0;
 
   final bool onboardingComplete;
   final String locale;
@@ -142,6 +147,7 @@ class AppPreferences {
   /// has folded it by hand.
   final int playerHintsShown;
   final DateTime? playerHintShownAt;
+  final int readerSwipeHintsShown;
 
   AppPreferences copyWith({
     bool? onboardingComplete,
@@ -173,6 +179,7 @@ class AppPreferences {
     bool? reminderSoundChecked,
     int? playerHintsShown,
     DateTime? playerHintShownAt,
+    int? readerSwipeHintsShown,
   }) {
     final nextListening =
         listeningRecitationId ??
@@ -214,6 +221,8 @@ class AppPreferences {
       reminderSoundChecked: reminderSoundChecked ?? this.reminderSoundChecked,
       playerHintsShown: playerHintsShown ?? this.playerHintsShown,
       playerHintShownAt: playerHintShownAt ?? this.playerHintShownAt,
+      readerSwipeHintsShown:
+          readerSwipeHintsShown ?? this.readerSwipeHintsShown,
     );
   }
 }
@@ -350,6 +359,8 @@ class PreferencesStore {
       reminderSoundChecked:
           _preferences.getBool('reminder_sound_checked') ?? false,
       playerHintsShown: _preferences.getInt('player_hint_count') ?? 0,
+      readerSwipeHintsShown:
+          _preferences.getInt('reader_swipe_hint_count') ?? 0,
       playerHintShownAt: DateTime.tryParse(
         _preferences.getString('player_hint_at') ?? '',
       ),
@@ -426,6 +437,10 @@ class PreferencesStore {
         value.reminderSoundChecked,
       ),
       _preferences.setInt('player_hint_count', value.playerHintsShown),
+      _preferences.setInt(
+        'reader_swipe_hint_count',
+        value.readerSwipeHintsShown,
+      ),
       if (value.playerHintShownAt case final shownAt?)
         _preferences.setString(
           'player_hint_at',

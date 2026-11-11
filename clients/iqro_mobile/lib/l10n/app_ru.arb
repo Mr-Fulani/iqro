@@ -137,6 +137,7 @@
   "textMode": "Текст",
   "mushafMode": "Мусхаф",
   "readerPlainText": "Арабский текст",
+  "readerSwipeHint": "Свайп вправо — арабский текст, влево — Мусхаф",
   "readerPlainTextPlace": "Аят {ayah} · стр. {page}",
   "selectedMushaf": "Выбранный Мусхаф",
   "chooseMushaf": "Выберите Мусхаф",
