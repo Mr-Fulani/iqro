@@ -3,13 +3,13 @@
 {% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Начало</a> › <a href="{{ summary_url }}?days={{ report.days }}">Статистика и оценки курсов</a> › {{ course }}</div>{% endblock %}
 {% block content %}
 <div class="ca">
-  <p><a href="{{ course_url }}">Открыть курс в редакторе</a></p>
+  {% if course_url %}<p><a href="{{ course_url }}">Открыть курс в редакторе</a></p>{% endif %}
   {% include "admin/course_feedback/periods.html" %}
 
   <div class="ca-kpis" aria-label="Коротко">
     <div class="ca-kpi"><span>Открыли темы</span><strong>{{ report.totals.opened }}</strong><span class="ca-quiet">всего открытий</span></div>
     <div class="ca-kpi"><span>Дошли до конца</span><strong>{% if report.totals.finished_share is not None %}{{ report.totals.finished_share }} %{% else %}—{% endif %}</strong><span class="ca-quiet">{{ report.totals.finished }} из {{ report.totals.started }} начавших</span></div>
-    <div class="ca-kpi"><span>Средняя оценка</span><strong>{% if report.ratings.count %}{{ report.ratings.average|floatformat:1 }} ★{% else %}—{% endif %}</strong><span class="ca-quiet">оценок за период: {{ report.ratings.count }}</span></div>
+    {% if report.ratings %}<div class="ca-kpi"><span>Средняя оценка</span><strong>{% if report.ratings.count %}{{ report.ratings.average|floatformat:1 }} ★{% else %}—{% endif %}</strong><span class="ca-quiet">оценок за период: {{ report.ratings.count }}</span></div>{% endif %}
     <div class="ca-kpi"><span>Замечания учеников</span><strong>{{ report.reports }}</strong><a href="{{ reports_url }}">Открыть обращения</a></div>
   </div>
 
@@ -74,7 +74,7 @@
       </tbody>
     </table>
   </section>
-  <section aria-labelledby="ca-ratings">
+  {% if report.ratings %}<section aria-labelledby="ca-ratings">
     <h2 id="ca-ratings">Оценки и комментарии</h2>
     <p>За период: {% if report.ratings.count %}<strong>{{ report.ratings.average|floatformat:1 }} ★</strong> из {{ report.ratings.count }} оценок{% else %}оценок нет{% endif %}. За всё время: {% if report.ratings.overall_count %}{{ report.ratings.overall_average|floatformat:1 }} ★ из {{ report.ratings.overall_count }}{% else %}оценок нет{% endif %}.</p>
     <table class="ca-stars" aria-label="Распределение звёзд">
@@ -89,7 +89,7 @@
       <p class="ca-quiet">Комментариев за период нет.</p>
     {% endfor %}
     <p class="ca-quiet">Оценки и комментарии видят только администраторы. Кто оценил, не хранится.</p>
-  </section>
+  </section>{% endif %}
 
 </div>
 {% endblock %}

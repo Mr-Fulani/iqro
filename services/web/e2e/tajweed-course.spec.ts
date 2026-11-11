@@ -13,6 +13,13 @@ const examples = JSON.parse(
   }[];
 }>;
 
+/** The counters of «Статистика курсов» queued on this page view, sent when the page is left. */
+async function sentCourseEvents(page: Page) {
+  const request = page.waitForRequest((item) => item.url().endsWith("/api/v1/courses/events") && item.method() === "POST");
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
+  return ((await request).postDataJSON() as { events: { course: string; lesson: string; event: string }[] }).events;
+}
+
 /** Seconds of silence as a WAV file: a recording the browser can play offline. */
 function silentWav(seconds: number) {
   const rate = 8000;
@@ -202,6 +209,11 @@ test("a lesson explains the rule, plays its examples and asks to find it", async
   await expect(lesson.getByRole("status").filter({ hasText: "Урок пройден" })).toBeVisible();
   await expect(lesson.getByRole("link", { name: /^Следующий урок:/ })).toHaveAttribute("href", "/ru/tajweed/ikhfa-shafawi");
   expect((await storedProgress(page)).lessons.ikhfa.status).toBe("completed");
+  // Opening and finishing are counted like a thematic course's (docs/courses/README.md, «События статистики»).
+  expect(await sentCourseEvents(page)).toEqual([
+    { course: "tajweed", lesson: "ikhfa", event: "lesson_opened" },
+    { course: "tajweed", lesson: "ikhfa", event: "lesson_completed" },
+  ]);
 
   await page.goto("/ru/tajweed");
   await expect(page.getByTestId("tajweed-course-progress")).toContainText("1 из 21 уроков");

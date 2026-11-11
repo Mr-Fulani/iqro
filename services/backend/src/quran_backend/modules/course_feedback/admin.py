@@ -10,8 +10,14 @@ from django.http import Http404, HttpRequest, HttpResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
 
-from quran_backend.modules.course_feedback.analytics import course_report, period_days, summary
+from quran_backend.modules.course_feedback.analytics import (
+    builtin_slugs,
+    course_report,
+    period_days,
+    summary,
+)
 from quran_backend.modules.course_feedback.models import CourseAnalytics
+from quran_backend.modules.courses.models import BuiltInCourse
 
 
 @admin.register(CourseAnalytics)
@@ -46,9 +52,7 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         context = self._context(request, "Статистика и оценки курсов")
         report = summary(period_days(request.GET.get("days")))
         for row in report["rows"]:
-            row["url"] = reverse(
-                "admin:course_feedback_courseanalytics_change", args=[row["course"].pk]
-            )
+            row["url"] = reverse("admin:course_feedback_courseanalytics_change", args=[row["key"]])
         context.update(report=report, **(extra_context or {}))
         return TemplateResponse(request, "admin/course_feedback/summary.html", context)
 
@@ -59,17 +63,29 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         form_url: str = "",  # noqa: ARG002
         extra_context: dict[str, Any] | None = None,
     ) -> HttpResponse:
+        days = period_days(request.GET.get("days"))
+        reports_url = reverse("admin:feedback_feedbackticket_changelist")
+        if object_id in BuiltInCourse.values:
+            # «Обучение намазу» and «Таджвид» are not rows of the catalog: no editor link.
+            title = BuiltInCourse(object_id).label
+            context = self._context(request, f"Аналитика: {title}")
+            slugs = builtin_slugs(object_id)
+            context.update(
+                course=title,
+                report=course_report(object_id, days),
+                reports_url=reports_url + (f"?course={slugs[0]}" if slugs else ""),
+                **(extra_context or {}),
+            )
+            return TemplateResponse(request, "admin/course_feedback/analytics.html", context)
         course = self.get_object(request, object_id)
         if course is None:
             raise Http404
         context = self._context(request, f"Аналитика: {course}")
         context.update(
             course=course,
-            report=course_report(course, period_days(request.GET.get("days"))),
+            report=course_report(course, days),
             course_url=reverse("admin:courses_course_change", args=[course.pk]),
-            reports_url=(
-                reverse("admin:feedback_feedbackticket_changelist") + f"?course={course.slug}"
-            ),
+            reports_url=f"{reports_url}?course={course.slug}",
             **(extra_context or {}),
         )
         return TemplateResponse(request, "admin/course_feedback/analytics.html", context)

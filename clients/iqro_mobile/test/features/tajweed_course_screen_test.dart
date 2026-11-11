@@ -22,6 +22,7 @@ import 'package:iqro_mobile/features/tajweed_course/tajweed_lesson_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'course_test_data.dart' show FakeCourseFeedbackGateway;
 import 'lesson_media_test_data.dart';
 import 'lesson_video_test_data.dart';
 import 'tajweed_course_test_data.dart';
@@ -230,6 +231,11 @@ void main() {
     await _settle(tester);
     expect(find.byType(TajweedCourseHomeScreen), findsOneWidget);
     expect(_text(tester, 'tajweed-course-progress'), '1 из 3 уроков');
+    // The counters of «Статистика курсов» leave when the lesson closes.
+    expect(harness.feedback.events, [
+      {'course': 'tajweed', 'lesson': 'izhar', 'event': 'lesson_opened'},
+      {'course': 'tajweed', 'lesson': 'izhar', 'event': 'lesson_completed'},
+    ]);
     expect(tester.takeException(), isNull);
     semantics.dispose();
   });
@@ -487,6 +493,7 @@ typedef _Harness = ({
   _CountingSync sync,
   _Engine engine,
   AudioController audio,
+  FakeCourseFeedbackGateway feedback,
 });
 
 TajweedCourseProgress _progress(
@@ -555,6 +562,7 @@ Future<_Harness> _pump(
     ],
   );
   addTearDown(router.dispose);
+  final feedback = FakeCourseFeedbackGateway();
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
@@ -566,6 +574,7 @@ Future<_Harness> _pump(
         tajweedCourseProvider.overrideWith((ref, slug) async => document),
         tajweedCourseRepositoryProvider.overrideWithValue(repository),
         tajweedCourseProgressStoreProvider.overrideWithValue(store),
+        courseFeedbackGatewayProvider.overrideWithValue(feedback),
         tajweedProgressSyncProvider.overrideWithValue(sync),
         tajweedCourseRecitationProvider.overrideWithValue(
           () async => 'recitation-1',
@@ -611,6 +620,7 @@ Future<_Harness> _pump(
     sync: sync,
     engine: engine,
     audio: audio,
+    feedback: feedback,
   );
 }
 

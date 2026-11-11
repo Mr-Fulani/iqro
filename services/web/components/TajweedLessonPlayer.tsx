@@ -29,6 +29,8 @@ import { useCourseRecitation } from "../lib/use-course-recitation";
 import { usePageLoaded } from "../lib/use-page-loaded";
 import { useTajweedProgressSync } from "../lib/use-tajweed-progress";
 import { trackEvent } from "../lib/analytics";
+import { trackCourseEvent } from "../lib/course-feedback";
+import { useLessonOpened } from "./courses/useLessonOpened";
 import { StepNav } from "./StepNav";
 import { ClipButtons, useAyahAudio, useClipPlayer } from "./TajweedAudio";
 import { colorStyle, Explanation } from "./TajweedParts";
@@ -176,6 +178,7 @@ export function TajweedLessonPlayer({
   const arabicFont = usePageLoaded();
   const sync = useTajweedProgressSync(courseSlug);
   const section = useRef<HTMLElement>(null);
+  useLessonOpened(courseSlug, lesson.slug);
 
   const loaded = examples.status === "ready" ? examples : null;
   const shownCount = loaded?.shown.length ?? 1;
@@ -308,10 +311,12 @@ export function TajweedLessonPlayer({
   };
 
   const finish = () => {
-    writeTajweedProgress(
-      recordTajweedStep(readTajweedProgress(courseSlug), lesson.slug, slug, courseVersion, { completed: true }),
-      courseSlug,
-    );
+    const progress = readTajweedProgress(courseSlug);
+    // Counted when the lesson is not yet completed on this device, as in a thematic course.
+    if (progress.lessons[lesson.slug]?.status !== "completed") {
+      trackCourseEvent({ course: courseSlug, lesson: lesson.slug, event: "lesson_completed" });
+    }
+    writeTajweedProgress(recordTajweedStep(progress, lesson.slug, slug, courseVersion, { completed: true }), courseSlug);
     setCompleted(true);
     trackEvent("lesson_complete", { course: courseSlug, lesson: lesson.slug });
     void sync();
