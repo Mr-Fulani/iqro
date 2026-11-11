@@ -1,0 +1,46 @@
+{% extends "admin/change_list.html" %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/course_feedback/styles.html" %}{% endblock %}
+
+{% block content %}
+{% if all_courses and not is_popup %}{% with all=all_courses %}
+<div class="ca" style="margin-bottom: 20px;">
+  <section aria-label="Все курсы">
+    <h2>Все курсы{% if all.stats %} и их статистика за {{ all.days }} дней{% endif %}</h2>
+    <table>
+      <thead><tr>
+        <th>Курс</th>
+        {% if all.stats %}
+        <th class="num">Открыли темы</th>
+        <th class="num">Изучили темы</th>
+        <th class="num">Оценка</th>
+        <th class="num">Замечания</th>
+        {% endif %}
+        <th></th>
+      </tr></thead>
+      <tbody>
+      {% for row in all.rows %}
+        <tr>
+          <td><strong>{{ row.title }}</strong>{% if not row.course %} <span class="ca-quiet">(встроенный курс)</span>{% elif row.course.hidden_at %} <span class="ca-quiet">(скрыт)</span>{% elif not row.course.live_release_id %} <span class="ca-quiet">(не опубликован)</span>{% endif %}</td>
+          {% if all.stats %}
+          <td class="num">{{ row.opened }}</td>
+          <td class="num">{{ row.completed }}</td>
+          <td class="num">{% if row.rating_count %}{{ row.rating_average|floatformat:1 }} ★ ({{ row.rating_count }}){% else %}—{% endif %}</td>
+          <td class="num">{{ row.reports }}</td>
+          {% endif %}
+          <td class="num">
+            {% if row.stats_url %}<a href="{{ row.stats_url }}">Статистика</a>{% endif %}
+            {% if row.stats_url and row.edit_url %} · {% endif %}
+            {% if row.edit_url %}<a href="{{ row.edit_url }}">Править</a>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="ca-quiet">«Обучение намазу» и «Таджвид» — встроенные курсы: у них свои уроки, упражнения и версии, поэтому их правят в своих разделах — туда ведёт «Править». Остальные курсы правятся здесь, в списке ниже.</p>
+    {% if all.stats %}<p><a href="{{ all.summary_url }}">Полная сводка: «Статистика и оценки курсов»</a> — там можно выбрать период и увидеть, сколько человек дошли до конца.</p>{% endif %}
+  </section>
+</div>
+{% endwith %}{% endif %}
+{{ block.super }}
+{% endblock %}
