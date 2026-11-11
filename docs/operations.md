@@ -615,7 +615,11 @@ filesystem после замены `gosu` на `su-exec`, поэтому Trivy �
 `ops/staging/caddy`, который Trivy в CI не проверяет), `musl`/`musl-utils` (CVE-2026-107891,
 07.11.2026: `>=1.2.6-r3` в образах на Alpine 3.24 — backend, web, postgres; `>=1.2.5-r24` в
 gateway и TLS-прокси на Alpine 3.23). Redis собран на Alpine 3.21, там исправления musl пока нет,
-и Trivy его не отмечает; при переходе redis на новую Alpine закрепить musl так же.
+и Trivy его не отмечает; при переходе redis на новую Alpine закрепить musl так же. `krb5-libs>=1.22.3-r0`
+и `libxslt>=1.1.43-r4` (11.11.2026, 18 `HIGH` в krb5 и libxslt, в их числе CVE-2026-118380 и
+CVE-2026-87636) закреплены только в образе PostgreSQL: в остальных проверяемых образах этих
+пакетов нет. Базовый тег `postgres:17.11-alpine3.24` при этом не менялся — более свежего тега
+PostgreSQL 17 на тот момент не было.
 
 Локальная проверка backend без изменения lock-файла:
 
