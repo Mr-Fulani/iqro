@@ -18,7 +18,9 @@ import {
 } from "./MushafAudioPlayer";
 import { useMushafPages } from "./useMushafPages";
 import { mushafScriptWordContent, mushafScriptWordStyle, useMushafScript } from "./useMushafScript";
-import { mushafPageEnds, readerDigits } from "../lib/mushaf-script";
+import {
+  MUSHAF_VARIANT_PREFERENCE_KEY, mushafPageEnds, readerDigits, readMushafVariantPreference, selectedMushaf,
+} from "../lib/mushaf-script";
 import { useTajweed } from "./useTajweed";
 import { TajweedLegend } from "./TajweedLegend";
 import { MushafPageTurn } from "./MushafPageTurn";
@@ -147,7 +149,6 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-
 
 const TRANSLATION_PREFERENCE_KEY_PREFIX = "iqro_quran_translation_v2";
 const READER_PREFERENCE_KEY_PREFIX = "iqro_quran_reader_preference_v1";
-const MUSHAF_VARIANT_PREFERENCE_KEY = "iqro_quran_mushaf_variant_v1";
 const DEFAULT_TRANSLATION_BY_LOCALE: Record<string, number | null> = {
   ar: null,
   en: 20,
@@ -206,17 +207,6 @@ function readLegacyTranslationPreference(locale: string): TranslationPreference 
 
 function readerPreferenceKey(locale: string): string {
   return `${READER_PREFERENCE_KEY_PREFIX}:${locale}`;
-}
-
-function readMushafVariantPreference(): number | null {
-  try {
-    const stored = window.localStorage.getItem(MUSHAF_VARIANT_PREFERENCE_KEY);
-    if (!stored) return null;
-    const sourceId = Number(stored);
-    return Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null;
-  } catch {
-    return null;
-  }
 }
 
 function writeMushafVariantPreference(sourceId: number | null): void {
@@ -1028,10 +1018,7 @@ function QuranContent() {
         );
         setFoundationMushafs(renderable);
         const preferredSourceId = readMushafVariantPreference();
-        const resolvedSourceId = preferredSourceId !== null
-          && renderable.some((mushaf) => mushaf.source_id === preferredSourceId)
-          ? preferredSourceId
-          : renderable.find((mushaf) => mushaf.source_id === 5)?.source_id ?? renderable[0]?.source_id ?? null;
+        const resolvedSourceId = selectedMushaf(renderable, preferredSourceId)?.source_id ?? null;
         setSelectedFoundationMushafId(resolvedSourceId);
         if (preferredSourceId !== null && resolvedSourceId === null) {
           writeMushafVariantPreference(null);

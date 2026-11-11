@@ -16,6 +16,7 @@ import {
   recordSalahStep,
   resumeStepIndex,
   salahLessonBundle,
+  salahQuranAyahs,
   salahProgressStorageKey,
   SalahDocumentError,
   stepRepeatTarget,
@@ -313,4 +314,27 @@ test("«Author and sources» and a lesson's sources come through; without them t
   const parsed = parseSalahCourseDocument(raw);
   assert.equal("source" in parsed.course, false);
   assert.deepEqual(parsed.lessons[2]!.sources, ["Умдат аль-фикх"]);
+});
+
+test("a formula of the Quran is split into its ayahs, the basmala apart", () => {
+  const quran = (arabic: string, surah: number, ayah_from: number, ayah_to: number) =>
+    ({ arabic, translation: "", repetitions: 1, source: { kind: "quran" as const, surah, ayah_from, ayah_to } });
+  // As the published course sends them.
+  const ikhlas = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ قُلْ هُوَ ٱللَّهُ أَحَدٌ ﴿١﴾ ٱللَّهُ ٱلصَّمَدُ ﴿٢﴾ "
+    + "لَمْ يَلِدْ وَلَمْ يُولَدْ ﴿٣﴾ وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ ﴿٤﴾";
+  assert.deepEqual(salahQuranAyahs(quran(ikhlas, 112, 1, 4)), [
+    { number: 1, opening: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", text: "قُلْ هُوَ ٱللَّهُ أَحَدٌ" },
+    { number: 2, opening: null, text: "ٱللَّهُ ٱلصَّمَدُ" },
+    { number: 3, opening: null, text: "لَمْ يَلِدْ وَلَمْ يُولَدْ" },
+    { number: 4, opening: null, text: "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ" },
+  ]);
+  // In al-Fatiha the basmala is the first ayah itself.
+  assert.deepEqual(salahQuranAyahs(course.formulas.fatiha!), [
+    { number: 1, opening: null, text: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ" },
+    { number: 2, opening: null, text: "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ" },
+  ]);
+  // Other formulas, and a text that is not the ayahs its source names, keep their one line.
+  assert.equal(salahQuranAyahs(course.formulas.takbir!), null);
+  assert.equal(salahQuranAyahs(quran(ikhlas, 112, 1, 3)), null);
+  assert.equal(salahQuranAyahs(quran("قُلْ هُوَ ٱللَّهُ أَحَدٌ", 112, 1, 1)), null);
 });

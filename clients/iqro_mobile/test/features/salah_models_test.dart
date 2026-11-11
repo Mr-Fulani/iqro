@@ -156,7 +156,7 @@ void main() {
     expect(fatiha.transliteration, isNull);
     expect(fatiha.source.kind, 'quran');
     expect(fatiha.source.surah, 1);
-    expect(fatiha.source.ayahTo, 7);
+    expect(fatiha.source.ayahTo, 2);
     expect(fatiha.audio?.segments, hasLength(2));
     expect(fatiha.audio?.segments.last.startMs, 6000);
     final tasbih = document.formulas['ruku-tasbih']!;

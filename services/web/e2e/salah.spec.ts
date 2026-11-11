@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { type ElementHandle, expect, test, type Page } from "@playwright/test";
 
 const progressKey = "salah.progress.hanbali-umdah";
@@ -350,6 +351,59 @@ test("a step's own voice-over plays in the step and stops with the step", async 
   await expect(page.locator("audio")).toHaveCount(1);
   await page.getByRole("button", { name: "Далее" }).click();
   await expect(page.locator("audio")).toHaveCount(0);
+});
+
+test("ayahs of the Quran stand an ayah to a line with their end signs, in the plain font without a Mushaf", async ({ page, request }) => {
+  // The server sends them so: not one line of text with the numbers inside it.
+  const html = await (await request.get("/ru/salah/fajr")).text();
+  expect(html).toMatch(/<div class="salah-arabic salah-quran" lang="ar" dir="rtl"><p data-ayah="1">/);
+
+  await openLesson(page, "/ru/salah/fajr#fajr.r1.fatiha");
+  const ayahs = page.locator(".salah-step:not([hidden]) .salah-quran p");
+  await expect(ayahs).toHaveText(["بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\u00A0﴿١﴾", "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ\u00A0﴿٢﴾"]);
+  const [first, second] = await Promise.all([ayahs.nth(0).boundingBox(), ayahs.nth(1).boundingBox()]);
+  expect(second!.y).toBeGreaterThanOrEqual(first!.y + first!.height - 1);
+  // Other formulas keep their one line.
+  await page.getByRole("button", { name: "Далее", exact: true }).click();
+  await expect(page.locator(".salah-step:not([hidden]) p.salah-arabic")).toHaveCount(1);
+});
+
+test("ayahs of the Quran take the script of the Mushaf selected in the reader, loaded before their step opens", async ({ page }) => {
+  const checksum = "c".repeat(64);
+  const rendering = {
+    available: true, version: 2, mode: "unicode-font", font_format: "woff2",
+    font_url: "https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2",
+  };
+  // Al-Fatiha 1–2 on the first page; the second ayah has a word more than the course's text.
+  const words = [4, 5].flatMap((count, ayah) => Array.from({ length: count + 1 }, (_, position) => ({
+    id: ayah * 10 + position + 1, verse_key: `1:${ayah + 1}`, position_in_page: ayah * 10 + position + 1,
+    char_type_name: position < count ? "word" : "end", text: position < count ? `س${ayah + 1}` : `۝${ayah + 1}`, css_class: "",
+  })));
+  const font = await readFile(new URL("../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2", import.meta.url));
+  await page.route("https://verses.quran.foundation/fonts/**", (route) => route.fulfill({ status: 200, contentType: "font/woff2", body: font }));
+  await page.route("**/api/v1/quran/foundation/mushafs", (route) => route.fulfill({ json: [
+    { source_id: 5, source_checksum_sha256: checksum, rendering },
+    { source_id: 19, source_checksum_sha256: checksum, rendering },
+  ] }));
+  await page.route("**/api/v1/quran/foundation/mushafs/19/page-index", (route) => route.fulfill({ json: {
+    mushaf_id: 19, pages_count: 604, source_checksum_sha256: checksum, verse_pages: { "1:1": [1], "1:2": [1] },
+  } }));
+  await page.route("**/api/v1/quran/foundation/mushafs/19/pages/1", (route) => route.fulfill({ json: {
+    mushaf_id: 19, page_number: 1, source_checksum_sha256: checksum, rendering, words,
+  } }));
+  await page.addInitScript(() => window.localStorage.setItem("iqro_quran_mushaf_variant_v1", "19"));
+
+  // The step with al-Fatiha is the next one: its page is asked for now.
+  const loaded = page.waitForResponse("**/api/v1/quran/foundation/mushafs/19/pages/1");
+  await openLesson(page, "/ru/salah/fajr");
+  await loaded;
+  await page.getByRole("button", { name: "Далее", exact: true }).click();
+
+  const ayahs = page.locator(".salah-step:not([hidden]) .salah-quran p");
+  await expect(ayahs.nth(0)).toHaveText("س1 س1 س1 س1\u00A0۝1");
+  await expect(ayahs.nth(0).locator("span span").first()).toHaveCSS("font-family", /qf-mushaf-19/);
+  // Not the words of the course's text: the plain ayah stays, and its own end sign.
+  await expect(ayahs.nth(1)).toHaveText("ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ\u00A0﴿٢﴾");
 });
 
 test("on a phone the formulas' Arabic font waits for the page to load", async ({ page, request }) => {
