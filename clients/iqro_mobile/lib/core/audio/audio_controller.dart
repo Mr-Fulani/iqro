@@ -31,9 +31,16 @@ abstract interface class IqroAudioEngine {
 }
 
 class JustAudioEngine implements IqroAudioEngine {
-  JustAudioEngine([AudioPlayer? player]) : _player = player ?? AudioPlayer();
+  JustAudioEngine([AudioPlayer? player, this._platformStarting])
+    : _player = player ?? AudioPlayer();
 
   final AudioPlayer _player;
+
+  /// The media service and the audio session start after the first screen.
+  /// A play pressed before they are ready waits for them, unless a pause or
+  /// a stop came meanwhile.
+  Future<Object?>? _platformStarting;
+  var _playRequest = 0;
 
   @override
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
@@ -61,13 +68,31 @@ class JustAudioEngine implements IqroAudioEngine {
   @override
   Future<void> setLoopMode(LoopMode mode) => _player.setLoopMode(mode);
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    final starting = _platformStarting;
+    if (starting != null) {
+      final request = ++_playRequest;
+      await starting;
+      _platformStarting = null;
+      if (request != _playRequest) return;
+    }
+    return _player.play();
+  }
+
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() {
+    ++_playRequest;
+    return _player.pause();
+  }
+
   @override
   Future<void> seek(Duration position) => _player.seek(position);
   @override
-  Future<void> stop() => _player.stop();
+  Future<void> stop() {
+    ++_playRequest;
+    return _player.stop();
+  }
+
   @override
   Future<void> dispose() => _player.dispose();
 }
@@ -461,15 +486,16 @@ class AudioController extends StateNotifier<IqroAudioState> {
     IqroAudioEngine? engine,
     AudioPlaybackStore? playbackStore,
     ListeningMediaService? mediaService,
+    Future<ListeningMediaService?>? mediaServiceStarting,
     ListeningQueueSource? queueSource,
     ListeningMediaLabels Function()? mediaLabels,
     Duration persistenceDelay = const Duration(seconds: 5),
     void Function(IqroAudioState state)? onPlaybackStarted,
   }) : assert(player == null || engine == null),
-       _player = engine ?? JustAudioEngine(player),
+       _player = engine ?? JustAudioEngine(player, mediaServiceStarting),
        _playbackStore = playbackStore,
        _persistenceDelay = persistenceDelay,
-       _mediaService = mediaService ?? ListeningMediaService.current,
+       _mediaService = mediaService,
        _queueSource = queueSource,
        _mediaLabels = mediaLabels,
        _onPlaybackStarted = onPlaybackStarted,
@@ -601,23 +627,33 @@ class AudioController extends StateNotifier<IqroAudioState> {
         );
       }),
     );
-    _mediaService?.bind(
-      this,
-      play: () async {
-        await activateListening();
-      },
-      pause: pauseListening,
-      seek: seekListening,
-      skipToNext: () => skipListeningSurah(1),
-      skipToPrevious: () => skipListeningSurah(-1),
-      setSpeed: setListeningSpeed,
-      labels: _mediaLabels,
-    );
+    _bindMediaService();
     _removeMediaListener = addListener(
       (_) => _publishListeningMedia(),
       fireImmediately: true,
     );
+    // The app opens before the media service has started; the system media
+    // card gets the current recitation as soon as it has.
+    mediaServiceStarting?.then((service) {
+      if (_disposed || service == null) return;
+      _mediaService = service;
+      _bindMediaService();
+      _publishListeningMedia();
+    });
   }
+
+  void _bindMediaService() => _mediaService?.bind(
+    this,
+    play: () async {
+      await activateListening();
+    },
+    pause: pauseListening,
+    seek: seekListening,
+    skipToNext: () => skipListeningSurah(1),
+    skipToPrevious: () => skipListeningSurah(-1),
+    setSpeed: setListeningSpeed,
+    labels: _mediaLabels,
+  );
 
   /// The ayah being recited at [position]; in a pause between two ayahs the
   /// one just recited, so the ayah number does not blink to a dash (some
@@ -657,7 +693,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
 
   final IqroAudioEngine _player;
   final AudioPlaybackStore? _playbackStore;
-  final ListeningMediaService? _mediaService;
+  ListeningMediaService? _mediaService;
   final ListeningQueueSource? _queueSource;
   final ListeningMediaLabels Function()? _mediaLabels;
   _QueuePrefetch? _queuePrefetch;

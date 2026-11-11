@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/startup/startup_gate.dart';
@@ -201,5 +202,33 @@ void main() {
     await tester.pump();
     expect(completions, 1);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the startup screen has the colour of the native launch screen', (
+    tester,
+  ) async {
+    Future<Color> background(TargetPlatform platform) async {
+      debugDefaultTargetPlatformOverride = platform;
+      await tester.pumpWidget(
+        StartupGate<String>(
+          key: UniqueKey(),
+          initialize: () => Completer<String>().future,
+          readyBuilder: (value) => MaterialApp(home: Text(value)),
+          introBuilder: (_) => const Text('intro'),
+        ),
+      );
+      final color = Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).scaffoldBackgroundColor;
+      debugDefaultTargetPlatformOverride = null;
+      return color;
+    }
+
+    expect(await background(TargetPlatform.android), const Color(0xFFE6D8BF));
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    // Android's launch screen follows the system theme; the iOS one is light.
+    expect(await background(TargetPlatform.android), const Color(0xFF071A16));
+    expect(await background(TargetPlatform.iOS), const Color(0xFFE6D8BF));
   });
 }

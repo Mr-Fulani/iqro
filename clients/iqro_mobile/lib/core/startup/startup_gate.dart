@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'startup_trace.dart';
 import 'startup_video.dart';
 
 typedef StartupIntroBuilder = Widget Function(VoidCallback onFinished);
@@ -38,6 +40,17 @@ class _StartupGateState<T extends Object> extends State<StartupGate<T>> {
   @override
   void initState() {
     super.initState();
+    if (StartupTrace.enabled) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => StartupTrace.mark('startup screen frame'),
+      );
+      _dependencies.then((_) {
+        StartupTrace.mark('ready');
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => StartupTrace.mark('app frame'),
+        );
+      }).ignore();
+    }
     final shouldPlayIntro = widget.shouldPlayIntro;
     if (shouldPlayIntro == null) return;
     shouldPlayIntro().then(
@@ -104,13 +117,23 @@ class _StartupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const background = Color(0xFFE6D8BF);
-    const accent = Color(0xFF073E34);
+    // The colours of the native launch screen, so that Flutter taking over
+    // does not flash: Android's follows the system theme
+    // (res/values*/colors.xml), the iOS one is always light.
+    final dark =
+        defaultTargetPlatform == TargetPlatform.android &&
+        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+            Brightness.dark;
+    final background = Color(dark ? 0xFF071A16 : 0xFFE6D8BF);
+    final accent = Color(dark ? 0xFFE6D8BF : 0xFF073E34);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true).copyWith(
         scaffoldBackgroundColor: background,
-        colorScheme: ColorScheme.fromSeed(seedColor: accent),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF073E34),
+          brightness: dark ? Brightness.dark : Brightness.light,
+        ),
       ),
       home: Scaffold(
         body: Stack(
@@ -125,7 +148,7 @@ class _StartupScreen extends StatelessWidget {
                       Text(
                         _startupMessage(),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: accent),
+                        style: TextStyle(color: accent),
                       ),
                       const SizedBox(height: 16),
                       OutlinedButton(
@@ -150,8 +173,8 @@ class _StartupScreen extends StatelessWidget {
                 ),
               ),
               if (intro == null)
-                const Align(
-                  alignment: Alignment(0, .28),
+                Align(
+                  alignment: const Alignment(0, .28),
                   child: SizedBox(
                     width: 22,
                     height: 22,

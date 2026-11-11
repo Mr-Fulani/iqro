@@ -4,17 +4,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:audio_session/audio_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'app/app_dependencies.dart';
 import 'core/observability/error_reporting.dart';
-import 'core/startup/startup_tasks.dart';
 import 'core/startup/startup_gate.dart';
-import 'core/audio/listening_media_service.dart';
+import 'core/startup/startup_trace.dart';
 
 void main() {
+  StartupTrace.begin();
   WidgetsFlutterBinding.ensureInitialized();
   startErrorReporting();
   LicenseRegistry.addLicense(() async* {
@@ -25,15 +24,14 @@ void main() {
       'three.js',
     ], await rootBundle.loadString('assets/salah3d/LICENSE-three.txt'));
   });
+  StartupTrace.mark('runApp');
   runApp(const _IqroBootstrap());
 }
 
-Future<AppDependencies> _initialize() async {
-  return initializeCriticalStartup<AppDependencies>(
-    initializeDependencies: AppDependencies.initialize,
-    initializeAudioPlatform: _initializeAudioPlatform,
-  );
-}
+// The audio platform is not part of this: the player starts it on first use
+// (ListeningMediaService.ensureStarted), after the first screen.
+Future<AppDependencies> _initialize() =>
+    StartupTrace.step('dependencies', AppDependencies.initialize);
 
 // The brand intro plays on the first launch only; later cold starts open as
 // soon as dependencies are ready.
@@ -50,12 +48,6 @@ void _markIntroSeen() {
         .then((preferences) => preferences.setBool(_startupIntroSeenKey, true))
         .catchError((Object _) => false),
   );
-}
-
-Future<void> _initializeAudioPlatform() async {
-  await ListeningMediaService.initialize();
-  final audioSession = await AudioSession.instance;
-  await audioSession.configure(const AudioSessionConfiguration.speech());
 }
 
 class _IqroBootstrap extends StatelessWidget {
