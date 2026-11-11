@@ -265,6 +265,29 @@ void main() {
     await _capture(tester, 'home-day-ru');
   }, skip: _directory.isEmpty);
 
+  // The same two screens on every language, for the store listing
+  // (docs/release/store-graphics).
+  for (final code in const ['ru', 'en', 'ar', 'tr']) {
+    testWidgets('store: Home and More in $code', (tester) async {
+      await _pumpApp(
+        tester,
+        location: '/app?tab=0',
+        active: const [],
+        locale: Locale(code),
+      );
+      await _capture(tester, 'store-home-$code');
+    }, skip: _directory.isEmpty);
+    testWidgets('store: More in $code', (tester) async {
+      await _pumpApp(
+        tester,
+        location: '/app?tab=4',
+        active: const [],
+        locale: Locale(code),
+      );
+      await _capture(tester, 'store-more-$code');
+    }, skip: _directory.isEmpty);
+  }
+
   testWidgets('the whole page', (tester) async {
     await _pumpApp(
       tester,
