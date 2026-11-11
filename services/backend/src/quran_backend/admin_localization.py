@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy
 MODEL_LABELS: dict[str, tuple[str, str]] = {
     "calendar.CalendarEvent": ("событие календаря", "события календаря"),
     "accounts.User": ("пользователь", "пользователи"),
+    "auth.Group": ("группа доступа", "группы доступа сотрудников"),
     "accounts.AuthIdentity": ("способ входа", "способы входа"),
     "accounts.Device": ("устройство", "устройства"),
     "accounts.RefreshSession": ("сессия входа", "сессии входа"),
@@ -31,7 +32,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "quran.Juz": ("джуз", "джузы"),
     "quran.Hizb": ("хизб", "хизбы"),
     "quran.RubElHizb": ("руб аль-хизб", "рубы аль-хизб"),
-    "quran.SourceManifest": ("манифест источника", "манифесты источников"),
+    "quran.SourceManifest": ("манифест источника", "источники текста"),
     "quran.QuranFoundationMushafSyncState": (
         "состояние синхронизации мусхафов",
         "синхронизация мусхафов Quran.Foundation",
@@ -54,7 +55,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     ),
     "translations.TranslationEdition": (
         "смысловой перевод Корана",
-        "смысловые переводы Корана",
+        "переводы Корана",
     ),
     "translations.TranslationEditionVersion": (
         "версия смыслового перевода",
@@ -71,9 +72,9 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "tajweed.TajweedEdition": ("разметка таджвида", "разметка таджвида"),
     "tajweed.TajweedEditionVersion": ("версия разметки таджвида", "версии разметки таджвида"),
     "tajweed.AyahTajweed": ("правила таджвида в аяте", "правила таджвида в аятах"),
-    "tajweed.TajweedCourse": ("курс «Таджвид»", "курсы «Таджвид»"),
-    "tajweed.TajweedCourseVersion": ("версия курса «Таджвид»", "версии курса «Таджвид»"),
-    "tajweed.TajweedCourseDocument": ("документ курса «Таджвид»", "документы курса «Таджвид»"),
+    "tajweed.TajweedCourse": ("курс «Таджвид»", "таджвид: курс"),
+    "tajweed.TajweedCourseVersion": ("версия курса «Таджвид»", "таджвид: версии курса"),
+    "tajweed.TajweedCourseDocument": ("документ курса «Таджвид»", "таджвид: документы"),
     "tafsirs.TafsirEdition": ("Тафсир Корана", "Тафсиры Корана"),
     "tafsirs.TafsirEditionVersion": ("версия Тафсира", "версии Тафсиров"),
     "tafsirs.AyahTafsir": ("Тафсир аята", "Тафсиры аятов"),
@@ -123,25 +124,25 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
         "удалённое напоминание",
         "идентификаторы удалённых напоминаний",
     ),
-    "feedback.FeedbackTicket": ("обращение", "обращения пользователей"),
-    "feedback.FeedbackMessage": ("сообщение", "сообщения по обращениям"),
-    "feedback.FeedbackAudit": ("изменение обращения", "история изменений обращений"),
-    "feedback.FeedbackContext": ("контекст обращения", "контекст обращений"),
+    "feedback.FeedbackTicket": ("обращение", "обращения"),
+    "feedback.FeedbackMessage": ("сообщение", "ответы на обращения"),
+    "feedback.FeedbackAudit": ("изменение обращения", "журнал обращений"),
+    "feedback.FeedbackContext": ("контекст обращения", "откуда отправлено обращение"),
     "website.SocialProfile": ("социальная сеть", "социальные сети"),
     "website.AllowedLinkSite": ("разрешённый сайт для ссылок", "Разрешённые сайты для ссылок"),
     "announcements.Announcement": ("объявление", "объявления"),
-    "announcements.AnnouncementSettings": ("показ объявлений", "показ объявлений"),
+    "announcements.AnnouncementSettings": ("показ объявлений", "где показывать объявления"),
     "announcements.AppReleaseSettings": (
         "последняя версия приложения",
         "последняя версия приложения",
     ),
     "share_referrals.ShareCampaign": (
         "кампания «Поделиться приложением»",
-        "1. Кампании «Поделиться приложением»",
+        "Акции «Поделиться приложением»",
     ),
     "share_referrals.ReferralLink": (
         "персональная ссылка пользователя",
-        "2. Персональные ссылки и промокоды",
+        "Персональные ссылки и промокоды",
     ),
     "share_referrals.ShareEvent": (
         "действие пользователя в разделе приглашений",
@@ -153,15 +154,15 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     ),
     "share_referrals.ReferralAttribution": (
         "подтверждение приглашения",
-        "3. Приглашения пользователей",
+        "Приглашения пользователей",
     ),
     "share_referrals.ReferralQualification": (
         "проверка условий приглашения",
-        "4. Проверка условий приглашений",
+        "Проверка условий приглашений",
     ),
     "share_referrals.ReferralReward": (
         "бонус за приглашение",
-        "5. Бонусы за приглашения",
+        "Бонусы за приглашения",
     ),
     "share_referrals.ReferralRewardAudit": (
         "запись истории бонуса",
@@ -181,16 +182,16 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "dua.DuaEvidence": ("ссылка на источник ду’а", "ссылки на источники ду’а"),
     "dua.DuaAudioAsset": ("аудиозапись ду’а", "аудиозаписи ду’а"),
     "dua.DuaFavorite": ("избранная ду’а", "избранные ду’а"),
-    "salah.SalahCourse": ("курс обучения намазу", "курсы обучения намазу"),
-    "salah.SalahCourseVersion": ("версия курса намаза", "версии курса намаза"),
-    "salah.SalahCompiledDocument": ("документ курса намаза", "документы курса намаза"),
+    "salah.SalahCourse": ("курс обучения намазу", "намаз: курс"),
+    "salah.SalahCourseVersion": ("версия курса намаза", "намаз: версии курса"),
+    "salah.SalahCompiledDocument": ("документ курса намаза", "намаз: документы"),
     "salah.SalahMediaAsset": ("медиафайл курса намаза", "медиафайлы курса намаза"),
     "courses.Course": ("курс", "курсы"),
     "courses.CourseLesson": ("тема", "темы курсов"),
     "courses.CourseRelease": ("выпуск курса", "выпуски курсов"),
     "courses.CourseDocument": ("документ выпуска", "документы выпусков курсов"),
     "courses.BuiltInCourseCover": ("обложка встроенного курса", "обложки: намаз и таджвид"),
-    "course_feedback.CourseAnalytics": ("аналитика курса", "Курсы: сводка"),
+    "course_feedback.CourseAnalytics": ("аналитика курса", "статистика и оценки курсов"),
 }
 
 

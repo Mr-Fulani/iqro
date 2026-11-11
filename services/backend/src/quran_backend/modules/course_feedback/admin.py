@@ -43,7 +43,7 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def changelist_view(
         self, request: HttpRequest, extra_context: dict[str, Any] | None = None
     ) -> HttpResponse:
-        context = self._context(request, "Курсы: сводка")
+        context = self._context(request, "Статистика и оценки курсов")
         report = summary(period_days(request.GET.get("days")))
         for row in report["rows"]:
             row["url"] = reverse(

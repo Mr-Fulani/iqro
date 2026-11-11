@@ -314,7 +314,7 @@ def test_signing_refuses_broken_markup_and_links_to_unknown_sites(owner: User) -
     assert error.value.problems == [
         "Урок «izhar»: как читать [en], строка 2: пустая пометка «[!]»: напишите текст подсказки",
         "Урок «izhar»: как читать [en], строка 2: сайта sunnah.com нет в «Разрешённых сайтах "
-        "для ссылок» (раздел «Сайт и настройки»)",
+        "для ссылок» (раздел «Сайт и приглашения»)",
     ]
     version.refresh_from_db()
     assert not version.is_signed

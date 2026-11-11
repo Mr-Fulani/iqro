@@ -429,7 +429,7 @@ def test_admin_pages_show_analytics_to_permitted_staff(live: Course, owner: User
 
     assert f"/admin/course_feedback/courseanalytics/{live.pk}/change/" in course_form
     assert overview.status_code == 200
-    assert "Курсы: сводка" in overview.content.decode()
+    assert "Статистика и оценки курсов" in overview.content.decode()
     assert page.status_code == 200
     body = page.content.decode()
     assert "Аналитика: Рамадан" in body

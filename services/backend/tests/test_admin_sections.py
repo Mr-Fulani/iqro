@@ -16,12 +16,12 @@ from django.contrib.auth.models import Permission
 from django.test import Client, RequestFactory
 
 from quran_backend.admin_attention import attention_items, backup_item
-from quran_backend.admin_site import SECTIONS, IqroAdminSite, placement
+from quran_backend.admin_site import SECTIONS, TILES, IqroAdminSite, placement
 from quran_backend.modules.accounts.models import User
 from quran_backend.modules.feedback.models import FeedbackTicket
 from quran_backend.modules.feedback.services import create_ticket
 
-SECTION_TITLES = [title for _key, title, _apps in SECTIONS]
+SECTION_TITLES = [section.title for section in SECTIONS]
 
 
 @pytest.fixture
@@ -80,33 +80,86 @@ def test_placement_rules() -> None:
     assert placement("brand_new_app", "Thing") == ("other", None)
 
 
+def test_main_tables_and_tiles_point_at_registered_models() -> None:
+    registered = {model._meta.label for model in admin.site._registry}
+    for section in SECTIONS:
+        assert section.hint
+        assert set(section.main) <= registered, section.key
+        for label in section.main:
+            app_label, object_name = label.split(".")
+            assert placement(app_label, object_name)[0] == section.key, label
+    assert {label for _title, _hint, label in TILES} <= registered
+
+
+def _section(body: str, key: str) -> str:
+    rest = body.split(f'<div class="app-section-{key} module', maxsplit=1)[1]
+    return rest.split('<div class="app-section-', maxsplit=1)[0]
+
+
+def _open_and_folded(section: str) -> tuple[str, str]:
+    main, _, folded = section.partition('<details class="iqro-service">')
+    return main, folded
+
+
 @pytest.mark.django_db
-def test_home_shows_sections_in_order_with_app_groups(owner: User) -> None:
+def test_home_shows_sections_with_main_tables_open_and_the_rest_folded(owner: User) -> None:
     body = _client(owner).get("/admin/").content.decode()
 
     captions = re.findall(
         r'<div class="app-section-[a-z]+ module">\s*<table>\s*<caption>\s*(.+?)\s*</caption>', body
     )
     assert captions == SECTION_TITLES
-    # Groups keep the app name and link to the app page, which stays Django's own.
-    assert '<a href="/admin/audio/">Аудио Корана</a>' in body
-    assert '<a href="/admin/salah/">Обучение намазу</a>' in body
-    assert "Разметка таджвида" in body
-    # A group named like its section gets no heading of its own.
-    feedback = body.split("app-section-feedback")[1].split("app-section-announcements")[0]
-    group_headings = [
-        heading.strip()
-        for heading in re.findall(
-            r'<tr class="iqro-group">\s*<th[^>]*>\s*(?:<a [^>]*>)?([^<]+)', feedback
-        )
+    for section in SECTIONS:
+        assert section.hint in _section(body, section.key)
+
+    # The main tables come first, in the order of SECTIONS, with no group headings.
+    main, folded = _open_and_folded(_section(body, "feedback"))
+    tables = re.findall(r'<th scope="row"[^>]*>\s*<a href="([^"]+)"', main)
+    assert tables == [
+        "/admin/feedback/feedbackticket/",
+        "/admin/feedback/feedbackmessage/",
+        "/admin/course_feedback/courseanalytics/",
     ]
-    assert "Обратная связь" not in group_headings
-    # Course statistics live in the same section under their own heading.
-    assert "Статистика курсов" in group_headings
-    learning = body.split("app-section-learning")[1].split("app-section-feedback")[0]
-    assert "/admin/courses/courserelease/" in learning
-    assert "/admin/tajweed/tajweedcourseversion/" in learning
-    assert "/admin/tajweed/ayahtajweed/" not in learning
+    assert "iqro-group" not in main
+    # Journals and technical tables are folded, under the name of their app.
+    assert "Служебные таблицы — заходить редко (2)" in folded
+    assert "/admin/feedback/feedbackaudit/" in folded
+    assert "/admin/feedback/feedbackcontext/" in folded
+    assert '<a href="/admin/feedback/">Обратная связь</a>' in folded
+
+    main, folded = _open_and_folded(_section(body, "audio"))
+    assert "/admin/audio/reciter/" in main
+    assert "/admin/audio/audiotrack/" in folded
+    assert '<a href="/admin/audio/">Аудио Корана</a>' in folded
+    main, folded = _open_and_folded(_section(body, "learning"))
+    assert "/admin/courses/courserelease/" in main
+    assert "/admin/tajweed/tajweedcourseversion/" in main
+    assert '<a href="/admin/salah/">Обучение намазу</a>' in folded
+    assert "/admin/tajweed/ayahtajweed/" not in main + folded
+    assert "Разметка таджвида" in _open_and_folded(_section(body, "quran"))[1]
+    # A section whose tables are all main has nothing to fold.
+    assert "iqro-service" not in _section(body, "announcements")
+
+
+@pytest.mark.django_db
+def test_home_has_daily_tiles_for_what_the_user_may_open(owner: User) -> None:
+    body = _client(owner).get("/admin/").content.decode()
+    assert "Каждый день" in body
+    for title, hint, _label in TILES:
+        assert f"<strong>{title}</strong><span>{hint}</span>" in body
+    assert '<a href="/admin/feedback/feedbackticket/"><strong>Обращения</strong>' in body
+
+    staff = User.objects.create_user(
+        email="tiles-staff@example.test", status="active", is_staff=True
+    )
+    staff.user_permissions.set(
+        Permission.objects.filter(
+            content_type__app_label="feedback", codename="view_feedbackticket"
+        )
+    )
+    body = _client(staff).get("/admin/").content.decode()
+    assert "<strong>Обращения</strong>" in body
+    assert "<strong>Чтецы</strong>" not in body
 
 
 @pytest.mark.django_db
@@ -116,10 +169,14 @@ def test_app_pages_and_model_urls_are_unchanged(owner: User) -> None:
     assert page.status_code == 200
     assert "Тематические курсы" in page.content.decode()
     assert client.get("/admin/feedback/feedbackticket/").status_code == 200
-    # The sidebar of every page uses the same sections.
+    assert client.get("/admin/feedback/feedbackaudit/").status_code == 200
+    # The sidebar of every page uses the same sections, without the hints and tiles.
     sidebar = client.get("/admin/feedback/feedbackticket/").content.decode()
-    assert "Обратная связь" in sidebar
+    assert "Обращения и отзывы" in sidebar
     assert "Ду’а и календарь" in sidebar
+    assert "Служебные таблицы (2)" in sidebar
+    assert SECTIONS[0].hint not in sidebar
+    assert "Каждый день" not in sidebar
 
 
 @pytest.mark.django_db
@@ -178,8 +235,8 @@ def test_staff_sees_only_what_they_may_view() -> None:
     assert items == ["Новые обращения", "Новые обращения: религиозное содержание"]
 
     body = _client(staff).get("/admin/").content.decode()
-    assert "Обратная связь" in body
-    assert "Коран и аудио" not in body
+    assert "Обращения и отзывы" in body
+    assert "Чтецы и аудио" not in body
     assert "Бэкап базы" not in body
 
 
