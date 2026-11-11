@@ -121,9 +121,14 @@ export function writeCourseProgress(
 /**
  * Two copies of the progress as one, as the backend merges them: a passed
  * lesson stays passed, otherwise the later record wins. The result is the same
- * whichever copy comes first.
+ * whichever copy comes first. `keepCompleted: false` is the merge of a thematic
+ * course: the later record wins as it is, so «studied» taken back in the app stays so.
  */
-export function mergeCourseProgress(left: CourseProgress, right: CourseProgress): CourseProgress {
+export function mergeCourseProgress(
+  left: CourseProgress,
+  right: CourseProgress,
+  { keepCompleted = true }: { keepCompleted?: boolean } = {},
+): CourseProgress {
   const lessons: Record<string, LessonProgress> = { ...left.lessons };
   for (const [slug, entry] of Object.entries(right.lessons)) {
     const current = lessons[slug];
@@ -132,10 +137,28 @@ export function mergeCourseProgress(left: CourseProgress, right: CourseProgress)
       continue;
     }
     const later = entry.updated_at > current.updated_at ? entry : current;
-    const completed = entry.status === "completed" || current.status === "completed";
+    const completed = keepCompleted && (entry.status === "completed" || current.status === "completed");
     lessons[slug] = { ...later, status: completed ? "completed" : later.status };
   }
   return { lessons };
+}
+
+/** Whether two copies hold the same lessons with the same records. */
+export function sameCourseProgress(left: CourseProgress, right: CourseProgress): boolean {
+  const slugs = Object.keys(left.lessons);
+  return slugs.length === Object.keys(right.lessons).length && slugs.every((slug) => {
+    const a = left.lessons[slug]!;
+    const b = right.lessons[slug];
+    return Boolean(b) && a.status === b!.status && a.step_slug === b!.step_slug
+      && a.content_version === b!.content_version && a.updated_at === b!.updated_at;
+  });
+}
+
+/** What the account API accepts: it refuses a record without its time. */
+export function progressToSend(progress: CourseProgress): CourseProgress {
+  return {
+    lessons: Object.fromEntries(Object.entries(progress.lessons).filter(([, entry]) => entry.updated_at)),
+  };
 }
 
 export function stepIndex(lesson: Pick<LessonOutline, "steps">, stepSlug: string | null | undefined): number {

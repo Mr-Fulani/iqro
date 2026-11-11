@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../core/auth/account_scope.dart';
 import '../../core/storage/local_database.dart';
 import '../tajweed_course/tajweed_course_progress.dart';
 import 'course_models.dart';
@@ -159,6 +160,34 @@ class CourseProgressStore {
     required String lesson,
     required String contentVersion,
   }) => _update(course, lesson, contentVersion, (_) => false);
+
+  /// Merges a copy from the server into the local one as it is now, as the
+  /// backend merges a topical course: the later record of a lesson wins as
+  /// it is, so «Studied» taken back stays taken back.
+  Future<CourseProgress> merge(
+    String course,
+    CourseProgress remote, {
+    AccountScopeSnapshot? accountScope,
+  }) => _enqueue(() async {
+    final current = CourseProgress.fromJson(
+      await _database.readState(stateKey(course), accountScope: accountScope),
+    );
+    final next = CourseProgress({
+      ...current.lessons,
+      for (final MapEntry(:key, :value) in remote.lessons.entries)
+        if (current.lessons[key] case final local?
+            when value.updatedAt.compareTo(local.updatedAt) <= 0)
+          key: local
+        else
+          key: value,
+    });
+    await _database.writeState(
+      stateKey(course),
+      next.toJson(),
+      accountScope: accountScope,
+    );
+    return next;
+  });
 
   Future<CourseProgress> _update(
     String course,

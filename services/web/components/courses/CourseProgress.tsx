@@ -14,15 +14,23 @@ import {
   courseProgressStorageKey,
   isLessonSlug,
   parseVideoPositions,
+  readThematicProgress,
   summarizeThematicProgress,
   videoPositionStorageKey,
+  writeThematicProgress,
   type CourseOutline,
 } from "../../lib/thematic-courses";
+import { useAccountProgressSync } from "../../lib/use-account-progress-sync";
 import { useCourseProgress } from "../../lib/use-course-progress";
 
 /** Local progress of a thematic course; `null` in server HTML and during hydration. */
 export function useThematicProgress(courseSlug: string): CourseProgress | null {
   return useCourseProgress(courseProgressStorageKey(courseSlug), COURSES_PROGRESS_EVENT, isLessonSlug);
+}
+
+/** Keeps the progress with a signed-in account; call the result after a lesson is learned. */
+export function useThematicProgressSync(courseSlug: string): () => Promise<void> {
+  return useAccountProgressSync("courses", courseSlug, readThematicProgress, writeThematicProgress, isLessonSlug);
 }
 
 function subscribePositions(onChange: () => void) {
@@ -128,10 +136,11 @@ export function CourseCardProgress({ course }: { course: CourseOutline }) {
   );
 }
 
-/** «2 of 8 lessons» and the «Start» / «Continue» link on the course page. */
+/** «2 of 8 lessons» and the «Start» / «Continue» link on the course page; synced for a signed-in account. */
 export function CourseProgressSummary({ course }: { course: CourseOutline }) {
   const { formatNumber, locale, t } = useI18n();
   const progress = useThematicProgress(course.slug);
+  useThematicProgressSync(course.slug);
   const summary = summarizeThematicProgress(course, progress ?? NO_PROGRESS);
   const next = summary.nextLesson;
   return (

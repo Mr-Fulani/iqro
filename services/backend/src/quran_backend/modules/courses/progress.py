@@ -1,8 +1,10 @@
 """Lesson progress of the prayer course and the thematic courses, kept with the account.
 
-The format and the merge are those of the tajweed course (`tajweed.progress`): a
-passed lesson stays passed, otherwise the later record wins, so a phone and a
-browser may send their copies in any order.
+The format and the merge are those of the tajweed course (`tajweed.progress`): the
+later record of a lesson wins, so a phone and a browser may send their copies in
+any order. In the prayer course a passed lesson also stays passed; in a thematic
+course the app lets the learner take «studied» back, so there the later record
+wins as it is.
 """
 
 from __future__ import annotations
@@ -29,7 +31,9 @@ def merge_user_progress(user: Any, kind: str, course: str, lessons: object) -> d
     progress, _ = LearnerProgress.objects.select_for_update().get_or_create(
         user=user, kind=kind, course=course
     )
-    merged = merge_lessons(progress.lessons, incoming)
+    merged = merge_lessons(
+        progress.lessons, incoming, keep_completed=kind == LearnerProgressKind.SALAH
+    )
     if merged != progress.lessons:
         progress.lessons = merged
         progress.save(update_fields=["lessons", "updated_at"])

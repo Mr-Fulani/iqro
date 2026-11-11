@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
 import { summarizeSalahProgress, type SalahLessonOutline } from "../lib/salah";
-import { useSalahProgress } from "../lib/use-salah-progress";
+import { useSalahProgress, useSalahProgressSync } from "../lib/use-salah-progress";
 
-/** Course summary and the «Continue» link, drawn from local progress after hydration. */
+/** Course summary and the «Continue» link from local progress, synced for a signed-in account. */
 export function SalahCourseProgress({ lessons }: { lessons: SalahLessonOutline[] }) {
   const { formatNumber, locale, t } = useI18n();
   const progress = useSalahProgress();
+  useSalahProgressSync();
   const summary = summarizeSalahProgress(lessons, progress ?? { lessons: {} });
   const started = Boolean(progress && Object.keys(progress.lessons).length);
   const target = summary.continueLesson;

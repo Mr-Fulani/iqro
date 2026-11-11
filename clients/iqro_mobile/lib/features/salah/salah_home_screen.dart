@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_icon.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/account_progress_sync.dart';
 import '../courses/course_sources.dart';
 import '../settings/offline_storage_screen.dart' show formatOfflineBytes;
 import 'salah_models.dart';
@@ -17,13 +20,29 @@ String salahLessonPath(String lesson) =>
     '/salah/lesson/${Uri.encodeComponent(lesson)}';
 
 /// Course home: sections with lesson cards, progress and «Continue».
-class SalahHomeScreen extends ConsumerWidget {
+class SalahHomeScreen extends ConsumerStatefulWidget {
   const SalahHomeScreen({this.courseSlug = salahDefaultCourseSlug, super.key});
 
   final String courseSlug;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SalahHomeScreen> createState() => _SalahHomeScreenState();
+}
+
+class _SalahHomeScreenState extends ConsumerState<SalahHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      ref
+          .read(accountProgressSyncProvider)
+          .sync(AccountProgressSync.salah, widget.courseSlug),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final courseSlug = widget.courseSlug;
     final course = ref.watch(salahCourseProvider(courseSlug));
     final document = course.valueOrNull;
     return Scaffold(

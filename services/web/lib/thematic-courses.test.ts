@@ -337,3 +337,26 @@ test("summary and «Continue» follow the first unfinished lesson of the course 
   assert.equal(continueTarget([ramadan], progressOf), null);
   assert.equal(continueTarget([ramadan], () => ({ lessons: {} })), null);
 });
+
+test("account sync sends only timed records and notices when nothing changed", async () => {
+  const { mergeCourseProgress, progressToSend, sameCourseProgress } = await import("./course-progress.ts");
+  const entry = (status: "in_progress" | "completed", updated_at: string) =>
+    ({ status, step_slug: "", content_version: "3", updated_at });
+  const local = { lessons: { niyat: entry("in_progress", "2026-11-10T08:00:00.000Z"), old: entry("completed", "") } };
+  assert.deepEqual(Object.keys(progressToSend(local).lessons), ["niyat"]);
+
+  // The server answers with the merged copy; merging it again changes nothing.
+  const answer = { lessons: { niyat: entry("completed", "2026-11-10T07:00:00.000Z") } };
+  const merged = mergeCourseProgress(local, answer);
+  assert.equal(merged.lessons.niyat?.status, "completed");
+  assert.equal(sameCourseProgress(merged, local), false);
+  assert.equal(sameCourseProgress(mergeCourseProgress(merged, answer), merged), true);
+  assert.equal(sameCourseProgress({ lessons: {} }, merged), false);
+
+  // A thematic course: «studied» taken back later in the app stays taken back.
+  const done = { lessons: { niyat: entry("completed", "2026-11-10T08:00:00.000Z") } };
+  const undone = { lessons: { niyat: entry("in_progress", "2026-11-10T09:00:00.000Z") } };
+  assert.equal(mergeCourseProgress(done, undone, { keepCompleted: false }).lessons.niyat?.status, "in_progress");
+  assert.equal(mergeCourseProgress(undone, done, { keepCompleted: false }).lessons.niyat?.status, "in_progress");
+  assert.equal(mergeCourseProgress(done, undone).lessons.niyat?.status, "completed");
+});

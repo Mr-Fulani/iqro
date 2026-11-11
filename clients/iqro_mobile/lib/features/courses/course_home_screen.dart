@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'account_progress_sync.dart';
 import 'course_feedback.dart';
 import 'course_feedback_widgets.dart';
 import 'course_models.dart';
@@ -16,13 +19,29 @@ const _arabicFallback = <String>[IqroTheme.arabicFontFamily];
 
 /// A course: its description, author and sources, progress with
 /// «Continue», then the list of lessons.
-class CourseHomeScreen extends ConsumerWidget {
+class CourseHomeScreen extends ConsumerStatefulWidget {
   const CourseHomeScreen({required this.courseSlug, super.key});
 
   final String courseSlug;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CourseHomeScreen> createState() => _CourseHomeScreenState();
+}
+
+class _CourseHomeScreenState extends ConsumerState<CourseHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      ref
+          .read(accountProgressSyncProvider)
+          .sync(AccountProgressSync.courses, widget.courseSlug),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final courseSlug = widget.courseSlug;
     final course = ref.watch(courseDocumentProvider(courseSlug));
     final document = course.valueOrNull;
     return Scaffold(

@@ -2021,6 +2021,19 @@ export class ApiClient {
     });
   }
 
+  /** The same for the prayer course (`salah`) and a thematic course (`courses`); an account only. */
+  public async mergeCourseProgress(
+    kind: "salah" | "courses",
+    course: string,
+    progress: { lessons: object },
+  ): Promise<unknown> {
+    return this.request<unknown>(`/api/v1/me/courses/progress/${kind}/${encodeURIComponent(course)}`, {
+      method: "PUT",
+      body: JSON.stringify({ lessons: progress.lessons }),
+      cache: "no-store",
+    });
+  }
+
   public async getJuzList(edition: string): Promise<Juz[]> {
     return this.request<Juz[]>(`/api/v1/quran/editions/${edition}/juz`);
   }

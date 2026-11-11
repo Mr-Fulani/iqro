@@ -9,10 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/courses/account_progress_sync.dart';
 import 'package:iqro_mobile/features/courses/course_progress_store.dart';
 import 'package:iqro_mobile/features/courses/lesson_video_player.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
@@ -46,6 +48,8 @@ void main() {
     expect(find.text('Шаг 1 из 5'), findsOneWidget);
     expect(find.bySemanticsLabel('Ракаат 1 из 2'), findsOneWidget);
     expect(_button(tester, 'salah-back').onPressed, isNull);
+    // Opening the course asks the account for its progress.
+    expect(_synced, ['salah:hanbali-umdah']);
     expect(harness.store.progress.lessons['fajr']?.stepSlug, 'fajr.r1.takbir');
 
     await _tapNext(tester);
@@ -75,6 +79,8 @@ void main() {
     );
     expect(find.text('Урок пройден'), findsOneWidget);
     expect(find.text('1 из 3 уроков'), findsOneWidget);
+    // A finished lesson goes to the account.
+    expect(_synced, List.filled(2, 'salah:hanbali-umdah'));
     // The counters of «Статистика курсов» leave when the lesson closes.
     expect(harness.feedback.events, [
       {'course': 'hanbali-umdah', 'lesson': 'fajr', 'event': 'lesson_opened'},
@@ -1029,6 +1035,7 @@ Future<_Harness> _pump(
   final database = LocalDatabase.forTesting(sqlDatabase);
   final document = SalahCourseDocument.fromJson(fixture ?? salahFixture());
   final store = _MemoryProgressStore(progress);
+  _synced.clear();
   final images = <String>[];
   final engine = _SilentAudioEngine();
   final audio = AudioController(engine: engine);
@@ -1073,6 +1080,7 @@ Future<_Harness> _pump(
         )),
         salahCourseProvider.overrideWith((ref, slug) async => document),
         salahProgressStoreProvider.overrideWithValue(store),
+        accountProgressSyncProvider.overrideWithValue(_RecordingSync()),
         courseFeedbackGatewayProvider.overrideWithValue(feedback),
         salahOfflineRepositoryProvider.overrideWithValue(
           offline ?? _MemoryOfflineRepository(),
@@ -1132,6 +1140,17 @@ final _transparentPng = base64Decode(
   '60e6kgAAAABJRU5ErkJggg==',
 );
 
+/// What the screens asked to synchronize with the account, as `kind:course`.
+final _synced = <String>[];
+
+class _RecordingSync implements AccountProgressSync {
+  @override
+  Future<bool> sync(String kind, String course) async {
+    _synced.add('$kind:$course');
+    return false;
+  }
+}
+
 /// The same rules as [SalahProgressStore], in memory: widget tests cannot
 /// wait for the database isolate.
 class _MemoryProgressStore implements SalahProgressStore {
@@ -1141,6 +1160,13 @@ class _MemoryProgressStore implements SalahProgressStore {
 
   @override
   Future<SalahCourseProgress> read(String course) async => progress;
+
+  @override
+  Future<SalahCourseProgress> merge(
+    String course,
+    SalahCourseProgress remote, {
+    AccountScopeSnapshot? accountScope,
+  }) async => progress = progress.merge(remote);
 
   @override
   Future<SalahCourseProgress> recordStep({
