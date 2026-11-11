@@ -1,0 +1,18 @@
+{% if not learning.rows and not learning.practice %}Курсы не открывал{% if guest %} (у гостя прогресс курсов остаётся на устройстве){% endif %}.{% else %}
+<table>
+  <thead><tr><th>Курс</th><th>Пройдено</th><th>Начато</th><th>Последнее занятие</th></tr></thead>
+  <tbody>
+  {% for row in learning.rows %}
+    <tr>
+      <td>{{ row.title }}</td>
+      <td>{{ row.completed }} из {{ row.total }}{% if row.total and row.completed == row.total %} ✓{% endif %}</td>
+      <td>{{ row.started }}</td>
+      <td>{% if row.last %}{{ row.last|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% for practice in learning.practice %}
+<p>Тренировки таджвида: занятий — {{ practice.sessions }}, верных ответов — {{ practice.correct }} из {{ practice.answers }}, серия дней — {{ practice.streak.current }} (лучшая {{ practice.streak.best }}).</p>
+{% endfor %}
+{% endif %}

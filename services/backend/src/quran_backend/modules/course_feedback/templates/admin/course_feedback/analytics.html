@@ -4,6 +4,7 @@
 {% block content %}
 <div class="ca">
   {% if course_url %}<p><a href="{{ course_url }}">Открыть курс в редакторе</a></p>{% endif %}
+  {% if learners_url %}<p><a href="{{ learners_url }}?course={{ learners_course|urlencode }}">Ученики этого курса</a> — кто проходит и докуда дошёл.</p>{% endif %}
   {% include "admin/course_feedback/periods.html" %}
 
   <div class="ca-kpis" aria-label="Коротко">

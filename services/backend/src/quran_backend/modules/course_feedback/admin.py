@@ -44,6 +44,9 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             "opts": self.model._meta,
             "title": title,
             "summary_url": reverse("admin:course_feedback_courseanalytics_changelist"),
+            "learners_url": reverse("admin:courses_learnerprogress_changelist")
+            if request.user.has_perm("courses.view_learnerprogress")
+            else "",
         }
 
     def changelist_view(
@@ -74,6 +77,7 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 course=title,
                 report=course_report(object_id, days),
                 reports_url=reports_url + (f"?course={slugs[0]}" if slugs else ""),
+                learners_course=object_id,
                 **(extra_context or {}),
             )
             return TemplateResponse(request, "admin/course_feedback/analytics.html", context)
@@ -86,6 +90,7 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             report=course_report(course, days),
             course_url=reverse("admin:courses_course_change", args=[course.pk]),
             reports_url=f"{reports_url}?course={course.slug}",
+            learners_course=course.slug,
             **(extra_context or {}),
         )
         return TemplateResponse(request, "admin/course_feedback/analytics.html", context)

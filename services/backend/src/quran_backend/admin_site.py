@@ -64,6 +64,7 @@ SECTIONS: tuple[Section, ...] = (
         (
             "courses.Course",
             "courses.CourseRelease",
+            "courses.LearnerProgress",
             "tajweed.TajweedCourseVersion",
             "salah.SalahCourseVersion",
             "courses.BuiltInCourseCover",
