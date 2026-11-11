@@ -11,6 +11,7 @@ import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/courses/account_progress_sync.dart';
 import 'package:iqro_mobile/features/courses/course_catalog_screen.dart';
 import 'package:iqro_mobile/features/courses/course_home_screen.dart';
 import 'package:iqro_mobile/features/courses/course_lesson_screen.dart';
@@ -191,6 +192,8 @@ void main() {
     await _settle(tester);
     expect(find.byType(CourseHomeScreen), findsOneWidget);
     expect(find.text('Пройдено тем: 0 из 3'), findsOneWidget);
+    // Opening the course asks the account for its progress.
+    expect(_synced, ['courses:ramadan']);
     expect(find.text('[автор и источники — после проверки]'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('course-continue')));
     await _settle(tester);
@@ -199,6 +202,8 @@ void main() {
     expect(find.text('Смысл поста'), findsOneWidget);
     expect(find.text('Рамадан · тема 1 из 3'), findsOneWidget);
     expect(find.text('Конспект'), findsOneWidget);
+    // The opened lesson is sent too.
+    expect(_synced, hasLength(2));
     // Sources are folded until asked for.
     expect(find.text('[источник 1 — после проверки]'), findsNothing);
     await tester.ensureVisible(
@@ -211,6 +216,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('course-lesson-done')));
     await _settle(tester);
     expect(find.text('Тема пройдена'), findsOneWidget);
+    expect(_synced, List.filled(3, 'courses:ramadan'));
     final stored = await tester.runAsync(
       () => harness.database.readState('courses.progress.ramadan'),
     );
@@ -251,9 +257,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('course-lesson-done')));
     await _settle(tester);
     expect(find.text('Все темы'), findsOneWidget);
+    final sent = _synced.length;
     await tester.tap(find.byKey(const ValueKey('course-lesson-unmark')));
     await _settle(tester);
     expect(find.byKey(const ValueKey('course-lesson-done')), findsOneWidget);
+    // The mark taken back goes to the account as well.
+    expect(_synced, hasLength(sent + 1));
     final stored = await tester.runAsync(
       () => harness.database.readState('courses.progress.ramadan'),
     );
@@ -540,6 +549,7 @@ Future<_Harness> _pump(
   tester.view.physicalSize = const Size(400, 900);
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
+  _synced.clear();
   final gateway = remote ?? FakeCourseGateway();
   final feedbackGateway = feedback ?? FakeCourseFeedbackGateway();
   final reports = FakeFeedbackRepository();
@@ -588,6 +598,7 @@ Future<_Harness> _pump(
           return const ShareResult('', ShareResultStatus.dismissed);
         }),
         sessionProvider.overrideWith((ref) => _Guest()),
+        accountProgressSyncProvider.overrideWithValue(_RecordingSync()),
         localDatabaseProvider.overrideWithValue(database),
         activeAccountScopeKeyProvider.overrideWithValue((
           userId: 'test-owner',
@@ -632,6 +643,17 @@ Future<_Harness> _pump(
       unawaited(sql.close());
     },
   );
+}
+
+/// What the screens asked to synchronize with the account, as `kind:course`.
+final _synced = <String>[];
+
+class _RecordingSync implements AccountProgressSync {
+  @override
+  Future<bool> sync(String kind, String course) async {
+    _synced.add('$kind:$course');
+    return false;
+  }
 }
 
 Future<void> _settle(WidgetTester tester) async {
