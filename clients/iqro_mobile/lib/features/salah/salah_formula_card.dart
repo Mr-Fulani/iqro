@@ -11,6 +11,7 @@ import '../../core/theme/iqro_theme.dart';
 import '../dua/dua_arabic.dart';
 import 'salah_display.dart';
 import 'salah_models.dart';
+import 'salah_quran_text.dart';
 
 /// Media id of a formula in the shared player. One formula sounds the same
 /// on every step, so its steps share the id.
@@ -68,23 +69,33 @@ class _SalahFormulaCardState extends ConsumerState<SalahFormulaCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (display.arabicVisible && formula.arabic.isNotEmpty)
-            for (final (index, part) in splitDuaArabic(
-              formula.arabic,
-            ).indexed) ...<Widget>[
-              if (index > 0) SizedBox(height: part.opening ? 14 : 4),
-              Text(
-                part.text,
-                key: index == 0 ? ValueKey('salah-arabic-${formula.id}') : null,
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.center,
-                style: part.opening
-                    ? arabicStyle?.copyWith(
-                        fontSize: fontSize * .78,
-                        color: scheme.primary,
-                      )
-                    : arabicStyle,
-              ),
-            ],
+            if (salahQuranAyahs(formula) case final ayahs?)
+              SalahQuranText(
+                key: ValueKey('salah-arabic-${formula.id}'),
+                surah: formula.source.surah!,
+                ayahs: ayahs,
+                style: arabicStyle,
+              )
+            else
+              for (final (index, part) in splitDuaArabic(
+                formula.arabic,
+              ).indexed) ...<Widget>[
+                if (index > 0) SizedBox(height: part.opening ? 14 : 4),
+                Text(
+                  part.text,
+                  key: index == 0
+                      ? ValueKey('salah-arabic-${formula.id}')
+                      : null,
+                  textDirection: TextDirection.rtl,
+                  textAlign: TextAlign.center,
+                  style: part.opening
+                      ? arabicStyle?.copyWith(
+                          fontSize: fontSize * .78,
+                          color: scheme.primary,
+                        )
+                      : arabicStyle,
+                ),
+              ],
           if (display.transliterationVisible &&
               transliteration != null) ...<Widget>[
             const SizedBox(height: 12),
