@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% block extrastyle %}{{ block.super }}{% include "admin/course_feedback/styles.html" %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Начало</a> › Ученики курсов</div>{% endblock %}
+{% block content %}
+<div class="ca">
+  <nav class="ca-periods" aria-label="Курс">
+    <span>Курс:</span>
+    <a href="?{% if query %}q={{ query|urlencode }}{% endif %}"{% if not course %} aria-current="page"{% endif %}>Все</a>
+    {% for value, label in report.options %}
+      <a href="?course={{ value|urlencode }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}"{% if value == course %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <form method="get" role="search">
+    {% if course %}<input type="hidden" name="course" value="{{ course }}">{% endif %}
+    <label>Почта ученика <input type="search" name="q" value="{{ query }}"></label>
+    <button type="submit" class="button">Найти</button>
+  </form>
+  <section aria-label="Ученики">
+    <table>
+      <thead><tr>
+        <th>Ученик</th>
+        <th>Курс</th>
+        <th class="num">Пройдено</th>
+        <th class="num">Начато</th>
+        <th class="num">Последнее занятие</th>
+      </tr></thead>
+      <tbody>
+      {% for row in report.rows %}
+        <tr>
+          <td>{% if row.url %}<a href="{{ row.url }}">{{ row.user.email|default:row.user.pk }}</a>{% else %}{{ row.user.email|default:row.user.pk }}{% endif %}</td>
+          <td>{{ row.title }}</td>
+          <td class="num">{{ row.completed }} из {{ row.total }}{% if row.total and row.completed == row.total %} ✓{% endif %}</td>
+          <td class="num">{{ row.started }}</td>
+          <td class="num">{% if row.last %}{{ row.last|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Пока никого: прогресс появляется, когда ученик с аккаунтом открывает курс в обновлённом приложении или на сайте.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if report.total > report.limit %}<p class="ca-quiet">Показаны последние {{ report.limit }} из {{ report.total }}. Выберите курс или найдите ученика по почте.</p>{% endif %}
+    <p class="ca-quiet">Здесь только ученики, вошедшие в аккаунт: у гостей прогресс остаётся на их устройстве. «Пройдено» — темы, отмеченные изученными; «Начато» — темы, которые ученик открывал. Нажмите на почту, чтобы открыть карточку ученика с блоком «Обучение».</p>
+  </section>
+</div>
+{% endblock %}

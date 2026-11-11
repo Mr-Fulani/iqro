@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.http import HttpRequest
+from django.template.loader import render_to_string
 
 from quran_backend.modules.accounts.models import (
     AuthIdentity,
@@ -12,6 +16,7 @@ from quran_backend.modules.accounts.models import (
     RefreshSession,
     RefreshToken,
     User,
+    UserStatus,
 )
 
 
@@ -30,6 +35,7 @@ class UserAdmin(DjangoUserAdmin):  # type: ignore[type-arg]
         "deletion_requested_at",
         "deletion_scheduled_for",
         "deleted_at",
+        "learning",
     )
     fieldsets = (
         (None, {"fields": ("id", "email", "password")}),
@@ -62,6 +68,22 @@ class UserAdmin(DjangoUserAdmin):  # type: ignore[type-arg]
             },
         ),
     )
+
+    def get_fieldsets(self, request: HttpRequest, obj: User | None = None) -> Any:
+        fieldsets = super().get_fieldsets(request, obj)
+        # Who studies what is shown under its own permission, not to every user manager.
+        if obj is None or not cast(Any, request.user).has_perm("courses.view_learnerprogress"):
+            return fieldsets
+        return (*fieldsets, ("Обучение", {"fields": ("learning",)}))
+
+    @admin.display(description="Курсы")
+    def learning(self, obj: User) -> str:
+        from quran_backend.modules.courses.learners import user_learning  # noqa: PLC0415
+
+        return render_to_string(
+            "admin/courses/learnerprogress/user_block.html",
+            {"learning": user_learning(obj), "guest": obj.status == UserStatus.GUEST},
+        )
 
 
 @admin.register(AuthIdentity)

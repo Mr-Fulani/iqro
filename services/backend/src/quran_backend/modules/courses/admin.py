@@ -59,6 +59,7 @@ from quran_backend.modules.courses.document import (
     untranslated,
     video_payload,
 )
+from quran_backend.modules.courses.learners import learners
 from quran_backend.modules.courses.lesson_media import (
     BANNER,
     SLIDES,
@@ -85,6 +86,7 @@ from quran_backend.modules.courses.models import (
     CourseLesson,
     CourseRelease,
     CourseReleaseStatus,
+    LearnerProgress,
 )
 from quran_backend.modules.courses.services import (
     CourseReleaseError,
@@ -1605,6 +1607,45 @@ class BuiltInCourseCoverForm(CoverForm, forms.ModelForm):  # type: ignore[type-a
         if commit:
             target.save()
         return target
+
+
+@admin.register(LearnerProgress)
+class LearnerProgressAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    """«Ученики курсов»: a read-only list, a row opens the user's card."""
+
+    def has_add_permission(self, _request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
+        return False
+
+    def has_delete_permission(self, _request: HttpRequest, _obj: Any = None) -> bool:
+        return False
+
+    def changelist_view(
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
+    ) -> HttpResponse:
+        if not self.has_view_permission(request):
+            raise PermissionDenied
+        course = str(request.GET.get("course", ""))
+        query = str(request.GET.get("q", "")).strip()
+        report = learners(course, query)
+        if cast(Any, request.user).has_perm("accounts.view_user"):
+            for row in report["rows"]:
+                row["url"] = reverse("admin:accounts_user_change", args=[row["user"].pk])
+        return TemplateResponse(
+            request,
+            "admin/courses/learnerprogress/learners.html",
+            {
+                **self.admin_site.each_context(request),
+                "opts": self.model._meta,
+                "title": "Ученики курсов",
+                "report": report,
+                "course": course,
+                "query": query,
+                **(extra_context or {}),
+            },
+        )
 
 
 @admin.register(BuiltInCourseCover)

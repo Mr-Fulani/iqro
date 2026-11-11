@@ -69,6 +69,7 @@ SECTIONS: tuple[Section, ...] = (
             # Also in «Обращения и отзывы»: people look for it next to the courses.
             "course_feedback.CourseAnalytics",
             "courses.CourseRelease",
+            "courses.LearnerProgress",
             "tajweed.TajweedCourseVersion",
             "salah.SalahCourseVersion",
             "courses.BuiltInCourseCover",
