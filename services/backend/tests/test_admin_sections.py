@@ -82,12 +82,14 @@ def test_placement_rules() -> None:
 
 def test_main_tables_and_tiles_point_at_registered_models() -> None:
     registered = {model._meta.label for model in admin.site._registry}
+    main = {section.key: section.main for section in SECTIONS}
     for section in SECTIONS:
         assert section.hint
         assert set(section.main) <= registered, section.key
         for label in section.main:
+            # A table shown openly elsewhere is open in its own section too.
             app_label, object_name = label.split(".")
-            assert placement(app_label, object_name)[0] == section.key, label
+            assert label in main[placement(app_label, object_name)[0]], label
     assert {label for _title, _hint, label in TILES} <= registered
 
 
@@ -132,6 +134,9 @@ def test_home_shows_sections_with_main_tables_open_and_the_rest_folded(owner: Us
     assert "/admin/audio/audiotrack/" in folded
     assert '<a href="/admin/audio/">Аудио Корана</a>' in folded
     main, folded = _open_and_folded(_section(body, "learning"))
+    # The course statistics are shown next to the courses as well as with the feedback.
+    tables = re.findall(r'<th scope="row"[^>]*>\s*<a href="([^"]+)"', main)
+    assert tables[:2] == ["/admin/courses/course/", "/admin/course_feedback/courseanalytics/"]
     assert "/admin/courses/courserelease/" in main
     assert "/admin/tajweed/tajweedcourseversion/" in main
     assert '<a href="/admin/salah/">Обучение намазу</a>' in folded

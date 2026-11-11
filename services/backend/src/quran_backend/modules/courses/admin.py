@@ -46,6 +46,7 @@ from quran_backend.modules.audio.serializers import public_audio_url
 from quran_backend.modules.core.content_revalidation import enqueue_courses_catalog_change
 from quran_backend.modules.core.editorial.diff import line_diff
 from quran_backend.modules.core.object_storage import ObjectStorageError
+from quran_backend.modules.course_feedback.analytics import DEFAULT_PERIOD, summary
 from quran_backend.modules.courses.document import (
     LANGUAGE_NAMES,
     build_document,
@@ -77,6 +78,7 @@ from quran_backend.modules.courses.media import CourseCoverError, upload_course_
 from quran_backend.modules.courses.models import (
     COURSE_LANGUAGES,
     SPOKEN_LANGUAGES,
+    BuiltInCourse,
     BuiltInCourseCover,
     Course,
     CourseDocument,
@@ -356,6 +358,54 @@ class CourseLessonInline(admin.TabularInline):  # type: ignore[type-arg]
         return " · ".join(parts) or "—"
 
 
+# Where the prayer and the tajweed course are edited: (permission, list of their versions).
+BUILTIN_EDITORS = {
+    BuiltInCourse.SALAH: (
+        "salah.view_salahcourseversion",
+        "admin:salah_salahcourseversion_changelist",
+    ),
+    BuiltInCourse.TAJWEED: (
+        "tajweed.view_tajweedcourseversion",
+        "admin:tajweed_tajweedcourseversion_changelist",
+    ),
+}
+
+
+def all_courses(request: HttpRequest) -> dict[str, Any]:
+    """The block above the list: the prayer and the tajweed course, then the catalog.
+
+    The numbers and the links to the statistics need the permission of the analytics pages.
+    """
+    user = cast(Any, request.user)
+    stats = user.has_perm("course_feedback.view_courseanalytics")
+    if stats:
+        rows = summary(DEFAULT_PERIOD)["rows"]
+    else:
+        rows = [
+            {"key": kind, "title": label, "course": None} for kind, label in BuiltInCourse.choices
+        ]
+        rows += [
+            {"key": course.pk, "title": str(course), "course": course}
+            for course in Course.objects.all()
+        ]
+    for row in rows:
+        if row["course"] is not None:
+            row["edit_url"] = reverse("admin:courses_course_change", args=[row["key"]])
+        else:
+            permission, url_name = BUILTIN_EDITORS[row["key"]]
+            row["edit_url"] = reverse(url_name) if user.has_perm(permission) else ""
+        if stats:
+            row["stats_url"] = reverse(
+                "admin:course_feedback_courseanalytics_change", args=[row["key"]]
+            )
+    return {
+        "rows": rows,
+        "stats": stats,
+        "days": DEFAULT_PERIOD,
+        "summary_url": reverse("admin:course_feedback_courseanalytics_changelist"),
+    }
+
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     form = CourseAdminForm
@@ -366,6 +416,14 @@ class CourseAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     prepopulated_fields: ClassVar[dict[str, Sequence[str]]] = {"slug": ("title_ru",)}
     readonly_fields = ("current_cover",)
     change_form_template = "admin/courses/course/change_form.html"
+    change_list_template = "admin/courses/course/change_list.html"
+
+    def changelist_view(
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
+    ) -> HttpResponse:
+        return super().changelist_view(
+            request, {"all_courses": all_courses(request), **(extra_context or {})}
+        )
 
     def get_fieldsets(self, _request: HttpRequest, _obj: Course | None = None) -> Any:
         language_sets = [
