@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,6 +13,7 @@ import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
 import '../core/notifications/notification_gateway.dart';
 import '../core/storage/local_database.dart';
+import '../core/startup/startup_trace.dart';
 import '../core/storage/preferences_store.dart';
 import '../core/sync/sync_service.dart';
 import '../features/audio/audio_repository.dart';
@@ -84,16 +88,28 @@ class AppDependencies {
   final BackgroundMaintenanceService maintenance;
 
   static Future<AppDependencies> initialize() async {
-    final config = await AppConfig.fromEnvironment();
-    final sharedPreferences = await SharedPreferences.getInstance();
+    final config = await StartupTrace.step('config', AppConfig.fromEnvironment);
+    final sharedPreferences = await StartupTrace.step(
+      'preferences',
+      SharedPreferences.getInstance,
+    );
     final preferences = PreferencesStore(sharedPreferences);
     final accountScope = AccountScope();
     final auth = AuthRepository(config: config, accountScope: accountScope);
-    final legacyOwnerId = await auth.legacyOwnerIdForMigration();
-    await preferences.migrateLegacyRecitationsForUser(legacyOwnerId);
-    final database = await LocalDatabase.open(
-      accountScope: accountScope,
-      legacyOwnerId: legacyOwnerId,
+    final legacyOwnerId = await StartupTrace.step(
+      'legacy owner',
+      auth.legacyOwnerIdForMigration,
+    );
+    await StartupTrace.step(
+      'legacy recitations',
+      () => preferences.migrateLegacyRecitationsForUser(legacyOwnerId),
+    );
+    final database = await StartupTrace.step(
+      'database',
+      () => LocalDatabase.open(
+        accountScope: accountScope,
+        legacyOwnerId: legacyOwnerId,
+      ),
     );
     accountScope.configure(
       loader: () async {
@@ -108,7 +124,7 @@ class AppDependencies {
       },
       finalizeTransfer: database.finalizeAccountTransfer,
     );
-    await auth.loadCachedSession();
+    await StartupTrace.step('cached session', auth.loadCachedSession);
     final api = ApiClient(
       config: config,
       authRepository: auth,
@@ -119,8 +135,11 @@ class AppDependencies {
     // the catalog queued for seconds behind the startup queries and the Quran
     // tab showed no edition. A damaged copy must not keep the app from
     // opening: the tab then waits for the network catalog as before.
-    final mushafRenditions = await quran.cachedMushafRenditions().onError(
-      (_, _) => const <NativeMushafEdition>[],
+    final mushafRenditions = await StartupTrace.step(
+      'mushaf catalog',
+      () => quran.cachedMushafRenditions().onError(
+        (_, _) => const <NativeMushafEdition>[],
+      ),
     );
     final prayer = PrayerRepository(api: api, database: database);
     final prayerWidget = PrayerWidgetService(
@@ -132,9 +151,28 @@ class AppDependencies {
       database: database,
       adhan: () => preferences.read().reminderAdhan,
     );
-    await notifications.initialize();
+    // Not awaited: on a slow phone the plugin takes seconds, most of all when
+    // it clears a reminder plan the last run left unfinished, and nothing on
+    // the first screen needs it. Scheduling queues behind it in the gateway.
+    unawaited(
+      StartupTrace.step('notifications', notifications.initialize).onError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'IQRO notifications startup',
+          ),
+        );
+      }),
+    );
     final offlineMushaf = MushafOfflineRepository(api: api, database: database);
-    final mushafThumbnails = await MushafThumbnailCache.open();
+    final mushafThumbnails = await StartupTrace.step(
+      'mushaf thumbnails',
+      MushafThumbnailCache.open,
+    );
     final offlineAudio = AudioOfflineRepository(api: api, database: database);
     final audio = AudioRepository(
       api: api,

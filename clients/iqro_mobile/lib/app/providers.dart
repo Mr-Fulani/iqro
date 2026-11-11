@@ -13,6 +13,7 @@ import '../core/audio/audio_controller.dart';
 import '../core/audio/audio_playback_store.dart';
 import '../core/audio/audio_playback_sync_service.dart';
 import '../core/audio/listening_media_controls.dart';
+import '../core/audio/listening_media_service.dart';
 import '../core/auth/account_scope.dart';
 import '../core/auth/auth_repository.dart';
 import '../core/auth/auth_session.dart';
@@ -1829,6 +1830,10 @@ final audioControllerProvider =
           ? currentScope
           : null;
       final controller = AudioController(
+        // Null until the first controller's start has finished; a later
+        // controller (another account) binds at once.
+        mediaService: ListeningMediaService.current,
+        mediaServiceStarting: ListeningMediaService.ensureStarted(),
         mediaLabels: () =>
             _listeningMediaLabels(ref.read(appPreferencesProvider).locale),
         playbackStore: boundScope == null

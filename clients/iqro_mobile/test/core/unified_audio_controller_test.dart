@@ -1634,6 +1634,51 @@ void main() {
       expect(controller.state.channel, AudioPlaybackChannel.mushaf);
     });
 
+    test('the app opens before the media service has started, and the '
+        'system media card gets the recitation once it has', () async {
+      final starting = Completer<ListeningMediaService?>();
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        mediaServiceStarting: starting.future,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+        autoplay: true,
+      );
+      expect(engine.playing, isTrue);
+
+      final media = ListeningMediaService();
+      starting.complete(media);
+      await Future<void>.delayed(Duration.zero);
+      expect(media.mediaItem.value?.id, 'track-1');
+      // The card's buttons reach the controller.
+      await media.pause();
+      expect(engine.playing, isFalse);
+    });
+
+    test('sound plays without the media card when the service cannot '
+        'start', () async {
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        mediaServiceStarting: Future<ListeningMediaService?>.value(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.loadPlayback(
+        playback: _playback,
+        reciter: _reciter,
+        surahName: 'Al-Fatiha',
+        autoplay: true,
+      );
+      expect(engine.playing, isTrue);
+    });
+
     test('the Android 10 card steps ten seconds, cycles the speed and '
         'pauses when swiped away', () async {
       final media = ListeningMediaService(androidSdk: 29);

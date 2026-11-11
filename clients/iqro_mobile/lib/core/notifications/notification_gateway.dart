@@ -81,29 +81,38 @@ class NotificationGateway {
     required LocalDatabase database,
     FlutterLocalNotificationsPlugin? plugin,
     Future<void> Function()? initializeForTesting,
+    String? launchPayloadForTesting,
     Future<void> Function(int id)? cancelForTesting,
     ReminderAdhan Function()? adhan,
   }) : _database = database,
        _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
        _initializeForTesting = initializeForTesting,
+       _launchPayloadForTesting = launchPayloadForTesting,
        _cancelForTesting = cancelForTesting,
        _adhan = adhan ?? (() => ReminderAdhan.none);
 
   final LocalDatabase _database;
   final FlutterLocalNotificationsPlugin _plugin;
   final Future<void> Function()? _initializeForTesting;
+
+  /// With [_initializeForTesting]: the notification that opened the app.
+  final String? _launchPayloadForTesting;
   final Future<void> Function(int id)? _cancelForTesting;
   final ReminderAdhan Function() _adhan;
   final StreamController<String> _routeController =
       StreamController<String>.broadcast(sync: true);
   String? _initialRoute;
   AccountScopeSnapshot? _initialRouteScope;
+  var _initialRouteTaken = false;
   static const _managedIdsStateKey = 'managed_notification_ids_v1';
   Future<void> _operationTail = Future<void>.value();
 
   Stream<String> get routeRequests => _routeController.stream;
 
+  /// The route of the notification that opened the app. When the app asks
+  /// before [initialize] has read it, the route arrives on [routeRequests].
   String? takeInitialRoute() {
+    _initialRouteTaken = true;
     final value = _initialRoute;
     final scope = _initialRouteScope;
     _initialRoute = null;
@@ -115,8 +124,16 @@ class NotificationGateway {
         : null;
   }
 
-  Future<void> initialize() async {
+  /// The app opens without waiting for the returned future: scheduling and
+  /// cancelling queue behind it.
+  Future<void> initialize() {
+    // Synchronous: prayer times and widgets use the zone database from the
+    // first frame.
     tz_data.initializeTimeZones();
+    return _serialize(_initialize);
+  }
+
+  Future<void> _initialize() async {
     try {
       final zone = (await FlutterTimezone.getLocalTimezone()).identifier;
       tz.setLocalLocation(tz.getLocation(zone));
@@ -128,6 +145,7 @@ class NotificationGateway {
     final initializeOverride = _initializeForTesting;
     if (initializeOverride != null) {
       await initializeOverride();
+      launchPayload = _launchPayloadForTesting;
     } else {
       await _plugin.initialize(
         settings: const InitializationSettings(
@@ -194,7 +212,8 @@ class NotificationGateway {
       await _acceptNotificationPayload(
         launchPayload,
         notificationId: launchNotificationId,
-        initial: true,
+        // The app may already be open and have asked for the route.
+        initial: !_initialRouteTaken,
       );
     }
   }
