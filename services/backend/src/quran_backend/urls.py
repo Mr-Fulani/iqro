@@ -57,6 +57,7 @@ urlpatterns = [
     path("api/v1/", include("quran_backend.modules.announcements.urls")),
     path("api/v1/", include("quran_backend.modules.course_feedback.urls")),
     path("api/v1/", include("quran_backend.modules.courses.urls")),
+    path("api/v1/", include("quran_backend.modules.courses.personal_urls")),
     path(
         "api/schema",
         docs_only(

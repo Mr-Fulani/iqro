@@ -354,7 +354,7 @@ HEVC (так iPhone снимает по умолчанию), WebM, VP9 и AV1 н
 **Когда язык викторины готов:** есть название викторины, каждый вопрос, каждый вариант (кроме true_false) и каждый источник. Пояснение желательно; без него админка покажет предупреждение.
 
 **Таблиц с данными учеников на старте нет.** Позже появятся:
-- `CourseProgress(user, course slug, lessons JSON)` по образцу TajweedCourseProgress;
+- `CourseProgress(user, course slug, lessons JSON)` по образцу TajweedCourseProgress — сделано 11.11.2026 как `courses.LearnerProgress` (ещё и для курса намаза; только для аккаунта, без гостей), см. README, «Прогресс в аккаунте»;
 - `QuizAttempt(id = UUID клиента, user, quiz slug, release, local_date, finished_at, answers)` по образцу TajweedPracticeSession: повторная отправка ничего не меняет, конфликт даёт 409;
 - обработка в accounts/merge.py и accounts/lifecycle.py и выгрузка данных (spec :651).
 
