@@ -413,3 +413,36 @@ class BuiltInCourseCover(BaseModel):
 
     def __str__(self) -> str:
         return str(self.get_course_display())
+
+
+class LearnerProgressKind(models.TextChoices):
+    # The values are the first part of the clients' local keys: `salah.progress.<course>`.
+    SALAH = "salah", "Обучение намазу"
+    COURSES = "courses", "Курс каталога"
+
+
+class LearnerProgress(BaseModel):
+    """A signed-in learner's lessons of one course, in the clients' local format.
+
+    The prayer course and the thematic courses; the tajweed course keeps its own
+    table (`tajweed.TajweedCourseProgress`) with the same format and merge.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="course_progress"
+    )
+    kind = models.CharField(max_length=16, choices=LearnerProgressKind.choices)
+    course = models.SlugField(max_length=64)
+    lessons = models.JSONField(default=dict)
+
+    class Meta:
+        db_table = "course_learner_progress"
+        ordering = ("user", "kind", "course")
+        constraints = (
+            models.UniqueConstraint(
+                fields=("user", "kind", "course"), name="course_learner_progress_unique"
+            ),
+        )
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.kind}:{self.course}"

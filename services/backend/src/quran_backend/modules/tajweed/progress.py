@@ -46,8 +46,11 @@ def _moment(value: object, where: str) -> datetime:
     return moment
 
 
-def clean_lessons(value: object) -> dict[str, dict[str, str]]:
-    """The lessons of a request in the stored form, or TajweedProgressError."""
+def clean_lessons(value: object, *, empty_step: bool = False) -> dict[str, dict[str, str]]:
+    """The lessons of a request in the stored form, or TajweedProgressError.
+
+    `empty_step` lets `step_slug` be "": the lessons of a thematic course have no steps.
+    """
     if not isinstance(value, Mapping):
         raise TajweedProgressError("lessons must be an object.")
     if len(value) > MAX_LESSONS:
@@ -64,7 +67,7 @@ def clean_lessons(value: object) -> dict[str, dict[str, str]]:
         version = entry.get("content_version")
         if status not in STATUSES:
             raise TajweedProgressError(f"{where}: status is in_progress or completed.")
-        if not isinstance(step, str) or not STEP_SLUG.match(step):
+        if not isinstance(step, str) or not (STEP_SLUG.match(step) or (empty_step and not step)):
             raise TajweedProgressError(f"{where}: invalid step_slug.")
         if not isinstance(version, str) or not VERSION.match(version):
             raise TajweedProgressError(f"{where}: invalid content_version.")

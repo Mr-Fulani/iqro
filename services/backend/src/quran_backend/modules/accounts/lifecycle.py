@@ -259,10 +259,12 @@ def _validate_recent_reauthentication(
         raise AccountReauthenticationRequired
 
 
-def _finalize_account(*, user: User, deleted_at: datetime) -> None:
+# A flat list: one line per table that holds the user's data.
+def _finalize_account(*, user: User, deleted_at: datetime) -> None:  # noqa: PLR0915
     from quran_backend.modules.announcements.models import (  # noqa: PLC0415
         AnnouncementReceipt,
     )
+    from quran_backend.modules.courses.models import LearnerProgress  # noqa: PLC0415
     from quran_backend.modules.feedback.models import (  # noqa: PLC0415
         FeedbackAudit,
         FeedbackMessage,
@@ -306,6 +308,7 @@ def _finalize_account(*, user: User, deleted_at: datetime) -> None:
     MemorizationSession.objects.filter(user=user).delete()
     MemorizationItem.objects.filter(user=user).delete()
     MemorizationPlan.objects.filter(user=user).delete()
+    LearnerProgress.objects.filter(user=user).delete()
     TajweedCourseProgress.objects.filter(user=user).delete()
     TajweedPracticeSession.objects.filter(user=user).delete()
     PrayerProfile.objects.filter(user=user).delete()
