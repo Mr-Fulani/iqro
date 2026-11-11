@@ -13,6 +13,7 @@ import '../../core/design_system/iqro_repetition_counter.dart';
 import '../../core/design_system/iqro_step_flow.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/account_progress_sync.dart';
 import '../courses/course_feedback.dart';
 import '../courses/course_sources.dart';
 import '../courses/lesson_media_view.dart';
@@ -293,6 +294,11 @@ class _SalahStepPlayerState extends ConsumerState<SalahStepPlayer>
     } on Object {
       // The lesson still closes; the next visit records it again.
     }
+    unawaited(
+      ref
+          .read(accountProgressSyncProvider)
+          .sync(AccountProgressSync.salah, widget.courseSlug),
+    );
     if (!mounted) return;
     // The site reports every prayer course as «salah».
     ref.read(analyticsProvider.notifier).track(AnalyticsEvent.lessonComplete, {

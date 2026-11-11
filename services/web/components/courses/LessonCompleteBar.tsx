@@ -13,7 +13,7 @@ import {
   recordLessonOpened,
   writeThematicProgress,
 } from "../../lib/thematic-courses";
-import { useThematicProgress } from "./CourseProgress";
+import { useThematicProgress, useThematicProgressSync } from "./CourseProgress";
 
 type LessonLink = { slug: string; title: string };
 
@@ -56,6 +56,8 @@ export function LessonCompleteBar({
     counted.current = lesson;
     trackCourseEvent({ course: courseSlug, lesson: lessonSlug, event: "lesson_opened" });
   }, [courseSlug, courseVersion, lessonSlug]);
+  // After the effect above, so the first sync already carries the opened lesson.
+  const syncProgress = useThematicProgressSync(courseSlug);
 
   function markDone() {
     const progress = readThematicProgress(courseSlug);
@@ -64,6 +66,7 @@ export function LessonCompleteBar({
       trackEvent("lesson_complete", { course: courseSlug, lesson: lessonSlug });
     }
     writeThematicProgress(recordLessonCompleted(progress, lessonSlug, courseVersion), courseSlug);
+    void syncProgress();
   }
 
   return (

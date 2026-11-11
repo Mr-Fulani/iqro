@@ -4,7 +4,7 @@ import { useCallback, useEffect } from "react";
 
 import { api } from "./api";
 import { useAuth } from "./auth-context";
-import { mergeCourseProgress, progressFromJson, type CourseProgress } from "./course-progress";
+import { mergeCourseProgress, progressFromJson, sameCourseProgress, type CourseProgress } from "./course-progress";
 import {
   isTajweedLessonSlug,
   readTajweedProgress,
@@ -18,16 +18,6 @@ import { useCourseProgress } from "./use-course-progress";
 /** Local course progress; `null` in server HTML and during hydration. */
 export function useTajweedProgress(courseSlug: string = TAJWEED_COURSE_SLUG): CourseProgress | null {
   return useCourseProgress(tajweedProgressStorageKey(courseSlug), TAJWEED_PROGRESS_EVENT, isTajweedLessonSlug);
-}
-
-function sameProgress(left: CourseProgress, right: CourseProgress): boolean {
-  const slugs = Object.keys(left.lessons);
-  return slugs.length === Object.keys(right.lessons).length && slugs.every((slug) => {
-    const a = left.lessons[slug]!;
-    const b = right.lessons[slug];
-    return Boolean(b) && a.status === b!.status && a.step_slug === b!.step_slug
-      && a.content_version === b!.content_version && a.updated_at === b!.updated_at;
-  });
 }
 
 /**
@@ -45,7 +35,7 @@ export function useTajweedProgressSync(courseSlug: string = TAJWEED_COURSE_SLUG)
       const answer = await api.mergeTajweedProgress(courseSlug, readTajweedProgress(courseSlug));
       const local = readTajweedProgress(courseSlug);
       const merged = mergeCourseProgress(local, progressFromJson(answer, isTajweedLessonSlug));
-      if (!sameProgress(merged, local)) writeTajweedProgress(merged, courseSlug);
+      if (!sameCourseProgress(merged, local)) writeTajweedProgress(merged, courseSlug);
     } catch {
       return;
     }

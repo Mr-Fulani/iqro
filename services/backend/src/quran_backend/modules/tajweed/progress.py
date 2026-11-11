@@ -81,8 +81,12 @@ def clean_lessons(value: object, *, empty_step: bool = False) -> dict[str, dict[
 
 
 def merge_lessons(
-    stored: Mapping[str, Mapping[str, str]], incoming: Mapping[str, Mapping[str, str]]
+    stored: Mapping[str, Mapping[str, str]],
+    incoming: Mapping[str, Mapping[str, str]],
+    *,
+    keep_completed: bool = True,
 ) -> dict[str, dict[str, str]]:
+    """`keep_completed=False`: the later record wins as it is, so «studied» can be taken back."""
     merged = {slug: dict(entry) for slug, entry in stored.items()}
     for slug, entry in incoming.items():
         current = merged.get(slug)
@@ -90,7 +94,7 @@ def merge_lessons(
             merged[slug] = dict(entry)
             continue
         later = entry if entry["updated_at"] > current["updated_at"] else current
-        completed = "completed" in {entry["status"], current["status"]}
+        completed = keep_completed and "completed" in {entry["status"], current["status"]}
         merged[slug] = {**later, "status": "completed" if completed else later["status"]}
     return dict(sorted(merged.items()))
 

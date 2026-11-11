@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import 'account_progress_sync.dart';
 import 'course_feedback.dart';
 import 'course_feedback_widgets.dart';
 import 'course_models.dart';
@@ -134,7 +135,13 @@ class _LessonContentsState extends ConsumerState<_LessonContents> {
       // Progress is a convenience; the lesson reads without it.
       return;
     }
-    if (mounted) ref.invalidate(courseProgressProvider(course.slug));
+    if (!mounted) return;
+    ref.invalidate(courseProgressProvider(course.slug));
+    unawaited(
+      ref
+          .read(accountProgressSyncProvider)
+          .sync(AccountProgressSync.courses, course.slug),
+    );
   }
 
   @override
@@ -250,6 +257,11 @@ class _LessonBar extends ConsumerWidget {
         );
       }
       ref.invalidate(courseProgressProvider(slug));
+      unawaited(
+        ref
+            .read(accountProgressSyncProvider)
+            .sync(AccountProgressSync.courses, slug),
+      );
     }
 
     void open(CourseLesson? other) {

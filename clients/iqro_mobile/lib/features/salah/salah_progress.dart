@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../core/auth/account_scope.dart';
 import '../../core/storage/local_database.dart';
 import 'salah_models.dart';
 
@@ -75,6 +76,35 @@ class SalahCourseProgress {
 
   SalahLessonStatus statusOf(String lesson) =>
       lessons[lesson]?.status ?? SalahLessonStatus.notStarted;
+
+  /// Two copies as one, as the backend merges them: a passed lesson stays
+  /// passed, otherwise the later record wins.
+  SalahCourseProgress merge(SalahCourseProgress other) {
+    final merged = {...lessons};
+    for (final MapEntry(:key, :value) in other.lessons.entries) {
+      final current = merged[key];
+      if (current == null) {
+        merged[key] = value;
+        continue;
+      }
+      final at = value.updatedAt;
+      final later =
+          at != null &&
+              (current.updatedAt == null || at.isAfter(current.updatedAt!))
+          ? value
+          : current;
+      final completed =
+          current.status == SalahLessonStatus.completed ||
+          value.status == SalahLessonStatus.completed;
+      merged[key] = SalahLessonProgress(
+        status: completed ? SalahLessonStatus.completed : later.status,
+        stepSlug: later.stepSlug,
+        contentVersion: later.contentVersion,
+        updatedAt: later.updatedAt,
+      );
+    }
+    return SalahCourseProgress(merged);
+  }
 
   int completedCount(SalahCourseDocument document) => document.orderedLessons
       .where((lesson) => statusOf(lesson.slug) == SalahLessonStatus.completed)
@@ -165,6 +195,29 @@ class SalahProgressStore {
       updatedAt: _clock(),
     ),
   );
+
+  /// Merges a copy from the server into the local one as it is now: steps
+  /// saved while the request was on its way are kept.
+  Future<SalahCourseProgress> merge(
+    String course,
+    SalahCourseProgress remote, {
+    AccountScopeSnapshot? accountScope,
+  }) {
+    final result = _queue.then((_) async {
+      final current = SalahCourseProgress.fromJson(
+        await _database.readState(stateKey(course), accountScope: accountScope),
+      );
+      final next = current.merge(remote);
+      await _database.writeState(
+        stateKey(course),
+        next.toJson(),
+        accountScope: accountScope,
+      );
+      return next;
+    });
+    _queue = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
 
   Future<SalahCourseProgress> _update(
     String course,

@@ -33,6 +33,7 @@ import '../features/audio/player_backgrounds.dart';
 import '../features/audio/reciter_catalog.dart';
 import '../features/courses/course_feedback.dart';
 import '../features/courses/course_models.dart';
+import '../features/courses/account_progress_sync.dart';
 import '../features/courses/course_progress_store.dart';
 import '../features/courses/course_repository.dart';
 import '../features/courses/lesson_media_cache.dart';
@@ -1193,6 +1194,40 @@ final courseProgressProvider = FutureProvider.autoDispose
       ref.watch(activeAccountScopeKeyProvider);
       return ref.watch(courseProgressStoreProvider).read(course);
     });
+final accountProgressSyncProvider = Provider<AccountProgressSync>(
+  (ref) => AccountProgressSync(
+    save: (kind, course, body, {accountScope}) => ref
+        .read(apiClientProvider)
+        .put(
+          '/me/courses/progress/$kind/${Uri.encodeComponent(course)}',
+          data: body,
+          accountScope: accountScope,
+        ),
+    database: ref.watch(localDatabaseProvider),
+    session: () => ref.read(sessionProvider).valueOrNull,
+    merge: (kind, course, answer, accountScope) =>
+        kind == AccountProgressSync.salah
+        ? ref
+              .read(salahProgressStoreProvider)
+              .merge(
+                course,
+                SalahCourseProgress.fromJson(answer),
+                accountScope: accountScope,
+              )
+        : ref
+              .read(courseProgressStoreProvider)
+              .merge(
+                course,
+                CourseProgress.fromJson(answer),
+                accountScope: accountScope,
+              ),
+    onMerged: (kind, course) => ref.invalidate(
+      kind == AccountProgressSync.salah
+          ? salahProgressProvider(course)
+          : courseProgressProvider(course),
+    ),
+  ),
+);
 final coursePositionsProvider = FutureProvider.autoDispose
     .family<CourseVideoPositions, String>((ref, course) {
       ref.watch(activeAccountScopeKeyProvider);

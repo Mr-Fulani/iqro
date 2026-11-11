@@ -78,16 +78,25 @@ def test_progress_of_a_thematic_course_is_private_and_merged(
         url,
         {
             "lessons": {
-                "smysl-posta": _entry("in_progress", "", "2026-11-10T08:00:00.000Z"),
+                "smysl-posta": _entry("in_progress", "", "2026-11-10T06:00:00.000Z"),
                 "niyat": _entry("in_progress", "", "2026-11-10T09:00:00.000Z"),
             }
         },
         format="json",
     ).json()
+    # An older record of another device does not undo the later one.
     assert second["lessons"]["smysl-posta"]["status"] == "completed"
     assert second["lessons"]["niyat"]["status"] == "in_progress"
     assert api_client.get(url).json() == second
     assert LearnerProgress.objects.count() == 1
+
+    # The app lets the learner take «studied» back: the later record wins as it is.
+    third = api_client.put(
+        url,
+        {"lessons": {"smysl-posta": _entry("in_progress", "", "2026-11-10T11:00:00.000Z")}},
+        format="json",
+    ).json()
+    assert third["lessons"]["smysl-posta"]["status"] == "in_progress"
 
     for bad in (
         {"lessons": []},
@@ -111,6 +120,19 @@ def test_progress_of_the_prayer_course_is_kept_apart(
     assert saved.status_code == 200
     assert saved.json()["kind"] == "salah"
     assert saved.json()["lessons"]["fajr"]["step_slug"] == "fajr.r1.ruku"
+    # A passed lesson of the prayer course stays passed, whatever comes later.
+    url = _url("salah", "hanbali-umdah")
+    api_client.put(
+        url,
+        {"lessons": {"fajr": _entry("completed", "fajr.salam", "2026-11-10T09:00:00Z")}},
+        format="json",
+    )
+    reopened = api_client.put(
+        url,
+        {"lessons": {"fajr": _entry("in_progress", "fajr.r1.ruku", "2026-11-10T10:00:00Z")}},
+        format="json",
+    ).json()
+    assert reopened["lessons"]["fajr"]["status"] == "completed"
     assert api_client.get(_url("courses", "ramadan")).json()["lessons"] == {}
 
 

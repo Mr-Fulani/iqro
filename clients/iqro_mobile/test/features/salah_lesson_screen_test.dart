@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
@@ -1141,6 +1142,13 @@ class _MemoryProgressStore implements SalahProgressStore {
 
   @override
   Future<SalahCourseProgress> read(String course) async => progress;
+
+  @override
+  Future<SalahCourseProgress> merge(
+    String course,
+    SalahCourseProgress remote, {
+    AccountScopeSnapshot? accountScope,
+  }) async => progress = progress.merge(remote);
 
   @override
   Future<SalahCourseProgress> recordStep({

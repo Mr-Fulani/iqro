@@ -29,6 +29,7 @@ import {
 import { salahStepScenes } from "../lib/salah-3d";
 import { trackEvent } from "../lib/analytics";
 import { trackCourseEvent } from "../lib/course-feedback";
+import { useSalahProgressSync } from "../lib/use-salah-progress";
 import { useLessonOpened } from "./courses/useLessonOpened";
 import { type Salah3D, useSalah3D } from "./SalahStep3D";
 import { SalahStepNotes } from "./SalahStepNotes";
@@ -245,6 +246,7 @@ export function SalahStepPlayer({
   const { index, setIndex, go, onKeyDown } = useStepNavigation(steps.length, direction);
   const [ready, setReady] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const syncProgress = useSalahProgressSync();
   const [display, setDisplay] = useState<Display>(DEFAULT_DISPLAY);
   const [audioPlayerId] = useState(() => Symbol("salah-audio-player"));
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -351,6 +353,7 @@ export function SalahStepPlayer({
     writeSalahProgress(recordSalahStep(progress, lesson.slug, step.slug, courseVersion, { completed: true }));
     setCompleted(true);
     trackEvent("lesson_complete", { course: "salah", lesson: lesson.slug });
+    void syncProgress();
   };
 
   useEffect(() => {
