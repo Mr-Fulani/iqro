@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import 'foundation_mushaf_page.dart';
 import 'mushaf_paper.dart';
+import 'quran_models.dart';
 
 /// One ayah's words on a page of the selected Mushaf, in the page's own font.
 typedef MushafScriptWords = ({
@@ -133,6 +134,34 @@ MushafAyahScript? watchMushafAyahScript(
   }
   if (words.length != wordCount) return null;
   return MushafAyahScript(words: words, marker: marker, colored: colored);
+}
+
+/// How long a reader holds its text back for the Mushaf's script of its
+/// first screen. A page on the phone comes well within it; one that needs a
+/// slow network does not, and the text opens in the plain font.
+const mushafScriptWait = Duration(milliseconds: 600);
+
+/// Whether the script of the first screen of a reader opening at [ayah] has
+/// loaded, or will not: the screen is then drawn once, in the font it keeps.
+/// It looks at the ayah's pages and the page after, which the screen may
+/// run on to.
+bool watchMushafScriptSettled(WidgetRef ref, List<QuranAyah> items, int ayah) {
+  final versePages = ref.watch(mushafVersePagesProvider);
+  if (versePages.isLoading) return false;
+  final pages = <int>{};
+  for (final item in items) {
+    if (item.number < ayah) continue;
+    pages.addAll(
+      versePages.valueOrNull?['${item.surahNumber}:${item.number}'] ??
+          const <int>[],
+    );
+    if (pages.length > 1) break;
+  }
+  // Every page is asked for at once, not one after another.
+  return pages
+      .map((page) => ref.watch(mushafPageScriptProvider(page)).isLoading)
+      .toList()
+      .every((loading) => !loading);
 }
 
 /// The end of a Mushaf page between two ayahs of a reader: a thin line with

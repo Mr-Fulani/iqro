@@ -16,6 +16,7 @@ import 'mushaf_paper.dart';
 import 'mushaf_script.dart';
 import 'next_surah.dart';
 import 'quran_models.dart';
+import 'reader_anchored_list.dart';
 import 'reader_page_turn.dart';
 import 'reader_words.dart';
 import 'rub_mark.dart';
@@ -154,8 +155,12 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   double? _fontSize;
   double? _width;
   var _placed = false;
-  var _placing = false;
   var _jumping = false;
+
+  /// The text is on screen: the Mushaf's script of its first screen is in,
+  /// or was not to be had within [mushafScriptWait].
+  var _opened = false;
+  Timer? _scriptTimer;
 
   @override
   void initState() {
@@ -190,6 +195,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   @override
   void dispose() {
     _markTimer?.cancel();
+    _scriptTimer?.cancel();
     _rubMark
       ..removeListener(_onRubMark)
       ..dispose();
@@ -270,34 +276,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   }
 
   /// Brings [ayah]'s first word to the top of the screen.
-  Future<void> _place(List<QuranAyah> items, int ayah) async {
-    final index = items.indexWhere((item) => item.number == ayah);
-    if (index < 0 || !_scrollController.hasClients) return;
-    _placing = true;
-    try {
-      for (var attempt = 0; attempt < 6 && mounted; attempt++) {
-        final ayahContext = _ayahKeys[ayah]?.currentContext;
-        if (ayahContext != null && ayahContext.mounted) {
-          await Scrollable.ensureVisible(ayahContext);
-          await WidgetsBinding.instance.endOfFrame;
-          _alignTo(ayah);
-          return;
-        }
-        // Not built yet: jump near it, and look again.
-        final position = _scrollController.position;
-        _scrollController.jumpTo(
-          (position.maxScrollExtent * (index + 1) / (items.length + 1)).clamp(
-            0,
-            position.maxScrollExtent,
-          ),
-        );
-        await WidgetsBinding.instance.endOfFrame;
-      }
-    } finally {
-      _placing = false;
-    }
-  }
-
   void _alignTo(int ayah) {
     if (!mounted || !_scrollController.hasClients) return;
     final position = _scrollController.position;
@@ -359,7 +337,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   /// the way back, as the reader scrolls: the one the first line starts
   /// with, or the next one if it begins on that line too.
   void _updatePlace() {
-    if (_placing) return;
     final box = _viewportBox;
     if (box == null) return;
     // The right end of the first line: where an Arabic line starts.
@@ -382,9 +359,10 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   void _schedulePlace(List<QuranAyah> items) {
     if (_placed || items.isEmpty) return;
     _placed = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _place(items, widget.initialAyah);
+    // The list opens at the ayah: only its first word is put in place.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _alignTo(widget.initialAyah);
       final ayah = items
           .where((item) => item.number == widget.initialAyah)
           .firstOrNull;
@@ -402,6 +380,14 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         if (mounted) setState(() => _marked = null);
       });
     });
+  }
+
+  bool _scriptSettled(List<QuranAyah> items) {
+    if (_opened) return true;
+    _scriptTimer ??= Timer(mushafScriptWait, () {
+      if (mounted) setState(() => _opened = true);
+    });
+    return _opened = watchMushafScriptSettled(ref, items, widget.initialAyah);
   }
 
   void _leave() => widget.onLeave(_ayah);
@@ -519,7 +505,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                       onRetry: () =>
                           ref.invalidate(ayahsProvider(widget.surah)),
                     ),
-                    data: (items) => _text(items, size, versePages),
+                    data: (items) => _scriptSettled(items)
+                        ? _text(items, size, versePages)
+                        : const SizedBox.expand(),
                   ),
                 ),
                 SizedBox(
@@ -622,9 +610,16 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                       );
                       return false;
                     },
-                    child: ListView.builder(
+                    child: ReaderAnchoredList(
                       key: _viewportKey,
                       controller: _scrollController,
+                      // The surah's title comes with its first ayah.
+                      initialIndex: widget.initialAyah <= 1
+                          ? 0
+                          : items.indexWhere(
+                                  (item) => item.number == widget.initialAyah,
+                                ) +
+                                1,
                       padding: EdgeInsets.fromLTRB(
                         side,
                         0,
