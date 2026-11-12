@@ -15,6 +15,7 @@ from quran_backend.modules.audio.quran_foundation import (
     QuranFoundationError,
     QuranFoundationTafsirSyncResult,
 )
+from quran_backend.modules.tafsirs import quran_foundation_sync
 from quran_backend.modules.tafsirs.models import (
     AyahTafsir,
     QuranFoundationTafsirSyncState,
@@ -400,3 +401,114 @@ def test_public_tafsir_catalog_and_surah_api(api_client: APIClient) -> None:
     assert "source_text" not in surah.json()[0]
     # The provider HTML is never serialized, so it is not read from the database.
     assert not any("source_text" in query["sql"] for query in queries.captured_queries)
+
+
+END_ANCHORED_VERSE_KEYS = {"1:1", "1:2", "2:1", "2:2", "2:3"}
+
+
+def _end_anchored_snapshot() -> dict[str, Any]:
+    # Russian Al-Sa'di (170): the text of surah 111 is published as 111:5-112:3
+    # and the text of surah 112 as 112:4-113:4, so 112:1-3 show surah 111.
+    surah_one = {
+        "group_tafsir_id": 1002,
+        "group_verse_key_from": "1:2",
+        "group_verse_key_to": "2:2",
+        "group_verses_count": 3,
+        "start_verse_id": 2,
+        "end_verse_id": 4,
+    }
+    snapshot = _snapshot()
+    snapshot["records"] = [
+        _record(id=1002, verse_id=2, verse_key="1:2", text="Surah one", **surah_one),
+        _record(id=1003, verse_id=3, verse_key="2:1", text="", **surah_one),
+        _record(id=1004, verse_id=4, verse_key="2:2", text="", **surah_one),
+        _record(
+            id=1005,
+            verse_id=5,
+            verse_key="2:3",
+            group_tafsir_id=1005,
+            group_verse_key_from="2:3",
+            group_verse_key_to="2:3",
+            group_verses_count=1,
+            start_verse_id=5,
+            end_verse_id=5,
+            text="Surah two",
+        ),
+    ]
+    return snapshot
+
+
+@pytest.mark.django_db
+@override_settings(QURAN_QF_ENV="production")
+def test_bootstrap_moves_end_anchored_texts_back_onto_their_passages(
+    api_client: APIClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(quran_foundation_sync, "END_ANCHORED_TAFSIR_IDS", {16})
+
+    sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(snapshot=_end_anchored_snapshot()),
+        expected_verse_keys=END_ANCHORED_VERSE_KEYS,
+    )
+
+    surah_one = api_client.get("/api/v1/quran/tafsirs/16/surahs/1").json()
+    assert [(row["verse_key"], row["text"]) for row in surah_one] == [("1:2", "Surah one")]
+    assert (surah_one[0]["start_verse_key"], surah_one[0]["end_verse_key"]) == ("1:1", "1:2")
+    surah_two = api_client.get("/api/v1/quran/tafsirs/16/surahs/2").json()
+    assert [(row["verse_key"], row["text"]) for row in surah_two] == [
+        ("2:1", "Surah two"),
+        ("2:2", "Surah two"),
+        ("2:3", "Surah two"),
+    ]
+    assert {(row["start_verse_key"], row["end_verse_key"]) for row in surah_two} == {("2:1", "2:3")}
+    assert {row["group_verses_count"] for row in surah_two} == {3}
+    assert TafsirEditionVersion.objects.get().covered_ayah_count == 5
+
+
+@pytest.mark.django_db
+def test_end_anchored_edition_keeps_ranges_that_stay_inside_a_surah(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(quran_foundation_sync, "END_ANCHORED_TAFSIR_IDS", {16})
+
+    sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(),
+        expected_verse_keys={"1:1", "1:2"},
+    )
+
+    tafsir = AyahTafsir.objects.get()
+    assert (tafsir.verse_key, tafsir.start_verse_key, tafsir.end_verse_key) == ("1:1", "1:1", "1:2")
+
+
+@pytest.mark.django_db
+def test_force_reimports_an_unchanged_snapshot_with_the_current_rules(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def sync(*, force: bool) -> None:
+        sync_quran_foundation_tafsirs(
+            resource_ids=(16,),
+            client=FakeTafsirClient(
+                snapshot=_end_anchored_snapshot(),
+                expected_token="" if force else "tafsir-checkpoint-1",
+            ),
+            force=force,
+            expected_verse_keys=END_ANCHORED_VERSE_KEYS,
+        )
+
+    def text_of_2_1() -> str:
+        row = AyahTafsir.objects.get(verse_key="2:1")
+        return AyahTafsir.objects.get(source_id=row.provider_group_id).text
+
+    sync(force=True)
+    assert text_of_2_1() == "Surah one"
+    monkeypatch.setattr(quran_foundation_sync, "END_ANCHORED_TAFSIR_IDS", {16})
+
+    sync(force=False)
+    assert text_of_2_1() == "Surah one"
+
+    sync(force=True)
+    assert text_of_2_1() == "Surah two"
+    assert TafsirEditionVersion.objects.count() == 1
+    assert AyahTafsir.objects.count() == 4

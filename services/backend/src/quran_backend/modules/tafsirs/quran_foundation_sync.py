@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from bisect import bisect_left
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
@@ -40,6 +41,10 @@ RELOAD_MUTATIONS = {
     "ROW_UPDATE",
     "ROW_DELETE",
 }
+# Editions whose provider ranges start at the last ayah of the passage a text
+# explains and run forward to the ayah before the next text. Russian Al-Sa'di
+# (170): the Tafsir of surah 111 is published as 111:5-112:3.
+END_ANCHORED_TAFSIR_IDS = frozenset({170})
 
 
 class QuranFoundationTafsirSource(Protocol):
@@ -165,6 +170,7 @@ def _sync_tafsir_resource(  # noqa: PLR0913
             result=result,
             expected_verse_keys=verse_keys or set(),
             current=current,
+            force=force,
         )
     except QuranFoundationError:
         state.consecutive_failures += 1
@@ -225,6 +231,7 @@ def _apply_catalog(  # noqa: PLR0913
     result: QuranFoundationTafsirSyncResult,
     expected_verse_keys: set[str],
     current: datetime,
+    force: bool = False,
 ) -> tuple[int, int, int]:
     TafsirEdition.objects.filter(
         environment=environment,
@@ -241,9 +248,10 @@ def _apply_catalog(  # noqa: PLR0913
             snapshot=snapshot,
             expected_verse_keys=expected_verse_keys,
             current=current,
+            force=force,
         )
         versions_created += int(created)
-        records_imported += record_count if created else 0
+        records_imported += record_count if created or force else 0
 
     state = QuranFoundationTafsirSyncState.objects.select_for_update().get(
         environment=environment,
@@ -273,13 +281,14 @@ def _apply_catalog(  # noqa: PLR0913
     return editions, versions_created, records_imported
 
 
-def _replace_snapshot(
+def _replace_snapshot(  # noqa: PLR0913
     *,
     environment: str,
     metadata: dict[str, Any],
     snapshot: dict[str, Any],
     expected_verse_keys: set[str],
     current: datetime,
+    force: bool = False,
 ) -> tuple[bool, int]:
     resource_id = _positive_int(metadata.get("id"), "Tafsir ID")
     if _positive_int(snapshot.get("resource_id"), "snapshot resource ID") != resource_id:
@@ -301,6 +310,8 @@ def _replace_snapshot(
         seen_verse_keys.add(row["verse_key"])
         normalized.append(row)
     normalized = _resolve_grouped_tafsir_texts(normalized)
+    if resource_id in END_ANCHORED_TAFSIR_IDS:
+        normalized = _reanchor_end_anchored_ranges(normalized, ordered_keys)
     if not normalized:
         raise QuranFoundationError("Quran.Foundation Tafsir snapshot has no Tafsir text.")
     covered_ranks = {
@@ -366,6 +377,17 @@ def _replace_snapshot(
         )
     elif version.status != TafsirPublicationStatus.PUBLISHED:
         raise QuranFoundationError("An existing Tafsir version is not published.")
+    elif force:
+        # The provider snapshot is unchanged, so no new version can be made;
+        # --force re-reads it with the current import rules instead.
+        version.ayah_tafsirs.all().delete()
+        AyahTafsir.objects.bulk_create(
+            [AyahTafsir(edition_version=version, **row) for row in normalized],
+            batch_size=250,
+        )
+        version.record_count = len(normalized)
+        version.covered_ayah_count = len(covered_ranks)
+        version.save(update_fields=["record_count", "covered_ayah_count", "updated_at"])
     edition.active_version = version
     edition.is_available = True
     edition.save(update_fields=["active_version", "is_available", "updated_at"])
@@ -488,6 +510,81 @@ def _resolve_grouped_tafsir_texts(rows: list[dict[str, Any]]) -> list[dict[str, 
             f"Quran.Foundation returned an unresolved grouped Tafsir text for {listed}."
         )
     return resolved
+
+
+def _reanchor_end_anchored_ranges(
+    rows: list[dict[str, Any]],
+    ordered_keys: list[str],
+) -> list[dict[str, Any]]:
+    """Move each text back onto the passage it explains.
+
+    The provider attaches a text to the last ayah of its passage and extends
+    the range forward, so every ayah before that one shows the previous text.
+    A range that crosses a surah boundary is the sign of this; without one the
+    snapshot is left as it is. The passage of a text is then every ayah after
+    the previous text's first ayah up to its own first ayah.
+    """
+
+    if all(row["start_surah_number"] == row["end_surah_number"] for row in rows):
+        return rows
+
+    texts: dict[int, tuple[str, str]] = {}
+    for row in rows:
+        if not row["text"]:
+            continue
+        first = texts.setdefault(row["start_verse_id"], (row["text"], row["source_text"]))
+        if first[0] != row["text"]:
+            raise QuranFoundationError(
+                f"Quran.Foundation returned two Tafsir texts starting at {row['start_verse_key']}."
+            )
+    anchors = sorted(texts)
+    verse_rank = {key: index for index, key in enumerate(ordered_keys, start=1)}
+    passages: dict[int, list[dict[str, Any]]] = {}
+    for row in sorted(rows, key=lambda row: verse_rank[row["verse_key"]]):
+        position = bisect_left(anchors, verse_rank[row["verse_key"]])
+        if position == len(anchors):
+            raise QuranFoundationError(
+                f"Quran.Foundation Tafsir has no text to re-anchor {row['verse_key']} to."
+            )
+        passages.setdefault(position, []).append(row)
+
+    reanchored: list[dict[str, Any]] = []
+    for position, members in passages.items():
+        start_rank = anchors[position - 1] + 1 if position else 1
+        end_rank = anchors[position]
+        start_verse_key = ordered_keys[start_rank - 1]
+        end_verse_key = ordered_keys[end_rank - 1]
+        start_surah_number, start_ayah_number = _parse_verse_key(start_verse_key)
+        end_surah_number, end_ayah_number = _parse_verse_key(end_verse_key)
+        if start_surah_number != end_surah_number:
+            raise QuranFoundationError(
+                "Quran.Foundation Tafsir cannot be re-anchored: "
+                f"{start_verse_key}-{end_verse_key} crosses a surah."
+            )
+        holder = members[-1]
+        text, source_text = texts[end_rank]
+        for row in members:
+            is_holder = row is holder
+            reanchored.append(
+                {
+                    **row,
+                    "provider_group_id": (
+                        row["provider_group_id"] if is_holder else holder["source_id"]
+                    ),
+                    "start_verse_id": start_rank,
+                    "end_verse_id": end_rank,
+                    "start_verse_key": start_verse_key,
+                    "end_verse_key": end_verse_key,
+                    "start_surah_number": start_surah_number,
+                    "start_ayah_number": start_ayah_number,
+                    "end_surah_number": end_surah_number,
+                    "end_ayah_number": end_ayah_number,
+                    "group_verses_count": end_rank - start_rank + 1,
+                    "text": text if is_holder else "",
+                    "source_text": source_text if is_holder else "",
+                }
+            )
+    return reanchored
 
 
 def _published_quran_verse_keys() -> set[str]:
