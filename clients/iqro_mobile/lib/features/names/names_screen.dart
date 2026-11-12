@@ -122,7 +122,12 @@ class _WheelState extends ConsumerState<_Wheel> {
     final name = _document.names[index];
     // The name is not said over the Quran that plays.
     if (_soundOn && !ref.read(audioControllerProvider).playing) {
-      unawaited(ref.read(namesVoiceProvider).play(name, album: _album));
+      // The wheel says the name alone; its meaning is on the card.
+      unawaited(
+        ref
+            .read(namesVoiceProvider)
+            .play(name, album: _album, language: NamesVoice.nameOnly),
+      );
     }
     final CourseProgress progress;
     try {

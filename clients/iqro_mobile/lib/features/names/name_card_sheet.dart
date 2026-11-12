@@ -246,7 +246,13 @@ class _NameCardState extends ConsumerState<_NameCard> {
                   key: const ValueKey('names-listen'),
                   onPressed: sounding
                       ? voice.stop
-                      : () => voice.play(name, album: widget.album),
+                      : () => voice.play(
+                          name,
+                          album: widget.album,
+                          language: Localizations.localeOf(
+                            context,
+                          ).languageCode,
+                        ),
                   icon: Icon(
                     sounding ? Icons.stop_rounded : Icons.volume_up_rounded,
                   ),

@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
 import type { DivineName } from "@/lib/names";
-import { RECORDED_NAMES } from "@/lib/names-audio";
+import { NAME_ONLY, RECORDED_NAMES } from "@/lib/names-audio";
 import { latestRecitationsByVariant, tajweedCourseRecitation, wordTimingFallbackRecitations } from "@/lib/reciter-catalog";
 import { wordTiming } from "@/lib/tajweed";
 import { loadAyahAudio, useClipPlayer, type Clip } from "../TajweedAudio";
@@ -59,14 +59,16 @@ export type NameVoice = {
   missing: string | null;
   /** Whether the card has «Слушать» for the name. */
   canSay: (name: DivineName) => boolean;
-  play: (name: DivineName) => Promise<void>;
+  /** Says the name with its meaning in `language`; `ar` is the name alone. */
+  play: (name: DivineName, language?: string) => Promise<void>;
   stop: () => void;
 };
 
 /**
- * Says a name. A name with a recording of its own (`public/names-audio/`) sounds
- * at once, in every language; another name is said by a reciter, as a word of
- * its ayah. A name with neither stays silent.
+ * Says a name from the recordings in `public/names-audio/<language>/`: the name
+ * with its meaning in the interface language, or the name alone. A name without
+ * a recording is said by a reciter, as a word of its ayah; a name with neither
+ * stays silent.
  */
 export function useNameVoice(): NameVoice {
   const [slug, setSlug] = useState<string | null>(null);
@@ -87,14 +89,14 @@ export function useNameVoice(): NameVoice {
     setRecording(false);
   }, [stopClip]);
 
-  const play = useCallback(async (name: DivineName) => {
+  const play = useCallback(async (name: DivineName, language: string = NAME_ONLY) => {
     const audio = element.current;
     if (RECORDED_NAMES.has(name.slug) && audio) {
       stopClip();
       setMissing(null);
       setSlug(name.slug);
       setRecording(true);
-      audio.src = `/names-audio/${name.slug}.mp3`;
+      audio.src = `/names-audio/${language}/${name.slug}.mp3`;
       audio.playbackRate = 1;
       try {
         await audio.play();

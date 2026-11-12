@@ -120,17 +120,20 @@ test("the wheel goes round and takes the short way", () => {
   assert.equal(wheelTarget(-1, 0, 99), 0);
 });
 
-test("every recorded name has its file and belongs to the list", () => {
-  const files = readdirSync(new URL("../public/names-audio/", import.meta.url))
-    .filter((file) => file.endsWith(".mp3"))
-    .map((file) => file.replace(".mp3", ""));
-  assert.deepEqual(files.sort(), [...RECORDED_NAMES].sort());
+test("every name of the list is recorded in every language", () => {
   const list = JSON.parse(
     readFileSync(
       new URL("../../backend/src/quran_backend/modules/names/data/asma-al-husna.json", import.meta.url),
       "utf8",
     ),
   ) as { names: { slug: string }[] };
-  const slugs = new Set(list.names.map((name) => name.slug));
-  assert.deepEqual(files.filter((slug) => !slugs.has(slug)), []);
+  const slugs = list.names.map((name) => name.slug).sort();
+  assert.deepEqual([...RECORDED_NAMES].sort(), slugs);
+  // The name with its meaning in ru, en and tr; the name alone in `ar`.
+  for (const language of ["ar", "ru", "en", "tr"]) {
+    const files = readdirSync(new URL(`../public/names-audio/${language}/`, import.meta.url))
+      .filter((file) => file.endsWith(".mp3"))
+      .map((file) => file.replace(".mp3", ""));
+    assert.deepEqual(files.sort(), slugs, language);
+  }
 });

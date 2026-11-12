@@ -96,7 +96,7 @@ export function NameCard({
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => (sounding ? voice.stop() : void voice.play(name))}
+            onClick={() => (sounding ? voice.stop() : void voice.play(name, locale))}
             data-testid="names-listen"
           >
             {sounding ? t("names.stop") : t("names.listen")}

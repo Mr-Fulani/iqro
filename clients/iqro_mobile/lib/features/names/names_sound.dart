@@ -104,10 +104,11 @@ class AssetNamesClipPlayer implements NamesClipPlayer {
   Future<void> dispose() async => _player?.dispose();
 }
 
-/// Says a name. A name with a recording of its own (`assets/names_audio/`)
-/// sounds at once, in every language; another name is said by a reciter: the
-/// word of its ayah, cut from the surah track by the word timings, as
-/// «Прослушать слово» in the Mushaf does.
+/// Says a name from the recordings in `assets/names_audio/<language>/`: the
+/// name with its meaning in the interface language, or the name alone (the
+/// `ar` folder). They sound at once and without a network. A name without a
+/// recording is said by a reciter: the word of its ayah, cut from the surah
+/// track by the word timings, as «Прослушать слово» in the Mushaf does.
 class NamesVoice extends ChangeNotifier {
   NamesVoice({
     required AudioController Function() audio,
@@ -138,7 +139,10 @@ class NamesVoice extends ChangeNotifier {
 
   static const _folder = 'assets/names_audio/';
 
-  /// The slugs of the names recorded in the app's assets.
+  /// The folder of the name alone, without a meaning.
+  static const nameOnly = 'ar';
+
+  /// The recordings in the app's assets, as `<language>/<slug>`.
   static Future<Set<String>> recordedNames(AssetBundle bundle) async {
     final manifest = await AssetManifest.loadFromAssetBundle(bundle);
     return <String>{
@@ -146,6 +150,15 @@ class NamesVoice extends ChangeNotifier {
         if (asset.startsWith(_folder) && asset.endsWith('.mp3'))
           asset.substring(_folder.length, asset.length - 4),
     };
+  }
+
+  /// The recording of [name] for [language], else the name alone.
+  String? _recording(DivineName name, String language) {
+    for (final folder in <String>[language, nameOnly]) {
+      final key = '$folder/${name.slug}';
+      if (_recorded.contains(key)) return key;
+    }
+    return null;
   }
 
   /// The slug of a name no reciter has a recording of, once it was asked for.
@@ -156,7 +169,7 @@ class NamesVoice extends ChangeNotifier {
 
   /// Whether the card has «Слушать» for [name].
   bool canSay(DivineName name) =>
-      _recorded.contains(name.slug) || name.hasVoice;
+      _recording(name, nameOnly) != null || name.hasVoice;
 
   static String clipId(DivineName name) => 'names:${name.slug}';
 
@@ -205,13 +218,19 @@ class NamesVoice extends ChangeNotifier {
     });
   }
 
-  /// Plays [name]; a name with nothing to play stays silent.
-  Future<void> play(DivineName name, {required String album}) async {
-    if (_recorded.contains(name.slug)) {
+  /// Plays [name] with its meaning in [language] (`ar`: the name alone); a
+  /// name with nothing to play stays silent.
+  Future<void> play(
+    DivineName name, {
+    required String album,
+    required String language,
+  }) async {
+    final recording = _recording(name, language);
+    if (recording != null) {
       _setMissing(null);
       _setPlaying(name.slug);
       try {
-        await _clipPlayer.play('$_folder${name.slug}.mp3');
+        await _clipPlayer.play('$_folder$recording.mp3');
       } on Object {
         // No sound on this device.
       }

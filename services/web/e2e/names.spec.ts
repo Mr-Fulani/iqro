@@ -69,9 +69,11 @@ test("the wheel turns by keys and by a tap on its centre; the name under it open
   await card.getByTestId("names-card-next").click();
   await expect(card.getByRole("heading", { level: 2 })).toHaveText("Аль-Джамиль");
   await expect(card).toContainText("Источник: Пример: другая книга для этого имени");
-  // Neither in the Quran nor recorded: no link and no «Слушать».
+  // A name from the Sunnah: no ayah to open, but its recording plays, with the meaning in the site's language.
   await expect(card.getByTestId("names-ayah")).toHaveCount(0);
-  await expect(card.getByTestId("names-listen")).toHaveCount(0);
+  const recording = page.waitForRequest((request) => request.url().endsWith("/names-audio/ru/al-jamil.mp3"));
+  await card.getByTestId("names-listen").click();
+  await recording;
   await expect(dial).toHaveAttribute("aria-valuenow", "4");
   await card.getByTestId("names-card-next").click();
   await expect(card.getByRole("heading", { level: 2 })).toHaveText("Ар-Рахман");

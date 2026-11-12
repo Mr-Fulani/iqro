@@ -114,7 +114,10 @@ flutter:
     # The click of the Names of Allah wheel, generated for the app (45 ms).
     - assets/sounds/names_tick.wav
     # The names said aloud, cut from the owner's recordings (docs/names-of-allah).
-    - assets/names_audio/
+    - assets/names_audio/ar/
+    - assets/names_audio/ru/
+    - assets/names_audio/en/
+    - assets/names_audio/tr/
 
   # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to
   # Arabic, ASCII digits and punctuation for Uthmani Quran and dua text.

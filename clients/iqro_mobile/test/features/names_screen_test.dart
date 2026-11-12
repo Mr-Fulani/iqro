@@ -33,7 +33,7 @@ void main() {
       expect(find.byKey(const ValueKey('names-card')), findsNothing);
       expect(harness.click.count, 1);
       // The needle stopped on the name: it is seen, and the reciter says it.
-      expect(harness.voice.played, <String>['ar-rahim']);
+      expect(harness.voice.played, <String>['ar-rahim@ar']);
       expect(_seen(tester), '1 из 4');
       expect(harness.store.progress.lessons['ar-rahim']!.completed, isFalse);
       expect(tester.takeException(), isNull);
@@ -61,7 +61,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_readout('Ар-Рахим'), findsOneWidget);
-    expect(harness.voice.played, <String>['ar-rahim']);
+    expect(harness.voice.played, <String>['ar-rahim@ar']);
     expect(tester.takeException(), isNull);
   });
 
@@ -133,7 +133,7 @@ void main() {
     harness.voice.played.clear();
     await tester.tap(listen);
     await tester.pump();
-    expect(harness.voice.played, <String>['ar-rahman']);
+    expect(harness.voice.played, <String>['ar-rahman@ru']);
 
     // «В Коране» opens the ayah in the reader.
     await tester.ensureVisible(find.byKey(const ValueKey('names-ayah')));
@@ -384,8 +384,12 @@ class _Voice extends ChangeNotifier implements NamesVoice {
   bool canSay(DivineName name) => name.hasVoice || name.slug == 'al-jamil';
 
   @override
-  Future<void> play(DivineName name, {required String album}) async {
-    if (canSay(name)) played.add(name.slug);
+  Future<void> play(
+    DivineName name, {
+    required String album,
+    required String language,
+  }) async {
+    if (canSay(name)) played.add('${name.slug}@$language');
   }
 
   @override
