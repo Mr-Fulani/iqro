@@ -678,6 +678,150 @@ abstract class AppLocalizations {
   /// **'Names of Allah'**
   String get namesOfAllah;
 
+  /// No description provided for @namesSoonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This section is being prepared'**
+  String get namesSoonTitle;
+
+  /// No description provided for @namesSoonText.
+  ///
+  /// In en, this message translates to:
+  /// **'The list of names is being checked against the books. It will appear here soon.'**
+  String get namesSoonText;
+
+  /// No description provided for @namesSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get namesSound;
+
+  /// No description provided for @namesLabelsGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Labels on the wheel'**
+  String get namesLabelsGroup;
+
+  /// No description provided for @namesLabelsLocale.
+  ///
+  /// In en, this message translates to:
+  /// **'Eng'**
+  String get namesLabelsLocale;
+
+  /// No description provided for @namesSeen.
+  ///
+  /// In en, this message translates to:
+  /// **'Seen'**
+  String get namesSeen;
+
+  /// No description provided for @namesSeenCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{seen} of {total}'**
+  String namesSeenCount(int seen, int total);
+
+  /// No description provided for @namesWheelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Wheel of names: left and right arrows'**
+  String get namesWheelLabel;
+
+  /// No description provided for @namesNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next name'**
+  String get namesNext;
+
+  /// No description provided for @namesOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'of {total}'**
+  String namesOfTotal(int total);
+
+  /// No description provided for @namesOpenCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the card'**
+  String get namesOpenCard;
+
+  /// No description provided for @namesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the wheel with a finger. A tap on the centre moves to the next name. Tap the name under the wheel to open its card.'**
+  String get namesHint;
+
+  /// No description provided for @namesCardNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Name {number} of {total}'**
+  String namesCardNumber(int number, int total);
+
+  /// No description provided for @namesListen.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen'**
+  String get namesListen;
+
+  /// No description provided for @namesStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get namesStop;
+
+  /// No description provided for @namesLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Learned'**
+  String get namesLearned;
+
+  /// No description provided for @namesMarkLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as learned'**
+  String get namesMarkLearned;
+
+  /// No description provided for @namesNoRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'The recording is not available now. Check your connection and try again.'**
+  String get namesNoRecording;
+
+  /// No description provided for @namesTafsir.
+  ///
+  /// In en, this message translates to:
+  /// **'Explanation'**
+  String get namesTafsir;
+
+  /// No description provided for @namesSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: {source}'**
+  String namesSource(String source);
+
+  /// No description provided for @namesInQuran.
+  ///
+  /// In en, this message translates to:
+  /// **'In the Quran'**
+  String get namesInQuran;
+
+  /// No description provided for @namesListSource.
+  ///
+  /// In en, this message translates to:
+  /// **'List of names: {source}'**
+  String namesListSource(String source);
+
+  /// No description provided for @namesPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get namesPrevious;
+
+  /// No description provided for @namesFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get namesFollowing;
+
   /// No description provided for @soon.
   ///
   /// In en, this message translates to:

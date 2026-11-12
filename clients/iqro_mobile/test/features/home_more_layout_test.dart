@@ -170,6 +170,10 @@ void main() {
                   path: '/notes',
                   builder: (_, _) => const Scaffold(body: Text('notes-opened')),
                 ),
+                GoRoute(
+                  path: '/names',
+                  builder: (_, _) => const Scaffold(body: Text('names-opened')),
+                ),
               ],
             );
             addTearDown(router.dispose);
@@ -195,15 +199,18 @@ void main() {
             final names = find.byKey(const ValueKey('more-names-of-allah'));
             await tester.ensureVisible(names);
             await tester.pumpAndSettle();
-            for (final text in <String>[l10n.namesOfAllah, l10n.soon]) {
-              expect(
-                find.descendant(of: names, matching: find.text(text)),
-                findsOneWidget,
-              );
-            }
+            expect(
+              find.descendant(
+                of: names,
+                matching: find.text(l10n.namesOfAllah),
+              ),
+              findsOneWidget,
+            );
             await tester.tap(names);
             await tester.pumpAndSettle();
-            expect(find.byType(MoreToolsGrid), findsOneWidget);
+            expect(find.text('names-opened'), findsOneWidget);
+            router.go('/');
+            await tester.pumpAndSettle();
             final notes = find.text(l10n.notes);
             await tester.ensureVisible(notes);
             await tester.pumpAndSettle();

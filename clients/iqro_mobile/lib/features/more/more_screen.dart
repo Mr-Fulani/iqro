@@ -252,6 +252,7 @@ class MoreToolsGrid extends StatelessWidget {
         art: 'quran',
         title: context.l10n.namesOfAllah,
         color: context.iqroColors.panelSoft,
+        onTap: () => context.push('/names'),
       ),
     ],
   );
@@ -264,7 +265,7 @@ class _ToolCard extends StatelessWidget {
     required this.title,
     required this.color,
     this.hint,
-    this.onTap,
+    required this.onTap,
   });
 
   /// A key of the shared topic illustrations (`dua-topic-icons.json`).
@@ -275,13 +276,10 @@ class _ToolCard extends StatelessWidget {
   /// Read out by screen readers after the title.
   final String? hint;
 
-  /// Null for a section that is announced but not open yet: the card shows
-  /// "Soon" instead of the arrow and does not react to taps.
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final soon = onTap == null;
     final card = IqroCard(
       color: color,
       borderColor: Colors.transparent,
@@ -305,15 +303,7 @@ class _ToolCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
-          if (soon)
-            Text(
-              context.l10n.soon,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: context.iqroColors.gold),
-            )
-          else
-            const Icon(Icons.arrow_forward, size: 18),
+          const Icon(Icons.arrow_forward, size: 18),
         ],
       ),
     );

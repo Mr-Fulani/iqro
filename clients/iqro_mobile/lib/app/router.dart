@@ -29,6 +29,7 @@ import '../features/quran/next_surah.dart';
 import '../features/quran/reader_page_turn.dart';
 import '../features/quran/reader_screen.dart';
 import '../features/reminders/reminders_screen.dart';
+import '../features/names/names_screen.dart';
 import '../features/salah/salah_home_screen.dart';
 import '../features/salah/salah_lesson_screen.dart';
 import '../features/settings/settings_screen.dart';
@@ -294,6 +295,7 @@ GoRouter createRouter({required bool onboardingComplete}) {
           );
         },
       ),
+      GoRoute(path: '/names', builder: (context, state) => const NamesScreen()),
       GoRoute(
         path: '/salah',
         builder: (context, state) => const AudioNavigationBoundary(

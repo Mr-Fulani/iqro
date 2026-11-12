@@ -89,9 +89,15 @@ class CourseVideoPositions {
 /// Keeps course progress in `app_state` under `courses.progress.<course>`
 /// and video positions under `courses.position.<course>`.
 class CourseProgressStore {
-  CourseProgressStore(this._database, {DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  CourseProgressStore(
+    this._database, {
+    this.kind = 'courses',
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
 
+  /// The first part of the progress key. The Names of Allah keep their marks
+  /// in the same format under `names.progress.<collection>`.
+  final String kind;
   final LocalDatabase _database;
   final DateTime Function() _clock;
 
@@ -100,10 +106,12 @@ class CourseProgressStore {
 
   static String stateKey(String course) => 'courses.progress.$course';
 
+  String _key(String course) => '$kind.progress.$course';
+
   static String positionKey(String course) => 'courses.position.$course';
 
   Future<CourseProgress> read(String course) async =>
-      CourseProgress.fromJson(await _database.readState(stateKey(course)));
+      CourseProgress.fromJson(await _database.readState(_key(course)));
 
   Future<CourseVideoPositions> readPositions(String course) async =>
       CourseVideoPositions.fromJson(
@@ -170,7 +178,7 @@ class CourseProgressStore {
     AccountScopeSnapshot? accountScope,
   }) => _enqueue(() async {
     final current = CourseProgress.fromJson(
-      await _database.readState(stateKey(course), accountScope: accountScope),
+      await _database.readState(_key(course), accountScope: accountScope),
     );
     final next = CourseProgress({
       ...current.lessons,
@@ -182,7 +190,7 @@ class CourseProgressStore {
           key: value,
     });
     await _database.writeState(
-      stateKey(course),
+      _key(course),
       next.toJson(),
       accountScope: accountScope,
     );
@@ -197,7 +205,7 @@ class CourseProgressStore {
   ) => _enqueue(() async {
     final scope = await _database.captureAccount();
     final current = CourseProgress.fromJson(
-      await _database.readState(stateKey(course), accountScope: scope),
+      await _database.readState(_key(course), accountScope: scope),
     );
     final next = CourseProgress({
       ...current.lessons,
@@ -211,7 +219,7 @@ class CourseProgressStore {
       ),
     });
     await _database.writeState(
-      stateKey(course),
+      _key(course),
       next.toJson(),
       accountScope: scope,
     );

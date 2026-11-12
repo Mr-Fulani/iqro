@@ -345,6 +345,91 @@ class AppLocalizationsTr extends AppLocalizations {
   String get namesOfAllah => 'Esmâü\'l-Hüsnâ';
 
   @override
+  String get namesSoonTitle => 'Bölüm hazırlanıyor';
+
+  @override
+  String get namesSoonText =>
+      'İsimlerin listesi kitaplarla karşılaştırılıyor. Yakında burada olacak.';
+
+  @override
+  String get namesSound => 'Ses';
+
+  @override
+  String get namesLabelsGroup => 'Çarktaki yazılar';
+
+  @override
+  String get namesLabelsLocale => 'Tür';
+
+  @override
+  String get namesSeen => 'Geçildi';
+
+  @override
+  String namesSeenCount(int seen, int total) {
+    return '$seen / $total';
+  }
+
+  @override
+  String get namesWheelLabel => 'İsimler çarkı: sol ve sağ ok tuşları';
+
+  @override
+  String get namesNext => 'Sonraki isim';
+
+  @override
+  String namesOfTotal(int total) {
+    return '/ $total';
+  }
+
+  @override
+  String get namesOpenCard => 'Kartı aç';
+
+  @override
+  String get namesHint =>
+      'Çarkı parmağınızla çevirin. Ortaya dokunmak sonraki isme geçer. Kartı açmak için çarkın altındaki isme dokunun.';
+
+  @override
+  String namesCardNumber(int number, int total) {
+    return 'İsim $number / $total';
+  }
+
+  @override
+  String get namesListen => 'Dinle';
+
+  @override
+  String get namesStop => 'Durdur';
+
+  @override
+  String get namesLearned => 'Öğrenildi';
+
+  @override
+  String get namesMarkLearned => 'Öğrenildi olarak işaretle';
+
+  @override
+  String get namesNoRecording =>
+      'Kayıt şu anda kullanılamıyor. Bağlantınızı kontrol edip tekrar deneyin.';
+
+  @override
+  String get namesTafsir => 'Açıklama';
+
+  @override
+  String namesSource(String source) {
+    return 'Kaynak: $source';
+  }
+
+  @override
+  String get namesInQuran => 'Kur\'an\'da';
+
+  @override
+  String namesListSource(String source) {
+    return 'İsimlerin listesi: $source';
+  }
+
+  @override
+  String get namesPrevious => 'Önceki';
+
+  @override
+  String get namesFollowing => 'Sonraki';
+
+  @override
   String get soon => 'Yakında';
 
   @override
