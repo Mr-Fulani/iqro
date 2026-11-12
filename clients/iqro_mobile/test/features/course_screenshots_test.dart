@@ -609,12 +609,15 @@ Future<Map<String, Uint8List>> _pictures() async {
   return {
     '9999999999': wudu,
     'fedcba9876': prayerCover,
-    // The covers the site serves for the two built-in courses.
+    // The covers the site serves for the built-in courses.
     'site-salah': File(
       '../../docs/courses/covers/salah.webp',
     ).readAsBytesSync(),
     'site-tajweed': File(
       '../../docs/courses/covers/tajweed.webp',
+    ).readAsBytesSync(),
+    'site-names': File(
+      '../../docs/courses/covers/names.webp',
     ).readAsBytesSync(),
     '1111111111': scheme,
     '3333333333': niyya,
@@ -708,8 +711,8 @@ void main() {
     }, skip: _directory.isEmpty);
   }
 
-  // «Имена Аллаха» as the third card, before its cover is uploaded, with a
-  // few names learned on the device.
+  // «Имена Аллаха» as the third card with its cover (docs/courses/covers)
+  // and a few names learned on the device.
   testWidgets('catalog with the names card', (tester) async {
     Map<String, Object?> cover(String name) => {
       'url': 'https://media.iqro.forum/courses/covers/site-$name.webp',
@@ -728,7 +731,7 @@ void main() {
           'built_in': {
             'salah': {'cover': cover('salah')},
             'tajweed': {'cover': cover('tajweed')},
-            'names': {'cover': null, 'lesson_count': 99},
+            'names': {'cover': cover('names'), 'lesson_count': 99},
           },
         },
       ),
