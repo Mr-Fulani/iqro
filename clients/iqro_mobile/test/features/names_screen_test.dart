@@ -37,6 +37,10 @@ void main() {
       expect(_seen(tester), '1 из 4');
       expect(harness.store.progress.lessons['ar-rahim']!.completed, isFalse);
 
+      // Clicks closer than 45 ms of real time are skipped.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 60)),
+      );
       await tester.tapAt(tester.getCenter(_dial));
       await tester.pumpAndSettle();
       // One click player and one voice serve the whole screen.
