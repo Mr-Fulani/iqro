@@ -1,0 +1,2808 @@
+{
+ "schema_version": 1,
+ "collection": {
+  "slug": "asma-al-husna",
+  "version": "draft-2026-11-12"
+ },
+ "list_source": {
+  "ru": "Са‘ид аль-Кахтани, «Шарх асма Аллах аль-хусна фи дау аль-Китаб ва-с-Сунна»",
+  "en": "Sa‘id al-Qahtani, Sharh Asma’ Allah al-Husna fi Daw’ al-Kitab wa-s-Sunnah",
+  "tr": "Saîd el-Kahtânî, Şerhu Esmâillâhi’l-Hüsnâ fî Dav’i’l-Kitâb ve’s-Sünne",
+  "ar": "سعيد بن علي بن وهف القحطاني، شرح أسماء الله الحسنى في ضوء الكتاب والسنة"
+ },
+ "tafsir_source": {
+  "ru": "‘Абд ар-Рахман ас-Са‘ди, «Тайсир аль-Карим ар-Рахман»",
+  "en": "‘Abd ar-Rahman as-Sa‘di, Taysir al-Karim ar-Rahman",
+  "tr": "Abdurrahman es-Sa‘dî, Teysîrü’l-Kerîmi’r-Rahmân",
+  "ar": "عبد الرحمن السعدي، تيسير الكريم الرحمن في تفسير كلام المنان"
+ },
+ "names": [
+  {
+   "slug": "al-awwal",
+   "arabic": "الأَوَّلُ",
+   "transliteration": {
+    "ru": "Аль-Авваль",
+    "en": "Al-Awwal",
+    "tr": "el-Evvel"
+   },
+   "meaning": {
+    "ru": "Первый",
+    "en": "The First",
+    "tr": "İlk",
+    "ar": "الذي ليس قبله شيء"
+   },
+   "tafsir": {
+    "ru": "Аллах — первый, до которого ничего не было, и последний, после которого ничего не будет.",
+    "en": "“Al-Awwal, Al-Akhir, Az-Zahir, Al-Batin.” The Prophet ﷺ explained them with a comprehensive, clear explanation, saying: “You are the First, so there is nothing before You; You are the Last, so there is nothing after You; You are the Uppermost, so there is nothing above You; and You are the Nearest, so there is nothing nearer than You.”",
+    "tr": "“el-Evvel, el-Âhir, ez-Zâhir, el-Bâtın.” Peygamber ﷺ bunları kapsamlı ve açık bir tefsirle açıklamış ve şöyle buyurmuştur: “Sen Evvel’sin, Senden önce hiçbir şey yoktur; Sen Âhir’sin, Senden sonra hiçbir şey yoktur; Sen Zâhir’sin, Senin üstünde hiçbir şey yoktur; Sen Bâtın’sın, Senden daha yakın hiçbir şey yoktur.”",
+    "ar": "\"الأول، والآخر، والظاهر، والباطن\". قد فسرها النبي ﷺ تفسيرا جامعا واضحا، فقال: \"أنت الأول فليس قبلك شيء، وأنت الآخر فليس بعدك شيء، وأنت الظاهر فليس فوقك شيء، وأنت الباطن فليس دونك شيء\"."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 57,
+    "ayah": 3,
+    "word": 2
+   }
+  },
+  {
+   "slug": "al-akhir",
+   "arabic": "الآخِرُ",
+   "transliteration": {
+    "ru": "Аль-Ахир",
+    "en": "Al-Akhir",
+    "tr": "el-Âhir"
+   },
+   "meaning": {
+    "ru": "Последний",
+    "en": "The Last",
+    "tr": "Son",
+    "ar": "الذي ليس بعده شيء"
+   },
+   "tafsir": {
+    "ru": "Аллах — первый, до которого ничего не было, и последний, после которого ничего не будет.",
+    "en": "“Al-Awwal, Al-Akhir, Az-Zahir, Al-Batin.” The Prophet ﷺ explained them with a comprehensive, clear explanation, saying: “You are the First, so there is nothing before You; You are the Last, so there is nothing after You; You are the Uppermost, so there is nothing above You; and You are the Nearest, so there is nothing nearer than You.”",
+    "tr": "“el-Evvel, el-Âhir, ez-Zâhir, el-Bâtın.” Peygamber ﷺ bunları kapsamlı ve açık bir tefsirle açıklamış ve şöyle buyurmuştur: “Sen Evvel’sin, Senden önce hiçbir şey yoktur; Sen Âhir’sin, Senden sonra hiçbir şey yoktur; Sen Zâhir’sin, Senin üstünde hiçbir şey yoktur; Sen Bâtın’sın, Senden daha yakın hiçbir şey yoktur.”",
+    "ar": "\"الأول، والآخر، والظاهر، والباطن\". قد فسرها النبي ﷺ تفسيرا جامعا واضحا، فقال: \"أنت الأول فليس قبلك شيء، وأنت الآخر فليس بعدك شيء، وأنت الظاهر فليس فوقك شيء، وأنت الباطن فليس دونك شيء\"."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 57,
+    "ayah": 3,
+    "word": 3
+   }
+  },
+  {
+   "slug": "az-zahir",
+   "arabic": "الظَّاهِرُ",
+   "transliteration": {
+    "ru": "Аз-Захир",
+    "en": "Az-Zahir",
+    "tr": "ez-Zâhir"
+   },
+   "meaning": {
+    "ru": "Высочайший",
+    "en": "The Uppermost",
+    "tr": "Her şeyin üstünde olan",
+    "ar": "الذي ليس فوقه شيء"
+   },
+   "tafsir": {
+    "ru": "Он — высочайший, выше которого ничего нет, и ближайший, ближе которого ничего нет.",
+    "en": "“Al-Awwal, Al-Akhir, Az-Zahir, Al-Batin.” The Prophet ﷺ explained them with a comprehensive, clear explanation, saying: “You are the First, so there is nothing before You; You are the Last, so there is nothing after You; You are the Uppermost, so there is nothing above You; and You are the Nearest, so there is nothing nearer than You.”",
+    "tr": "“el-Evvel, el-Âhir, ez-Zâhir, el-Bâtın.” Peygamber ﷺ bunları kapsamlı ve açık bir tefsirle açıklamış ve şöyle buyurmuştur: “Sen Evvel’sin, Senden önce hiçbir şey yoktur; Sen Âhir’sin, Senden sonra hiçbir şey yoktur; Sen Zâhir’sin, Senin üstünde hiçbir şey yoktur; Sen Bâtın’sın, Senden daha yakın hiçbir şey yoktur.”",
+    "ar": "\"الأول، والآخر، والظاهر، والباطن\". قد فسرها النبي ﷺ تفسيرا جامعا واضحا، فقال: \"أنت الأول فليس قبلك شيء، وأنت الآخر فليس بعدك شيء، وأنت الظاهر فليس فوقك شيء، وأنت الباطن فليس دونك شيء\"."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 57,
+    "ayah": 3,
+    "word": 4
+   }
+  },
+  {
+   "slug": "al-batin",
+   "arabic": "البَاطِنُ",
+   "transliteration": {
+    "ru": "Аль-Батын",
+    "en": "Al-Batin",
+    "tr": "el-Bâtın"
+   },
+   "meaning": {
+    "ru": "Ближайший",
+    "en": "The Nearest",
+    "tr": "En yakın olan",
+    "ar": "الذي ليس دونه شيء"
+   },
+   "tafsir": {
+    "ru": "Он — высочайший, выше которого ничего нет, и ближайший, ближе которого ничего нет.",
+    "en": "“Al-Awwal, Al-Akhir, Az-Zahir, Al-Batin.” The Prophet ﷺ explained them with a comprehensive, clear explanation, saying: “You are the First, so there is nothing before You; You are the Last, so there is nothing after You; You are the Uppermost, so there is nothing above You; and You are the Nearest, so there is nothing nearer than You.”",
+    "tr": "“el-Evvel, el-Âhir, ez-Zâhir, el-Bâtın.” Peygamber ﷺ bunları kapsamlı ve açık bir tefsirle açıklamış ve şöyle buyurmuştur: “Sen Evvel’sin, Senden önce hiçbir şey yoktur; Sen Âhir’sin, Senden sonra hiçbir şey yoktur; Sen Zâhir’sin, Senin üstünde hiçbir şey yoktur; Sen Bâtın’sın, Senden daha yakın hiçbir şey yoktur.”",
+    "ar": "\"الأول، والآخر، والظاهر، والباطن\". قد فسرها النبي ﷺ تفسيرا جامعا واضحا، فقال: \"أنت الأول فليس قبلك شيء، وأنت الآخر فليس بعدك شيء، وأنت الظاهر فليس فوقك شيء، وأنت الباطن فليس دونك شيء\"."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 57,
+    "ayah": 3,
+    "word": 5
+   }
+  },
+  {
+   "slug": "al-aliyy",
+   "arabic": "العَلِيُّ",
+   "transliteration": {
+    "ru": "Аль-Алий",
+    "en": "Al-‘Aliyy",
+    "tr": "el-Aliyy"
+   },
+   "meaning": {
+    "ru": "Возвышенный",
+    "en": "The Exalted",
+    "tr": "Yüce",
+    "ar": "له العلو المطلق"
+   },
+   "tafsir": {
+    "ru": "Одним из Его прекрасных имен является имя Возвышенный. Своей сущностью Он находится над творениями, Его качества преисполнены величия, Его могуществу покорны все создания и существа, Ему подвластны и послушны все рабы.",
+    "en": "“Al-‘Aliyy Al-A‘la”: He is the One to whom belongs absolute highness in every respect: highness of essence, highness of rank and attributes, and highness of subjugation. He is the One who rose over the Throne and encompassed the dominion. He is characterised by all the attributes of greatness, grandeur, majesty, beauty and utmost perfection, and with Him is their ultimate limit.",
+    "tr": "“el-Aliyy el-A‘lâ”: O, her yönden mutlak yücelik sahibi olandır: zâtın yüceliği, kadrin ve sıfatların yüceliği ve kahrın yüceliği. O, Arş’a istivâ eden ve mülkü kuşatandır. Azamet, kibriyâ, celâl, cemâl ve kemâlin son derecesine ait bütün sıfatlarla vasıflanmıştır; bunlarda son nokta O’na varır.",
+    "ar": "\"العلي الأعلى\" وهو الذي له العلو المطلق من جميع الوجوه، علو الذات، وعلو القدر والصفات، وعلو القهر. فهو الذي على العرش استوى، وعلى الملك احتوى. وبجميع صفات العظمة والكبرياء والجلال والجمال وغاية الكمال اتصف، وإليه فيها المنتهى."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 255,
+    "word": 49
+   }
+  },
+  {
+   "slug": "al-ala",
+   "arabic": "الأَعْلَى",
+   "transliteration": {
+    "ru": "Аль-А‘ля",
+    "en": "Al-A‘la",
+    "tr": "el-A‘lâ"
+   },
+   "meaning": {
+    "ru": "Всевышний",
+    "en": "The Most High",
+    "tr": "En yüce",
+    "ar": "له علو الذات والقدر والقهر"
+   },
+   "tafsir": {
+    "ru": "«Аль-‘Алий Аль-А‘ля»: Он — Тот, Кому принадлежит абсолютная возвышенность во всех отношениях: возвышенность сущности, возвышенность положения и качеств и возвышенность покоряющей силы. Он — Тот, Кто вознёсся на Трон и объял владычество. Ему присущи все качества величия, гордости, могущества, красоты и предельного совершенства, и у Него в них — предел.",
+    "en": "“Al-‘Aliyy Al-A‘la”: He is the One to whom belongs absolute highness in every respect: highness of essence, highness of rank and attributes, and highness of subjugation. He is the One who rose over the Throne and encompassed the dominion. He is characterised by all the attributes of greatness, grandeur, majesty, beauty and utmost perfection, and with Him is their ultimate limit.",
+    "tr": "“el-Aliyy el-A‘lâ”: O, her yönden mutlak yücelik sahibi olandır: zâtın yüceliği, kadrin ve sıfatların yüceliği ve kahrın yüceliği. O, Arş’a istivâ eden ve mülkü kuşatandır. Azamet, kibriyâ, celâl, cemâl ve kemâlin son derecesine ait bütün sıfatlarla vasıflanmıştır; bunlarda son nokta O’na varır.",
+    "ar": "\"العلي الأعلى\" وهو الذي له العلو المطلق من جميع الوجوه، علو الذات، وعلو القدر والصفات، وعلو القهر. فهو الذي على العرش استوى، وعلى الملك احتوى. وبجميع صفات العظمة والكبرياء والجلال والجمال وغاية الكمال اتصف، وإليه فيها المنتهى."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 87,
+    "ayah": 1,
+    "word": 4
+   }
+  },
+  {
+   "slug": "al-mutaal",
+   "arabic": "المُتَعَالِ",
+   "transliteration": {
+    "ru": "Аль-Мута‘аль",
+    "en": "Al-Muta‘al",
+    "tr": "el-Müteâl"
+   },
+   "meaning": {
+    "ru": "Превознесшийся",
+    "en": "The Supremely Exalted",
+    "tr": "Yüceler yücesi",
+    "ar": "المتعالي على جميع خلقه"
+   },
+   "tafsir": {
+    "ru": "Он превосходит все творения своим местонахождением, могуществом и властью.",
+    "en": "“Al-Muta‘al”: exalted above all His creation in His essence, His power and His subjugation.",
+    "tr": "“el-Müteâl”: zâtıyla, kudretiyle ve kahrıyla bütün yarattıklarının üstünde yüce olandır.",
+    "ar": "﴿الْمُتَعَالِ﴾ على جميع خلقه بذاته وقدرته وقهره."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "13:9",
+   "ayah": {
+    "surah": 13,
+    "ayah": 9,
+    "word": 5
+   }
+  },
+  {
+   "slug": "al-azim",
+   "arabic": "العَظِيمُ",
+   "transliteration": {
+    "ru": "Аль-Азым",
+    "en": "Al-‘Azim",
+    "tr": "el-Azîm"
+   },
+   "meaning": {
+    "ru": "Великий",
+    "en": "The Magnificent",
+    "tr": "Azametli",
+    "ar": "أعظم من كل شيء"
+   },
+   "tafsir": {
+    "ru": "Еще одним Его именем является имя Великий. Он объединяет в себе все качества величия, почета, великолепия и славы, благодаря чему сердца проникаются к Нему любовью, а души — почтением.",
+    "en": "“Al-Majid, Al-Kabir, Al-‘Azim, Al-Jalil”: He is the One described by the attributes of glory, grandeur, greatness and majesty; who is greater than everything, mightier than everything, and more majestic and higher. To Him belong veneration and reverence in the hearts of His allies and His chosen ones; their hearts have been filled with veneration and reverence of Him, submission to Him and humility before His grandeur.",
+    "tr": "“el-Mecîd, el-Kebîr, el-Azîm, el-Celîl”: O; mecd, kibriyâ, azamet ve celâl sıfatlarıyla vasıflanan, her şeyden daha büyük, her şeyden daha azametli, daha celîl ve daha yüce olandır. Dostlarının ve seçkin kullarının kalplerinde tâzim ve iclâl O’nundur; onların kalpleri O’nu tâzim ve iclâl etmekle, O’na boyun eğmekle ve O’nun kibriyâsı karşısında alçalmakla dolmuştur.",
+    "ar": "\"المجيد، الكبير، العظيم، الجليل\" وهو الموصوف بصفات المجد، والكبرياء، والعظمة، والجلال، الذي هو أكبر من كل شيء، وأعظم من كل شيء، وأجل وأعلى. وله التعظيم والإجلال في قلوب أوليائه وأصفيائه، قد ملئت قلوبهم من تعظيمه وإجلاله، والخضوع له والتذلل لكبريائه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 255,
+    "word": 50
+   }
+  },
+  {
+   "slug": "al-majid",
+   "arabic": "المَجِيدُ",
+   "transliteration": {
+    "ru": "Аль-Маджид",
+    "en": "Al-Majid",
+    "tr": "el-Mecîd"
+   },
+   "meaning": {
+    "ru": "Славный",
+    "en": "The Glorious",
+    "tr": "Şanı yüce",
+    "ar": "الموصوف بصفات المجد"
+   },
+   "tafsir": {
+    "ru": "Согласно вышеупомянутому чтению этого аята эпитет «славный» относится к Трону. А согласно другому чтению, этот эпитет относится к Аллаху и указывает на необъятность и величие Его прекрасных качеств.",
+    "en": "“Al-Majid, Al-Kabir, Al-‘Azim, Al-Jalil”: He is the One described by the attributes of glory, grandeur, greatness and majesty; who is greater than everything, mightier than everything, and more majestic and higher. To Him belong veneration and reverence in the hearts of His allies and His chosen ones; their hearts have been filled with veneration and reverence of Him, submission to Him and humility before His grandeur.",
+    "tr": "“el-Mecîd, el-Kebîr, el-Azîm, el-Celîl”: O; mecd, kibriyâ, azamet ve celâl sıfatlarıyla vasıflanan, her şeyden daha büyük, her şeyden daha azametli, daha celîl ve daha yüce olandır. Dostlarının ve seçkin kullarının kalplerinde tâzim ve iclâl O’nundur; onların kalpleri O’nu tâzim ve iclâl etmekle, O’na boyun eğmekle ve O’nun kibriyâsı karşısında alçalmakla dolmuştur.",
+    "ar": "\"المجيد، الكبير، العظيم، الجليل\" وهو الموصوف بصفات المجد، والكبرياء، والعظمة، والجلال، الذي هو أكبر من كل شيء، وأعظم من كل شيء، وأجل وأعلى. وله التعظيم والإجلال في قلوب أوليائه وأصفيائه، قد ملئت قلوبهم من تعظيمه وإجلاله، والخضوع له والتذلل لكبريائه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 85,
+    "ayah": 15,
+    "word": 3
+   }
+  },
+  {
+   "slug": "al-kabir",
+   "arabic": "الكَبِيرُ",
+   "transliteration": {
+    "ru": "Аль-Кабир",
+    "en": "Al-Kabir",
+    "tr": "el-Kebîr"
+   },
+   "meaning": {
+    "ru": "Большой",
+    "en": "The Great",
+    "tr": "Büyük",
+    "ar": "أكبر من كل شيء"
+   },
+   "tafsir": {
+    "ru": "Он велик, поскольку велики Его божественная сущность, прекрасные имена и совершенные качества.",
+    "en": "“Al-Majid, Al-Kabir, Al-‘Azim, Al-Jalil”: He is the One described by the attributes of glory, grandeur, greatness and majesty; who is greater than everything, mightier than everything, and more majestic and higher. To Him belong veneration and reverence in the hearts of His allies and His chosen ones; their hearts have been filled with veneration and reverence of Him, submission to Him and humility before His grandeur.",
+    "tr": "“el-Mecîd, el-Kebîr, el-Azîm, el-Celîl”: O; mecd, kibriyâ, azamet ve celâl sıfatlarıyla vasıflanan, her şeyden daha büyük, her şeyden daha azametli, daha celîl ve daha yüce olandır. Dostlarının ve seçkin kullarının kalplerinde tâzim ve iclâl O’nundur; onların kalpleri O’nu tâzim ve iclâl etmekle, O’na boyun eğmekle ve O’nun kibriyâsı karşısında alçalmakla dolmuştur.",
+    "ar": "\"المجيد، الكبير، العظيم، الجليل\" وهو الموصوف بصفات المجد، والكبرياء، والعظمة، والجلال، الذي هو أكبر من كل شيء، وأعظم من كل شيء، وأجل وأعلى. وله التعظيم والإجلال في قلوب أوليائه وأصفيائه، قد ملئت قلوبهم من تعظيمه وإجلاله، والخضوع له والتذلل لكبريائه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 13,
+    "ayah": 9,
+    "word": 4
+   }
+  },
+  {
+   "slug": "as-sami",
+   "arabic": "السَّمِيعُ",
+   "transliteration": {
+    "ru": "Ас-Сами‘",
+    "en": "As-Sami‘",
+    "tr": "es-Semî‘"
+   },
+   "meaning": {
+    "ru": "Слышащий",
+    "en": "The All-Hearing",
+    "tr": "Her şeyi işiten",
+    "ar": "السميع لجميع الأصوات"
+   },
+   "tafsir": {
+    "ru": "Он слышит молитвы Своих рабов, которые обращаются к Нему на самых разных языках и по самым разным вопросам.",
+    "en": "“As-Sami‘”: the Hearer of all voices, with the difference of languages and the variety of needs.",
+    "tr": "“es-Semî‘”: Dillerin farklılığı ve ihtiyaçların çeşitliliği ile birlikte bütün sesleri işitendir.",
+    "ar": "\"السميع\" لجميع الأصوات، باختلاف اللغات على تفنن الحاجات."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 40,
+    "ayah": 20,
+    "word": 14
+   }
+  },
+  {
+   "slug": "al-basir",
+   "arabic": "البَصِيرُ",
+   "transliteration": {
+    "ru": "Аль-Басыр",
+    "en": "Al-Basir",
+    "tr": "el-Basîr"
+   },
+   "meaning": {
+    "ru": "Видящий",
+    "en": "The All-Seeing",
+    "tr": "Her şeyi gören",
+    "ar": "الذي يبصر كل شيء"
+   },
+   "tafsir": {
+    "ru": "Он видит все, что происходит на свете, даже если это сокрыто от взоров и познаний людей.",
+    "en": "“Al-Basir”: the One who sees everything, however fine and small it may be; He sees the crawling of a black ant on a dark night upon a solid rock. He sees what is beneath the seven earths just as He sees what is above the seven heavens.",
+    "tr": "“el-Basîr”: Ne kadar ince ve küçük olursa olsun her şeyi görendir; karanlık gecede, som kayanın üzerindeki siyah karıncanın yürüyüşünü görür. Yedi göğün üstündekini gördüğü gibi yedi yerin altındakini de görür.",
+    "ar": "\"البصير\" الذي يبصر كل شيء وإن دق وصغر، فيبصر دبيب النملة السوداء في الليلة الظلماء على الصخرة الصماء. ويبصر ما تحت الأرضين السبع، كما يبصر ما فوق السموات السبع."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 40,
+    "ayah": 20,
+    "word": 15
+   }
+  },
+  {
+   "slug": "al-alim",
+   "arabic": "العَلِيمُ",
+   "transliteration": {
+    "ru": "Аль-Алим",
+    "en": "Al-‘Alim",
+    "tr": "el-Alîm"
+   },
+   "meaning": {
+    "ru": "Знающий",
+    "en": "The All-Knowing",
+    "tr": "Her şeyi bilen",
+    "ar": "أحاط علمه بالظواهر والبواطن"
+   },
+   "tafsir": {
+    "ru": "Он ведает обо всем очевидном и сокровенном, прошлом и будущем.",
+    "en": "“Al-‘Alim, Al-Khabir”: He is the One whose knowledge encompasses the outward and the inward, the secret and the open, the necessary, the impossible and the possible, the upper and the lower world, the past, the present and the future; so nothing whatsoever is hidden from Him.",
+    "tr": "“el-Alîm, el-Habîr”: O, ilmi zâhirleri ve bâtınları, gizlileri ve açığa vurulanı, vâcipleri, imkânsızları ve mümkünleri, ulvî ve süflî âlemi, geçmişi, şimdiyi ve geleceği kuşatandır; hiçbir şey O’na gizli kalmaz.",
+    "ar": "\"العليم، الخبير\": وهو الذي أحاط علمه بالظواهر والبواطن، والأسرار والإعلان، وبالواجبات والمستحيلات والممكنات، وبالعالم العلوي والسفلي، وبالماضي والحاضر والمستقبل، فلا يخفى عليه شيء من الأشياء."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 6,
+    "ayah": 115,
+    "word": 11
+   }
+  },
+  {
+   "slug": "al-khabir",
+   "arabic": "الخَبِيرُ",
+   "transliteration": {
+    "ru": "Аль-Хабир",
+    "en": "Al-Khabir",
+    "tr": "el-Habîr"
+   },
+   "meaning": {
+    "ru": "Ведающий",
+    "en": "The All-Aware",
+    "tr": "Her şeyden haberdar",
+    "ar": "لا يخفى عليه شيء"
+   },
+   "tafsir": {
+    "ru": "Он ведает обо всех тайнах и сокровенных мыслях и знает о самых незаметных деяниях, и это также подтверждает истинность единобожия.",
+    "en": "“Al-‘Alim, Al-Khabir”: He is the One whose knowledge encompasses the outward and the inward, the secret and the open, the necessary, the impossible and the possible, the upper and the lower world, the past, the present and the future; so nothing whatsoever is hidden from Him.",
+    "tr": "“el-Alîm, el-Habîr”: O, ilmi zâhirleri ve bâtınları, gizlileri ve açığa vurulanı, vâcipleri, imkânsızları ve mümkünleri, ulvî ve süflî âlemi, geçmişi, şimdiyi ve geleceği kuşatandır; hiçbir şey O’na gizli kalmaz.",
+    "ar": "\"العليم، الخبير\": وهو الذي أحاط علمه بالظواهر والبواطن، والأسرار والإعلان، وبالواجبات والمستحيلات والممكنات، وبالعالم العلوي والسفلي، وبالماضي والحاضر والمستقبل، فلا يخفى عليه شيء من الأشياء."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 6,
+    "ayah": 18,
+    "word": 7
+   }
+  },
+  {
+   "slug": "al-hamid",
+   "arabic": "الحَمِيدُ",
+   "transliteration": {
+    "ru": "Аль-Хамид",
+    "en": "Al-Hamid",
+    "tr": "el-Hamîd"
+   },
+   "meaning": {
+    "ru": "Достохвальный",
+    "en": "The Praiseworthy",
+    "tr": "Övgüye lâyık",
+    "ar": "الحميد في ذاته وصفاته وأفعاله"
+   },
+   "tafsir": {
+    "ru": "Среди Его прекрасных имен также — Достохвальный. Его божественная сущность, прекрасные имена, совершенные качества, а также деяния, преисполненные справедливости, добродетели, милосердия и мудрости, — все это заслуживает самой славной похвалы.",
+    "en": "“Al-Hamid”: praiseworthy in His essence, His names, His attributes and His actions. To Him belong the best of names, the most perfect of attributes, and the most complete and best of actions; for His actions, exalted is He, revolve between grace and justice.",
+    "tr": "“el-Hamîd”: Zâtında, isimlerinde, sıfatlarında ve fiillerinde övgüye lâyık olandır. İsimlerin en güzeli, sıfatların en mükemmeli, fiillerin en eksiksizi ve en güzeli O’nundur; çünkü Yüce Allah’ın fiilleri lütuf ile adalet arasında döner.",
+    "ar": "\"الحميد\" في ذاته، وأسمائه، وصفاته، وأفعاله، فله من الأسماء أحسنها، ومن الصفات أكملها، ومن الأفعال أتمها وأحسنها، فإن أفعاله تعالى دائرة بين الفضل والعدل."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 22,
+    "ayah": 64,
+    "word": 12
+   }
+  },
+  {
+   "slug": "al-aziz",
+   "arabic": "العَزِيزُ",
+   "transliteration": {
+    "ru": "Аль-Азиз",
+    "en": "Al-‘Aziz",
+    "tr": "el-Azîz"
+   },
+   "meaning": {
+    "ru": "Могущественный",
+    "en": "The Almighty",
+    "tr": "İzzet sahibi",
+    "ar": "الذي له العزة كلها"
+   },
+   "tafsir": {
+    "ru": "Могущественный, то есть никто не в силах одолеть Его либо воспротивиться Его воле, потому что Он господствует надо всем сущим и правит всеми творениями.",
+    "en": "“Al-‘Aziz”: the One to whom belongs all might: the might of strength, the might of dominance and the might of inaccessibility. So none of the created beings can reach Him; He has subdued all that exists; and creation has yielded to Him and humbled itself before His greatness.",
+    "tr": "“el-Azîz”: Bütün izzet kendisine ait olandır: kuvvet izzeti, galebe izzeti ve erişilmezlik izzeti. Yaratılmışlardan hiçbirinin O’na erişmesi mümkün değildir; O, bütün varlıklara boyun eğdirmiştir; mahlûkat O’na itaat etmiş ve O’nun azameti karşısında boyun eğmiştir.",
+    "ar": "\"العزيز\" الذي له العزة كلها: عزة القوة، وعزة الغلبة، وعزة الامتناع. فامتنع أن يناله أحد من المخلوقات، وقهر جميع الموجودات، ودانت له الخليقة وخضعت لعظمته."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 23,
+    "word": 13
+   }
+  },
+  {
+   "slug": "al-qadir",
+   "arabic": "القَدِيرُ",
+   "transliteration": {
+    "ru": "Аль-Кади́р",
+    "en": "Al-Qadir",
+    "tr": "el-Kadîr"
+   },
+   "meaning": {
+    "ru": "Всемогущий",
+    "en": "The All-Powerful",
+    "tr": "Her şeye gücü yeten",
+    "ar": "كامل القدرة"
+   },
+   "tafsir": {
+    "ru": "Рабы Аллаха должны осознавать всемогущество своего Господа, которое остается совершенным на протяжении вечности. Он творит сущее и управляет Своими творениями, но никогда не испытывает усталости или слабости.",
+    "en": "“Al-Qadir”: perfect in power. By His power He brought all that exists into existence, by His power He governs it, by His power He fashioned it and perfected it, and by His power He gives life and causes death, resurrects the servants for recompense, and requites the doer of good for his good and the doer of evil for his evil; the One who, when He wills a thing, says to it “Be, and it is”; and by His power He turns the hearts and directs them as He wishes and wills.",
+    "tr": "“el-Kadîr”: Kudreti tam olandır. Varlıkları kudretiyle var etmiş, kudretiyle onları idare etmiş, kudretiyle onları düzenlemiş ve sağlam kılmıştır. Kudretiyle diriltir ve öldürür, kulları karşılık görmeleri için yeniden diriltir, iyilik edene iyiliğinin, kötülük edene kötülüğünün karşılığını verir. O, bir şeyi dilediğinde ona “Ol” der, o da oluverir. Kudretiyle kalpleri evirip çevirir ve onları dilediği ve irade ettiği şekilde yönlendirir.",
+    "ar": "\"القدير\" كامل القدرة، بقدرته أوجد الموجودات، وبقدرته دبرها، وبقدرته سواها وأحكمها، وبقدرته يحيي ويميت، ويبعث العباد للجزاء، ويجازي المحسن بإحسانه، والمسيء بإساءته، الذي إذا أراد شيئا قال له \"كن فيكون\"، وبقدرته يقلب القلوب، ويصرفها على ما يشاء ويريد."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 30,
+    "ayah": 54,
+    "word": 24
+   }
+  },
+  {
+   "slug": "al-qaadir",
+   "arabic": "القَادِرُ",
+   "transliteration": {
+    "ru": "Аль-Ка́дир",
+    "en": "Al-Qaadir",
+    "tr": "el-Kādir"
+   },
+   "meaning": {
+    "ru": "Способный",
+    "en": "The Able",
+    "tr": "Kudret sahibi",
+    "ar": "القادر على ما يشاء"
+   },
+   "tafsir": {
+    "ru": "Всевышний способен наслать на вас наказание отовсюду.",
+    "en": "That is: He, exalted is He, is able to send punishment upon you from every direction.",
+    "tr": "Yani: Yüce Allah, üzerinize her yönden azap göndermeye kadirdir.",
+    "ar": "أي: هو تعالى قادر على إرسال العذاب إليكم من كل جهة."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "6:65",
+   "ayah": {
+    "surah": 6,
+    "ayah": 65,
+    "word": 3
+   }
+  },
+  {
+   "slug": "al-muqtadir",
+   "arabic": "المُقْتَدِرُ",
+   "transliteration": {
+    "ru": "Аль-Муктадир",
+    "en": "Al-Muqtadir",
+    "tr": "el-Muktedir"
+   },
+   "meaning": {
+    "ru": "Всемогущий",
+    "en": "The Omnipotent",
+    "tr": "Mutlak kudret sahibi",
+    "ar": "التام القدرة"
+   },
+   "tafsir": {
+    "ru": "Значения этих великих имён близки: Всевышний обладает совершенной силой, великим могуществом и всеобъемлющей мощью.",
+    "en": "The meanings of these great names are close to one another: He, the Most High, is perfect in strength, great in power, and all-encompassing in might.",
+    "tr": "Bu yüce isimlerin anlamları birbirine yakındır: Yüce Allah’ın kuvveti kâmil, kudreti büyük, izzeti her şeyi kuşatıcıdır.",
+    "ar": "هذه الأسماء العظيمة معانيها متقاربة، فهو تعالى كامل القوة، عظيم القدرة، شامل العزّة."
+   },
+   "tafsir_source": {
+    "ru": "Са‘ид аль-Кахтани, «Шарх асма Аллах аль-хусна фи дау аль-Китаб ва-с-Сунна»",
+    "en": "Sa‘id al-Qahtani, Sharh Asma’ Allah al-Husna fi Daw’ al-Kitab wa-s-Sunnah",
+    "tr": "Saîd el-Kahtânî, Şerhu Esmâillâhi’l-Hüsnâ fî Dav’i’l-Kitâb ve’s-Sünne",
+    "ar": "سعيد بن علي بن وهف القحطاني، شرح أسماء الله الحسنى في ضوء الكتاب والسنة"
+   },
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 54,
+    "ayah": 55,
+    "word": 6
+   }
+  },
+  {
+   "slug": "al-qawiyy",
+   "arabic": "القَوِيُّ",
+   "transliteration": {
+    "ru": "Аль-Кавий",
+    "en": "Al-Qawiyy",
+    "tr": "el-Kaviyy"
+   },
+   "meaning": {
+    "ru": "Всесильный",
+    "en": "The All-Strong",
+    "tr": "Kuvvetli",
+    "ar": "ذو القوة التامة"
+   },
+   "tafsir": {
+    "ru": "Среди Его прекрасных имен — Всесильный и Могущественный. Ему принадлежит власть целиком. Ни одно творение не в силах сделать что-либо, если на то не будет воли Аллаха, ибо Ему подвластно все сущее.",
+    "en": "“Al-Qawiyy, Al-Matin”: it is in the meaning of Al-‘Aziz.",
+    "tr": "“el-Kaviyy, el-Metîn”: el-Azîz anlamındadır.",
+    "ar": "\"القوي، المتين\" هو في معنى العزيز."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 42,
+    "ayah": 19,
+    "word": 8
+   }
+  },
+  {
+   "slug": "al-matin",
+   "arabic": "المَتِينُ",
+   "transliteration": {
+    "ru": "Аль-Матин",
+    "en": "Al-Matin",
+    "tr": "el-Metîn"
+   },
+   "meaning": {
+    "ru": "Крепкий",
+    "en": "The Firm",
+    "tr": "Sarsılmaz güç sahibi",
+    "ar": "الشديد القوة"
+   },
+   "tafsir": {
+    "ru": "Его могущество и власть безграничны. Благодаря им Он сотворил земной и небесный миры, благодаря им Он управляет делами во Вселенной и господствует над всем сущим.",
+    "en": "“Al-Qawiyy, Al-Matin”: it is in the meaning of Al-‘Aziz.",
+    "tr": "“el-Kaviyy, el-Metîn”: el-Azîz anlamındadır.",
+    "ar": "\"القوي، المتين\" هو في معنى العزيز."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 51,
+    "ayah": 58,
+    "word": 7
+   }
+  },
+  {
+   "slug": "al-ghaniyy",
+   "arabic": "الغَنِيُّ",
+   "transliteration": {
+    "ru": "Аль-Ганий",
+    "en": "Al-Ghaniyy",
+    "tr": "el-Ganiyy"
+   },
+   "meaning": {
+    "ru": "Богатый",
+    "en": "The Self-Sufficient",
+    "tr": "Zengin, muhtaç olmayan",
+    "ar": "الغني بذاته"
+   },
+   "tafsir": {
+    "ru": "Среди прекрасных имен Аллаха — Богатый. Его богатство совершенно и всесторонне. Он не нуждается ни в одном из Своих творений.",
+    "en": "“Al-Ghaniyy, Al-Mughni”: He is the Rich in His essence, to whom belongs complete, absolute richness in every respect and consideration, because of His perfection and the perfection of His attributes, so no deficiency can reach them in any way. He cannot be other than rich, because His richness is among the necessary concomitants of His essence, just as He cannot be other than Creator, Able, Provider and Benefactor. So He is not in need of anyone in any way. He is the Rich, in whose Hand are the treasures of the heavens and the earth, and the treasures of this world and the Hereafter.",
+    "tr": "“el-Ganiyy, el-Muğnî”: O, zâtıyla zengin olandır; kemâli ve sıfatlarının kemâli sebebiyle her yönden ve her bakımdan tam ve mutlak zenginlik O’nundur; bu sıfatlara hiçbir şekilde eksiklik ulaşamaz. O’nun zengin olmaması mümkün değildir; çünkü zenginliği zâtının ayrılmaz gereklerindendir. Nitekim O’nun yaratıcı, kudret sahibi, rızık veren ve ihsan eden olmaması da mümkün değildir. O, hiçbir şekilde hiç kimseye muhtaç değildir. O, göklerin ve yerin hazineleri, dünyanın ve âhiretin hazineleri elinde olan Zengin’dir.",
+    "ar": "\"الغني، المغني\" فهو الغني بذاته، الذي له الغنى التام المطلق، من جميع الوجوه والاعتبارات لكماله، وكمال صفاته، فلا يتطرق إليها نقص بوجه من الوجوه، ولا يمكن أن يكون إلا غنيا، لأن غناه من لوازم ذاته، كما لا يكون إلا خالقا، قادرا، رازقا، محسنا، فلا يحتاج إلى أحد بوجه من الوجوه، فهو الغني، الذي بيده خزائن السموات والأرض، وخزائن الدنيا والآخرة."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 22,
+    "ayah": 64,
+    "word": 11
+   }
+  },
+  {
+   "slug": "al-hakim",
+   "arabic": "الحَكِيمُ",
+   "transliteration": {
+    "ru": "Аль-Хаким",
+    "en": "Al-Hakim",
+    "tr": "el-Hakîm"
+   },
+   "meaning": {
+    "ru": "Мудрый",
+    "en": "The All-Wise",
+    "tr": "Hikmet sahibi",
+    "ar": "له الحكمة العليا"
+   },
+   "tafsir": {
+    "ru": "Среди Его прекрасных имен — Мудрый и Знающий. Свидетельством божественной мудрости являются сотворенные Им существа и ниспосланные Им законы. Все во Вселенной создано по мудрому божественному плану, которому также подчинены предопределение Аллаха, Его религиозные предписания и установленное Им воздаяние.",
+    "en": "“Al-Hakim”: He is the One to whom belongs the highest wisdom in His creation and His command, who made excellent everything He created.",
+    "tr": "“el-Hakîm”: O, yaratmasında ve emrinde en yüce hikmet sahibi olan, yarattığı her şeyi güzel yapandır.",
+    "ar": "\"الحكيم\": وهو الذي له الحكمة العليا في خلقه وأمره، الذي أحسن كل شيء خلقه"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 43,
+    "ayah": 84,
+    "word": 10
+   }
+  },
+  {
+   "slug": "al-halim",
+   "arabic": "الحَلِيمُ",
+   "transliteration": {
+    "ru": "Аль-Халим",
+    "en": "Al-Halim",
+    "tr": "el-Halîm"
+   },
+   "meaning": {
+    "ru": "Выдержанный",
+    "en": "The Forbearing",
+    "tr": "Hilim sahibi",
+    "ar": "يمهل العاصين كي ينيبوا"
+   },
+   "tafsir": {
+    "ru": "Он не спешит покарать грешников и дает им отсрочку, но Он никогда не предает их забвению.",
+    "en": "“Al-Halim”: the One who pours upon His creation outward and inward blessings, despite their sins and their many lapses. He forbears from requiting the disobedient for their disobedience, calls on them to seek His pleasure so that they may repent, and gives them respite so that they may turn back to Him.",
+    "tr": "“el-Halîm”: Günahlarına ve sürçmelerinin çokluğuna rağmen yarattıklarına açık ve gizli nimetleri bol bol verendir. İsyankârlara isyanlarıyla karşılık vermekte hilim gösterir; tevbe etsinler diye onlardan rızasını aramalarını ister, kendisine yönelsinler diye onlara mühlet verir.",
+    "ar": "\"الحليم\" الذي يدر على خلقه النعم الظاهرة والباطنة، مع معاصيهم وكثرة زلاتهم، فيحلم عن مقابلة العاصين بعصيانهم، ويستعتبهم كي يتوبوا، ويمهلهم كي ينيبوا."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 64,
+    "ayah": 17,
+    "word": 12
+   }
+  },
+  {
+   "slug": "al-afuww",
+   "arabic": "العَفُوُّ",
+   "transliteration": {
+    "ru": "Аль-Афув",
+    "en": "Al-‘Afuww",
+    "tr": "el-Afüvv"
+   },
+   "meaning": {
+    "ru": "Снисходительный",
+    "en": "The Pardoner",
+    "tr": "Affeden",
+    "ar": "المعروف بالعفو عن عباده"
+   },
+   "tafsir": {
+    "ru": "Среди прекрасных имен Аллаха — Снисходительный и Прощающий. Он снисходителен к грешникам и не спешит с наказанием.",
+    "en": "“Al-‘Afuww, Al-Ghafur, Al-Ghaffar”: the One who has always been, and will always be, known for pardon, and described by forgiveness and overlooking the faults of His servants. Everyone is in dire need of His pardon and His forgiveness, just as he is in dire need of His mercy and His generosity. And He has promised forgiveness and pardon to whoever brings about their causes.",
+    "tr": "“el-Afüvv, el-Gafûr, el-Gaffâr”: Ezelden beri af ile bilinen ve bilinmeye devam eden, kullarını bağışlamak ve onların kusurlarından geçmekle vasıflanandır. Herkes O’nun rahmetine ve keremine muhtaç olduğu gibi, affına ve mağfiretine de muhtaçtır. O, sebeplerini yerine getirene mağfiret ve af vaat etmiştir.",
+    "ar": "\"العفو، الغفور، الغفار\" الذي لم يزل، ولا يزال بالعفو معروفا، وبالغفران والصفح عن عباده موصوفا، كل أحد مضطر إلى عفوه ومغفرته، كما هو مضطر إلى رحمته وكرمه، وقد وعد بالمغفرة والعفو لمن أتى بأسبابها"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 22,
+    "ayah": 60,
+    "word": 15
+   }
+  },
+  {
+   "slug": "al-ghafur",
+   "arabic": "الغَفُورُ",
+   "transliteration": {
+    "ru": "Аль-Гафур",
+    "en": "Al-Ghafur",
+    "tr": "el-Gafûr"
+   },
+   "meaning": {
+    "ru": "Прощающий",
+    "en": "The Forgiving",
+    "tr": "Bağışlayan",
+    "ar": "الموصوف بالغفران والصفح"
+   },
+   "tafsir": {
+    "ru": "Он прощает все грехи тем, кто кается в них, просит прощения и возвращается на прямой путь.",
+    "en": "“Al-‘Afuww, Al-Ghafur, Al-Ghaffar”: the One who has always been, and will always be, known for pardon, and described by forgiveness and overlooking the faults of His servants. Everyone is in dire need of His pardon and His forgiveness, just as he is in dire need of His mercy and His generosity. And He has promised forgiveness and pardon to whoever brings about their causes.",
+    "tr": "“el-Afüvv, el-Gafûr, el-Gaffâr”: Ezelden beri af ile bilinen ve bilinmeye devam eden, kullarını bağışlamak ve onların kusurlarından geçmekle vasıflanandır. Herkes O’nun rahmetine ve keremine muhtaç olduğu gibi, affına ve mağfiretine de muhtaçtır. O, sebeplerini yerine getirene mağfiret ve af vaat etmiştir.",
+    "ar": "\"العفو، الغفور، الغفار\" الذي لم يزل، ولا يزال بالعفو معروفا، وبالغفران والصفح عن عباده موصوفا، كل أحد مضطر إلى عفوه ومغفرته، كما هو مضطر إلى رحمته وكرمه، وقد وعد بالمغفرة والعفو لمن أتى بأسبابها"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 85,
+    "ayah": 14,
+    "word": 2
+   }
+  },
+  {
+   "slug": "al-ghaffar",
+   "arabic": "الغَفَّارُ",
+   "transliteration": {
+    "ru": "Аль-Гаффар",
+    "en": "Al-Ghaffar",
+    "tr": "el-Gaffâr"
+   },
+   "meaning": {
+    "ru": "Всепрощающий",
+    "en": "The Oft-Forgiving",
+    "tr": "Çok bağışlayan",
+    "ar": "كثير المغفرة لعباده"
+   },
+   "tafsir": {
+    "ru": "Благодаря своему величию Он сотворил огромную Вселенную, которая живет по Его законам, а благодаря Своему всепрощению Он отпускает прегрешения Своим верующим и кающимся рабам.",
+    "en": "“Al-‘Afuww, Al-Ghafur, Al-Ghaffar”: the One who has always been, and will always be, known for pardon, and described by forgiveness and overlooking the faults of His servants. Everyone is in dire need of His pardon and His forgiveness, just as he is in dire need of His mercy and His generosity. And He has promised forgiveness and pardon to whoever brings about their causes.",
+    "tr": "“el-Afüvv, el-Gafûr, el-Gaffâr”: Ezelden beri af ile bilinen ve bilinmeye devam eden, kullarını bağışlamak ve onların kusurlarından geçmekle vasıflanandır. Herkes O’nun rahmetine ve keremine muhtaç olduğu gibi, affına ve mağfiretine de muhtaçtır. O, sebeplerini yerine getirene mağfiret ve af vaat etmiştir.",
+    "ar": "\"العفو، الغفور، الغفار\" الذي لم يزل، ولا يزال بالعفو معروفا، وبالغفران والصفح عن عباده موصوفا، كل أحد مضطر إلى عفوه ومغفرته، كما هو مضطر إلى رحمته وكرمه، وقد وعد بالمغفرة والعفو لمن أتى بأسبابها"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 39,
+    "ayah": 5,
+    "word": 23
+   }
+  },
+  {
+   "slug": "at-tawwab",
+   "arabic": "التَّوَّابُ",
+   "transliteration": {
+    "ru": "Ат-Тавваб",
+    "en": "At-Tawwab",
+    "tr": "et-Tevvâb"
+   },
+   "meaning": {
+    "ru": "Принимающий покаяние",
+    "en": "The Acceptor of Repentance",
+    "tr": "Tevbeleri kabul eden",
+    "ar": "يتوب على التائبين"
+   },
+   "tafsir": {
+    "ru": "Аллах всегда принимает покаяния тех, кто раскаивается в грехах и возвращается на путь своего Господа, и это божественное качество проявляется в двух формах. Вначале Аллах вдохновляет раба на покаяние, а затем принимает его покаяние, когда тот выполняет все его условия и требования.",
+    "en": "“At-Tawwab”: the One who has always been turning in acceptance to the repentant and forgiving the sins of those who turn back to Him. So whoever repents to Allah with sincere repentance, Allah turns to him in acceptance. He is the One who turns to the repentant first, by granting them the success to repent and to turn to Him with their hearts; and He is the One who turns to them after their repentance, by accepting it and pardoning their sins.",
+    "tr": "“et-Tevvâb”: Tevbe edenlerin tevbesini daima kabul eden ve kendisine yönelenlerin günahlarını bağışlayandır. Allah’a içten bir tevbe ile tevbe eden herkesin tevbesini Allah kabul eder. O, önce tevbe edenleri tevbeye ve kalpleriyle kendisine yönelmeye muvaffak kılarak onlara tevbe nasip edendir; tevbelerinden sonra da bu tevbeyi kabul ederek ve hatalarını affederek onların tevbesini kabul edendir.",
+    "ar": "\"التواب\" الذي لم يزل يتوب على التائبين، ويغفر ذنوب المنيبين، فكل من تاب إلى الله توبة نصوحا، تاب الله عليه، فهو التائب على التائبين أولا بتوفيقهم للتوبة والإقبال بقلوبهم إليه، وهو التائب عليهم بعد توبتهم قبولا لها، وعفوا عن خطاياهم."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 37,
+    "word": 10
+   }
+  },
+  {
+   "slug": "ar-raqib",
+   "arabic": "الرَّقِيبُ",
+   "transliteration": {
+    "ru": "Ар-Ракыб",
+    "en": "Ar-Raqib",
+    "tr": "er-Rakîb"
+   },
+   "meaning": {
+    "ru": "Наблюдающий",
+    "en": "The Watchful",
+    "tr": "Gözetleyen",
+    "ar": "المطلع على ما أكنته الصدور"
+   },
+   "tafsir": {
+    "ru": "Когда же Ты упокоил меня, Ты наблюдал за ними, за их сокровенными мыслями и тайными помыслами.",
+    "en": "“Ar-Raqib”: the One who is aware of what the breasts conceal, who stands over every soul with regard to what it has earned, who has preserved the created beings and made them run according to the best order and the most perfect governance.",
+    "tr": "“er-Rakîb”: Göğüslerin gizlediğine muttali olan, her nefsin kazandığını gözetip duran, yaratılmışları koruyan ve onları en güzel düzen ve en mükemmel tedbir üzere yürütendir.",
+    "ar": "\"الرقيب\" المطلع على ما أكنته الصدور، القائم على كل نفس بما كسبت، الذي حفظ المخلوقات وأجراها على أحسن نظام وأكمل تدبير."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 5,
+    "ayah": 117,
+    "word": 23
+   }
+  },
+  {
+   "slug": "ash-shahid",
+   "arabic": "الشَّهِيدُ",
+   "transliteration": {
+    "ru": "Аш-Шахид",
+    "en": "Ash-Shahid",
+    "tr": "eş-Şehîd"
+   },
+   "meaning": {
+    "ru": "Свидетель",
+    "en": "The Witness",
+    "tr": "Şahit",
+    "ar": "المطلع على جميع الأشياء"
+   },
+   "tafsir": {
+    "ru": "Ты свидетельствуешь обо всем сущем благодаря Своему знанию, слуху и зрению. Ты знаешь обо всем, о чем можно знать, и слышишь все, что можно услышать, и видишь все, что можно увидеть.",
+    "en": "“Ash-Shahid”, that is: the One who is aware of all things. He hears all voices, the hidden of them and the open; He sees all that exists, the fine and the great, the small and the large; and His knowledge encompasses everything; the One who bears witness for His servants and against His servants concerning what they have done.",
+    "tr": "“eş-Şehîd”, yani: Her şeye muttali olandır. Gizlisiyle açığıyla bütün sesleri işitmiş, incesiyle irisiyle, küçüğüyle büyüğüyle bütün varlıkları görmüş ve ilmi her şeyi kuşatmıştır. O, kullarının lehine ve kullarının aleyhine, yaptıkları şeylere şahitlik edendir.",
+    "ar": "\"الشهيد\" أي: المطلع على جميع الأشياء. سمع جميع الأصوات خفيها وجليها، وأبصر جميع الموجودات دقيقها وجليلها صغيرها وكبيرها، وأحاط علمه بكل شيء، الذي شهد لعباده وعلى عباده بما عملوه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 5,
+    "ayah": 117,
+    "word": 29
+   }
+  },
+  {
+   "slug": "al-hafiz",
+   "arabic": "الحَفِيظُ",
+   "transliteration": {
+    "ru": "Аль-Хафиз",
+    "en": "Al-Hafiz",
+    "tr": "el-Hafîz"
+   },
+   "meaning": {
+    "ru": "Хранитель",
+    "en": "The Preserver",
+    "tr": "Koruyan",
+    "ar": "الذي حفظ ما خلقه"
+   },
+   "tafsir": {
+    "ru": "Что же касается Всевышнего Господа, то Он хранит Своих рабов, хранит совершенные ими деяния и хранит уготовленное для них воздаяние, а в День воскресения каждый человек получит свое воздаяние сполна.",
+    "en": "“Al-Hafiz”: the One who preserves what He created, and whose knowledge encompasses what He brought into existence; who protects His allies from falling into sins and into what destroys, is kind to them in their movements and their stillness, and has recorded for the servants their deeds and the recompense of them.",
+    "tr": "“el-Hafîz”: Yarattığını koruyan, ilmi var ettiği şeyleri kuşatan, dostlarını günahlara ve helâk edici şeylere düşmekten koruyan, hareketlerinde ve duruşlarında onlara lütufta bulunan, kulların amellerini ve bunların karşılığını sayıp tespit edendir.",
+    "ar": "\"الحفيظ\" الذي حفظ ما خلقه، وأحاط علمه بما أوجده، وحفظ أولياءه من وقوعهم في الذنوب والهلكات، ولطف بهم في الحركات والسكنات، وأحصى على العباد أعمالهم وجزاءها."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 34,
+    "ayah": 21,
+    "word": 21
+   }
+  },
+  {
+   "slug": "al-latif",
+   "arabic": "اللَّطِيفُ",
+   "transliteration": {
+    "ru": "Аль-Латыф",
+    "en": "Al-Latif",
+    "tr": "el-Latîf"
+   },
+   "meaning": {
+    "ru": "Проницательный (или Добрый)",
+    "en": "The Subtle, the Kind",
+    "tr": "Lütufkâr, her inceliği bilen",
+    "ar": "اللطيف بعباده المؤمنين"
+   },
+   "tafsir": {
+    "ru": "Он добр к Своим возлюбленным рабам и осеняет их Своей милостью и добродетелью тогда, когда они и не помышляют об этом. Он защищает их от зла так надежно, что они даже не ожидают подобного покровительства. Он возносит их до высот, ведя путями, о которых они даже не подозревали.",
+    "en": "“Al-Latif”: the One whose knowledge encompasses the secrets and the hidden things, and who perceives what is concealed, what is inward and the subtle matters; the Kind to His believing servants, who brings to them what is good for them by His kindness and His beneficence, through ways they do not perceive. So it is in the meaning of “Al-Khabir” and in the meaning of “Ar-Ra’uf”.",
+    "tr": "“el-Latîf”: İlmi sırları ve gizlilikleri kuşatan, saklı olanları, iç yüzleri ve ince işleri idrak edendir; mümin kullarına lütufkâr olan, onların faydasına olan şeyleri lütfu ve ihsanıyla, farkına varmadıkları yollardan onlara ulaştırandır. Bu isim “el-Habîr” anlamında ve “er-Raûf” anlamındadır.",
+    "ar": "\"اللطيف\" الذي أحاط علمه بالسرائر والخفايا، وأدرك الخبايا والبواطن والأمور الدقيقة، اللطيف بعباده المؤمنين، الموصل إليهم مصالحهم بلطفه وإحسانه، من طرق لا يشعرون بها، فهو بمعنى \"الخبير\" وبمعنى \"الرؤوف\"."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 67,
+    "ayah": 14,
+    "word": 6
+   }
+  },
+  {
+   "slug": "al-qarib",
+   "arabic": "القَرِيبُ",
+   "transliteration": {
+    "ru": "Аль-Кариб",
+    "en": "Al-Qarib",
+    "tr": "el-Karîb"
+   },
+   "meaning": {
+    "ru": "Близкий",
+    "en": "The Near",
+    "tr": "Yakın",
+    "ar": "القريب من كل أحد"
+   },
+   "tafsir": {
+    "ru": "Воистину, Господь близок к тем, кто обращается к Нему с молитвами, прося о помощи или просто поклоняясь Ему.",
+    "en": "“Al-Qarib, Al-Mujib”, that is: He, exalted is He, is the One near to everyone. His nearness, exalted is He, is of two kinds: a general nearness to everyone, by His knowledge, His awareness, His watching, His witnessing and His encompassing; and a special nearness to those who worship Him, those who ask of Him and those who love Him. It is a nearness whose reality cannot be grasped; only its effects are known: His kindness to His servant, His care for him, and His granting him success and right direction.",
+    "tr": "“el-Karîb, el-Mücîb”, yani: Yüce Allah herkese yakın olandır. Yüce Allah’ın yakınlığı iki türlüdür: İlmiyle, haberdar oluşuyla, gözetmesiyle, görmesiyle ve kuşatmasıyla herkese olan genel yakınlık; ve kendisine ibadet edenlere, kendisinden isteyenlere ve kendisini sevenlere olan özel yakınlık. Bu, hakikati idrak edilemeyen bir yakınlıktır; ancak eserleri bilinir: kuluna lütfu, ona inâyeti, onu muvaffak kılması ve doğruya iletmesi.",
+    "ar": "\"القريب، المجيب\" أي: هو تعالى القريب من كل أحد، وقربه تعالى نوعان: قرب عام من كل أحد، بعلمه، وخبرته، ومراقبته، ومشاهدته، وإحاطته. وقرب خاص، من عابديه، وسائليه، ومحبيه، وهو قرب لا تدرك له حقيقة، وإنما تعلم آثاره، من لطفه بعبده، وعنايته به، وتوفيقه وتسديده."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 11,
+    "ayah": 61,
+    "word": 26
+   }
+  },
+  {
+   "slug": "al-mujib",
+   "arabic": "المُجِيبُ",
+   "transliteration": {
+    "ru": "Аль-Муджиб",
+    "en": "Al-Mujib",
+    "tr": "el-Mücîb"
+   },
+   "meaning": {
+    "ru": "Отзывчивый",
+    "en": "The Responsive",
+    "tr": "Duaya icabet eden",
+    "ar": "المجيب للداعين"
+   },
+   "tafsir": {
+    "ru": "Он отвечает на молитвы Своих рабов, оказывая им помощь, принимая их поклонение и вознаграждая их самым славным образом.",
+    "en": "He is the Responder with a general response to those who call upon Him, whoever they may be, wherever they may be and in whatever state they may be, as He has promised them with this unrestricted promise. He is the Responder with a special response to those who respond to Him and submit to His law. And He is also the Responder to those in distress, and to those whose hope in created beings has been cut off and whose attachment to Him has grown strong, in longing, hope and fear.",
+    "tr": "O, kim olurlarsa olsunlar, nerede olurlarsa olsunlar ve hangi hâlde olurlarsa olsunlar, kendilerine verdiği bu mutlak vaat gereğince dua edenlere genel bir icabetle icabet edendir. O, kendisine icabet eden ve şeriatına boyun eğenlere özel bir icabetle icabet edendir. O, ayrıca darda kalanlara ve yaratılmışlardan ümidi kesilip arzu, ümit ve korku ile kendisine bağlılığı kuvvetlenenlere de icabet edendir.",
+    "ar": "فهو المجيب إجابة عامة للداعين مهما كانوا، وأين كانوا، وعلى أي حال كانوا كما وعدهم بهذا الوعد المطلق، وهو المجيب إجابة خاصة للمستجيبين له المنقادين لشرعه، وهو المجيب أيضا للمضطرين، ومن انقطع رجاؤهم من المخلوقين وقوي تعلقهم به طمعا ورجاء وخوفا."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 11,
+    "ayah": 61,
+    "word": 27
+   }
+  },
+  {
+   "slug": "al-wadud",
+   "arabic": "الوَدُودُ",
+   "transliteration": {
+    "ru": "Аль-Вадуд",
+    "en": "Al-Wadud",
+    "tr": "el-Vedûd"
+   },
+   "meaning": {
+    "ru": "Любящий (или Любимый)",
+    "en": "The Loving",
+    "tr": "Seven",
+    "ar": "يحب أنبياءه وأتباعهم ويحبونه"
+   },
+   "tafsir": {
+    "ru": "Он любит своих праведных рабов, которые также питают к Нему великую и несравненную любовь.",
+    "en": "“Al-Wadud”: the One who loves His prophets and His messengers and their followers, and they love Him; so He is dearer to them than everything. Their hearts have been filled with love of Him, their tongues are devoted to praising Him, and their hearts are drawn to Him in love, sincerity and turning back to Him in every respect.",
+    "tr": "“el-Vedûd”: Peygamberlerini, resullerini ve onlara tâbi olanları seven, onların da kendisini sevdiği zâttır. O, onlara her şeyden daha sevimlidir. Kalpleri O’nun sevgisiyle dolmuş, dilleri O’nu övmeye düşkün olmuş, gönülleri her yönden sevgi, ihlâs ve yöneliş ile O’na çekilmiştir.",
+    "ar": "\"الودود\" الذي يحب أنبياءه ورسله وأتباعهم، ويحبونه، فهو أحب إليهم من كل شيء، قد امتلأت قلوبهم من محبته، ولهجت ألسنتهم بالثناء عليه، وانجذبت أفئدتهم إليه ودا وإخلاصا وإنابة من جميع الوجوه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 85,
+    "ayah": 14,
+    "word": 3
+   }
+  },
+  {
+   "slug": "ash-shakir",
+   "arabic": "الشَّاكِرُ",
+   "transliteration": {
+    "ru": "Аш-Шакир",
+    "en": "Ash-Shakir",
+    "tr": "eş-Şâkir"
+   },
+   "meaning": {
+    "ru": "Признательный",
+    "en": "The Appreciative",
+    "tr": "Şükre karşılık veren",
+    "ar": "يشكر القليل من العمل"
+   },
+   "tafsir": {
+    "ru": "Затем Всевышний Аллах упомянул о Своих прекрасных именах Признательный и Знающий. У Аллаха также есть прекрасное имя Благодарный. Эти имена означают, что Аллах принимает от Своих рабов даже самые незначительные благодеяния и одаряет их великой наградой.",
+    "en": "“Ash-Shakir, Ash-Shakur”: the One who thanks for a little of deeds and forgives many lapses. He multiplies for the sincere their deeds without measure, thanks the thankful, and remembers whoever remembers Him; and whoever draws near to Him with any righteous deed, Allah draws nearer to him still.",
+    "tr": "“eş-Şâkir, eş-Şekûr”: Az amele şükürle karşılık veren ve çok sürçmeyi bağışlayandır. İhlâslı kulların amellerini hesapsız kat kat artırır, şükredenlere şükürle karşılık verir, kendisini ananı anar. Kim sâlih amellerden bir şeyle O’na yaklaşırsa, Allah ona daha çok yaklaşır.",
+    "ar": "\"الشاكر، الشكور\" الذي يشكر القليل من العمل، ويغفر الكثير من الزلل. ويضاعف للمخلصين أعمالهم بغير حساب، ويشكر الشاكرين، ويذكر من ذكره، ومن تقرب إليه بشيء من الأعمال الصالحة، تقرب الله منه أكثر."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 158,
+    "word": 23
+   }
+  },
+  {
+   "slug": "ash-shakur",
+   "arabic": "الشَّكُورُ",
+   "transliteration": {
+    "ru": "Аш-Шакур",
+    "en": "Ash-Shakur",
+    "tr": "eş-Şekûr"
+   },
+   "meaning": {
+    "ru": "Благодарный",
+    "en": "The Most Appreciative",
+    "tr": "Az amele çok veren",
+    "ar": "يضاعف للمخلصين أعمالهم"
+   },
+   "tafsir": {
+    "ru": "Воистину, Аллах — Прощающий, Благодарный. Он прощает грехи Своих рабов и принимает от них даже самые малые благодеяния.",
+    "en": "“Ash-Shakir, Ash-Shakur”: the One who thanks for a little of deeds and forgives many lapses. He multiplies for the sincere their deeds without measure, thanks the thankful, and remembers whoever remembers Him; and whoever draws near to Him with any righteous deed, Allah draws nearer to him still.",
+    "tr": "“eş-Şâkir, eş-Şekûr”: Az amele şükürle karşılık veren ve çok sürçmeyi bağışlayandır. İhlâslı kulların amellerini hesapsız kat kat artırır, şükredenlere şükürle karşılık verir, kendisini ananı anar. Kim sâlih amellerden bir şeyle O’na yaklaşırsa, Allah ona daha çok yaklaşır.",
+    "ar": "\"الشاكر، الشكور\" الذي يشكر القليل من العمل، ويغفر الكثير من الزلل. ويضاعف للمخلصين أعمالهم بغير حساب، ويشكر الشاكرين، ويذكر من ذكره، ومن تقرب إليه بشيء من الأعمال الصالحة، تقرب الله منه أكثر."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 35,
+    "ayah": 30,
+    "word": 8
+   }
+  },
+  {
+   "slug": "as-sayyid",
+   "arabic": "السَّيِّدُ",
+   "transliteration": {
+    "ru": "Ас-Сайид",
+    "en": "As-Sayyid",
+    "tr": "es-Seyyid"
+   },
+   "meaning": {
+    "ru": "Господин",
+    "en": "The Master",
+    "tr": "Efendi",
+    "ar": "الكامل في سؤدده"
+   },
+   "tafsir": {
+    "ru": "Словом «ас-Сайид» называют господа, владельца, знатного, достойного, щедрого, выдержанного, предводителя, мужа и того, кто терпит обиды от своего народа. Аллах, Могуч Он и Велик, — Господин, в Чьей власти все творения и Кто заботится о них. Всё господство в действительности принадлежит Аллаху, а все творения — Его рабы.",
+    "en": "“As-Sayyid” is used for the lord, the owner, the noble, the virtuous, the generous, the forbearing, the chief, the husband, and the one who bears the harm of his people. Allah, Mighty and Majestic, is the Master Who holds the forelocks of creation and takes care of them. All mastery in truth belongs to Allah, and all creatures are His servants.",
+    "tr": "“Seyyid” kelimesi rab, mâlik, şerefli, faziletli, cömert, halîm, reis, koca ve kavminin eziyetine katlanan kimse için kullanılır. Aziz ve Celil olan Allah ise yaratılmışların perçemlerini elinde tutan ve onların işlerini üstlenen Seyyid’dir. Gerçek anlamda efendiliğin tamamı Allah’a aittir, bütün yaratılmışlar O’nun kullarıdır.",
+    "ar": "و«السيد» يطلق على الرّب، والمالك، والشريف، والفاضل، والكريم، والحليم، والرئيس، والزوج، ومُتَحَمِّل أذى قومه، واللَّه عز وجل هو السيد الذي يملك نواصي الخلق ويتولاهم، فالسؤدد كله حقيقة للَّه والخلق كلهم عبيده."
+   },
+   "tafsir_source": {
+    "ru": "Са‘ид аль-Кахтани, «Шарх асма Аллах аль-хусна фи дау аль-Китаб ва-с-Сунна»",
+    "en": "Sa‘id al-Qahtani, Sharh Asma’ Allah al-Husna fi Daw’ al-Kitab wa-s-Sunnah",
+    "tr": "Saîd el-Kahtânî, Şerhu Esmâillâhi’l-Hüsnâ fî Dav’i’l-Kitâb ve’s-Sünne",
+    "ar": "سعيد بن علي بن وهف القحطاني، شرح أسماء الله الحسنى في ضوء الكتاب والسنة"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "as-samad",
+   "arabic": "الصَّمَدُ",
+   "transliteration": {
+    "ru": "Ас-Самад",
+    "en": "As-Samad",
+    "tr": "es-Samed"
+   },
+   "meaning": {
+    "ru": "Самодостаточный",
+    "en": "The Eternal Refuge",
+    "tr": "Her şeyin muhtaç olduğu",
+    "ar": "تقصده الخلائق في حاجاتها"
+   },
+   "tafsir": {
+    "ru": "Он самодостаточен, и все обитатели небес и земли в высшей степени нуждаются в Нем и молят Его о помощи, потому что все Его качества совершенны.",
+    "en": "“As-Samad”: He is the One to whom all created beings turn in all their needs, their necessities and their conditions, because of the absolute perfection that belongs to Him in His essence, His names, His attributes and His actions.",
+    "tr": "“es-Samed”: O; zâtında, isimlerinde, sıfatlarında ve fiillerinde mutlak kemâl sahibi olduğu için bütün yaratılmışların her türlü ihtiyaçlarında, zaruretlerinde ve hâllerinde kendisine yöneldiği zâttır.",
+    "ar": "\"الصمد\": وهو الذي تقصده الخلائق كلها في جميع حاجاتها، وضروراتها وأحوالها، لما له من الكمال المطلق في ذاته، وأسمائه، وصفاته، وأفعاله."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 112,
+    "ayah": 2,
+    "word": 2
+   }
+  },
+  {
+   "slug": "al-qahir",
+   "arabic": "القَاهِرُ",
+   "transliteration": {
+    "ru": "Аль-Кахир",
+    "en": "Al-Qahir",
+    "tr": "el-Kāhir"
+   },
+   "meaning": {
+    "ru": "Одолевающий",
+    "en": "The Subduer",
+    "tr": "Mutlak galip olan",
+    "ar": "القاهر فوق عباده"
+   },
+   "tafsir": {
+    "ru": "Он один подчиняет Себе творения, и все они подвластны Ему, и это значит, что только Он заслуживает поклонения.",
+    "en": "“And He is the Subduer over His servants.” So none of them who acts can act, none who moves can move, and none who is still can be still, except by His will. Kings and others cannot go outside His dominion and His authority; rather, they are governed and subdued. So since He is the Subduer and all besides Him are subdued, He is the One who deserves worship.",
+    "tr": "“O, kullarının üstünde Kāhir’dir.” Onlardan hiçbir tasarruf eden O’nun dilemesi olmadan tasarruf edemez, hiçbir hareket eden hareket edemez, hiçbir duran da duramaz. Hükümdarlar ve başkaları O’nun mülkünün ve saltanatının dışına çıkamaz; aksine onlar idare edilen ve boyun eğdirilmiş kimselerdir. O, Kāhir; O’ndan başkası ise boyun eğdirilmiş olduğuna göre ibadete lâyık olan O’dur.",
+    "ar": "﴿وَهُوَ الْقَاهِرُ فَوْقَ عِبَادِهِ﴾ فلا يتصرف منهم متصرف، ولا يتحرك متحرك، ولا يسكن ساكن، إلا بمشيئته، وليس للملوك وغيرهم الخروج عن ملكه وسلطانه، بل هم مدبرون مقهورون، فإذا كان هو القاهر وغيره مقهورا، كان هو المستحق للعبادة."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "6:18",
+   "ayah": {
+    "surah": 6,
+    "ayah": 18,
+    "word": 2
+   }
+  },
+  {
+   "slug": "al-qahhar",
+   "arabic": "القَهَّارُ",
+   "transliteration": {
+    "ru": "Аль-Каххар",
+    "en": "Al-Qahhar",
+    "tr": "el-Kahhâr"
+   },
+   "meaning": {
+    "ru": "Всемогущий",
+    "en": "The All-Subduing",
+    "tr": "Her şeye boyun eğdiren",
+    "ar": "خضعت له المخلوقات"
+   },
+   "tafsir": {
+    "ru": "Кроме того, только Аллах является Могущественным Властелином, Которому подвластны земной и вышний миры.",
+    "en": "“Al-Qahhar”: the Subduer of everything, to whom the created beings have submitted, and humbled themselves before His might, His strength and the perfection of His power.",
+    "tr": "“el-Kahhâr”: Her şeye boyun eğdirendir; yaratılmışlar O’na boyun eğmiş, O’nun izzeti, kuvveti ve kudretinin kemâli karşısında zelil olmuştur.",
+    "ar": "\"القهار\" لكل شيء، الذي خضعت له المخلوقات، وذلت لعزته وقوته وكمال اقتداره."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 39,
+    "ayah": 4,
+    "word": 16
+   }
+  },
+  {
+   "slug": "al-jabbar",
+   "arabic": "الجَبَّارُ",
+   "transliteration": {
+    "ru": "Аль-Джаббар",
+    "en": "Al-Jabbar",
+    "tr": "el-Cebbâr"
+   },
+   "meaning": {
+    "ru": "Могучий",
+    "en": "The Compeller",
+    "tr": "İradesini geçiren, kırıkları onaran",
+    "ar": "الجابر للقلوب المنكسرة"
+   },
+   "tafsir": {
+    "ru": "Могучий, Чья божественная власть распространяется на всех рабов и который властен унизить великих и обогатить бедных.",
+    "en": "“Al-Jabbar”: it is in the meaning of Al-‘Aliyy Al-A‘la, and in the meaning of Al-Qahhar, and in the meaning of “Ar-Ra’uf”: the One who mends the broken hearts, and the weak and helpless, and whoever takes shelter with Him and seeks refuge in Him.",
+    "tr": "“el-Cebbâr”: el-Aliyy el-A‘lâ anlamında, el-Kahhâr anlamında ve “er-Raûf” anlamındadır: kırık kalpleri, zayıf ve âciz olanı, kendisine sığınanı ve iltica edeni onarıp düzeltendir.",
+    "ar": "\"الجبار\" هو بمعنى العلي الأعلى، وبمعنى القهار، وبمعنى \"الرؤوف\" الجابر للقلوب المنكسرة، وللضعيف العاجز، ولمن لاذ به ولجأ إليه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 23,
+    "word": 14
+   }
+  },
+  {
+   "slug": "al-hasib",
+   "arabic": "الحَسِيبُ",
+   "transliteration": {
+    "ru": "Аль-Хасиб",
+    "en": "Al-Hasib",
+    "tr": "el-Hasîb"
+   },
+   "meaning": {
+    "ru": "Подсчитывающий",
+    "en": "The Reckoner",
+    "tr": "Hesaba çeken, yeten",
+    "ar": "كافي المتوكلين"
+   },
+   "tafsir": {
+    "ru": "Он подсчитывает все сущее и сохраняет для Своих рабов их хорошие и плохие, большие и малые деяния, дабы они могли получить воздаяние в соответствии с Его милостью, справедливостью и мудростью.",
+    "en": "“Al-Hasib”: He is the Knower of His servants, the Sufficer of those who rely on Him, the Requiter of His servants with good and evil, according to His wisdom and His knowledge of their deeds, the fine of them and the great.",
+    "tr": "“el-Hasîb”: O, kullarını bilen, tevekkül edenlere yeten, hikmetine ve onların amellerinin incesini ve büyüğünü bilmesine göre kullarına hayır ve şer ile karşılık verendir.",
+    "ar": "\"الحسيب\" هو العليم بعباده، كافي المتوكلين، المجازي لعباده بالخير والشر، بحسب حكمته وعلمه بدقيق أعمالهم وجليلها."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 4,
+    "ayah": 86,
+    "word": 15
+   }
+  },
+  {
+   "slug": "al-hadi",
+   "arabic": "الهَادِي",
+   "transliteration": {
+    "ru": "Аль-Хади",
+    "en": "Al-Hadi",
+    "tr": "el-Hâdî"
+   },
+   "meaning": {
+    "ru": "Наставляющий на прямой путь",
+    "en": "The Guide",
+    "tr": "Hidayet veren",
+    "ar": "يهدي عباده إلى المنافع"
+   },
+   "tafsir": {
+    "ru": "Ради правой веры, которая укореняется в сердцах верующих, Аллах помогает им познавать истину и поступать в соответствии со своими знаниями.",
+    "en": "“Al-Hadi, Ar-Rashid”, that is: the One who guides and directs His servants to all that benefits them and to the repelling of what harms them, teaches them what they do not know, guides them with the guidance of success and right direction, inspires them with piety, and makes their hearts turn back to Him and submit to His command.",
+    "tr": "“el-Hâdî, er-Reşîd”, yani: Kullarını bütün faydalı şeylere ve zararlı şeyleri def etmeye hidayet ve irşad eden, onlara bilmediklerini öğreten, onları tevfik ve doğrultma hidayetiyle hidayete erdiren, onlara takvayı ilham eden, kalplerini kendisine yönelen ve emrine boyun eğen kılan zâttır.",
+    "ar": "\"الهادي، الرشيد\" أي: الذي يهدي ويرشد عباده إلى جميع المنافع، وإلى دفع المضار، ويعلمهم ما لا يعلمون، ويهديهم لهداية التوفيق والتسديد، ويلهمهم التقوى، ويجعل قلوبهم منيبة إليه منقادة لأمره."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 22,
+    "ayah": 54,
+    "word": 16
+   }
+  },
+  {
+   "slug": "al-hakam",
+   "arabic": "الحَكَمُ",
+   "transliteration": {
+    "ru": "Аль-Хакам",
+    "en": "Al-Hakam",
+    "tr": "el-Hakem"
+   },
+   "meaning": {
+    "ru": "Судья",
+    "en": "The Judge",
+    "tr": "Hüküm veren",
+    "ar": "يحكم بين عباده بعدله"
+   },
+   "tafsir": {
+    "ru": "Все распоряжения и законы, которые творения принимают самостоятельно, преисполнены недостатков и несправедливы, и поэтому люди обязаны обращаться на суд к Аллаху, Который создает творения и издает законы без каких-либо сотоварищей.",
+    "en": "“Al-Hakam, Al-‘Adl”: the One who judges between His servants in this world and the Hereafter with His justice and His equity. He does not wrong by the weight of an atom, does not burden anyone with the burden of another, and does not requite the servant with more than his sin. He renders the rights to those entitled to them, and leaves no holder of a right without delivering his right to him. And He is the Just in His governance and His decree.",
+    "tr": "“el-Hakem, el-Adl”: Dünyada ve âhirette kulları arasında adaleti ve hakkaniyetiyle hükmedendir. Zerre ağırlığınca zulmetmez, hiç kimseye başkasının günah yükünü yüklemez, kula günahından fazlasıyla karşılık vermez; hakları sahiplerine ulaştırır, hakkını kendisine ulaştırmadığı hiçbir hak sahibi bırakmaz. O, tedbirinde ve takdirinde âdil olandır.",
+    "ar": "\"الحكم، العدل\" الذي يحكم بين عباده في الدنيا والآخرة بعدله وقسطه. فلا يظلم مثقال ذرة، ولا يحمِّل أحدا وزر أحد، ولا يجازي العبد بأكثر من ذنبه ويؤدي الحقوق إلى أهلها، فلا يدع صاحب حق إلا أوصل إليه حقه، وهو العدل في تدبيره وتقديره"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 6,
+    "ayah": 114,
+    "word": 4
+   }
+  },
+  {
+   "slug": "al-quddus",
+   "arabic": "القُدُّوسُ",
+   "transliteration": {
+    "ru": "Аль-Куддус",
+    "en": "Al-Quddus",
+    "tr": "el-Kuddûs"
+   },
+   "meaning": {
+    "ru": "Святой",
+    "en": "The Most Holy",
+    "tr": "Her eksiklikten münezzeh",
+    "ar": "المنزه عن صفات النقص"
+   },
+   "tafsir": {
+    "ru": "Святой и Пречистый, то есть лишенный любых пороков и недостатков и обладающий совершенными качествами, благодаря которым Он более кого бы то ни было достоин почитания и возвеличивания.",
+    "en": "“Al-Quddus, As-Salam”, that is: the Venerated, the One free of all attributes of deficiency and of any of the creation being like Him. He is free of all defects, and free of anyone coming near Him or being like Him in anything of perfection.",
+    "tr": "“el-Kuddûs, es-Selâm”, yani: Yüceltilen; bütün noksan sıfatlardan ve yaratılmışlardan birinin kendisine benzemesinden münezzeh olandır. O, bütün kusurlardan münezzehtir; kemâle dair herhangi bir şeyde birinin kendisine yaklaşmasından veya benzemesinden de münezzehtir.",
+    "ar": "\"القدوس، السلام\" أي: المعظم المنزه عن صفات النقص كلها، وأن يماثله أحد من الخلق، فهو المتنزه عن جميع العيوب، والمتنزه عن أن يقاربه أو يماثله أحد في شيء من الكمال"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 23,
+    "word": 9
+   }
+  },
+  {
+   "slug": "as-salam",
+   "arabic": "السَّلَامُ",
+   "transliteration": {
+    "ru": "Ас-Салям",
+    "en": "As-Salam",
+    "tr": "es-Selâm"
+   },
+   "meaning": {
+    "ru": "Пречистый",
+    "en": "The Flawless",
+    "tr": "Kusurlardan selâmette olan",
+    "ar": "المتنزه عن جميع العيوب"
+   },
+   "tafsir": {
+    "ru": "Святой и Пречистый, то есть лишенный любых пороков и недостатков и обладающий совершенными качествами, благодаря которым Он более кого бы то ни было достоин почитания и возвеличивания.",
+    "en": "“Al-Quddus, As-Salam”, that is: the Venerated, the One free of all attributes of deficiency and of any of the creation being like Him. He is free of all defects, and free of anyone coming near Him or being like Him in anything of perfection.",
+    "tr": "“el-Kuddûs, es-Selâm”, yani: Yüceltilen; bütün noksan sıfatlardan ve yaratılmışlardan birinin kendisine benzemesinden münezzeh olandır. O, bütün kusurlardan münezzehtir; kemâle dair herhangi bir şeyde birinin kendisine yaklaşmasından veya benzemesinden de münezzehtir.",
+    "ar": "\"القدوس، السلام\" أي: المعظم المنزه عن صفات النقص كلها، وأن يماثله أحد من الخلق، فهو المتنزه عن جميع العيوب، والمتنزه عن أن يقاربه أو يماثله أحد في شيء من الكمال"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 23,
+    "word": 10
+   }
+  },
+  {
+   "slug": "al-barr",
+   "arabic": "البَرُّ",
+   "transliteration": {
+    "ru": "Аль-Барр",
+    "en": "Al-Barr",
+    "tr": "el-Berr"
+   },
+   "meaning": {
+    "ru": "Добродетельный",
+    "en": "The Most Kind",
+    "tr": "İyiliği bol",
+    "ar": "المتصف بالبر والجود"
+   },
+   "tafsir": {
+    "ru": "Среди Его прекрасных имен — Добродетельный, Милосердный. По Своей доброте и милости Он позволил праведникам войти в Рай и защитил их от своего гнева и адских мук.",
+    "en": "These names are close in their meanings, and all of them indicate that the Lord is characterised by mercy, kindness, munificence and generosity, and indicate the vastness of His mercy and His gifts, with which He has encompassed all of existence, according to what His wisdom requires; and He has singled out the believers with the fullest share and the most complete portion of them.",
+    "tr": "Bu isimlerin anlamları birbirine yakındır; hepsi Rabb’in rahmet, iyilik, cömertlik ve kerem ile vasıflandığına, hikmetinin gerektirdiğine göre bütün varlığı kapsadığı rahmetinin ve bağışlarının genişliğine delâlet eder. Müminlere ise bunlardan en bol payı ve en mükemmel nasibi ayırmıştır.",
+    "ar": "هذه الأسماء تتقارب معانيها، وتدل كلها على اتصاف الرب بالرحمة، والبر، والجود، والكرم، وعلى سعة رحمته ومواهبه، التي عم بها جميع الوجود، بحسب ما تقتضيه حكمته، وخص المؤمنين منها بالنصيب الأوفر، والحظ الأكمل"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 52,
+    "ayah": 28,
+    "word": 8
+   }
+  },
+  {
+   "slug": "al-wahhab",
+   "arabic": "الوَهَّابُ",
+   "transliteration": {
+    "ru": "Аль-Ваххаб",
+    "en": "Al-Wahhab",
+    "tr": "el-Vehhâb"
+   },
+   "meaning": {
+    "ru": "Дарующий",
+    "en": "The Bestower",
+    "tr": "Karşılıksız veren",
+    "ar": "واسع المواهب"
+   },
+   "tafsir": {
+    "ru": "Эти имена близки по смыслу, и все они указывают на то, что Господь обладает милостью, добродетелью, щедростью и великодушием, и на широту Его милости и Его даров, которыми Он охватил всё сущее сообразно тому, чего требует Его мудрость; а верующим Он отвёл из них наибольшую долю и самый полный удел.",
+    "en": "These names are close in their meanings, and all of them indicate that the Lord is characterised by mercy, kindness, munificence and generosity, and indicate the vastness of His mercy and His gifts, with which He has encompassed all of existence, according to what His wisdom requires; and He has singled out the believers with the fullest share and the most complete portion of them.",
+    "tr": "Bu isimlerin anlamları birbirine yakındır; hepsi Rabb’in rahmet, iyilik, cömertlik ve kerem ile vasıflandığına, hikmetinin gerektirdiğine göre bütün varlığı kapsadığı rahmetinin ve bağışlarının genişliğine delâlet eder. Müminlere ise bunlardan en bol payı ve en mükemmel nasibi ayırmıştır.",
+    "ar": "هذه الأسماء تتقارب معانيها، وتدل كلها على اتصاف الرب بالرحمة، والبر، والجود، والكرم، وعلى سعة رحمته ومواهبه، التي عم بها جميع الوجود، بحسب ما تقتضيه حكمته، وخص المؤمنين منها بالنصيب الأوفر، والحظ الأكمل"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 3,
+    "ayah": 8,
+    "word": 15
+   }
+  },
+  {
+   "slug": "ar-rahman",
+   "arabic": "الرَّحْمَنُ",
+   "transliteration": {
+    "ru": "Ар-Рахман",
+    "en": "Ar-Rahman",
+    "tr": "er-Rahmân"
+   },
+   "meaning": {
+    "ru": "Милостивый",
+    "en": "The All-Merciful",
+    "tr": "Çok merhametli",
+    "ar": "ذو الرحمة الواسعة"
+   },
+   "tafsir": {
+    "ru": "Прекрасные имена Милостивый и Милосердный свидетельствуют о Его великом милосердии, объемлющем всякую вещь и всякую тварь.",
+    "en": "These names are close in their meanings, and all of them indicate that the Lord is characterised by mercy, kindness, munificence and generosity, and indicate the vastness of His mercy and His gifts, with which He has encompassed all of existence, according to what His wisdom requires; and He has singled out the believers with the fullest share and the most complete portion of them.",
+    "tr": "Bu isimlerin anlamları birbirine yakındır; hepsi Rabb’in rahmet, iyilik, cömertlik ve kerem ile vasıflandığına, hikmetinin gerektirdiğine göre bütün varlığı kapsadığı rahmetinin ve bağışlarının genişliğine delâlet eder. Müminlere ise bunlardan en bol payı ve en mükemmel nasibi ayırmıştır.",
+    "ar": "هذه الأسماء تتقارب معانيها، وتدل كلها على اتصاف الرب بالرحمة، والبر، والجود، والكرم، وعلى سعة رحمته ومواهبه، التي عم بها جميع الوجود، بحسب ما تقتضيه حكمته، وخص المؤمنين منها بالنصيب الأوفر، والحظ الأكمل"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 22,
+    "word": 12
+   }
+  },
+  {
+   "slug": "ar-rahim",
+   "arabic": "الرَّحِيمُ",
+   "transliteration": {
+    "ru": "Ар-Рахим",
+    "en": "Ar-Rahim",
+    "tr": "er-Rahîm"
+   },
+   "meaning": {
+    "ru": "Милосердный",
+    "en": "The Most Merciful",
+    "tr": "Çok merhamet eden",
+    "ar": "المتصف بالرحمة الواسعة"
+   },
+   "tafsir": {
+    "ru": "Прекрасные имена Милостивый и Милосердный свидетельствуют о Его великом милосердии, объемлющем всякую вещь и всякую тварь.",
+    "en": "These names are close to one another in meaning, and all of them indicate that the Lord is characterised by mercy, kindness, generosity and bounty, and indicate the vastness of His mercy and His gifts, with which He has encompassed all of existence, in accordance with what His wisdom requires; and He has singled out the believers for the most abundant portion of it and the most complete share.",
+    "tr": "Bu isimlerin anlamları birbirine yakındır ve hepsi Rabbin rahmet, iyilik, cömertlik ve kerem ile vasıflandığına, hikmetinin gerektirdiği ölçüde bütün varlığı kuşattığı rahmetinin ve bağışlarının genişliğine delâlet eder; müminlere ise bundan en bol payı ve en mükemmel nasibi ayırmıştır.",
+    "ar": "هذه الأسماء تتقارب معانيها، وتدل كلها على اتصاف الرب بالرحمة، والبر، والجود، والكرم، وعلى سعة رحمته ومواهبه، التي عم بها جميع الوجود، بحسب ما تقتضيه حكمته، وخص المؤمنين منها بالنصيب الأوفر، والحظ الأكمل"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 22,
+    "word": 13
+   }
+  },
+  {
+   "slug": "al-karim",
+   "arabic": "الكَرِيمُ",
+   "transliteration": {
+    "ru": "Аль-Карим",
+    "en": "Al-Karim",
+    "tr": "el-Kerîm"
+   },
+   "meaning": {
+    "ru": "Великодушный",
+    "en": "The Most Generous",
+    "tr": "Çok cömert",
+    "ar": "المتصف بالجود والكرم"
+   },
+   "tafsir": {
+    "ru": "Среди прекрасных имен Аллаха — Богатый и Великодушный. Господь настолько богат, что не нуждается в праведных делах Своих рабов, а Его великодушие настолько велико, что Он ниспосылает милости как благодарным праведникам, так и непризнательным грешникам.",
+    "en": "These names are close to one another in meaning, and all of them indicate that the Lord is characterised by mercy, kindness, generosity and bounty, and indicate the vastness of His mercy and His gifts, with which He has encompassed all of existence, in accordance with what His wisdom requires; and He has singled out the believers for the most abundant portion of it and the most complete share.",
+    "tr": "Bu isimlerin anlamları birbirine yakındır ve hepsi Rabbin rahmet, iyilik, cömertlik ve kerem ile vasıflandığına, hikmetinin gerektirdiği ölçüde bütün varlığı kuşattığı rahmetinin ve bağışlarının genişliğine delâlet eder; müminlere ise bundan en bol payı ve en mükemmel nasibi ayırmıştır.",
+    "ar": "هذه الأسماء تتقارب معانيها، وتدل كلها على اتصاف الرب بالرحمة، والبر، والجود، والكرم، وعلى سعة رحمته ومواهبه، التي عم بها جميع الوجود، بحسب ما تقتضيه حكمته، وخص المؤمنين منها بالنصيب الأوفر، والحظ الأكمل"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 27,
+    "ayah": 40,
+    "word": 38
+   }
+  },
+  {
+   "slug": "al-akram",
+   "arabic": "الأَكْرَمُ",
+   "transliteration": {
+    "ru": "Аль-Акрам",
+    "en": "Al-Akram",
+    "tr": "el-Ekrem"
+   },
+   "meaning": {
+    "ru": "Самый великодушный",
+    "en": "The Most Bountiful",
+    "tr": "En cömert olan",
+    "ar": "كثير الكرم والإحسان"
+   },
+   "tafsir": {
+    "ru": "Его великодушие и добродетель огромны, а щедрость бесконечна, и из своего великодушия Он научил человека различным наукам.",
+    "en": "“Read, and your Lord is the Most Generous”, that is: abundant and vast in attributes, abundant in generosity and beneficence, vast in bounty, of Whose generosity it is that He taught knowledge.",
+    "tr": "“Oku! Rabbin en cömert olandır”, yani: sıfatları çok ve geniş olan, keremi ve ihsanı çok, cömertliği geniş olandır; ilmi öğretmiş olması da O’nun keremindendir.",
+    "ar": "﴿اقْرَأْ وَرَبُّكَ الأكْرَمُ﴾ أي: كثير الصفات واسعها، كثير الكرم والإحسان، واسع الجود، الذي من كرمه أن علم بالعلم"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "96:3",
+   "ayah": {
+    "surah": 96,
+    "ayah": 3,
+    "word": 3
+   }
+  },
+  {
+   "slug": "ar-rauf",
+   "arabic": "الرَّءُوفُ",
+   "transliteration": {
+    "ru": "Ар-Рауф",
+    "en": "Ar-Ra’uf",
+    "tr": "er-Raûf"
+   },
+   "meaning": {
+    "ru": "Сострадательный",
+    "en": "The Most Kind",
+    "tr": "Çok şefkatli",
+    "ar": "المتصف بالرحمة والبر"
+   },
+   "tafsir": {
+    "ru": "Затем Аллах сообщил о Своем безграничном милосердии и сострадании к людям.",
+    "en": "These names are close to one another in meaning, and all of them indicate that the Lord is characterised by mercy, kindness, generosity and bounty, and indicate the vastness of His mercy and His gifts, with which He has encompassed all of existence, in accordance with what His wisdom requires; and He has singled out the believers for the most abundant portion of it and the most complete share.",
+    "tr": "Bu isimlerin anlamları birbirine yakındır ve hepsi Rabbin rahmet, iyilik, cömertlik ve kerem ile vasıflandığına, hikmetinin gerektirdiği ölçüde bütün varlığı kuşattığı rahmetinin ve bağışlarının genişliğine delâlet eder; müminlere ise bundan en bol payı ve en mükemmel nasibi ayırmıştır.",
+    "ar": "هذه الأسماء تتقارب معانيها، وتدل كلها على اتصاف الرب بالرحمة، والبر، والجود، والكرم، وعلى سعة رحمته ومواهبه، التي عم بها جميع الوجود، بحسب ما تقتضيه حكمته، وخص المؤمنين منها بالنصيب الأوفر، والحظ الأكمل"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 143,
+    "word": 44
+   }
+  },
+  {
+   "slug": "al-fattah",
+   "arabic": "الفَتَّاحُ",
+   "transliteration": {
+    "ru": "Аль-Фаттах",
+    "en": "Al-Fattah",
+    "tr": "el-Fettâh"
+   },
+   "meaning": {
+    "ru": "Раскрывающий (или Справедливый Судья)",
+    "en": "The Opener, the Judge",
+    "tr": "Açan, hükmeden",
+    "ar": "الذي يحكم بين عباده"
+   },
+   "tafsir": {
+    "ru": "Воистину, Аллах — Справедливый Судья, Знающий. Он способен пролить свет на самые запутанные и темные дела и вынести справедливый приговор, потому что Он ведает обо всех человеческих поступках.",
+    "en": "“Al-Fattah” is the One Who judges between His servants by His legislative rulings, His rulings of decree, and the rulings of recompense; Who by His kindness opened the insight of the truthful, and opened their hearts to knowing Him, loving Him and turning to Him; and opened for His servants the gates of mercy and of the various kinds of provision, and prepared for them the means by which they attain the good of this world and of the Hereafter.",
+    "tr": "“el-Fettâh”, kulları arasında şer‘î hükümleriyle, kaderî hükümleriyle ve ceza (karşılık) hükümleriyle hükmedendir; lütfuyla sâdıkların basiretlerini açan, kalplerini Kendisini tanımaya, Kendisini sevmeye ve Kendisine yönelmeye açandır; kullarına rahmet kapılarını ve çeşitli rızıkların kapılarını açan, onlar için dünya ve âhiret hayrına ulaşacakları sebepleri hazırlayandır.",
+    "ar": "\"الفتاح\" الذي يحكم بين عباده بأحكامه الشرعية، وأحكامه القدرية، وأحكام الجزاء، الذي فتح بلطفه بصائر الصادقين، وفتح قلوبهم لمعرفته ومحبته والإنابة إليه، وفتح لعباده أبواب الرحمة والأرزاق المتنوعة، وسبب لهم الأسباب التي ينالون بها خير الدنيا والآخرة"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 34,
+    "ayah": 26,
+    "word": 10
+   }
+  },
+  {
+   "slug": "ar-razzaq",
+   "arabic": "الرَّزَّاقُ",
+   "transliteration": {
+    "ru": "Ар-Разза́к",
+    "en": "Ar-Razzaq",
+    "tr": "er-Rezzâk"
+   },
+   "meaning": {
+    "ru": "Наделяющий уделом",
+    "en": "The All-Provider",
+    "tr": "Bol rızık veren",
+    "ar": "الرزاق لجميع عباده"
+   },
+   "tafsir": {
+    "ru": "Его дары щедры и богаты, и в небесах и на земле нет живого существа, которое бы не питалось этими дарами. Он знает, где Его рабы находят приют и где они ищут пропитание.",
+    "en": "“Ar-Razzaq” is the Provider of all His servants; there is no creature on earth but that its provision is upon Allah. His provision for His servants is of two kinds: a general provision, which includes the righteous and the wicked, the first and the last, and it is the provision of bodies; and a special provision, which is the provision of hearts and their nourishment with knowledge and faith.",
+    "tr": "“er-Rezzâk”, bütün kullarını rızıklandırandır; yeryüzünde hiçbir canlı yoktur ki rızkı Allah’ın üzerine olmasın. O’nun kullarına verdiği rızık iki türlüdür: iyiyi ve günahkârı, öncekileri ve sonrakileri kapsayan genel rızık ki bu bedenlerin rızkıdır; ve özel rızık ki bu kalplerin rızkı ve onların ilim ve imanla beslenmesidir.",
+    "ar": "\"الرزاق\" لجميع عباده، فما من دابة في الأرض إلا على الله رزقها. ورزقه لعباده نوعان: رزق عام، شمل البر والفاجر، والأولين والآخرين، وهو رزق الأبدان. ورزق خاص وهو رزق القلوب، وتغذيتها بالعلم والإيمان."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 51,
+    "ayah": 58,
+    "word": 4
+   }
+  },
+  {
+   "slug": "ar-raaziq",
+   "arabic": "الرَّازِقُ",
+   "transliteration": {
+    "ru": "Ар-Ра́зик",
+    "en": "Ar-Raziq",
+    "tr": "er-Râzık"
+   },
+   "meaning": {
+    "ru": "Дарующий удел",
+    "en": "The Provider",
+    "tr": "Rızık veren",
+    "ar": "الرازق لجميع عباده"
+   },
+   "tafsir": {
+    "ru": "Однако терпеливое и усердное поклонение Аллаху никогда не уменьшит удела человека на земле, ибо Аллах является наилучшим кормильцем. Он наделяет благами своих благочестивых и набожных рабов оттуда, откуда они этого даже не ожидают.",
+    "en": "“Ar-Razzaq” is the Provider of all His servants; there is no creature on earth but that its provision is upon Allah. His provision for His servants is of two kinds: a general provision, which includes the righteous and the wicked, the first and the last, and it is the provision of bodies; and a special provision, which is the provision of hearts and their nourishment with knowledge and faith.",
+    "tr": "“er-Rezzâk”, bütün kullarını rızıklandırandır; yeryüzünde hiçbir canlı yoktur ki rızkı Allah’ın üzerine olmasın. O’nun kullarına verdiği rızık iki türlüdür: iyiyi ve günahkârı, öncekileri ve sonrakileri kapsayan genel rızık ki bu bedenlerin rızkıdır; ve özel rızık ki bu kalplerin rızkı ve onların ilim ve imanla beslenmesidir.",
+    "ar": "\"الرزاق\" لجميع عباده، فما من دابة في الأرض إلا على الله رزقها. ورزقه لعباده نوعان: رزق عام، شمل البر والفاجر، والأولين والآخرين، وهو رزق الأبدان. ورزق خاص وهو رزق القلوب، وتغذيتها بالعلم والإيمان."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 62,
+    "ayah": 11,
+    "word": null
+   }
+  },
+  {
+   "slug": "al-hayy",
+   "arabic": "الحَيُّ",
+   "transliteration": {
+    "ru": "Аль-Хайй",
+    "en": "Al-Hayy",
+    "tr": "el-Hayy"
+   },
+   "meaning": {
+    "ru": "Живой",
+    "en": "The Ever-Living",
+    "tr": "Diri olan",
+    "ar": "كامل الحياة"
+   },
+   "tafsir": {
+    "ru": "Живой — одно из прекрасных имен Аллаха. Оно означает, что Аллах объединяет в Себе самые прекрасные признаки жизни, среди которых — слух, зрение, могущество, воля и другие качества, связанные с Его сущностью.",
+    "en": "“Al-Hayy Al-Qayyum”: the One of perfect life and the One Who subsists by Himself. He is the Sustainer of the inhabitants of the heavens and the earth, Who undertakes their management, their provisions and all their conditions. So “Al-Hayy” is the name that comprises the attributes of the Essence, and “Al-Qayyum” is the name that comprises the attributes of actions.",
+    "tr": "“el-Hayyu’l-Kayyûm”: hayatı kâmil olan ve Kendi zâtıyla kaim olandır. Göklerin ve yerin ehlini ayakta tutan, onların idaresini, rızıklarını ve bütün hallerini üstlenendir. Buna göre “el-Hayy” zât sıfatlarını kendinde toplayan, “el-Kayyûm” ise fiil sıfatlarını kendinde toplayan isimdir.",
+    "ar": "\"الحي القيوم\" كامل الحياة والقائم بنفسه. القيوم لأهل السموات والأرض، القائم بتدبيرهم وأرزاقهم، وجميع أحوالهم، فـ \"الحي\": الجامع لصفات الذات، و\"القيوم\" الجامع لصفات الأفعال."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 255,
+    "word": 6
+   }
+  },
+  {
+   "slug": "al-qayyum",
+   "arabic": "القَيُّومُ",
+   "transliteration": {
+    "ru": "Аль-Кайюм",
+    "en": "Al-Qayyum",
+    "tr": "el-Kayyûm"
+   },
+   "meaning": {
+    "ru": "Вседержитель",
+    "en": "The Self-Subsisting Sustainer",
+    "tr": "Her şeyi ayakta tutan",
+    "ar": "القائم بنفسه القائم بتدبير خلقه"
+   },
+   "tafsir": {
+    "ru": "Поддерживающий жизнь — еще одно прекрасное имя Аллаха. Оно означает, что Он совершает самые совершенные дела. Он является Самодостаточным Властелином и не нуждается в творениях, но создает их, поддерживает их существование и обеспечивает их всем необходимым.",
+    "en": "“Al-Hayy Al-Qayyum”: the One of perfect life and the One Who subsists by Himself. He is the Sustainer of the inhabitants of the heavens and the earth, Who undertakes their management, their provisions and all their conditions. So “Al-Hayy” is the name that comprises the attributes of the Essence, and “Al-Qayyum” is the name that comprises the attributes of actions.",
+    "tr": "“el-Hayyu’l-Kayyûm”: hayatı kâmil olan ve Kendi zâtıyla kaim olandır. Göklerin ve yerin ehlini ayakta tutan, onların idaresini, rızıklarını ve bütün hallerini üstlenendir. Buna göre “el-Hayy” zât sıfatlarını kendinde toplayan, “el-Kayyûm” ise fiil sıfatlarını kendinde toplayan isimdir.",
+    "ar": "\"الحي القيوم\" كامل الحياة والقائم بنفسه. القيوم لأهل السموات والأرض، القائم بتدبيرهم وأرزاقهم، وجميع أحوالهم، فـ \"الحي\": الجامع لصفات الذات، و\"القيوم\" الجامع لصفات الأفعال."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 255,
+    "word": 7
+   }
+  },
+  {
+   "slug": "nur-as-samawati-wal-ard",
+   "arabic": "نُورُ السَّمَوَاتِ وَالأَرْضِ",
+   "transliteration": {
+    "ru": "Нуру-с-самавати ва-ль-ард",
+    "en": "Nur as-Samawati wal-Ard",
+    "tr": "Nûru’s-semâvâti ve’l-arz"
+   },
+   "meaning": {
+    "ru": "Свет небес и земли",
+    "en": "Light of the Heavens and Earth",
+    "tr": "Göklerin ve yerin nuru",
+    "ar": "الذي أنار السموات والأرض"
+   },
+   "tafsir": {
+    "ru": "Аллах — Свет небес и земли в прямом и переносном смысле этого выражения. Его божественная сущность есть свет, и Его покрывало тоже из света. И если бы Аллах приподнял его, то величие Его лика сожгло бы все, что объемлет Его взор.",
+    "en": "“An-Nur” is the Light of the heavens and the earth, Who illuminated the hearts of those who know Him with knowledge of Him and faith in Him, and illuminated their inner hearts with His guidance; He is the One Who lit the heavens and the earth with the lights that He placed; and His veil is light: were He to remove it, the splendours of His Face would burn everything of His creation that His sight reaches.",
+    "tr": "“en-Nûr”, göklerin ve yerin nurudur; âriflerin kalplerini Kendisini tanımakla ve Kendisine iman ile nurlandıran, gönüllerini hidayetiyle nurlandırandır; gökleri ve yeri oraya koyduğu nurlarla aydınlatan O’dur; O’nun hicabı nurdur: onu açacak olsa, yüzünün nurları, yaratıklarından bakışının ulaştığı her şeyi yakardı.",
+    "ar": "\"النور\" نور السموات والأرض، الذي نوَّر قلوب العارفين بمعرفته والإيمان به، ونوَّر أفئدتهم بهدايته، وهو الذي أنار السموات والأرض بالأنوار التي وضعها، وحجابه النور، لو كشفه لأحرقت سبحات وجهه ما انتهى إليه بصره من خلقه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 24,
+    "ayah": 35,
+    "word": null
+   }
+  },
+  {
+   "slug": "ar-rabb",
+   "arabic": "الرَّبُّ",
+   "transliteration": {
+    "ru": "Ар-Рабб",
+    "en": "Ar-Rabb",
+    "tr": "er-Rab"
+   },
+   "meaning": {
+    "ru": "Господь",
+    "en": "The Lord",
+    "tr": "Rab",
+    "ar": "المربي جميع عباده"
+   },
+   "tafsir": {
+    "ru": "Господство Всевышнего Аллаха бывает двух видов: всеобщее и частное. Всеобщее господство выражается в том, что Он создает творения, ниспосылает им пропитание и указывает им верный путь, благодаря чему они могут благоустроить свою жизнь в этом мире. А частное господство проявляется в том, что Аллах воспитывает Своих возлюбленных рабов в духе набожности, помогает им обрести и усовершенствовать веру, защищает их от всего, что может сбить их с прямого пути и отдалить от Него.",
+    "en": "“Ar-Rabb”: He is the One Who nurtures all His servants through management and all kinds of blessings. More specific than this is His nurturing of His chosen ones by setting right their hearts, their souls and their character. For this reason their supplication to Him by this majestic name is frequent, because they ask Him for this special nurturing.",
+    "tr": "“er-Rab”: bütün kullarını idare etmekle ve türlü nimetlerle terbiye edendir. Bundan daha özel olanı, seçkin kullarını kalplerini, ruhlarını ve ahlâklarını ıslah ederek terbiye etmesidir. Bu sebeple onların O’na bu yüce isimle duaları çok olmuştur; çünkü onlar O’ndan bu özel terbiyeyi isterler.",
+    "ar": "\"الرب\": هو المربي جميع عباده بالتدبير وأصناف النعم. وأخص من هذا تربيته لأصفيائه بإصلاح قلوبهم وأرواحهم وأخلاقهم. ولهذا كثر دعاؤهم له بهذا الاسم الجليل، لأنهم يطلبون منه هذه التربية الخاصة."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 1,
+    "ayah": 2,
+    "word": 3
+   }
+  },
+  {
+   "slug": "allah",
+   "arabic": "اللهُ",
+   "transliteration": {
+    "ru": "Аллах",
+    "en": "Allah",
+    "tr": "Allah"
+   },
+   "meaning": {
+    "ru": "Аллах",
+    "en": "Allah",
+    "tr": "Allah",
+    "ar": "المألوه المعبود"
+   },
+   "tafsir": {
+    "ru": "Аллах — одно из этих имен, означающее «Бог, Которого обожествляют и Которому поклоняются, Единственный, Кто заслуживает поклонения в силу Своих божественных качеств — качеств совершенства и безупречности».",
+    "en": "“Allah”: He is the One Who is deified and worshipped, the Possessor of divinity and of servitude over all His creation, because of the attributes of divinity by which He is characterised, which are the attributes of perfection.",
+    "tr": "“Allah”: ilâh edinilen, ibadet edilendir; bütün yaratıkları üzerinde ulûhiyet ve ubûdiyet sahibidir; çünkü O, kemal sıfatları olan ulûhiyet sıfatlarıyla vasıflanmıştır.",
+    "ar": "\"الله\": هو المألوه المعبود، ذو الألوهية والعبودية على خلقه أجمعين، لما اتصف به من صفات الألوهية التي هي صفات الكمال."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 22,
+    "word": 2
+   }
+  },
+  {
+   "slug": "al-malik",
+   "arabic": "المَلِكُ",
+   "transliteration": {
+    "ru": "Аль-Ма́лик",
+    "en": "Al-Malik",
+    "tr": "el-Melik"
+   },
+   "meaning": {
+    "ru": "Властелин",
+    "en": "The King",
+    "tr": "Hükümdar",
+    "ar": "الذي له الملك"
+   },
+   "tafsir": {
+    "ru": "Властелин, то есть небесный и земной миры находятся в Его власти и нуждаются в Его поддержке.",
+    "en": "“Al-Malik, Al-Maalik”: the One to Whom sovereignty belongs; He is the One described by the attribute of sovereignty, which is the attributes of greatness and grandeur, of subjugation and management; the One to Whom belongs absolute disposal in creation, command and recompense; and to Him belongs the whole world, upper and lower; all of them are slaves and possessions, and in dire need of Him.",
+    "tr": "“el-Melik, el-Mâlik”: mülk Kendisine ait olandır; O, mülk sıfatıyla vasıflanandır ki bu, azamet ve kibriyâ, kahır ve tedbir sıfatlarıdır; yaratmada, emirde ve cezada (karşılıkta) mutlak tasarruf O’nundur; ulvî ve süflî bütün âlem O’nundur; hepsi kul ve memlûktur, O’na muhtaçtır.",
+    "ar": "\"الملك، المالك\": الذي له الملك فهو الموصوف بصفة الملك، وهي صفات العظمة والكبرياء، والقهر والتدبير، الذي له التصرف المطلق في الخلق والأمر والجزاء، وله جميع العالم العلوي والسفلي، كلهم عبيد ومماليك، ومضطرون إليه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 23,
+    "word": 8
+   }
+  },
+  {
+   "slug": "al-maleek",
+   "arabic": "المَلِيكُ",
+   "transliteration": {
+    "ru": "Аль-Мали́к",
+    "en": "Al-Maleek",
+    "tr": "el-Melîk"
+   },
+   "meaning": {
+    "ru": "Властелин",
+    "en": "The Sovereign",
+    "tr": "Mutlak hükümdar",
+    "ar": "الذي له الملك"
+   },
+   "tafsir": {
+    "ru": "Властелин, то есть небесный и земной миры находятся в Его власти и нуждаются в Его поддержке.",
+    "en": "“Al-Malik, Al-Maalik”: the One to Whom sovereignty belongs; He is the One described by the attribute of sovereignty, which is the attributes of greatness and grandeur, of subjugation and management; the One to Whom belongs absolute disposal in creation, command and recompense; and to Him belongs the whole world, upper and lower; all of them are slaves and possessions, and in dire need of Him.",
+    "tr": "“el-Melik, el-Mâlik”: mülk Kendisine ait olandır; O, mülk sıfatıyla vasıflanandır ki bu, azamet ve kibriyâ, kahır ve tedbir sıfatlarıdır; yaratmada, emirde ve cezada (karşılıkta) mutlak tasarruf O’nundur; ulvî ve süflî bütün âlem O’nundur; hepsi kul ve memlûktur, O’na muhtaçtır.",
+    "ar": "\"الملك، المالك\": الذي له الملك فهو الموصوف بصفة الملك، وهي صفات العظمة والكبرياء، والقهر والتدبير، الذي له التصرف المطلق في الخلق والأمر والجزاء، وله جميع العالم العلوي والسفلي، كلهم عبيد ومماليك، ومضطرون إليه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 54,
+    "ayah": 55,
+    "word": 5
+   }
+  },
+  {
+   "slug": "malik-al-mulk",
+   "arabic": "مَالِكُ المُلْكِ",
+   "transliteration": {
+    "ru": "Малику-ль-мульк",
+    "en": "Malik al-Mulk",
+    "tr": "Mâlikü’l-mülk"
+   },
+   "meaning": {
+    "ru": "Владыка царства",
+    "en": "Owner of the Dominion",
+    "tr": "Mülkün sahibi",
+    "ar": "الملك المالك لجميع الممالك"
+   },
+   "tafsir": {
+    "ru": "Господь — Единственный, Кто распоряжается делами Вселенной, управляет небесным и земным мирами и обладает абсолютной властью.",
+    "en": "That is: You are the King, the Owner of all kingdoms; the attribute of absolute sovereignty is Yours, and the entire dominion, its upper and its lower, is Yours, and all disposal and management are Yours.",
+    "tr": "Yani: Sen bütün memleketlerin sahibi olan Melik’sin; mutlak mülk sıfatı Senindir, ulvîsi ve süflîsiyle bütün memleket Senindir, tasarruf ve tedbirin tamamı Senindir.",
+    "ar": "أي: أنت الملك المالك لجميع الممالك، فصفة الملك المطلق لك، والمملكة كلها علويها وسفليها لك والتصريف والتدبير كله لك"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "3:26",
+   "ayah": {
+    "surah": 3,
+    "ayah": 26,
+    "word": null
+   }
+  },
+  {
+   "slug": "al-wahid",
+   "arabic": "الوَاحِدُ",
+   "transliteration": {
+    "ru": "Аль-Вахид",
+    "en": "Al-Wahid",
+    "tr": "el-Vâhid"
+   },
+   "meaning": {
+    "ru": "Единственный",
+    "en": "The One",
+    "tr": "Bir olan",
+    "ar": "الذي توحد بجميع الكمالات"
+   },
+   "tafsir": {
+    "ru": "Он — Единственный и Всемогущий. Ему одному присуща божественная сущность, прекрасные имена, совершенные качества и похвальные деяния.",
+    "en": "“Al-Wahid, Al-Ahad”: He is the One Who is alone in all perfections, such that no partner shares in them with Him. It is obligatory upon the servants to single Him out, in mind, word and deed, by acknowledging His absolute perfection and His being alone in oneness, and by singling Him out with all kinds of worship.",
+    "tr": "“el-Vâhid, el-Ehad”: bütün kemal sıfatlarında tek olan, bunlarda hiçbir ortağın Kendisine ortak olmadığı zâttır. Kulların O’nu aklen, sözle ve amelle birlemeleri vâciptir; bu da O’nun mutlak kemalini ve birlikte tek oluşunu kabul etmeleri ve ibadetin bütün çeşitlerini yalnız O’na yapmalarıyla olur.",
+    "ar": "\"الواحد، الأحد\": وهو الذي توحد بجميع الكمالات، بحيث لا يشاركه فيها مشارك. ويجب على العبيد توحيده، عقلا وقولا وعملا بأن يعترفوا بكماله المطلق، وتفرده بالوحدانية، ويفردوه بأنواع العبادة."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 39,
+    "ayah": 4,
+    "word": 15
+   }
+  },
+  {
+   "slug": "al-ahad",
+   "arabic": "الأَحَدُ",
+   "transliteration": {
+    "ru": "Аль-Ахад",
+    "en": "Al-Ahad",
+    "tr": "el-Ehad"
+   },
+   "meaning": {
+    "ru": "Единый",
+    "en": "The Unique One",
+    "tr": "Tek olan",
+    "ar": "الذي توحد بجميع الكمالات"
+   },
+   "tafsir": {
+    "ru": "Аллах — Единственный Бог. Его прекрасные имена и качества совершенны, Его деяния святы и лишены изъянов, и нет никого похожего на Него или подобного Ему.",
+    "en": "“Al-Wahid, Al-Ahad”: He is the One Who is alone in all perfections, such that no partner shares in them with Him. It is obligatory upon the servants to single Him out, in mind, word and deed, by acknowledging His absolute perfection and His being alone in oneness, and by singling Him out with all kinds of worship.",
+    "tr": "“el-Vâhid, el-Ehad”: bütün kemal sıfatlarında tek olan, bunlarda hiçbir ortağın Kendisine ortak olmadığı zâttır. Kulların O’nu aklen, sözle ve amelle birlemeleri vâciptir; bu da O’nun mutlak kemalini ve birlikte tek oluşunu kabul etmeleri ve ibadetin bütün çeşitlerini yalnız O’na yapmalarıyla olur.",
+    "ar": "\"الواحد، الأحد\": وهو الذي توحد بجميع الكمالات، بحيث لا يشاركه فيها مشارك. ويجب على العبيد توحيده، عقلا وقولا وعملا بأن يعترفوا بكماله المطلق، وتفرده بالوحدانية، ويفردوه بأنواع العبادة."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 112,
+    "ayah": 1,
+    "word": 4
+   }
+  },
+  {
+   "slug": "al-mutakabbir",
+   "arabic": "المُتَكَبِّرُ",
+   "transliteration": {
+    "ru": "Аль-Мутакаббир",
+    "en": "Al-Mutakabbir",
+    "tr": "el-Mütekebbir"
+   },
+   "meaning": {
+    "ru": "Гордый",
+    "en": "The Supreme",
+    "tr": "Büyüklükte eşsiz",
+    "ar": "المتكبر عن السوء والنقص"
+   },
+   "tafsir": {
+    "ru": "Гордый, Которому присущи высокомерие и величие и который превыше несправедливости, угнетения и других пороков.",
+    "en": "“Al-Mutakabbir”: the One Who is exalted above evil, deficiency and defects, because of His greatness and grandeur.",
+    "tr": "“el-Mütekebbir”: azameti ve kibriyâsı sebebiyle kötülükten, noksanlıktan ve kusurlardan yüce olandır.",
+    "ar": "\"المتكبر\" عن السوء والنقص والعيوب، لعظمته وكبريائه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 23,
+    "word": 15
+   }
+  },
+  {
+   "slug": "al-khaliq",
+   "arabic": "الخَالِقُ",
+   "transliteration": {
+    "ru": "Аль-Халик",
+    "en": "Al-Khaliq",
+    "tr": "el-Hâlik"
+   },
+   "meaning": {
+    "ru": "Творец",
+    "en": "The Creator",
+    "tr": "Yaratan",
+    "ar": "الذي خلق جميع الموجودات"
+   },
+   "tafsir": {
+    "ru": "Среди Его прекрасных имен — Творец, Создатель, Дарующий облик. Эти прекрасные эпитеты свидетельствуют о том, что Он сотворил Вселенную и единовластно правит ею в соответствии со Своим предопределением.",
+    "en": "“Al-Khaliq, Al-Bari’, Al-Musawwir”: the One Who created all existing things, brought them into being and proportioned them by His wisdom, and gave them form by His praise and His wisdom; and He has always been and will always be upon this great attribute.",
+    "tr": "“el-Hâlik, el-Bâri’, el-Musavvir”: bütün varlıkları yaratan, onları var eden ve hikmetiyle düzenleyen, hamdi ve hikmetiyle onlara şekil verendir; O, bu büyük vasıf üzere olagelmiştir ve hep öyle olacaktır.",
+    "ar": "\"الخالق، البارئ، المصور\" الذي خلق جميع الموجودات وبرأها وسواها بحكمته، وصورها بحمده وحكمته، وهو لم يزل ولا يزال على هذا الوصف العظيم."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 24,
+    "word": 3
+   }
+  },
+  {
+   "slug": "al-bari",
+   "arabic": "البَارِئُ",
+   "transliteration": {
+    "ru": "Аль-Бари",
+    "en": "Al-Bari’",
+    "tr": "el-Bâri’"
+   },
+   "meaning": {
+    "ru": "Создатель",
+    "en": "The Originator",
+    "tr": "Yoktan var eden",
+    "ar": "الذي برأ جميع الموجودات"
+   },
+   "tafsir": {
+    "ru": "Среди Его прекрасных имен — Творец, Создатель, Дарующий облик. Эти прекрасные эпитеты свидетельствуют о том, что Он сотворил Вселенную и единовластно правит ею в соответствии со Своим предопределением.",
+    "en": "“Al-Khaliq, Al-Bari’, Al-Musawwir”: the One Who created all existing things, brought them into being and proportioned them by His wisdom, and gave them form by His praise and His wisdom; and He has always been and will always be upon this great attribute.",
+    "tr": "“el-Hâlik, el-Bâri’, el-Musavvir”: bütün varlıkları yaratan, onları var eden ve hikmetiyle düzenleyen, hamdi ve hikmetiyle onlara şekil verendir; O, bu büyük vasıf üzere olagelmiştir ve hep öyle olacaktır.",
+    "ar": "\"الخالق، البارئ، المصور\" الذي خلق جميع الموجودات وبرأها وسواها بحكمته، وصورها بحمده وحكمته، وهو لم يزل ولا يزال على هذا الوصف العظيم."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 24,
+    "word": 4
+   }
+  },
+  {
+   "slug": "al-musawwir",
+   "arabic": "المُصَوِّرُ",
+   "transliteration": {
+    "ru": "Аль-Мусаввир",
+    "en": "Al-Musawwir",
+    "tr": "el-Musavvir"
+   },
+   "meaning": {
+    "ru": "Дарующий облик",
+    "en": "The Fashioner",
+    "tr": "Şekil veren",
+    "ar": "الذي صور جميع الموجودات"
+   },
+   "tafsir": {
+    "ru": "Среди Его прекрасных имен — Творец, Создатель, Дарующий облик. Эти прекрасные эпитеты свидетельствуют о том, что Он сотворил Вселенную и единовластно правит ею в соответствии со Своим предопределением.",
+    "en": "“Al-Khaliq, Al-Bari’, Al-Musawwir”: the One Who created all existing things, brought them into being and proportioned them by His wisdom, and gave them form by His praise and His wisdom; and He has always been and will always be upon this great attribute.",
+    "tr": "“el-Hâlik, el-Bâri’, el-Musavvir”: bütün varlıkları yaratan, onları var eden ve hikmetiyle düzenleyen, hamdi ve hikmetiyle onlara şekil verendir; O, bu büyük vasıf üzere olagelmiştir ve hep öyle olacaktır.",
+    "ar": "\"الخالق، البارئ، المصور\" الذي خلق جميع الموجودات وبرأها وسواها بحكمته، وصورها بحمده وحكمته، وهو لم يزل ولا يزال على هذا الوصف العظيم."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 24,
+    "word": 5
+   }
+  },
+  {
+   "slug": "al-khallaq",
+   "arabic": "الخَلَّاقُ",
+   "transliteration": {
+    "ru": "Аль-Халляк",
+    "en": "Al-Khallaq",
+    "tr": "el-Hallâk"
+   },
+   "meaning": {
+    "ru": "Творец",
+    "en": "The Supreme Creator",
+    "tr": "Çokça yaratan",
+    "ar": "الخلاق لكل مخلوق"
+   },
+   "tafsir": {
+    "ru": "Аллах сотворил все сущее и ведает обо всем сущем.",
+    "en": "“Indeed, your Lord is the Creator” of every created thing, “the All-Knowing” of everything; so no one is beyond His power among all that His knowledge has encompassed and His creation has extended to, and that is all existing things.",
+    "tr": "“Şüphesiz Rabbin, yaratandır” her yaratılmışı, “bilendir” her şeyi; ilminin kuşattığı ve yaratmasının üzerinde cereyan ettiği şeylerden hiçbiri O’nu âciz bırakamaz; bu da bütün varlıklardır.",
+    "ar": "﴿إِنَّ رَبَّكَ هُوَ الْخَلاقُ﴾ لكل مخلوق ﴿الْعَلِيمُ﴾ بكل شيء، فلا يعجزه أحد من جميع ما أحاط به علمه وجرى عليه خلقه، وذلك سائر الموجودات"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "15:86",
+   "ayah": {
+    "surah": 15,
+    "ayah": 86,
+    "word": 4
+   }
+  },
+  {
+   "slug": "al-mumin",
+   "arabic": "المُؤْمِنُ",
+   "transliteration": {
+    "ru": "Аль-Му’мин",
+    "en": "Al-Mu’min",
+    "tr": "el-Mü’min"
+   },
+   "meaning": {
+    "ru": "Оберегающий",
+    "en": "The Giver of Security",
+    "tr": "Güven veren",
+    "ar": "الذي صدق رسله بالبراهين"
+   },
+   "tafsir": {
+    "ru": "Хранитель, то есть подтверждающий правдивость своих пророков и посланников неопровержимыми доказательствами и ясными знамениями, которые они являли своим народам.",
+    "en": "“Al-Mu’min”: the One Who praised Himself with the attributes of perfection, and with the perfection of majesty and beauty; Who sent His messengers and sent down His books with signs and proofs, and confirmed His messengers with every sign and proof that indicates their truthfulness and the soundness of what they brought.",
+    "tr": "“el-Mü’min”: Kendisini kemal sıfatlarıyla, celâl ve cemâlin kemaliyle öven; peygamberlerini gönderen ve kitaplarını âyetler ve burhanlarla indiren; peygamberlerini, onların doğruluğuna ve getirdiklerinin sıhhatine delâlet eden her âyet ve burhanla tasdik edendir.",
+    "ar": "\"المؤمن\" الذي أثنى على نفسه بصفات الكمال، وبكمال الجلال والجمال، الذي أرسل رسله وأنزل كتبه بالآيات والبراهين، وصدق رسله بكل آية وبرهان، يدل على صدقهم وصحة ما جاؤوا به."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 23,
+    "word": 11
+   }
+  },
+  {
+   "slug": "al-muhaymin",
+   "arabic": "المُهَيْمِنُ",
+   "transliteration": {
+    "ru": "Аль-Мухаймин",
+    "en": "Al-Muhaymin",
+    "tr": "el-Müheymin"
+   },
+   "meaning": {
+    "ru": "Хранитель",
+    "en": "The Guardian",
+    "tr": "Gözetip koruyan",
+    "ar": "المطلع على خفايا الأمور"
+   },
+   "tafsir": {
+    "ru": "«Аль-Мухаймин» — Ведающий о скрытых делах и о том, что таится в груди, объявший всё сущее знанием.",
+    "en": "“Al-Muhaymin”: the One Who is aware of the hidden matters and of what the breasts conceal, Who has encompassed everything in knowledge.",
+    "tr": "“el-Müheymin”: işlerin gizliliklerine ve göğüslerin sakladıklarına muttali olan, her şeyi ilmiyle kuşatandır.",
+    "ar": "\"المهيمن\": المطلع على خفايا الأمور وخبايا الصدور، الذي أحاط بكل شيء علما."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 59,
+    "ayah": 23,
+    "word": 12
+   }
+  },
+  {
+   "slug": "al-muhit",
+   "arabic": "المُحِيطُ",
+   "transliteration": {
+    "ru": "Аль-Мухит",
+    "en": "Al-Muhit",
+    "tr": "el-Muhît"
+   },
+   "meaning": {
+    "ru": "Объемлющий",
+    "en": "The All-Encompassing",
+    "tr": "Her şeyi kuşatan",
+    "ar": "المحيط بكل شيء علما وقدرة"
+   },
+   "tafsir": {
+    "ru": "Этот прекрасный аят разъясняет, что Всевышний Аллах объемлет все сущее. Все творения на небесах и на земле принадлежат Ему одному и являются Его рабами. Они подвластны Ему, а Он является их Единственным Властелином и Правителем. Он ведает обо всем, что можно узнать; видит все, что можно увидеть; и слышит все, что можно услышать. Его могуществу подвластно все сущее, а Его милость объемлет всех обитателей земли и небес.",
+    "en": "“Al-Muhit”: the One Who encompasses everything in knowledge, power, mercy and subjugation.",
+    "tr": "“el-Muhît”: her şeyi ilim, kudret, rahmet ve kahır bakımından kuşatandır.",
+    "ar": "\"المحيط\" بكل شيء علما، وقدرة، ورحمة، وقهرا."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 4,
+    "ayah": 126,
+    "word": 12
+   }
+  },
+  {
+   "slug": "al-muqit",
+   "arabic": "المُقِيتُ",
+   "transliteration": {
+    "ru": "Аль-Мукыт",
+    "en": "Al-Muqit",
+    "tr": "el-Mukît"
+   },
+   "meaning": {
+    "ru": "Наблюдающий за всякой вещью",
+    "en": "The Sustainer",
+    "tr": "Rızıkları ulaştıran",
+    "ar": "الذي أوصل إلى كل موجود قوته"
+   },
+   "tafsir": {
+    "ru": "Аллах наблюдает за всякой вещью и подсчитывает все деяния, чтобы каждый человек получил по заслугам.",
+    "en": "“Al-Muqit”: the One Who has conveyed to every existing thing that by which it is nourished, and conveyed to them their provisions, and disposes of them as He wills, by His wisdom and His praise.",
+    "tr": "“el-Mukît”: her varlığa kendisiyle beslendiği şeyi ulaştıran, onlara rızıklarını ulaştıran ve bunları hikmeti ve hamdi ile dilediği gibi çekip çevirendir.",
+    "ar": "\"المقيت\" الذي أوصل إلى كل موجود ما به يقتات، وأوصل إليها أرزاقها وصرفها كيف يشاء بحكمته وحمده."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 4,
+    "ayah": 85,
+    "word": 22
+   }
+  },
+  {
+   "slug": "al-wakil",
+   "arabic": "الوَكِيلُ",
+   "transliteration": {
+    "ru": "Аль-Вакиль",
+    "en": "Al-Wakil",
+    "tr": "el-Vekîl"
+   },
+   "meaning": {
+    "ru": "Попечитель и Хранитель",
+    "en": "The Trustee",
+    "tr": "Vekil",
+    "ar": "المتولي لتدبير خلقه"
+   },
+   "tafsir": {
+    "ru": "Мы вверяем Ему свою судьбу, поскольку Он лучше других управляет Своими рабами и заботится об их интересах.",
+    "en": "“Al-Wakil”: the One Who takes charge of managing His creation by His knowledge, the perfection of His power and the comprehensiveness of His wisdom; Who took charge of His allies, so He eased them towards ease, kept them away from hardship, and sufficed them in their affairs. So whoever takes Him as a Trustee, He suffices him.",
+    "tr": "“el-Vekîl”: ilmiyle, kudretinin kemaliyle ve hikmetinin kuşatıcılığıyla yaratıklarının idaresini üstlenendir; dostlarını üstlenen, onları en kolay olana muvaffak kılan, onları güçlükten uzak tutan ve işlerinde onlara yetendir. Kim O’nu vekil edinirse O ona yeter.",
+    "ar": "\"الوكيل\" المتولي لتدبير خلقه بعلمه وكمال قدرته وشمول حكمته، الذي تولى أولياءه، فيسرهم لليسرى، وجنبهم العسرى، وكفاهم الأمور. فمن اتخذه وكيلا كفاه"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 3,
+    "ayah": 173,
+    "word": 17
+   }
+  },
+  {
+   "slug": "dhul-jalali-wal-ikram",
+   "arabic": "ذُو الجَلَالِ وَالإِكْرَامِ",
+   "transliteration": {
+    "ru": "Зу-ль-Джаляли ва-ль-Икрам",
+    "en": "Dhul-Jalali wal-Ikram",
+    "tr": "Zü’l-celâli ve’l-ikrâm"
+   },
+   "meaning": {
+    "ru": "Обладающий величием и великодушием",
+    "en": "Lord of Majesty and Honour",
+    "tr": "Celâl ve ikram sahibi",
+    "ar": "ذو العظمة والكبرياء والرحمة والجود"
+   },
+   "tafsir": {
+    "ru": "Он обладает величием и славой, которые достойны восхваления и прославления. Он также обладает благородством и великодушием. Он одаряет великими дарами и милостями Свои особые творения — Своих приближенных рабов, которые славят и возвеличивают Его, любят Его всей душой и искренне поклоняются только Ему.",
+    "en": "“Dhul-Jalali wal-Ikram”, that is: the Possessor of greatness and grandeur, and the Possessor of mercy and generosity, and of general and special beneficence; the One Who honours His allies and His chosen ones, who revere Him, magnify Him and love Him.",
+    "tr": "“Zü’l-celâli ve’l-ikrâm”, yani: azamet ve kibriyâ sahibi, rahmet ve cömertlik sahibi, genel ve özel ihsan sahibi; Kendisini yücelten, ta‘zim eden ve seven dostlarına ve seçkin kullarına ikram edendir.",
+    "ar": "\"ذو الجلال والإكرام\" أي: ذو العظمة والكبرياء، وذو الرحمة والجود، والإحسان العام والخاص، المكرم لأوليائه وأصفيائه، الذين يجلونه ويعظمونه ويحبونه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 55,
+    "ayah": 27,
+    "word": null
+   }
+  },
+  {
+   "slug": "jami-an-nas",
+   "arabic": "جَامِعُ النَّاسِ لِيَوْمٍ لَا رَيْبَ فِيهِ",
+   "transliteration": {
+    "ru": "Джами‘у-н-нас",
+    "en": "Jami‘ an-Nas",
+    "tr": "Câmiu’n-nâs"
+   },
+   "meaning": {
+    "ru": "Собирающий людей",
+    "en": "The Gatherer of Mankind",
+    "tr": "İnsanları toplayan",
+    "ar": "جامع الناس ليوم لا ريب فيه"
+   },
+   "tafsir": {
+    "ru": "«Джами‘у-н-нас» — Собирающий людей ко дню, в котором нет сомнения, Собирающий их деяния и их удел, так что Он не оставляет из них ни малого, ни великого, не сосчитав его; Собирающий то, что рассеялось и изменилось из умерших, первых и последних, совершенством Своего могущества и широтой Своего знания.",
+    "en": "“Jami‘ an-Nas”: the Gatherer of mankind for a Day about which there is no doubt, and the Gatherer of their deeds and their provisions, so that He leaves nothing of them, small or great, without having enumerated it; and the Gatherer of what was scattered and transformed of the dead, the first and the last, by the perfection of His power and the vastness of His knowledge.",
+    "tr": "“Câmiu’n-nâs”: insanları, hakkında şüphe olmayan bir gün için toplayan; onların amellerini ve rızıklarını toplayan, bunlardan küçük büyük hiçbir şeyi saymadan bırakmayandır; öncekilerden ve sonrakilerden ölülerin dağılmış ve başkalaşmış olan parçalarını kudretinin kemali ve ilminin genişliği ile toplayandır.",
+    "ar": "\"جامع الناس\" ليوم لا ريب فيه، وجامع أعمالهم وأرزاقهم، فلا يترك منها صغيرة ولا كبيرة إلا أحصاها، وجامع ما تفرق واستحال من الأموات الأولين والآخرين، بكمال قدرته، وسعة علمه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 3,
+    "ayah": 9,
+    "word": null
+   }
+  },
+  {
+   "slug": "badi-as-samawati-wal-ard",
+   "arabic": "بَدِيعُ السَّمَوَاتِ وَالأَرْضِ",
+   "transliteration": {
+    "ru": "Бади‘у-с-самавати ва-ль-ард",
+    "en": "Badi‘ as-Samawati wal-Ard",
+    "tr": "Bedîu’s-semâvâti ve’l-arz"
+   },
+   "meaning": {
+    "ru": "Первосоздатель небес и земли",
+    "en": "Originator of the Heavens and Earth",
+    "tr": "Göklerin ve yerin eşsiz yaratıcısı",
+    "ar": "خالق السموات والأرض ومبدعهما"
+   },
+   "tafsir": {
+    "ru": "Аллах сотворил небеса и землю, придал им совершенный облик и сделал их прекрасными творениями, подобных которым ранее не было.",
+    "en": "“Badi‘ as-samawati wal-ard”, that is: their Creator and Originator, in the utmost degree of beauty, of wondrous creation, and of marvellous, precise order.",
+    "tr": "“Bedîu’s-semâvâti ve’l-arz”, yani: o ikisini güzelliğin, eşsiz yaratılışın ve hayranlık verici sağlam düzenin en son derecesinde yaratan ve örneksiz var edendir.",
+    "ar": "\"بديع السموات والأرض\" أي: خالقهما ومبدعهما، في غاية ما يكون من الحسن والخلق البديع، والنظام العجيب المحكم."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 117,
+    "word": null
+   }
+  },
+  {
+   "slug": "al-kafi",
+   "arabic": "الكَافِي",
+   "transliteration": {
+    "ru": "Аль-Кафи",
+    "en": "Al-Kafi",
+    "tr": "el-Kâfî"
+   },
+   "meaning": {
+    "ru": "Достаточный",
+    "en": "The Sufficient",
+    "tr": "Yeten",
+    "ar": "الكافي عباده جميع ما يحتاجون"
+   },
+   "tafsir": {
+    "ru": "Разве щедрости, милости и покровительства Аллаха не достаточно для Его раба?",
+    "en": "“Al-Kafi”: the One Who suffices His servants in all that they need and are compelled to seek; the One Who suffices with a special sufficiency whoever believes in Him, relies upon Him, and seeks from Him the needs of his religion and of his worldly life.",
+    "tr": "“el-Kâfî”: kullarına muhtaç oldukları ve mecbur kaldıkları her şeyde yetendir; Kendisine iman eden, Kendisine tevekkül eden ve din ve dünya ihtiyaçlarını Kendisinden isteyen kimseye özel bir yeterlilikle yetendir.",
+    "ar": "\"الكافي\" عباده جميع ما يحتاجون ويضطرون إليه، الكافي كفاية خاصة من آمن به، وتوكل عليه، واستمد منه حوائج دينه ودنياه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 39,
+    "ayah": 36,
+    "word": 3
+   }
+  },
+  {
+   "slug": "al-wasi",
+   "arabic": "الوَاسِعُ",
+   "transliteration": {
+    "ru": "Аль-Васи‘",
+    "en": "Al-Wasi‘",
+    "tr": "el-Vâsi‘"
+   },
+   "meaning": {
+    "ru": "Объемлющий",
+    "en": "The All-Encompassing, the Vast",
+    "tr": "İlmi ve lütfu geniş",
+    "ar": "الواسع الصفات والنعوت"
+   },
+   "tafsir": {
+    "ru": "В конце этого аята Аллах упомянул Свои прекрасные имена Объемлющий и Знающий. Его качества всеобъемлющи, а Его дары — щедры и богаты.",
+    "en": "“Al-Wasi‘”: the One Who is vast in attributes and qualities and in all that relates to them, such that no one can enumerate praise of Him; rather, He is as He has praised Himself. Vast in greatness, authority and dominion; vast in bounty and beneficence; great in generosity and munificence.",
+    "tr": "“el-Vâsi‘”: sıfatları, vasıfları ve bunlarla ilgili olan şeyleri geniş olandır; öyle ki hiç kimse O’na olan övgüyü sayıp bitiremez; bilakis O, Kendisini övdüğü gibidir. Azameti, saltanatı ve mülkü geniş; fazlı ve ihsanı geniş; cömertliği ve keremi büyük olandır.",
+    "ar": "\"الواسع\" الصفات والنعوت ومتعلقاتها، بحيث لا يحصي أحد ثناء عليه، بل هو كما أثنى على نفسه. واسع العظمة والسلطان والملك، واسع الفضل والإحسان، عظيم الجود والكرم."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 268,
+    "word": 12
+   }
+  },
+  {
+   "slug": "al-haqq",
+   "arabic": "الحَقُّ",
+   "transliteration": {
+    "ru": "Аль-Хакк",
+    "en": "Al-Haqq",
+    "tr": "el-Hak"
+   },
+   "meaning": {
+    "ru": "Истина",
+    "en": "The Truth",
+    "tr": "Hak olan",
+    "ar": "الحق في ذاته وصفاته"
+   },
+   "tafsir": {
+    "ru": "Среди прекрасных имен Аллаха — Истинный. Он всегда был и никогда не перестанет существовать.",
+    "en": "“Al-Haqq”: the Truth in His Essence and His attributes; He is the One Whose existence is necessary, perfect in attributes and qualities; His existence is among the necessary concomitants of His Essence, and nothing whatsoever has existence except through Him. He is the One Who has always been and will always be described with majesty, beauty and perfection, and Who has always been and will always be known for beneficence.",
+    "tr": "“el-Hak”: zâtında ve sıfatlarında hak olandır; O, varlığı zorunlu olan, sıfatları ve vasıfları kâmil olandır; varlığı zâtının gereklerindendir ve hiçbir şeyin varlığı ancak O’nunladır. O, ezelden beri celâl, cemâl ve kemal ile vasıflanmış ve hep öyle olacak olan; ezelden beri ihsan ile tanınmış ve hep öyle olacak olandır.",
+    "ar": "\"الحق\" في ذاته وصفاته، فهو واجب الوجود، كامل الصفات والنعوت، وجوده من لوازم ذاته، ولا وجود لشيء من الأشياء إلا به. فهو الذي لم يزل ولا يزال بالجلال والجمال والكمال موصوفا، ولم يزل ولا يزال بالإحسان معروفا."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 22,
+    "ayah": 62,
+    "word": 5
+   }
+  },
+  {
+   "slug": "al-jamil",
+   "arabic": "الجَمِيلُ",
+   "transliteration": {
+    "ru": "Аль-Джамиль",
+    "en": "Al-Jamil",
+    "tr": "el-Cemîl"
+   },
+   "meaning": {
+    "ru": "Прекрасный",
+    "en": "The Beautiful",
+    "tr": "Güzel olan",
+    "ar": "من له نعوت الحسن والإحسان"
+   },
+   "tafsir": {
+    "ru": "Аль-Джамиль — Тот, Кому принадлежат качества красоты и благодеяния, ибо Он прекрасен в Своей сущности, Своих именах, Своих качествах и Своих деяниях.",
+    "en": "Al-Jamil is the One to Whom belong the qualities of beauty and beneficence; for He is beautiful in His Essence, His names, His attributes and His actions.",
+    "tr": "el-Cemîl, güzellik ve ihsan vasıfları Kendisine ait olandır; çünkü O, zâtında, isimlerinde, sıfatlarında ve fiillerinde güzeldir.",
+    "ar": "الجميل من له نعوت الحسن والإحسان، فإنه جميل في ذاته، وأسمائه، وصفاته، وأفعاله"
+   },
+   "tafsir_source": {
+    "ru": "‘Абд ар-Рахман ас-Са‘ди, «Тафсир асма Аллах аль-хусна»",
+    "en": "‘Abd ar-Rahman as-Sa‘di, Tafsir Asma’ Allah al-Husna",
+    "tr": "Abdurrahman es-Sa‘dî, Tefsîru Esmâillâhi’l-Hüsnâ",
+    "ar": "عبد الرحمن السعدي، تفسير أسماء الله الحسنى"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "ar-rafiq",
+   "arabic": "الرَّفِيقُ",
+   "transliteration": {
+    "ru": "Ар-Рафик",
+    "en": "Ar-Rafiq",
+    "tr": "er-Refîk"
+   },
+   "meaning": {
+    "ru": "Мягкий, Добрый",
+    "en": "The Gentle",
+    "tr": "Yumuşak davranan",
+    "ar": "الرفيق في أفعاله"
+   },
+   "tafsir": {
+    "ru": "Всевышний Аллах мягок в Своих деяниях: Он сотворил все творения постепенно, одно за другим, сообразно Своей мудрости и Своей мягкости, хотя Он способен сотворить их разом и в одно мгновение.",
+    "en": "Allah the Exalted is gentle in His actions: He created all creatures gradually, little by little, in accordance with His wisdom and His gentleness, although He is able to create them all at once and in a single moment.",
+    "tr": "Yüce Allah fiillerinde refîktir: bütün yaratıkları hikmetine ve rıfkına göre tedricen, azar azar yaratmıştır; hâlbuki O, onları bir defada ve bir anda yaratmaya kadirdir.",
+    "ar": "فالله تعالى رفيق في أفعاله خلق المخلوقات كلها بالتدريج شيئًا فشيئًا بحسب حكمته ورفقه مع أنه قادر على خلقها دفعة واحدة وفي لحظة واحدة"
+   },
+   "tafsir_source": {
+    "ru": "‘Абд ар-Рахман ас-Са‘ди, «Тафсир асма Аллах аль-хусна»",
+    "en": "‘Abd ar-Rahman as-Sa‘di, Tafsir Asma’ Allah al-Husna",
+    "tr": "Abdurrahman es-Sa‘dî, Tefsîru Esmâillâhi’l-Hüsnâ",
+    "ar": "عبد الرحمن السعدي، تفسير أسماء الله الحسنى"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "al-hayiyy",
+   "arabic": "الحَيِيُّ",
+   "transliteration": {
+    "ru": "Аль-Хайий",
+    "en": "Al-Hayiyy",
+    "tr": "el-Hayiyy"
+   },
+   "meaning": {
+    "ru": "Стыдливый",
+    "en": "The Modest",
+    "tr": "Hayâ sahibi",
+    "ar": "الذي يستحي من هتك عبده"
+   },
+   "tafsir": {
+    "ru": "Это — от Его милости, Его великодушия, Его совершенства и Его кротости: раб открыто совершает грехи, хотя сильно нуждается в Нём, так что он не может даже ослушаться, иначе как укрепившись для этого милостями своего Господа; Господь же, при полной Своей независимости от всех творений, по Своему великодушию стыдится разоблачить его, опозорить его и подвергнуть его наказанию, и потому покрывает его теми причинами сокрытия, которые дарует ему, прощает его и отпускает ему грехи.",
+    "en": "And this is from His mercy, His generosity, His perfection and His forbearance: that the servant openly commits sins despite his severe need of Him, to the point that he cannot even disobey except by being strengthened for it by the blessings of his Lord; while the Lord, despite His perfect independence of all creation, out of His generosity is shy of exposing him, disgracing him and letting punishment befall him; so He covers him by the means of concealment that He bestows upon him, and He pardons him and forgives him.",
+    "tr": "Bu, O’nun rahmetinden, kereminden, kemalinden ve hilminden dolayıdır: kul, O’na şiddetle muhtaç olduğu hâlde günahları açıkça işler; öyle ki Rabbinin nimetleriyle güç bulmadan günah işlemesi bile mümkün değildir; Rab ise bütün yaratıklardan tamamen müstağni olmasına rağmen, kereminden dolayı kulunun perdesini yırtmaktan, onu rezil etmekten ve ona cezayı indirmekten hayâ eder; ona bahşettiği örtme sebepleriyle onu örter, onu affeder ve ona mağfiret eder.",
+    "ar": "وهذا من رحمته، وكرمه، وكماله، وحلمه أن العبد يجاهر بالمعاصي مع فقره الشديد إليه، حتى أنه لا يمكنه أن يعصى إلا أن يتقوى عليها بنعم ربه، والرب مع كمال غناه عن الخلق كلهم من كرمه يستحي من هتكه، وفضيحته، وإحلال العقوبة به، فيستره بما يفيض له من أسباب الستر، ويعفو عنه، ويغفر له"
+   },
+   "tafsir_source": {
+    "ru": "‘Абд ар-Рахман ас-Са‘ди, «Тафсир асма Аллах аль-хусна»",
+    "en": "‘Abd ar-Rahman as-Sa‘di, Tafsir Asma’ Allah al-Husna",
+    "tr": "Abdurrahman es-Sa‘dî, Tefsîru Esmâillâhi’l-Hüsnâ",
+    "ar": "عبد الرحمن السعدي، تفسير أسماء الله الحسنى"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "as-sittir",
+   "arabic": "السِّتِّيرُ",
+   "transliteration": {
+    "ru": "Ас-Ситтир",
+    "en": "As-Sittir",
+    "tr": "es-Sittîr"
+   },
+   "meaning": {
+    "ru": "Покрывающий",
+    "en": "The Concealer",
+    "tr": "Kusurları örten",
+    "ar": "الذي يستر عبده ويعفو عنه"
+   },
+   "tafsir": {
+    "ru": "Это — от Его милости, Его великодушия, Его совершенства и Его кротости: раб открыто совершает грехи, хотя сильно нуждается в Нём, так что он не может даже ослушаться, иначе как укрепившись для этого милостями своего Господа; Господь же, при полной Своей независимости от всех творений, по Своему великодушию стыдится разоблачить его, опозорить его и подвергнуть его наказанию, и потому покрывает его теми причинами сокрытия, которые дарует ему, прощает его и отпускает ему грехи.",
+    "en": "And this is from His mercy, His generosity, His perfection and His forbearance: that the servant openly commits sins despite his severe need of Him, to the point that he cannot even disobey except by being strengthened for it by the blessings of his Lord; while the Lord, despite His perfect independence of all creation, out of His generosity is shy of exposing him, disgracing him and letting punishment befall him; so He covers him by the means of concealment that He bestows upon him, and He pardons him and forgives him.",
+    "tr": "Bu, O’nun rahmetinden, kereminden, kemalinden ve hilminden dolayıdır: kul, O’na şiddetle muhtaç olduğu hâlde günahları açıkça işler; öyle ki Rabbinin nimetleriyle güç bulmadan günah işlemesi bile mümkün değildir; Rab ise bütün yaratıklardan tamamen müstağni olmasına rağmen, kereminden dolayı kulunun perdesini yırtmaktan, onu rezil etmekten ve ona cezayı indirmekten hayâ eder; ona bahşettiği örtme sebepleriyle onu örter, onu affeder ve ona mağfiret eder.",
+    "ar": "وهذا من رحمته، وكرمه، وكماله، وحلمه أن العبد يجاهر بالمعاصي مع فقره الشديد إليه، حتى أنه لا يمكنه أن يعصى إلا أن يتقوى عليها بنعم ربه، والرب مع كمال غناه عن الخلق كلهم من كرمه يستحي من هتكه، وفضيحته، وإحلال العقوبة به، فيستره بما يفيض له من أسباب الستر، ويعفو عنه، ويغفر له"
+   },
+   "tafsir_source": {
+    "ru": "‘Абд ар-Рахман ас-Са‘ди, «Тафсир асма Аллах аль-хусна»",
+    "en": "‘Abd ar-Rahman as-Sa‘di, Tafsir Asma’ Allah al-Husna",
+    "tr": "Abdurrahman es-Sa‘dî, Tefsîru Esmâillâhi’l-Hüsnâ",
+    "ar": "عبد الرحمن السعدي، تفسير أسماء الله الحسنى"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "al-ilah",
+   "arabic": "الإِلَهُ",
+   "transliteration": {
+    "ru": "Аль-Илях",
+    "en": "Al-Ilah",
+    "tr": "el-İlâh"
+   },
+   "meaning": {
+    "ru": "Бог",
+    "en": "The God",
+    "tr": "İlâh",
+    "ar": "الجامع لجميع صفات الكمال"
+   },
+   "tafsir": {
+    "ru": "Аллах — Единственный Бог. Ему одному присущи божественная сущность, прекрасные имена, совершенные качества и божественные деяния. Он не имеет ни сотоварищей, ни равных Ему, ни подобных Ему.",
+    "en": "Al-Ilah is the One Who combines all the attributes of perfection and the qualities of majesty; thus all the Most Beautiful Names are included in this name.",
+    "tr": "el-İlâh, bütün kemal sıfatlarını ve celâl vasıflarını Kendisinde toplayandır; böylece bütün Esmâ-i Hüsnâ bu ismin içine girmiştir.",
+    "ar": "والإله هو الجامع لجميع صفات الكمال ونعوت الجلال، فقد دخل في هذا الاسم جميع الأسماء الحسنى"
+   },
+   "tafsir_source": {
+    "ru": "‘Абд ар-Рахман ас-Са‘ди, «Тафсир асма Аллах аль-хусна»",
+    "en": "‘Abd ar-Rahman as-Sa‘di, Tafsir Asma’ Allah al-Husna",
+    "tr": "Abdurrahman es-Sa‘dî, Tefsîru Esmâillâhi’l-Hüsnâ",
+    "ar": "عبد الرحمن السعدي، تفسير أسماء الله الحسنى"
+   },
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 163,
+    "word": 2
+   }
+  },
+  {
+   "slug": "al-qabid",
+   "arabic": "القَابِضُ",
+   "transliteration": {
+    "ru": "Аль-Кабид",
+    "en": "Al-Qabid",
+    "tr": "el-Kâbız"
+   },
+   "meaning": {
+    "ru": "Удерживающий",
+    "en": "The Withholder",
+    "tr": "Daraltan",
+    "ar": "الذي يقبض الأرزاق والأرواح"
+   },
+   "tafsir": {
+    "ru": "Он посылает скудный удел, кому пожелает, и щедро одаряет, кого пожелает.",
+    "en": "“Al-Qabid, Al-Basit”: He withholds provisions and takes souls, and He extends provisions and expands hearts; and that follows His wisdom and His mercy.",
+    "tr": "“el-Kâbız, el-Bâsıt”: rızıkları daraltır ve ruhları kabzeder; rızıkları genişletir ve kalplere genişlik verir; bu da O’nun hikmetine ve rahmetine tâbidir.",
+    "ar": "\"القابض الباسط\" يقبض الأرزاق والأرواح، ويبسط الأرزاق والقلوب، وذلك تبع لحكمته ورحمته."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 245,
+    "word": null
+   }
+  },
+  {
+   "slug": "al-basit",
+   "arabic": "البَاسِطُ",
+   "transliteration": {
+    "ru": "Аль-Басит",
+    "en": "Al-Basit",
+    "tr": "el-Bâsıt"
+   },
+   "meaning": {
+    "ru": "Щедро одаряющий",
+    "en": "The Extender",
+    "tr": "Genişleten",
+    "ar": "الذي يبسط الأرزاق والقلوب"
+   },
+   "tafsir": {
+    "ru": "Он посылает скудный удел, кому пожелает, и щедро одаряет, кого пожелает.",
+    "en": "“Al-Qabid, Al-Basit”: He withholds provisions and takes souls, and He extends provisions and expands hearts; and that follows His wisdom and His mercy.",
+    "tr": "“el-Kâbız, el-Bâsıt”: rızıkları daraltır ve ruhları kabzeder; rızıkları genişletir ve kalplere genişlik verir; bu da O’nun hikmetine ve rahmetine tâbidir.",
+    "ar": "\"القابض الباسط\" يقبض الأرزاق والأرواح، ويبسط الأرزاق والقلوب، وذلك تبع لحكمته ورحمته."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": {
+    "surah": 2,
+    "ayah": 245,
+    "word": null
+   }
+  },
+  {
+   "slug": "al-muti",
+   "arabic": "المُعْطِي",
+   "transliteration": {
+    "ru": "Аль-Му‘ты",
+    "en": "Al-Mu‘ti",
+    "tr": "el-Mu‘tî"
+   },
+   "meaning": {
+    "ru": "Дарующий",
+    "en": "The Giver",
+    "tr": "Veren",
+    "ar": "الذي يعطي من يشاء بحكمته"
+   },
+   "tafsir": {
+    "ru": "«Аль-Му‘ты, Аль-Мани‘»: никто не удержит того, что Он даровал, и никто не дарует того, что Он удержал. Поэтому все блага и польза испрашиваются у Него, и к Нему обращаются с желанием их; Он дарует их, кому пожелает, и лишает их, кого пожелает, по Своей мудрости и Своей милости.",
+    "en": "“Al-Mu‘ti, Al-Mani‘”: none can withhold what He has given, and none can give what He has withheld. So all interests and benefits are sought from Him, and to Him one turns in desire for them; and He is the One Who gives them to whom He wills and withholds them from whom He wills, by His wisdom and His mercy.",
+    "tr": "“el-Mu‘tî, el-Mâni‘”: O’nun verdiğine engel olacak yoktur, O’nun engellediğini verecek de yoktur. Bütün maslahatlar ve menfaatler O’ndan istenir ve bunlar için O’na rağbet edilir; O, bunları hikmeti ve rahmetiyle dilediğine verir, dilediğinden de men eder.",
+    "ar": "\"المعطي، المانع\"، لا مانع لما أعطى، ولا معطي لما منع، فجميع المصالح والمنافع منه تطلب، وإليه يرغب فيها، وهو الذي يعطيها لمن يشاء، ويمنعها من يشاء بحكمته ورحمته."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "al-muqaddim",
+   "arabic": "المُقَدِّمُ",
+   "transliteration": {
+    "ru": "Аль-Мукаддим",
+    "en": "Al-Muqaddim",
+    "tr": "el-Mukaddim"
+   },
+   "meaning": {
+    "ru": "Выдвигающий вперёд",
+    "en": "The Expediter",
+    "tr": "Öne alan",
+    "ar": "المقدم لمن شاء بحكمته"
+   },
+   "tafsir": {
+    "ru": "Аль-Мукаддим и Аль-Му’аххир — из числа Его прекрасных парных, противоположных имён, ни одно из которых не применяется к Аллаху отдельно, а только вместе с другим, ибо совершенство — в их соединении. Он, Всевышний, выдвигает вперёд, кого пожелает, и отодвигает назад, кого пожелает, по Своей мудрости.",
+    "en": "Al-Muqaddim and Al-Mu’akhkhir are among His paired, opposite Most Beautiful Names, of which neither is applied to Allah by itself, but only joined with the other, for perfection lies in their combination. So He, the Exalted, is the One Who brings forward whom He wills and the One Who puts back whom He wills, by His wisdom.",
+    "tr": "el-Mukaddim ve el-Muahhir, O’nun çift ve karşılıklı olan güzel isimlerindendir; bunlardan hiçbiri Allah için tek başına kullanılmaz, ancak diğeriyle birlikte kullanılır; çünkü kemal, ikisinin bir araya gelmesindedir. Yüce Allah, hikmetiyle dilediğini öne alan ve dilediğini geri bırakandır.",
+    "ar": "المقدم والمؤخر من أسمائه الحسنى المزدوجة المتقابلة التي لا يطلق واحد بمفرده على الله إلا مقرونًا بالآخر فإن الكمال من اجتماعهما فهو تعالى المقدم لمن شاء والمؤخر لمن شاء بحكمته."
+   },
+   "tafsir_source": {
+    "ru": "‘Абд ар-Рахман ас-Са‘ди, «Тафсир асма Аллах аль-хусна»",
+    "en": "‘Abd ar-Rahman as-Sa‘di, Tafsir Asma’ Allah al-Husna",
+    "tr": "Abdurrahman es-Sa‘dî, Tefsîru Esmâillâhi’l-Hüsnâ",
+    "ar": "عبد الرحمن السعدي، تفسير أسماء الله الحسنى"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "al-muakhkhir",
+   "arabic": "المُؤَخِّرُ",
+   "transliteration": {
+    "ru": "Аль-Му’аххир",
+    "en": "Al-Mu’akhkhir",
+    "tr": "el-Muahhir"
+   },
+   "meaning": {
+    "ru": "Отодвигающий назад",
+    "en": "The Delayer",
+    "tr": "Geri bırakan",
+    "ar": "المؤخر لمن شاء بحكمته"
+   },
+   "tafsir": {
+    "ru": "Аль-Мукаддим и Аль-Му’аххир — из числа Его прекрасных парных, противоположных имён, ни одно из которых не применяется к Аллаху отдельно, а только вместе с другим, ибо совершенство — в их соединении. Он, Всевышний, выдвигает вперёд, кого пожелает, и отодвигает назад, кого пожелает, по Своей мудрости.",
+    "en": "Al-Muqaddim and Al-Mu’akhkhir are among His paired, opposite Most Beautiful Names, of which neither is applied to Allah by itself, but only joined with the other, for perfection lies in their combination. So He, the Exalted, is the One Who brings forward whom He wills and the One Who puts back whom He wills, by His wisdom.",
+    "tr": "el-Mukaddim ve el-Muahhir, O’nun çift ve karşılıklı olan güzel isimlerindendir; bunlardan hiçbiri Allah için tek başına kullanılmaz, ancak diğeriyle birlikte kullanılır; çünkü kemal, ikisinin bir araya gelmesindedir. Yüce Allah, hikmetiyle dilediğini öne alan ve dilediğini geri bırakandır.",
+    "ar": "المقدم والمؤخر من أسمائه الحسنى المزدوجة المتقابلة التي لا يطلق واحد بمفرده على الله إلا مقرونًا بالآخر فإن الكمال من اجتماعهما فهو تعالى المقدم لمن شاء والمؤخر لمن شاء بحكمته."
+   },
+   "tafsir_source": {
+    "ru": "‘Абд ар-Рахман ас-Са‘ди, «Тафсир асма Аллах аль-хусна»",
+    "en": "‘Abd ar-Rahman as-Sa‘di, Tafsir Asma’ Allah al-Husna",
+    "tr": "Abdurrahman es-Sa‘dî, Tefsîru Esmâillâhi’l-Hüsnâ",
+    "ar": "عبد الرحمن السعدي، تفسير أسماء الله الحسنى"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "al-mubin",
+   "arabic": "المُبِينُ",
+   "transliteration": {
+    "ru": "Аль-Мубин",
+    "en": "Al-Mubin",
+    "tr": "el-Mübîn"
+   },
+   "meaning": {
+    "ru": "Явный",
+    "en": "The Manifest",
+    "tr": "Apaçık olan",
+    "ar": "الحق المبين"
+   },
+   "tafsir": {
+    "ru": "В этот страшный день им станет ясно, что Аллах есть явная истина и что этим эпитетом можно назвать только то, что связано с Всевышним Аллахом. Его величественные качества — истина, и Его достохвальные деяния — истина, и поклонение Ему — истина, и встреча с Ним — истина, и обещание Его — истина, законы Его религии — истина, и законы Его возмездия — истина, и Его посланники — истина. Любая истина либо присуща Аллаху, либо исходит от Него.",
+    "en": "And they will know, at that tremendous standing place, that Allah is the Manifest Truth; so they will know that the manifest truth is confined to Allah the Exalted. His great attributes are truth, His actions are the truth, worship of Him is the truth, the meeting with Him is truth, His promise and His threat and His religious and recompensing judgment are truth, and His messengers are truth; so there is no truth except in Allah and in what is from Allah.",
+    "tr": "O büyük duruş yerinde Allah’ın apaçık hak olduğunu bilecekler; böylece apaçık hakkın yalnızca Yüce Allah’a mahsus olduğunu bileceklerdir. O’nun büyük vasıfları haktır, fiilleri haktır, O’na ibadet haktır, O’na kavuşmak haktır; vaadi ve tehdidi, dinî ve cezaî hükmü haktır, peygamberleri haktır; Allah’ta olan ve Allah’tan gelenin dışında hak yoktur.",
+    "ar": "ويعلمون في ذلك الموقف العظيم، أن الله هو الحق المبين، فيعلمون انحصار الحق المبين في الله تعالى. فأوصافه العظيمة حق، وأفعاله هي الحق، وعبادته هي الحق، ولقاؤه حق، ووعده ووعيده، وحكمه الديني والجزائي حق، ورسله حق، فلا ثم حق، إلا في الله وما من الله."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "24:25",
+   "ayah": {
+    "surah": 24,
+    "ayah": 25,
+    "word": 11
+   }
+  },
+  {
+   "slug": "al-mannan",
+   "arabic": "المَنَّانُ",
+   "transliteration": {
+    "ru": "Аль-Маннан",
+    "en": "Al-Mannan",
+    "tr": "el-Mennân"
+   },
+   "meaning": {
+    "ru": "Щедро одаряющий милостями",
+    "en": "The Bestower of Favours",
+    "tr": "Çok lütufta bulunan",
+    "ar": "كثير العطاء والإنعام"
+   },
+   "tafsir": {
+    "ru": "Аллах, Могуч Он и Велик, — аль-Маннан; слово происходит от «манн» — дар. Аль-Маннан — Тот, Чьи дары велики: Он даровал жизнь, разум и речь, придал облик и сделал его прекрасным, оказал милость и сделал её обильной, даровал высокие блага и умножил дары и подношения.",
+    "en": "Allah, Mighty and Majestic, is al-Mannan, from al-mann, which is giving. Al-Mannan is the One Whose gifts are immense: He gave life, intellect and speech; He fashioned and made the form beautiful; He bestowed favour and made it abundant; He gave the loftiest blessings and multiplied gifts and grants.",
+    "tr": "Aziz ve Celil olan Allah Mennân’dır; kelime, vermek anlamındaki “menn”den gelir. Mennân, bağışları büyük olandır: O hayatı, aklı ve konuşmayı vermiş, şekil verip güzel yapmış, nimet verip bol kılmış, nimetlerin en yücesini vermiş, bağış ve ihsanları çoğaltmıştır.",
+    "ar": "واللَّه عز وجل هو المنَّان: من المن العطاء، والمنّان: هو عظيم المواهب؛ فإنه أعطى الحياة، والعقل، والنطق، وصوّر فأحسن، وأنعم فأجزل، وأسنى النعم، وأكثر العطايا والمنح."
+   },
+   "tafsir_source": {
+    "ru": "Са‘ид аль-Кахтани, «Шарх асма Аллах аль-хусна фи дау аль-Китаб ва-с-Сунна»",
+    "en": "Sa‘id al-Qahtani, Sharh Asma’ Allah al-Husna fi Daw’ al-Kitab wa-s-Sunnah",
+    "tr": "Saîd el-Kahtânî, Şerhu Esmâillâhi’l-Hüsnâ fî Dav’i’l-Kitâb ve’s-Sünne",
+    "ar": "سعيد بن علي بن وهف القحطاني، شرح أسماء الله الحسنى في ضوء الكتاب والسنة"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  },
+  {
+   "slug": "al-waliyy",
+   "arabic": "الوَلِيُّ",
+   "transliteration": {
+    "ru": "Аль-Валий",
+    "en": "Al-Waliyy",
+    "tr": "el-Velî"
+   },
+   "meaning": {
+    "ru": "Покровитель",
+    "en": "The Protecting Friend",
+    "tr": "Dost ve yardımcı",
+    "ar": "الذي يتولى عباده بأنواع التدبير"
+   },
+   "tafsir": {
+    "ru": "Среди прекрасных имен Аллах — Покровитель и Достохвальный. Он заботится о судьбе Своих рабов и поступает во благо их религии и мирской жизни.",
+    "en": "“And He is the Protector”, Who takes charge of His servants with all kinds of management, and takes charge of upholding the interests of their religion and of their worldly life.",
+    "tr": "“O, velîdir”; kullarını türlü tedbirlerle üstlenen, onların din ve dünya maslahatlarını yerine getirmeyi üstlenendir.",
+    "ar": "﴿وَهُوَ الْوَلِيُّ﴾ الذي يتولى عباده بأنواع التدبير، ويتولى القيام بمصالح دينهم ودنياهم."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "42:28",
+   "ayah": {
+    "surah": 42,
+    "ayah": 28,
+    "word": 12
+   }
+  },
+  {
+   "slug": "al-mawla",
+   "arabic": "المَوْلَى",
+   "transliteration": {
+    "ru": "Аль-Мауля",
+    "en": "Al-Mawla",
+    "tr": "el-Mevlâ"
+   },
+   "meaning": {
+    "ru": "Покровитель",
+    "en": "The Protector",
+    "tr": "Mevlâ, sahip",
+    "ar": "الذي يتولى أمور عباده"
+   },
+   "tafsir": {
+    "ru": "Как же прекрасен покровитель, который помогает своим преданным рабам достичь желанной цели!",
+    "en": "“He is your Protector”, Who takes charge of your affairs, so He manages you with His excellent management and disposes of you according to His best decree; “so how excellent a Protector and how excellent a Helper”, that is: how excellent a Protector for whoever takes Him as protector, so that he attains what he seeks.",
+    "tr": "“O, sizin mevlânızdır”; işlerinizi üstlenen, sizi güzel tedbiriyle idare eden ve en güzel takdiri üzere sizi çekip çevirendir; “O ne güzel mevlâ ve ne güzel yardımcıdır”, yani: Kendisini dost edinen için ne güzel mevlâdır; böylece o kimse istediğine kavuşur.",
+    "ar": "﴿هُوَ مَوْلاكُمْ﴾ الذي يتولى أموركم، فيدبركم بحسن تدبيره، ويصرفكم على أحسن تقديره، ﴿فَنِعْمَ الْمَوْلَى وَنِعْمَ النَّصِيرُ﴾ أي: نعم المولى لمن تولاه، فحصل له مطلوبه"
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "22:78",
+   "ayah": {
+    "surah": 22,
+    "ayah": 78,
+    "word": 42
+   }
+  },
+  {
+   "slug": "an-nasir",
+   "arabic": "النَّصِيرُ",
+   "transliteration": {
+    "ru": "Ан-Насыр",
+    "en": "An-Nasir",
+    "tr": "en-Nasîr"
+   },
+   "meaning": {
+    "ru": "Помощник",
+    "en": "The Helper",
+    "tr": "Yardım eden",
+    "ar": "النصير لمن استنصره"
+   },
+   "tafsir": {
+    "ru": "Как же прекрасен помощник, который защищает своих просящих рабов от всего дурного!",
+    "en": "“And how excellent a Helper” for whoever seeks His help, so that He repels from him what is disliked.",
+    "tr": "“Ne güzel yardımcıdır” Kendisinden yardım isteyen için; böylece ondan hoşlanılmayan şeyi defeder.",
+    "ar": "﴿وَنِعْمَ النَّصِيرُ﴾ لمن استنصره فدفع عنه المكروه."
+   },
+   "tafsir_source": {},
+   "tafsir_ref": "22:78",
+   "ayah": {
+    "surah": 22,
+    "ayah": 78,
+    "word": 44
+   }
+  },
+  {
+   "slug": "ash-shafi",
+   "arabic": "الشَّافِي",
+   "transliteration": {
+    "ru": "Аш-Шафи",
+    "en": "Ash-Shafi",
+    "tr": "eş-Şâfî"
+   },
+   "meaning": {
+    "ru": "Исцеляющий",
+    "en": "The Healer",
+    "tr": "Şifa veren",
+    "ar": "الذي يشفي عباده"
+   },
+   "tafsir": {
+    "ru": "Аллах, Могуч Он и Велик, — Исцеляющий от болезней, недугов и сомнений.",
+    "en": "Allah, Mighty and Majestic, is the Healer of diseases, ailments and doubts.",
+    "tr": "Aziz ve Celil olan Allah hastalıklardan, illetlerden ve şüphelerden şifa verendir.",
+    "ar": "فاللَّه عز وجل هو الشافي من الأمراض والعلل والشكوك."
+   },
+   "tafsir_source": {
+    "ru": "Са‘ид аль-Кахтани, «Шарх асма Аллах аль-хусна фи дау аль-Китаб ва-с-Сунна»",
+    "en": "Sa‘id al-Qahtani, Sharh Asma’ Allah al-Husna fi Daw’ al-Kitab wa-s-Sunnah",
+    "tr": "Saîd el-Kahtânî, Şerhu Esmâillâhi’l-Hüsnâ fî Dav’i’l-Kitâb ve’s-Sünne",
+    "ar": "سعيد بن علي بن وهف القحطاني، شرح أسماء الله الحسنى في ضوء الكتاب والسنة"
+   },
+   "tafsir_ref": "",
+   "ayah": null
+  }
+ ]
+}
