@@ -512,3 +512,187 @@ def test_force_reimports_an_unchanged_snapshot_with_the_current_rules(
     assert text_of_2_1() == "Surah two"
     assert TafsirEditionVersion.objects.count() == 1
     assert AyahTafsir.objects.count() == 4
+
+
+def _surah_overrunning_snapshot() -> dict[str, Any]:
+    # Ma'arif al-Qur'an (168): the closing commentary of surah 81 is published
+    # as 81:19-82:4, so 82:1-4 show the end of surah 81.
+    surah_one = {
+        "group_tafsir_id": 1001,
+        "group_verse_key_from": "1:1",
+        "group_verse_key_to": "2:1",
+        "group_verses_count": 3,
+        "start_verse_id": 1,
+        "end_verse_id": 3,
+    }
+    surah_two = {
+        "group_tafsir_id": 1004,
+        "group_verse_key_from": "2:2",
+        "group_verse_key_to": "2:3",
+        "group_verses_count": 2,
+        "start_verse_id": 4,
+        "end_verse_id": 5,
+    }
+    snapshot = _snapshot()
+    snapshot["records"] = [
+        _record(id=1001, verse_id=1, verse_key="1:1", text="Surah one", **surah_one),
+        _record(id=1002, verse_id=2, verse_key="1:2", text="", **surah_one),
+        _record(id=1003, verse_id=3, verse_key="2:1", text="", **surah_one),
+        _record(id=1004, verse_id=4, verse_key="2:2", text="Surah two", **surah_two),
+        _record(id=1005, verse_id=5, verse_key="2:3", text="", **surah_two),
+    ]
+    return snapshot
+
+
+def _surah_rows(api_client: APIClient, surah: int) -> list[tuple[str, str, str, str, int]]:
+    return [
+        (
+            row["verse_key"],
+            row["text"],
+            row["start_verse_key"],
+            row["end_verse_key"],
+            row["group_verses_count"],
+        )
+        for row in api_client.get(f"/api/v1/quran/tafsirs/16/surahs/{surah}").json()
+    ]
+
+
+@pytest.mark.django_db
+@override_settings(QURAN_QF_ENV="production")
+def test_other_editions_keep_a_surah_overrunning_range_as_the_provider_sends_it(
+    api_client: APIClient,
+) -> None:
+    sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(snapshot=_surah_overrunning_snapshot()),
+        expected_verse_keys=END_ANCHORED_VERSE_KEYS,
+    )
+
+    # The defect: 2:1 shows the text of surah 1.
+    assert _surah_rows(api_client, 2) == [
+        ("2:1", "Surah one", "1:1", "2:1", 3),
+        ("2:2", "Surah two", "2:2", "2:3", 2),
+        ("2:3", "Surah two", "2:2", "2:3", 2),
+    ]
+
+
+@pytest.mark.django_db
+@override_settings(QURAN_QF_ENV="production")
+def test_bootstrap_keeps_a_surah_overrunning_text_inside_its_surah(
+    api_client: APIClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(quran_foundation_sync, "SURAH_OVERRUNNING_TAFSIR_IDS", {16})
+
+    sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(snapshot=_surah_overrunning_snapshot()),
+        expected_verse_keys=END_ANCHORED_VERSE_KEYS,
+    )
+
+    assert _surah_rows(api_client, 1) == [
+        ("1:1", "Surah one", "1:1", "1:2", 2),
+        ("1:2", "Surah one", "1:1", "1:2", 2),
+    ]
+    assert _surah_rows(api_client, 2) == [
+        ("2:1", "Surah two", "2:1", "2:3", 3),
+        ("2:2", "Surah two", "2:1", "2:3", 3),
+        ("2:3", "Surah two", "2:1", "2:3", 3),
+    ]
+    assert TafsirEditionVersion.objects.get().covered_ayah_count == 5
+
+
+@pytest.mark.django_db
+def test_surah_overrunning_edition_keeps_ranges_that_stay_inside_a_surah(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(quran_foundation_sync, "SURAH_OVERRUNNING_TAFSIR_IDS", {16})
+
+    sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(),
+        expected_verse_keys={"1:1", "1:2"},
+    )
+
+    tafsir = AyahTafsir.objects.get()
+    assert (tafsir.verse_key, tafsir.start_verse_key, tafsir.end_verse_key) == ("1:1", "1:1", "1:2")
+
+
+@pytest.mark.django_db
+@override_settings(QURAN_QF_ENV="production")
+def test_surah_overrunning_text_leaves_ayahs_without_a_following_text_uncovered(
+    api_client: APIClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(quran_foundation_sync, "SURAH_OVERRUNNING_TAFSIR_IDS", {16})
+    snapshot = _surah_overrunning_snapshot()
+    snapshot["records"] = snapshot["records"][:3]
+
+    sync_quran_foundation_tafsirs(
+        resource_ids=(16,),
+        client=FakeTafsirClient(snapshot=snapshot),
+        expected_verse_keys=END_ANCHORED_VERSE_KEYS,
+    )
+
+    assert [row[0] for row in _surah_rows(api_client, 1)] == ["1:1", "1:2"]
+    assert _surah_rows(api_client, 2) == []
+    assert TafsirEditionVersion.objects.get().covered_ayah_count == 2
+
+
+@pytest.mark.django_db
+def test_bootstrap_rejects_a_surah_overrunning_range_with_a_text_in_the_next_surah(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(quran_foundation_sync, "SURAH_OVERRUNNING_TAFSIR_IDS", {16})
+    snapshot = _surah_overrunning_snapshot()
+    snapshot["records"][2]["text"] = "Whose text is this?"
+
+    with pytest.raises(QuranFoundationError, match=r"range 1:1-2:1 has a text outside"):
+        sync_quran_foundation_tafsirs(
+            resource_ids=(16,),
+            client=FakeTafsirClient(snapshot=snapshot),
+            expected_verse_keys=END_ANCHORED_VERSE_KEYS,
+        )
+    assert not TafsirEditionVersion.objects.exists()
+
+
+@pytest.mark.django_db
+@override_settings(QURAN_QF_ENV="production")
+def test_force_reimport_clips_surah_overrunning_ranges_once_and_republishes(
+    api_client: APIClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def sync(*, force: bool, day: int) -> None:
+        sync_quran_foundation_tafsirs(
+            resource_ids=(16,),
+            client=FakeTafsirClient(
+                snapshot=_surah_overrunning_snapshot(),
+                expected_token="" if force else "tafsir-checkpoint-1",
+            ),
+            force=force,
+            now=datetime(2026, 11, day, tzinfo=UTC),
+            expected_verse_keys=END_ANCHORED_VERSE_KEYS,
+        )
+
+    def published_day() -> int:
+        published_at = TafsirEditionVersion.objects.get().published_at
+        assert published_at is not None
+        return published_at.day
+
+    sync(force=True, day=1)
+    assert _surah_rows(api_client, 2)[0][:2] == ("2:1", "Surah one")
+    monkeypatch.setattr(quran_foundation_sync, "SURAH_OVERRUNNING_TAFSIR_IDS", {16})
+
+    sync(force=False, day=2)
+    assert _surah_rows(api_client, 2)[0][:2] == ("2:1", "Surah one")
+    assert published_day() == 1
+
+    sync(force=True, day=3)
+    fixed = _surah_rows(api_client, 1) + _surah_rows(api_client, 2)
+    assert fixed[2] == ("2:1", "Surah two", "2:1", "2:3", 3)
+    # Clients learn about the rebuilt rows from the new publication time.
+    assert published_day() == 3
+
+    sync(force=True, day=4)
+    assert _surah_rows(api_client, 1) + _surah_rows(api_client, 2) == fixed
+    assert AyahTafsir.objects.count() == 5

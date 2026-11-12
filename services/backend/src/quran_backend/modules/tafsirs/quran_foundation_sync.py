@@ -45,6 +45,11 @@ RELOAD_MUTATIONS = {
 # explains and run forward to the ayah before the next text. Russian Al-Sa'di
 # (170): the Tafsir of surah 111 is published as 111:5-112:3.
 END_ANCHORED_TAFSIR_IDS = frozenset({170})
+# Editions whose provider ranges start at the right ayah but run past the end
+# of the surah, over the first ayahs of the next one, which have no text of
+# their own. Ma'arif al-Qur'an (168): the closing commentary of surah 81 is
+# published as 81:19-82:4.
+SURAH_OVERRUNNING_TAFSIR_IDS = frozenset({168})
 
 
 class QuranFoundationTafsirSource(Protocol):
@@ -310,8 +315,7 @@ def _replace_snapshot(  # noqa: PLR0913
         seen_verse_keys.add(row["verse_key"])
         normalized.append(row)
     normalized = _resolve_grouped_tafsir_texts(normalized)
-    if resource_id in END_ANCHORED_TAFSIR_IDS:
-        normalized = _reanchor_end_anchored_ranges(normalized, ordered_keys)
+    normalized = _correct_known_range_defects(resource_id, normalized, ordered_keys)
     if not normalized:
         raise QuranFoundationError("Quran.Foundation Tafsir snapshot has no Tafsir text.")
     covered_ranks = {
@@ -387,7 +391,12 @@ def _replace_snapshot(  # noqa: PLR0913
         )
         version.record_count = len(normalized)
         version.covered_ayah_count = len(covered_ranks)
-        version.save(update_fields=["record_count", "covered_ayah_count", "updated_at"])
+        # Clients keep a surah's Tafsir offline until the publication time of
+        # its edition changes, so rebuilt rows need a new one.
+        version.published_at = current
+        version.save(
+            update_fields=["record_count", "covered_ayah_count", "published_at", "updated_at"]
+        )
     edition.active_version = version
     edition.is_available = True
     edition.save(update_fields=["active_version", "is_available", "updated_at"])
@@ -512,6 +521,18 @@ def _resolve_grouped_tafsir_texts(rows: list[dict[str, Any]]) -> list[dict[str, 
     return resolved
 
 
+def _correct_known_range_defects(
+    resource_id: int,
+    rows: list[dict[str, Any]],
+    ordered_keys: list[str],
+) -> list[dict[str, Any]]:
+    if resource_id in END_ANCHORED_TAFSIR_IDS:
+        return _reanchor_end_anchored_ranges(rows, ordered_keys)
+    if resource_id in SURAH_OVERRUNNING_TAFSIR_IDS:
+        return _clip_ranges_to_their_surah(rows, ordered_keys)
+    return rows
+
+
 def _reanchor_end_anchored_ranges(
     rows: list[dict[str, Any]],
     ordered_keys: list[str],
@@ -585,6 +606,97 @@ def _reanchor_end_anchored_ranges(
                 }
             )
     return reanchored
+
+
+def _clip_ranges_to_their_surah(
+    rows: list[dict[str, Any]],
+    ordered_keys: list[str],
+) -> list[dict[str, Any]]:
+    """Keep each text inside the surah it explains.
+
+    The provider lets the last range of a surah run on over the first ayahs of
+    the next surah, so those ayahs show the end of the previous surah. Such a
+    range is cut at the end of the surah it starts in. The ayahs cut off join
+    the range that follows them, the first commentary of their own surah; with
+    no such range they are left uncovered. Ranges inside one surah are left as
+    they are, so a snapshot the provider has fixed is not touched.
+    """
+
+    if all(row["start_surah_number"] == row["end_surah_number"] for row in rows):
+        return rows
+
+    first_rank: dict[int, int] = {}
+    last_rank: dict[int, int] = {}
+    for rank, key in enumerate(ordered_keys, start=1):
+        surah_number = _parse_verse_key(key)[0]
+        first_rank.setdefault(surah_number, rank)
+        last_rank[surah_number] = rank
+    kept: list[dict[str, Any]] = []
+    cut_off: list[dict[str, Any]] = []
+    for row in rows:
+        if row["start_surah_number"] == row["end_surah_number"]:
+            kept.append(row)
+        elif row["surah_number"] == row["start_surah_number"]:
+            end_rank = last_rank[row["surah_number"]]
+            kept.append(_with_range(row, row["start_verse_id"], end_rank, ordered_keys))
+        elif row["text"]:
+            raise QuranFoundationError(
+                "Quran.Foundation Tafsir range "
+                f"{row['start_verse_key']}-{row['end_verse_key']} has a text outside "
+                "the surah it starts in."
+            )
+        else:
+            cut_off.append(row)
+
+    first_text: dict[int, dict[str, Any]] = {}
+    for row in sorted(kept, key=lambda row: (row["surah_number"], row["ayah_number"])):
+        if row["text"]:
+            first_text.setdefault(row["start_verse_id"], row)
+
+    new_start: dict[int, int] = {}
+    rehomed: list[dict[str, Any]] = []
+    for row in cut_off:
+        following = first_text.get(row["end_verse_id"] + 1)
+        if following is None or following["surah_number"] != row["surah_number"]:
+            continue
+        start_rank = first_rank[row["surah_number"]]
+        new_start[following["start_verse_id"]] = start_rank
+        rehomed.append(
+            {
+                **_with_range(row, start_rank, following["end_verse_id"], ordered_keys),
+                "provider_group_id": following["source_id"],
+            }
+        )
+    return [
+        _with_range(row, new_start[row["start_verse_id"]], row["end_verse_id"], ordered_keys)
+        if row["start_verse_id"] in new_start
+        else row
+        for row in kept
+    ] + rehomed
+
+
+def _with_range(
+    row: dict[str, Any],
+    start_rank: int,
+    end_rank: int,
+    ordered_keys: list[str],
+) -> dict[str, Any]:
+    start_verse_key = ordered_keys[start_rank - 1]
+    end_verse_key = ordered_keys[end_rank - 1]
+    start_surah_number, start_ayah_number = _parse_verse_key(start_verse_key)
+    end_surah_number, end_ayah_number = _parse_verse_key(end_verse_key)
+    return {
+        **row,
+        "start_verse_id": start_rank,
+        "end_verse_id": end_rank,
+        "start_verse_key": start_verse_key,
+        "end_verse_key": end_verse_key,
+        "start_surah_number": start_surah_number,
+        "start_ayah_number": start_ayah_number,
+        "end_surah_number": end_surah_number,
+        "end_ayah_number": end_ayah_number,
+        "group_verses_count": end_rank - start_rank + 1,
+    }
 
 
 def _published_quran_verse_keys() -> set[str]:

@@ -467,14 +467,19 @@ class QuranTafsirEdition {
     required this.languageCode,
     required this.name,
     required this.authorName,
+    this.version = '',
   });
 
   factory QuranTafsirEdition.fromJson(Map<String, Object?> json) {
+    final active = json['active_version'];
     return QuranTafsirEdition(
       sourceId: (json['source_id'] as num?)?.toInt() ?? 0,
       languageCode: json['language_code']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       authorName: json['author_name']?.toString() ?? '',
+      version: active is Map
+          ? '${active['sync_sequence'] ?? ''}:${active['published_at'] ?? ''}'
+          : '',
     );
   }
 
@@ -482,6 +487,9 @@ class QuranTafsirEdition {
   final String languageCode;
   final String name;
   final String authorName;
+
+  /// Changes whenever the server publishes or rebuilds the edition's texts.
+  final String version;
 }
 
 class QuranAyahTafsir {
