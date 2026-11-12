@@ -14,6 +14,7 @@ const PAGES = [
   "/ru/tajweed/izhar",
   "/ru/tajweed/practice",
   "/ru/dua",
+  "/ru/names",
   "/ru/news",
 ];
 

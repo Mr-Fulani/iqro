@@ -1,0 +1,56 @@
+{
+  "collection": {
+    "slug": "asma-al-husna",
+    "version": "example-1",
+    "language": "ru",
+    "published_at": "2026-11-12T10:00:00+00:00",
+    "list_source": "Пример: книга, из которой взят список",
+    "tafsir_source": "Пример: книга толкований"
+  },
+  "names": [
+    {
+      "slug": "ar-rahman",
+      "position": 1,
+      "arabic": "الرَّحْمَٰنُ",
+      "transliteration": "Ар-Рахман",
+      "meaning": "Милостивый",
+      "tafsir": "Пример текста толкования первого имени.",
+      "tafsir_source": "Пример: книга толкований",
+      "tafsir_ref": "с. 1",
+      "ayah": { "surah": 55, "ayah": 1, "word": 1 }
+    },
+    {
+      "slug": "ar-rahim",
+      "position": 2,
+      "arabic": "الرَّحِيمُ",
+      "transliteration": "Ар-Рахим",
+      "meaning": "Милосердный",
+      "tafsir": "Пример текста толкования второго имени.",
+      "tafsir_source": "Пример: книга толкований",
+      "tafsir_ref": "",
+      "ayah": { "surah": 2, "ayah": 163, "word": 9 }
+    },
+    {
+      "slug": "malik-al-mulk",
+      "position": 3,
+      "arabic": "مَالِكُ الْمُلْكِ",
+      "transliteration": "Малик аль-Мульк",
+      "meaning": "Владыка царства",
+      "tafsir": "Пример: имя из двух слов, поэтому у аята нет номера слова и кнопки «Слушать».",
+      "tafsir_source": "Пример: книга толкований",
+      "tafsir_ref": "",
+      "ayah": { "surah": 3, "ayah": 26, "word": null }
+    },
+    {
+      "slug": "al-jamil",
+      "position": 4,
+      "arabic": "الْجَمِيلُ",
+      "transliteration": "Аль-Джамиль",
+      "meaning": "Прекрасный",
+      "tafsir": "Пример: имя из Сунны, в Коране его нет, поэтому нет ни ссылки, ни звука.",
+      "tafsir_source": "Пример: другая книга для этого имени",
+      "tafsir_ref": "",
+      "ayah": null
+    }
+  ]
+}

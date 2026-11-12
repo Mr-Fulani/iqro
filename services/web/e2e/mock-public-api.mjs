@@ -150,6 +150,11 @@ function salahCourse(language) {
   return document;
 }
 
+// The Names of Allah contract example; NAMES_MOCK_FILE swaps in another list for a manual look.
+const namesExample = JSON.parse(
+  readFileSync(process.env.NAMES_MOCK_FILE ?? new URL("../../../docs/names-of-allah/names-document.example.json", import.meta.url), "utf8"),
+);
+
 // The tajweed course contract example and real lesson examples from the Quran.Foundation
 // markup (docs/tajweed/course.md); the language follows the request.
 const tajweedCourseExample = JSON.parse(
@@ -745,6 +750,17 @@ const server = createServer(async (request, response) => {
     const requested = url.searchParams.get("language");
     if (!salahLanguages.has(requested)) return sendJson(response, 400, { detail: "Unsupported language." });
     return sendJson(response, 200, salahCourse(requested));
+  }
+  if (path === "/api/v1/names/collections/asma-al-husna") {
+    const requested = url.searchParams.get("language");
+    if (!salahLanguages.has(requested)) return sendJson(response, 400, { detail: "Unsupported language." });
+    if (process.env.NAMES_MOCK_UNPUBLISHED) return sendJson(response, 404, { detail: "Not found." });
+    return sendJson(response, 200, {
+      ...namesExample,
+      collection: { ...namesExample.collection, language: requested },
+      // The Arabic document has no transliteration: the name itself is shown.
+      names: requested === "ar" ? namesExample.names.map((name) => ({ ...name, transliteration: "" })) : namesExample.names,
+    });
   }
   if (path === "/api/v1/tajweed/courses") {
     const { course } = tajweedCourseExample;

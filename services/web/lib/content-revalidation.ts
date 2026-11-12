@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { isEditionCode, isUuid } from "./public-content";
 import { isDuaCollectionSlug } from "./public-route-params";
+import { isNameSlug } from "./names";
 import { isSalahSlug } from "./salah";
 import { isTajweedLessonSlug } from "./tajweed-course";
 import { isCourseSlug, isQuizSlug } from "./thematic-courses";
@@ -61,6 +62,13 @@ type DuaContentChange = {
   version: string;
 };
 
+type NamesCollectionChange = {
+  type: "names.collection.changed";
+  action: string;
+  collection: string;
+  version: string;
+};
+
 type SalahCourseChange = {
   type: "salah.course.changed";
   action: string;
@@ -101,6 +109,7 @@ export type ContentChange =
   | ReciterContentChange
   | DuaContentChange
   | SalahCourseChange
+  | NamesCollectionChange
   | TajweedCourseChange
   | ThematicCourseChange
   | CourseCatalogChange
@@ -204,6 +213,19 @@ export function parseContentChange(value: unknown): ContentChange | null {
     return value as SalahCourseChange;
   }
 
+  if (value.type === "names.collection.changed") {
+    if (!hasExactKeys(value, ["type", "action", "collection", "version"])) return null;
+    if (
+      typeof value.action !== "string" ||
+      !COURSE_ACTIONS.has(value.action) ||
+      typeof value.collection !== "string" ||
+      !isNameSlug(value.collection) ||
+      typeof value.version !== "string" ||
+      !VERSION_PATTERN.test(value.version)
+    ) return null;
+    return value as NamesCollectionChange;
+  }
+
   if (value.type === "tajweed.course.changed") {
     if (!hasExactKeys(value, ["type", "action", "course", "version"])) return null;
     if (
@@ -296,6 +318,13 @@ export function revalidateContentChange(change: ContentChange): void {
     for (const locale of SUPPORTED_LOCALES) expireTag(`salah:locale:${locale}`);
     revalidatePath("/[locale]/salah", "page");
     revalidatePath("/[locale]/salah/[lesson]", "page");
+    return;
+  }
+
+  if (change.type === "names.collection.changed") {
+    expireTag(`names:collection:${change.collection}`);
+    for (const locale of SUPPORTED_LOCALES) expireTag(`names:locale:${locale}`);
+    revalidatePath("/[locale]/names", "page");
     return;
   }
 

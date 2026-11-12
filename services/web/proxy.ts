@@ -50,6 +50,7 @@ export const config = {
     "/prayer/:path*",
     "/calendar/:path*",
     "/courses/:path*",
+    "/names/:path*",
     "/profile/:path*",
     "/notes/:path*",
     "/login/:path*",
