@@ -310,7 +310,7 @@ class _WheelState extends ConsumerState<_Wheel> {
                           ),
                         ),
                         // Arabic vowel marks hang below the line.
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 12),
                         if (name.transliteration.isNotEmpty)
                           Text(
                             name.transliteration,
