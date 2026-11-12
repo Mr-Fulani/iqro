@@ -260,58 +260,91 @@
   background: var(--panel);
 }
 
+/* The name in calligraphy on a dark panel with a star ornament. */
+.names-card-hero {
+  --names-gold: #e2b665;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  overflow: hidden;
+  margin-top: 0;
+  padding: 14px 16px 20px;
+  border: 1px solid color-mix(in srgb, var(--names-gold) 35%, transparent);
+  border-radius: 24px;
+  background: linear-gradient(140deg, #0f6b55, #073e34);
+  color: #fff;
+  text-align: center;
+}
+
+.names-card-hero svg {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: min(300px, 88%);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  color: var(--names-gold);
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.names-card-hero > :not(svg) {
+  position: relative;
+}
+
 .names-card-number {
-  color: var(--text-muted);
+  justify-self: start;
+  padding: 4px 12px;
+  border: 1px solid color-mix(in srgb, var(--names-gold) 55%, transparent);
+  border-radius: var(--radius-full);
+  color: var(--names-gold);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-top: 0;
+  letter-spacing: 0.04em;
 }
 
 .names-card-calligraphy {
-  position: relative;
   display: grid;
   place-items: center;
-  min-height: 180px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: radial-gradient(circle at 50% 45%, var(--panel), var(--bg-subtle) 75%);
-}
-
-.names-card-calligraphy svg {
-  position: absolute;
-  width: min(170px, 58%);
-  aspect-ratio: 1;
-  color: var(--accent-gold);
-  opacity: 0.4;
-}
-
-.names-card-calligraphy span {
-  position: relative;
-  padding: 8px 16px;
-  color: var(--primary);
+  min-height: 140px;
+  padding: 0 8px;
+  color: #f5ebd3;
   font-family: var(--font-arabic);
-  font-size: clamp(40px, 12vw, 60px);
-  line-height: 1.6;
-  text-align: center;
+  font-size: clamp(44px, 13vw, 64px);
+  line-height: 1.7;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
-.names-card-head {
-  display: grid;
-  gap: 4px;
-  text-align: center;
-}
-
-.names-card-head h2 {
+.names-card-hero h2 {
   font-size: 28px;
   line-height: 1.2;
   text-wrap: balance;
 }
 
-.names-card-head p {
-  color: var(--text-secondary);
+/* A thin rule with a diamond in the middle. */
+.names-card-rule {
+  width: min(220px, 70%);
+  height: 1px;
+  margin: 6px 0;
+  background: color-mix(in srgb, var(--names-gold) 40%, transparent);
+}
+
+.names-card-rule::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--names-gold);
+}
+
+.names-card-meaning {
+  color: var(--names-gold);
+  font-size: 17px;
+  font-weight: 500;
 }
 
 .names-card-actions {
@@ -341,14 +374,18 @@
   text-align: center;
 }
 
-.names-card-block {
+/* The explanation reads as a quotation from its book. */
+.names-card-tafsir {
   display: grid;
-  gap: 6px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
+  gap: 8px;
+  padding: 14px 16px;
+  border-inline-start: 4px solid var(--accent-gold);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
 }
 
-.names-card-block h3 {
+.names-card-tafsir h3,
+.names-card-ayah small {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 600;
@@ -356,20 +393,58 @@
   text-transform: uppercase;
 }
 
-.names-card-block p:not(.names-card-source) {
+.names-card-tafsir p:not(.names-card-source) {
   max-width: 62ch;
   font-size: 16px;
   line-height: 1.6;
 }
 
+.names-card-tafsir .names-card-source {
+  font-style: italic;
+}
+
+.names-card-list-source {
+  text-align: center;
+}
+
 .names-card-ayah {
-  justify-self: start;
-  padding: 6px 14px;
-  border: 1px solid var(--primary-border);
-  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: var(--text-primary);
+}
+
+.names-card-ayah:hover {
+  border-color: var(--primary-border);
+}
+
+.names-card-ayah-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--primary-subtle);
   color: var(--primary);
-  font-size: 14px;
-  font-weight: 600;
+}
+
+.names-card-ayah-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+
+.names-card-ayah-chevron {
+  color: var(--text-muted);
+  font-size: 22px;
+}
+
+[dir="rtl"] .names-card-ayah-chevron {
+  transform: scaleX(-1);
 }
 
 .names-card-nav {

@@ -51,9 +51,9 @@ test("the wheel turns by keys and by a tap on its centre; the name under it open
   await expect(card.getByRole("heading", { level: 2 })).toHaveText("Малик аль-Мульк");
   await expect(card).toContainText("Имя 3 из 4");
   await expect(card).toContainText("Источник: Пример: книга толкований");
-  // Two words of the ayah: a link to our reader, no «Слушать».
+  // Two words of the ayah: a link to our reader; «Слушать» plays the name's own recording.
   await expect(card.getByTestId("names-ayah")).toHaveAttribute("href", "/ru/quran?surah=3&ayah=26");
-  await expect(card.getByTestId("names-listen")).toHaveCount(0);
+  await expect(card.getByTestId("names-listen")).toBeVisible();
 
   const learned = card.getByTestId("names-learned");
   await expect(learned).toHaveAttribute("aria-pressed", "false");
@@ -69,7 +69,9 @@ test("the wheel turns by keys and by a tap on its centre; the name under it open
   await card.getByTestId("names-card-next").click();
   await expect(card.getByRole("heading", { level: 2 })).toHaveText("Аль-Джамиль");
   await expect(card).toContainText("Источник: Пример: другая книга для этого имени");
+  // Neither in the Quran nor recorded: no link and no «Слушать».
   await expect(card.getByTestId("names-ayah")).toHaveCount(0);
+  await expect(card.getByTestId("names-listen")).toHaveCount(0);
   await expect(dial).toHaveAttribute("aria-valuenow", "4");
   await card.getByTestId("names-card-next").click();
   await expect(card.getByRole("heading", { level: 2 })).toHaveText("Ар-Рахман");

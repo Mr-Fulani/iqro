@@ -378,8 +378,14 @@ class _Voice extends ChangeNotifier implements NamesVoice {
   String? get missing => null;
 
   @override
+  String? get playing => null;
+
+  @override
+  bool canSay(DivineName name) => name.hasVoice || name.slug == 'al-jamil';
+
+  @override
   Future<void> play(DivineName name, {required String album}) async {
-    if (name.hasVoice) played.add(name.slug);
+    if (canSay(name)) played.add(name.slug);
   }
 
   @override

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -1273,6 +1274,7 @@ final namesVoiceProvider = Provider.autoDispose<NamesVoice>((ref) {
   final voice = NamesVoice(
     audio: () => audio,
     repository: ref.watch(audioRepositoryProvider),
+    recorded: NamesVoice.recordedNames(rootBundle),
   );
   ref.onDispose(() {
     unawaited(voice.stop());

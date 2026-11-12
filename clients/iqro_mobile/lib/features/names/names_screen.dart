@@ -120,7 +120,8 @@ class _WheelState extends ConsumerState<_Wheel> {
   /// says it.
   Future<void> _settled(int index) async {
     final name = _document.names[index];
-    if (_soundOn) {
+    // The name is not said over the Quran that plays.
+    if (_soundOn && !ref.read(audioControllerProvider).playing) {
       unawaited(ref.read(namesVoiceProvider).play(name, album: _album));
     }
     final CourseProgress progress;
