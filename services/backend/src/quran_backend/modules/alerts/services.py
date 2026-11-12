@@ -185,8 +185,10 @@ def course_release_event(release: Any, event: str, user: Any = None, note: str =
 
 
 def course_version_event(version: Any, event: str, user: Any = None) -> None:
-    """A tajweed or salah course version: «draft» waits for a signature, «published»."""
-    course = "Таджвид" if version._meta.app_label == "tajweed" else "Обучение намазу"
+    """A tajweed, salah or Names version: «draft» waits for a signature, «published»."""
+    course = {"tajweed": "Таджвид", "names": "Имена Аллаха"}.get(
+        version._meta.app_label, "Обучение намазу"
+    )
     headlines = {
         "draft": f"🟡 {course}: новая версия ждёт подписи",
         "published": f"🟢 {course}: версия опубликована",

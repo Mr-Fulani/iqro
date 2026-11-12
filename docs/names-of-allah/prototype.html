@@ -1,0 +1,725 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Колесо имён Аллаха</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600&family=Golos+Text:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-screen instrument, like a brass astrolabe — progress gauge on top, dial in the middle, readout below; the card rises as a bottom sheet */
+:root{
+  --ink:#0c100f;
+  --dial:#121715;
+  --dial-2:#1c2320;
+  --rim:#2b322e;
+  --line:#252c29;
+  --sheet:#161b19;
+  --brass:#d1b06c;
+  --brass-dim:#7c6a45;
+  --text:#efe9dc;
+  --muted:#9b9d93;
+  --faint:#555a54;
+  --scrim:rgba(4,6,5,.62);
+  --f-ar:"Amiri","Noto Naskh Arabic","Geeza Pro","Arabic Typesetting",serif;
+  --f-display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --f-ui:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+html{box-sizing:border-box;height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--ink);color:var(--text);font-family:var(--f-ui);overflow:hidden;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+
+.app{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:6px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 14px}
+
+/* header */
+.top{display:flex;flex-direction:column;gap:10px}
+.title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+[hidden]{display:none!important}
+.eyebrow{font:600 12px/1 var(--f-ui);letter-spacing:.2em;color:var(--text);white-space:nowrap}
+.toggles{display:flex;gap:6px;align-items:center}
+.chip,.seg button{height:30px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:var(--dial);font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{color:var(--brass);border-color:var(--brass-dim)}
+.chip svg{width:14px;height:14px}
+.seg{display:flex;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--dial)}
+.seg button{height:24px;border:0;background:transparent;padding:0 9px}
+.seg button[aria-pressed="true"]{background:var(--dial-2);color:var(--text)}
+.seg button[lang="ar"]{font-family:var(--f-ar);font-size:14px}
+
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter-label{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.meter-label .num{letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.meter-label b{color:var(--brass);font-weight:600}
+.bar{position:relative;height:6px;border-radius:3px;background:var(--dial-2);overflow:hidden}
+.bar .fill{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--brass-dim),var(--brass));border-radius:3px;transition:width .4s ease}
+.bar i{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
+
+/* dial */
+.stage{flex:1;min-height:0;position:relative}
+.dial{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);touch-action:none;border-radius:50%}
+.dial canvas{display:block}
+.core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid var(--brass-dim);
+  background:radial-gradient(circle at 50% 35%,var(--dial-2),var(--ink) 75%);color:var(--text);pointer-events:none;padding:0;display:grid;place-items:center;
+  box-shadow:0 0 0 6px var(--dial),0 0 0 7px var(--line)}
+.core svg{width:78%;height:78%}
+.core .waves path{opacity:.35;transition:opacity .2s}
+.core.speaking .waves path{animation:wave 1s ease-in-out infinite}
+.core.speaking .waves path:nth-child(2){animation-delay:.18s}
+@keyframes wave{0%,100%{opacity:.25}50%{opacity:1}}
+.dial.pressed .core{border-color:var(--brass)}
+
+/* readout */
+.readout{height:150px;flex:none;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding-top:4px}
+.r-ar{font:400 30px/1.35 var(--f-ar);color:var(--brass);min-height:40px}
+.r-name{font:600 30px/1.1 var(--f-display);letter-spacing:.01em}
+.r-mean{font-size:14px;color:var(--muted);margin-top:4px}
+.hint{font-size:12px;color:var(--faint);margin:10px 0 0}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(440px,calc(100% - 32px));
+  background:var(--dial-2);border:1px solid var(--line);color:var(--text);font-size:13px;line-height:1.45;padding:10px 14px;border-radius:12px;z-index:30}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:var(--scrim);opacity:0;transition:opacity .28s ease;z-index:10}
+.scrim.open{opacity:1}
+.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;z-index:11;
+  max-height:calc(100% - 40px - env(safe-area-inset-top,0px));display:flex;flex-direction:column;
+  background:var(--sheet);border:1px solid var(--line);border-bottom:0;border-radius:24px 24px 0 0;
+  transform:translateY(105%);transition:transform .34s cubic-bezier(.2,.8,.2,1);
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet.open{transform:translateY(0)}
+.sheet.dragging{transition:none}
+.grab{flex:none;height:26px;display:grid;place-items:center;touch-action:none;cursor:grab}
+.grab span{width:40px;height:4px;border-radius:2px;background:var(--faint)}
+.sheet-scroll{overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:18px;-webkit-user-select:text;user-select:text;
+  padding:0 max(20px,env(safe-area-inset-right,0px)) 22px max(20px,env(safe-area-inset-left,0px))}
+.c-top{display:flex;align-items:center;justify-content:space-between;touch-action:none}
+.c-num{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
+.c-num b{color:var(--brass);font-weight:600}
+.x{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--dial);display:grid;place-items:center;color:var(--muted)}
+.x svg{width:14px;height:14px}
+
+.c-cal{position:relative;display:grid;place-items:center;min-height:190px;border-radius:18px;overflow:hidden;
+  background:radial-gradient(circle at 50% 45%,var(--dial-2),var(--dial) 70%);border:1px solid var(--line)}
+.c-cal .star{position:absolute;width:min(180px,60%);aspect-ratio:1;color:var(--brass-dim);opacity:.55}
+.c-ar{position:relative;font:400 clamp(44px,13vw,64px)/1.5 var(--f-ar);color:var(--brass);text-align:center;padding:10px 16px}
+.c-head{display:flex;flex-direction:column;gap:4px;text-align:center}
+.c-head h2{margin:0;font:600 34px/1.1 var(--f-display);text-wrap:balance}
+.c-mean{margin:0;color:var(--muted);font-size:15px}
+.c-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--dial-2);color:var(--text);font-size:15px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.btn svg{width:16px;height:16px}
+.btn.primary{background:var(--brass);color:var(--ink);border-color:var(--brass)}
+.btn[aria-pressed="true"]{border-color:var(--brass);color:var(--brass)}
+.c-block{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:16px}
+.c-block h3{margin:0;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.c-block p{margin:0;font-size:16px;line-height:1.6;max-width:62ch}
+.c-block p.placeholder{color:var(--faint);font-size:14px}
+.ayah{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;font-size:14px;color:var(--brass);border:1px solid var(--brass-dim);border-radius:999px;padding:6px 12px}
+.langs{display:flex;gap:6px;flex-wrap:wrap}
+.langs span{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.c-nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c-nav button{min-height:56px;border-radius:14px;border:1px solid var(--line);background:var(--dial);padding:8px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.c-nav button small{font-size:11px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+.c-nav button span{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.c-nav #c-prev{align-items:flex-start;text-align:left}
+.c-nav #c-next{align-items:flex-end;text-align:right}
+
+@media (prefers-reduced-motion: reduce){
+  .sheet,.scrim,.bar .fill{transition:none}
+  .core.speaking .waves path{animation:none;opacity:1}
+}
+@media (max-height:640px){
+  .readout{height:122px}
+  .r-ar{font-size:24px;min-height:32px}
+  .r-name{font-size:25px}
+  .hint{display:none}
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="title-row">
+      <div class="eyebrow">99 ИМЁН АЛЛАХА</div>
+      <div class="toggles">
+        <button class="chip" id="sound" aria-pressed="true" aria-label="Озвучка имён">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6h2.5l3-2.5v9L5 10H2.5z"/><path class="on" d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6.3 6.3 0 0 1 0 9"/></svg>
+          <span>Звук</span>
+        </button>
+        <div class="seg" role="group" aria-label="Подписи на круге">
+          <button id="lbl-ru" aria-pressed="true">Рус</button>
+          <button id="lbl-ar" aria-pressed="false" lang="ar">عربي</button>
+        </div>
+      </div>
+    </div>
+    <div class="meter">
+      <div class="meter-label"><span>Пройдено</span><span class="num"><b id="seen">0</b> из 99</span></div>
+      <div class="bar" aria-hidden="true"><div class="fill" id="fill"></div><i style="left:33.33%"></i><i style="left:66.66%"></i></div>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="dial" id="dial" tabindex="0" role="slider" aria-label="Колесо имён, стрелками влево и вправо" aria-valuemin="1" aria-valuemax="99" aria-valuenow="1">
+      <canvas id="cv"></canvas>
+      <button class="core" id="core" aria-label="Открыть карточку имени">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <filter id="pencil" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="4" result="n"/>
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+            </filter>
+          </defs>
+          <g filter="url(#pencil)" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="49" cy="24" r="8.5"/>
+            <path d="M49 33 C48.5 43 47.5 53 46 62"/>
+            <path d="M46 62 C55 63 65 64.5 73 67"/>
+            <path d="M73 67 C74 71 71.5 73 67 73 L40 73 C36 73 35 70 38.5 67"/>
+            <path d="M49 38 C52 46 54 51 57 56 C62 58.5 66 60 70 62"/>
+            <path d="M70 62 L73 55.5"/>
+            <path d="M20 79 H82" stroke-width="2" opacity=".55"/>
+          </g>
+          <g class="waves" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M34 18 a9 9 0 0 0 0 12"/>
+            <path d="M29 13.5 a15 15 0 0 0 0 21"/>
+          </g>
+        </svg>
+      </button>
+    </div>
+  </main>
+
+  <section class="readout">
+    <div class="r-ar" id="r-ar" lang="ar" dir="rtl"></div>
+    <div class="r-name" id="r-name"></div>
+    <div class="r-mean" id="r-mean"></div>
+    <p class="hint">Крутите стрелку пальцем. Нажмите в центр, чтобы открыть карточку.</p>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="c-name" hidden>
+  <div class="grab" id="grab"><span></span></div>
+  <div class="sheet-scroll" id="sheet-scroll">
+    <div class="c-top" id="c-top">
+      <span class="c-num">Имя <b id="c-num">1</b> из 99</span>
+      <button class="x" id="close" aria-label="Закрыть карточку"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button>
+    </div>
+
+    <div class="c-cal">
+      <svg class="star" viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width=".8">
+        <rect x="20" y="20" width="60" height="60"/>
+        <rect x="20" y="20" width="60" height="60" transform="rotate(45 50 50)"/>
+        <circle cx="50" cy="50" r="46" stroke-dasharray="1 3"/>
+        <circle cx="50" cy="50" r="24"/>
+      </svg>
+      <div class="c-ar" id="c-ar" lang="ar" dir="rtl"></div>
+    </div>
+
+    <div class="c-head">
+      <h2 id="c-name"></h2>
+      <p class="c-mean" id="c-mean"></p>
+    </div>
+
+    <div class="c-actions">
+      <button class="btn primary" id="c-play"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg>Слушать</button>
+      <button class="btn" id="c-learn" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg><span>Выучено</span></button>
+    </div>
+
+    <div class="c-block">
+      <h3>Тафсир</h3>
+      <p id="c-tafsir"></p>
+    </div>
+
+    <div class="c-block" id="c-ayah-block">
+      <h3>В Коране</h3>
+      <span class="ayah" id="c-ayah"></span>
+    </div>
+
+    <div class="c-block">
+      <h3>Языки карточки</h3>
+      <div class="langs"><span>Русский</span><span>English</span><span>Türkçe</span><span lang="ar">العربية</span></div>
+    </div>
+
+    <nav class="c-nav" aria-label="Соседние имена">
+      <button id="c-prev"><small>Предыдущее</small><span id="c-prev-name"></span></button>
+      <button id="c-next"><small>Следующее</small><span id="c-next-name"></span></button>
+    </nav>
+  </div>
+</section>
+
+<script>
+(function(){
+"use strict";
+// Список по хадису ат-Тирмизи (порядок как в нём). Формат: арабский | транслитерация | значение
+const RAW = `الرَّحْمَنُ|Ар-Рахман|Милостивый ко всем творениям
+الرَّحِيمُ|Ар-Рахим|Милосердный к верующим
+الْمَلِكُ|Аль-Малик|Царь, Владыка
+الْقُدُّوسُ|Аль-Куддус|Пресвятой, Пречистый
+السَّلَامُ|Ас-Салям|Свободный от изъянов, Дарующий мир
+الْمُؤْمِنُ|Аль-Му'мин|Дарующий безопасность
+الْمُهَيْمِنُ|Аль-Мухаймин|Хранитель, Наблюдающий
+الْعَزِيزُ|Аль-Азиз|Могущественный
+الْجَبَّارُ|Аль-Джаббар|Всепокоряющий
+الْمُتَكَبِّرُ|Аль-Мутакаббир|Превосходящий, Величественный
+الْخَالِقُ|Аль-Халик|Творец
+الْبَارِئُ|Аль-Бари|Создатель
+الْمُصَوِّرُ|Аль-Мусаввир|Придающий облик
+الْغَفَّارُ|Аль-Гаффар|Многопрощающий
+الْقَهَّارُ|Аль-Каххар|Всепобеждающий
+الْوَهَّابُ|Аль-Ваххаб|Дарующий
+الرَّزَّاقُ|Ар-Раззак|Наделяющий уделом
+الْفَتَّاحُ|Аль-Фаттах|Открывающий, Судья
+الْعَلِيمُ|Аль-Алим|Всезнающий
+الْقَابِضُ|Аль-Кабид|Сжимающий
+الْبَاسِطُ|Аль-Басит|Расширяющий
+الْخَافِضُ|Аль-Хафид|Понижающий
+الرَّافِعُ|Ар-Рафи|Возвышающий
+الْمُعِزُّ|Аль-Муизз|Возвеличивающий
+الْمُذِلُّ|Аль-Музилль|Унижающий
+السَّمِيعُ|Ас-Сами|Всеслышащий
+الْبَصِيرُ|Аль-Басир|Всевидящий
+الْحَكَمُ|Аль-Хакам|Судья
+الْعَدْلُ|Аль-Адль|Справедливый
+اللَّطِيفُ|Аль-Латыф|Добрый, Проницательный
+الْخَبِيرُ|Аль-Хабир|Сведущий
+الْحَلِيمُ|Аль-Халим|Выдержанный
+الْعَظِيمُ|Аль-Азым|Великий
+الْغَفُورُ|Аль-Гафур|Прощающий
+الشَّكُورُ|Аш-Шакур|Благодарный
+الْعَلِيُّ|Аль-Алий|Высочайший
+الْكَبِيرُ|Аль-Кабир|Большой
+الْحَفِيظُ|Аль-Хафиз|Хранящий
+الْمُقِيتُ|Аль-Мукит|Питающий
+الْحَسِيبُ|Аль-Хасиб|Достаточный, Ведущий счёт
+الْجَلِيلُ|Аль-Джалиль|Величавый
+الْكَرِيمُ|Аль-Карим|Щедрый
+الرَّقِيبُ|Ар-Ракиб|Наблюдающий
+الْمُجِيبُ|Аль-Муджиб|Отвечающий на мольбы
+الْوَاسِعُ|Аль-Васи|Объемлющий
+الْحَكِيمُ|Аль-Хаким|Мудрый
+الْوَدُودُ|Аль-Вадуд|Любящий
+الْمَجِيدُ|Аль-Маджид|Славный
+الْبَاعِثُ|Аль-Баис|Воскрешающий
+الشَّهِيدُ|Аш-Шахид|Свидетель
+الْحَقُّ|Аль-Хакк|Истина
+الْوَكِيلُ|Аль-Вакиль|Попечитель
+الْقَوِيُّ|Аль-Кавий|Сильный
+الْمَتِينُ|Аль-Матин|Крепкий
+الْوَلِيُّ|Аль-Валий|Покровитель
+الْحَمِيدُ|Аль-Хамид|Достохвальный
+الْمُحْصِي|Аль-Мухси|Исчисляющий
+الْمُبْدِئُ|Аль-Мубди|Начинающий творение
+الْمُعِيدُ|Аль-Муид|Возвращающий
+الْمُحْيِي|Аль-Мухйи|Оживляющий
+الْمُمِيتُ|Аль-Мумит|Умерщвляющий
+الْحَيُّ|Аль-Хайй|Живой
+الْقَيُّومُ|Аль-Каййум|Вечносущий, Поддерживающий жизнь
+الْوَاجِدُ|Аль-Ваджид|Ни в чём не нуждающийся
+الْمَاجِدُ|Аль-Мааджид|Преславный
+الْوَاحِدُ|Аль-Вахид|Единственный
+الْأَحَدُ|Аль-Ахад|Единый
+الصَّمَدُ|Ас-Самад|Самодостаточный
+الْقَادِرُ|Аль-Кадир|Всемогущий
+الْمُقْتَدِرُ|Аль-Муктадир|Всесильный
+الْمُقَدِّمُ|Аль-Мукаддим|Приближающий
+الْمُؤَخِّرُ|Аль-Муаххир|Отдаляющий
+الْأَوَّلُ|Аль-Авваль|Первый
+الْآخِرُ|Аль-Ахир|Последний
+الظَّاهِرُ|Аз-Захир|Явный
+الْبَاطِنُ|Аль-Батын|Скрытый
+الْوَالِي|Аль-Вали|Правитель
+الْمُتَعَالِي|Аль-Мутаали|Превышающий всё
+الْبَرُّ|Аль-Барр|Благотворящий
+التَّوَّابُ|Ат-Тавваб|Принимающий покаяние
+الْمُنْتَقِمُ|Аль-Мунтаким|Воздающий
+الْعَفُوُّ|Аль-Афувв|Стирающий грехи
+الرَّءُوفُ|Ар-Рауф|Сострадательный
+مَالِكُ الْمُلْكِ|Малик уль-Мульк|Владыка царства
+ذُو الْجَلَالِ وَالْإِكْرَامِ|Зуль-Джаляли валь-Икрам|Обладатель величия и щедрости
+الْمُقْسِطُ|Аль-Муксит|Беспристрастный
+الْجَامِعُ|Аль-Джами|Собирающий
+الْغَنِيُّ|Аль-Ганий|Богатый, Независимый
+الْمُغْنِي|Аль-Мугни|Обогащающий
+الْمَانِعُ|Аль-Мани|Удерживающий
+الضَّارُّ|Ад-Дарр|Насылающий вред
+النَّافِعُ|Ан-Нафи|Приносящий пользу
+النُّورُ|Ан-Нур|Свет
+الْهَادِي|Аль-Хади|Ведущий прямым путём
+الْبَدِيعُ|Аль-Бади|Создающий небывалое
+الْبَاقِي|Аль-Баки|Вечный
+الْوَارِثُ|Аль-Варис|Наследующий
+الرَّشِيدُ|Ар-Рашид|Направляющий к истине
+الصَّبُورُ|Ас-Сабур|Терпеливый`;
+
+const NAMES = RAW.trim().split("\n").map((l,i)=>{const [ar,ru,mean]=l.split("|");return {n:i+1,ar:ar.trim(),ru:ru.trim(),mean:mean.trim()}});
+const N = NAMES.length;
+
+// Пример тафсира и аятов для первых имён. Остальное приходит с бэкенда.
+const TAFSIR = {
+ 1:["Милость Аллаха объемлет всё творение в этом мире: верующих и неверующих, людей и животных. Этим именем не называют никого, кроме Аллаха.","Сура аль-Фатиха, 1:3"],
+ 2:["Особая милость, которую Аллах оказывает верующим, прежде всего в Последней жизни. Ар-Рахман говорит о широте милости, Ар-Рахим о том, что она достигает Его рабов.","Сура аль-Фатиха, 1:3"],
+ 3:["Истинный Владыка всего, распоряжающийся Своим царством как пожелает. Власть любого человека временна и дана Им.","Сура аль-Хашр, 59:23"],
+ 4:["Пречистый, свободный от любого недостатка и от всего, что не подобает Его величию.","Сура аль-Хашр, 59:23"],
+ 5:["Свободный от всякого изъяна. От Него исходят мир и безопасность для творений.","Сура аль-Хашр, 59:23"],
+ 6:["Подтверждающий правдивость Своих посланников знамениями и дарующий безопасность верующим.","Сура аль-Хашр, 59:23"],
+ 7:["Наблюдающий за делами творений, оберегающий их и свидетельствующий обо всём.","Сура аль-Хашр, 59:23"],
+ 8:["Могущественный, Которого невозможно одолеть. Вся сила и величие принадлежат Ему.","Сура аль-Хашр, 59:23"],
+ 9:["Тот, чьей воле подчинено всё. Учёные также объясняют это имя как Того, Кто восполняет надломленное и исправляет.","Сура аль-Хашр, 59:23"],
+ 10:["Возвышенный над творениями. Величие подобает только Ему.","Сура аль-Хашр, 59:23"],
+ 11:["Творец, определяющий меру всего прежде, чем создать.","Сура аль-Хашр, 59:24"],
+ 12:["Создающий творения из небытия и отличающий их друг от друга.","Сура аль-Хашр, 59:24"],
+ 13:["Придающий каждому творению его облик и форму так, как Он пожелал.","Сура аль-Хашр, 59:24"],
+ 14:["Прощающий снова и снова, сколько бы раз раб ни возвращался к Нему с покаянием.","Сура Нух, 71:10"],
+ 15:["Одолевающий всех. Перед Его могуществом смиряется каждое творение.","Сура ар-Ра'д, 13:16"],
+ 16:["Дарующий щедро и безвозмездно, не ожидая ничего взамен.","Сура Али Имран, 3:8"],
+ 17:["Наделяющий уделом каждое творение: пропитанием для тела, знанием и верой для сердца.","Сура аз-Зарият, 51:58"],
+ 18:["Открывающий врата милости и удела и выносящий справедливое решение между рабами.","Сура Саба, 34:26"],
+ 19:["Знающий всё явное и сокровенное, прошлое и будущее.","Сура аль-Бакара, 2:32"]
+};
+
+const $ = id => document.getElementById(id);
+const stage=$("stage"), dial=$("dial"), cv=$("cv"), core=$("core"), ctx=cv.getContext("2d");
+const TAU=Math.PI*2, STEP=TAU/N;
+const mod = x => ((x % N) + N) % N;
+const stripHarakat = s => s.replace(/[ً-ْٰـ]/g,"");
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const css=getComputedStyle(document.documentElement);
+const C={}; ["ink","dial","dial-2","rim","brass","brass-dim","text","muted","faint"].forEach(k=>C[k]=css.getPropertyValue("--"+k).trim());
+
+// ---------- storage (per-viewer, optional) ----------
+function load(key){try{return new Set(JSON.parse(localStorage.getItem(key)||"[]"))}catch(e){return new Set()}}
+function save(key,set){try{localStorage.setItem(key,JSON.stringify([...set]))}catch(e){}}
+const seen=load("iqro-names-seen"), learned=load("iqro-names-learned");
+
+// ---------- state ----------
+let p=0, dir=1, arabicLabels=false, soundOn=true;
+let size=0, dpr=1, coreR=0;
+let curIdx=0, lastSpoken=-1;
+let mode="idle", v=0, target=0, raf=0, lastT=0;
+
+function angleOf(i){return -Math.PI/2 + dir*i*STEP}
+
+// ---------- drawing ----------
+function layout(){
+  const r=stage.getBoundingClientRect();
+  const s=Math.max(200,Math.floor(Math.min(r.width,r.height)));
+  size=s; dpr=Math.min(3,window.devicePixelRatio||1);
+  dial.style.width=dial.style.height=s+"px";
+  cv.width=Math.round(s*dpr); cv.height=Math.round(s*dpr);
+  cv.style.width=cv.style.height=s+"px";
+  coreR=s*0.16;
+  core.style.width=core.style.height=(coreR*2)+"px";
+  draw();
+}
+
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+
+function draw(){
+  if(!size) return;
+  const S=size, c=S/2, R=c-3;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,S,S);
+
+  // face
+  const g=ctx.createRadialGradient(c,c-R*0.3,R*0.05,c,c,R);
+  g.addColorStop(0,C["dial-2"]); g.addColorStop(1,C.dial);
+  ctx.beginPath(); ctx.arc(c,c,R,0,TAU); ctx.fillStyle=g; ctx.fill();
+  ctx.lineWidth=5; ctx.strokeStyle=C.rim; ctx.beginPath(); ctx.arc(c,c,R-2.5,0,TAU); ctx.stroke();
+  ctx.lineWidth=1; ctx.strokeStyle=C["brass-dim"]; ctx.globalAlpha=.8; ctx.beginPath(); ctx.arc(c,c,R-6,0,TAU); ctx.stroke();
+
+  const rTick=R-9, rOut=R-19, rIn=R*0.43;
+  ctx.globalAlpha=.6; ctx.strokeStyle=C.faint; ctx.beginPath(); ctx.arc(c,c,rIn-8,0,TAU); ctx.stroke();
+  ctx.globalAlpha=1;
+
+  ctx.save(); ctx.translate(c,c);
+
+  // ticks: every name, longer every 11, brass every 33 (как деления тасбиха)
+  for(let i=0;i<N;i++){
+    const major=i%33===0, mid=i%11===0;
+    const len=major?9:mid?6:3;
+    ctx.save(); ctx.rotate(angleOf(i));
+    ctx.strokeStyle=major?C.brass:C.muted; ctx.globalAlpha=major?.95:mid?.6:.35; ctx.lineWidth=major?1.6:1;
+    ctx.beginPath(); ctx.moveTo(rTick-len,0); ctx.lineTo(rTick,0); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+
+  // labels with magnifier
+  const cur=mod(p), near=mod(Math.round(p));
+  const fam=arabicLabels?'"Amiri","Noto Naskh Arabic","Geeza Pro",serif':'"Golos Text",system-ui,sans-serif';
+  const baseFs=Math.max(6.5,S*0.0205)*(arabicLabels?1.5:1);
+  const span=rOut-rIn;
+  ctx.textBaseline="middle"; ctx.textAlign="left";
+  ctx.direction="ltr"; // absolute anchoring; Arabic still shapes right-to-left
+
+  // Cyrillic labels start at the inner radius; Arabic labels are short, so they end at the outer radius (closer to the rim, more room)
+  const drawLabel=(i,measureOnly)=>{
+    let d=Math.abs(i-cur); d=Math.min(d,N-d);
+    const m=Math.exp(-d*d/0.6);
+    const sel=i===near;
+    let fs=baseFs*(1+1.0*m);
+    const txt=arabicLabels?stripHarakat(NAMES[i].ar):NAMES[i].ru;
+    const weight=sel?600:(m>.3?500:400);
+    ctx.font=`${weight} ${fs}px ${fam}`;
+    let w=ctx.measureText(txt).width;
+    const maxW=sel?span-4:span;
+    if(w>maxW){fs=fs*maxW/w; ctx.font=`${weight} ${fs}px ${fam}`; w=ctx.measureText(txt).width;}
+    const pad=Math.max(4,fs*.45);
+    const start=arabicLabels?rOut-w:rIn;
+    if(measureOnly) return start-pad;
+    const a=angleOf(i);
+    ctx.save(); ctx.rotate(a);
+    const left=Math.cos(a)<-1e-6;
+    if(left) ctx.rotate(Math.PI);
+    const x0=left?-(start+w):start;
+    if(sel){
+      const h=fs*1.6;
+      roundRect(x0-pad,-h/2,w+pad*2,h,h/2);
+      ctx.fillStyle=C.brass; ctx.shadowColor=C.brass; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
+      ctx.fillStyle=C.ink; ctx.globalAlpha=1;
+    }else{
+      ctx.fillStyle=m>.08?C.text:C.muted;
+      ctx.globalAlpha=.42+.58*m;
+    }
+    ctx.fillText(txt,x0,arabicLabels?fs*.08:0);
+    ctx.restore();
+  };
+  for(let i=0;i<N;i++) if(i!==near) drawLabel(i);
+  ctx.globalAlpha=1;
+
+  // needle (under the highlighted label so the pill stays on top)
+  const ap=-Math.PI/2+dir*p*STEP;
+  ctx.save(); ctx.rotate(ap);
+  const r0=coreR+8, r1=arabicLabels?Math.max(rIn-12,drawLabel(near,true)-9):rIn-12;
+  const lg=ctx.createLinearGradient(r0,0,r1,0); lg.addColorStop(0,C["brass-dim"]); lg.addColorStop(1,C.brass);
+  ctx.strokeStyle=lg; ctx.lineWidth=2.2; ctx.lineCap="round";
+  ctx.shadowColor=C.brass; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.moveTo(r0,0); ctx.lineTo(r1,0); ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.fillStyle=C.brass; ctx.beginPath(); ctx.moveTo(r1+5,0); ctx.lineTo(r1-2,-3.2); ctx.lineTo(r1-2,3.2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(r0,0,3.2,0,TAU); ctx.fillStyle=C.ink; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=C.brass; ctx.stroke();
+  // rim marker
+  ctx.lineWidth=2.5; ctx.strokeStyle=C.brass; ctx.shadowColor=C.brass; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.moveTo(rTick-12,0); ctx.lineTo(R-4,0); ctx.stroke(); ctx.shadowBlur=0;
+  ctx.restore();
+
+  drawLabel(near);
+  ctx.restore();
+}
+
+// ---------- readout ----------
+function updateReadout(){
+  const it=NAMES[curIdx];
+  $("r-ar").textContent=it.ar;
+  $("r-name").textContent=it.ru;
+  $("r-mean").textContent=it.mean;
+  dial.setAttribute("aria-valuenow",String(it.n));
+  dial.setAttribute("aria-valuetext",`${it.ru}, ${it.mean}`);
+}
+function updateMeter(){
+  $("seen").textContent=seen.size;
+  $("fill").style.width=(seen.size/N*100)+"%";
+}
+
+// ---------- audio ----------
+let actx=null, lastTick=0, unlocked=false, arVoice=null, warned=false;
+function pickVoice(){
+  if(!("speechSynthesis" in window)) return;
+  const vs=speechSynthesis.getVoices();
+  arVoice=vs.find(v=>/^ar(-|_|$)/i.test(v.lang))||null;
+}
+if("speechSynthesis" in window){pickVoice(); speechSynthesis.addEventListener?.("voiceschanged",pickVoice);}
+
+function unlockAudio(){
+  if(unlocked) return; unlocked=true;
+  try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  try{ if("speechSynthesis" in window){ const u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u);} }catch(e){}
+}
+function tick(){
+  const now=performance.now();
+  if(navigator.vibrate) { try{navigator.vibrate(4)}catch(e){} }
+  if(!soundOn||!actx||now-lastTick<28) return;
+  lastTick=now;
+  try{
+    if(actx.state==="suspended") actx.resume();
+    const t=actx.currentTime, o=actx.createOscillator(), gn=actx.createGain();
+    o.type="triangle"; o.frequency.setValueAtTime(2200,t); o.frequency.exponentialRampToValueAtTime(900,t+.03);
+    gn.gain.setValueAtTime(.05,t); gn.gain.exponentialRampToValueAtTime(.0001,t+.04);
+    o.connect(gn).connect(actx.destination); o.start(t); o.stop(t+.05);
+  }catch(e){}
+}
+function speak(i,force){
+  if(!force && i===lastSpoken) return;
+  lastSpoken=i;
+  if(!soundOn) return;
+  if(!("speechSynthesis" in window)){ toast("Этот браузер не умеет озвучивать текст. В приложении здесь будет запись чтеца."); return; }
+  if(!arVoice && !warned){ warned=true; pickVoice(); if(!arVoice) toast("На этом устройстве нет арабского голоса, поэтому озвучка может звучать неточно. В приложении здесь будет запись чтеца."); }
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(NAMES[i].ar);
+    u.lang="ar-SA"; if(arVoice) u.voice=arVoice; u.rate=.8;
+    u.onstart=()=>core.classList.add("speaking");
+    u.onend=u.onerror=()=>core.classList.remove("speaking");
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+let toastT=0;
+function toast(msg){const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,4200);}
+
+// ---------- motion ----------
+function onPos(){
+  const idx=mod(Math.round(p));
+  if(idx!==curIdx){ curIdx=idx; lastSpoken=-1; tick(); updateReadout(); }
+}
+function settle(){
+  if(!seen.has(curIdx)){ seen.add(curIdx); save("iqro-names-seen",seen); updateMeter(); }
+  speak(curIdx);
+}
+function kick(){ if(!raf) raf=requestAnimationFrame(loop); }
+function loop(t){
+  raf=0;
+  if(!lastT) lastT=t;
+  const dt=Math.min(40,t-lastT); lastT=t;
+  if(mode==="inertia"){
+    p+=v*dt; v*=Math.exp(-dt/450);
+    if(Math.abs(v)<0.0035){ mode="snap"; target=Math.round(p); }
+  }else if(mode==="snap"){
+    p+=(target-p)*(1-Math.exp(-dt/70));
+    if(Math.abs(target-p)<0.003){ p=target; mode="idle"; lastT=0; onPos(); draw(); settle(); return; }
+  }
+  onPos(); draw();
+  if(mode==="inertia"||mode==="snap") kick(); else lastT=0;
+}
+function goTo(i){ // move to an absolute index along the shortest way
+  let delta=mod(i)-mod(Math.round(p)); if(delta>N/2) delta-=N; if(delta<-N/2) delta+=N;
+  target=Math.round(p)+delta;
+  if(reduceMotion){ p=target; mode="idle"; onPos(); draw(); settle(); return; }
+  mode="snap"; lastT=0; kick();
+}
+
+// ---------- gestures ----------
+let dragging=false, startedInCore=false, moved=0, lastAng=0, sx=0, sy=0, samples=[], pauseT=0;
+function local(e){const r=dial.getBoundingClientRect(); return {x:e.clientX-r.left-r.width/2, y:e.clientY-r.top-r.height/2};}
+dial.addEventListener("pointerdown",e=>{
+  if(e.button>0) return;
+  unlockAudio();
+  const q=local(e);
+  dragging=true; moved=0; sx=e.clientX; sy=e.clientY;
+  startedInCore=Math.hypot(q.x,q.y)<=coreR;
+  lastAng=Math.atan2(q.y,q.x);
+  mode="drag"; v=0; samples=[{t:e.timeStamp,p}];
+  dial.classList.toggle("pressed",startedInCore);
+  try{dial.setPointerCapture(e.pointerId)}catch(err){}
+  clearTimeout(pauseT);
+});
+dial.addEventListener("pointermove",e=>{
+  if(!dragging) return;
+  const q=local(e);
+  moved=Math.max(moved,Math.hypot(e.clientX-sx,e.clientY-sy));
+  if(Math.hypot(q.x,q.y)<12) return;
+  const ang=Math.atan2(q.y,q.x);
+  let da=ang-lastAng; if(da>Math.PI) da-=TAU; if(da<-Math.PI) da+=TAU;
+  lastAng=ang;
+  if(moved<6 && startedInCore) return;
+  p+=dir*da/STEP;
+  samples.push({t:e.timeStamp,p}); while(samples.length>2 && e.timeStamp-samples[0].t>90) samples.shift();
+  onPos(); draw();
+  clearTimeout(pauseT);
+  pauseT=setTimeout(()=>{ if(mode==="drag"){ if(!seen.has(curIdx)){seen.add(curIdx);save("iqro-names-seen",seen);updateMeter();} speak(curIdx);} },450);
+});
+function endDrag(e){
+  if(!dragging) return;
+  dragging=false; dial.classList.remove("pressed"); clearTimeout(pauseT);
+  if(startedInCore && moved<8){ mode="idle"; openCard(curIdx); return; }
+  const a=samples[0], b=samples[samples.length-1];
+  v=(b&&a&&b.t>a.t)?(b.p-a.p)/(b.t-a.t):0;
+  if(e && e.timeStamp-b.t>80) v=0;
+  v=Math.max(-0.09,Math.min(0.09,v));
+  if(reduceMotion||Math.abs(v)<0.004){ mode="snap"; target=Math.round(p); }
+  else mode="inertia";
+  lastT=0; kick();
+}
+dial.addEventListener("pointerup",endDrag);
+dial.addEventListener("pointercancel",endDrag);
+dial.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"||e.key==="ArrowDown"){ e.preventDefault(); unlockAudio(); goTo(Math.round(p)+1); }
+  else if(e.key==="ArrowLeft"||e.key==="ArrowUp"){ e.preventDefault(); unlockAudio(); goTo(Math.round(p)-1); }
+  else if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openCard(curIdx); }
+});
+core.addEventListener("click",()=>openCard(curIdx)); // keyboard only (pointer taps go through the dial)
+
+// ---------- toggles ----------
+$("sound").addEventListener("click",()=>{
+  soundOn=!soundOn; $("sound").setAttribute("aria-pressed",String(soundOn));
+  $("sound").querySelector(".on").style.opacity=soundOn?1:.2;
+  if(!soundOn && "speechSynthesis" in window) speechSynthesis.cancel();
+});
+function setLabels(ar){
+  arabicLabels=ar; dir=ar?-1:1;
+  $("lbl-ru").setAttribute("aria-pressed",String(!ar));
+  $("lbl-ar").setAttribute("aria-pressed",String(ar));
+  draw();
+}
+$("lbl-ru").addEventListener("click",()=>setLabels(false));
+$("lbl-ar").addEventListener("click",()=>setLabels(true));
+
+// ---------- card ----------
+const sheet=$("sheet"), scrim=$("scrim");
+let cardIdx=0, closeT=0;
+function fillCard(i){
+  cardIdx=i;
+  const it=NAMES[i];
+  $("c-num").textContent=it.n;
+  $("c-ar").textContent=it.ar;
+  $("c-name").textContent=it.ru;
+  $("c-mean").textContent=it.mean;
+  const t=TAFSIR[it.n], tp=$("c-tafsir");
+  if(t){ tp.textContent=t[0]; tp.className=""; $("c-ayah").textContent=t[1]; $("c-ayah-block").hidden=false; }
+  else{ tp.textContent="В прототипе тафсир написан для первых 19 имён. Здесь будет текст с бэкенда на языке интерфейса."; tp.className="placeholder"; $("c-ayah-block").hidden=true; }
+  const L=learned.has(it.n); $("c-learn").setAttribute("aria-pressed",String(L)); $("c-learn").querySelector("span").textContent=L?"Выучено":"Отметить выученным";
+  $("c-prev-name").textContent=NAMES[mod(i-1)].ru;
+  $("c-next-name").textContent=NAMES[mod(i+1)].ru;
+}
+function openCard(i){
+  clearTimeout(closeT);
+  fillCard(i);
+  sheet.hidden=false; scrim.hidden=false; sheet.style.transform="";
+  $("sheet-scroll").scrollTop=0;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ sheet.classList.add("open"); scrim.classList.add("open"); }));
+  setTimeout(()=>$("close").focus({preventScroll:true}),50);
+}
+function closeCard(){
+  sheet.classList.remove("open"); scrim.classList.remove("open"); sheet.style.transform="";
+  closeT=setTimeout(()=>{ sheet.hidden=true; scrim.hidden=true; }, reduceMotion?0:340);
+  dial.focus({preventScroll:true});
+}
+$("close").addEventListener("click",closeCard);
+scrim.addEventListener("click",closeCard);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !sheet.hidden) closeCard(); });
+$("c-play").addEventListener("click",()=>{ unlockAudio(); const was=soundOn; soundOn=true; speak(cardIdx,true); soundOn=was; });
+$("c-learn").addEventListener("click",()=>{
+  const n=NAMES[cardIdx].n; learned.has(n)?learned.delete(n):learned.add(n); save("iqro-names-learned",learned); fillCard(cardIdx);
+});
+function step(d){ const i=mod(cardIdx+d); fillCard(i); goTo(i); }
+$("c-prev").addEventListener("click",()=>step(-1));
+$("c-next").addEventListener("click",()=>step(1));
+
+// swipe down to close
+let sy0=0, sdy=0, sdrag=false;
+function sDown(e){ sdrag=true; sy0=e.clientY; sdy=0; sheet.classList.add("dragging"); try{e.currentTarget.setPointerCapture(e.pointerId)}catch(err){} }
+function sMove(e){ if(!sdrag) return; sdy=Math.max(0,e.clientY-sy0); sheet.style.transform=`translateY(${sdy}px)`; }
+function sUp(e){ if(!sdrag) return; sdrag=false; sheet.classList.remove("dragging"); if(sdy>90) closeCard(); else sheet.style.transform=""; }
+["grab","c-top"].forEach(id=>{const el=$(id); el.addEventListener("pointerdown",e=>{ if(e.target.closest("button")) return; sDown(e);}); el.addEventListener("pointermove",sMove); el.addEventListener("pointerup",sUp); el.addEventListener("pointercancel",sUp);});
+
+// ---------- boot ----------
+updateReadout(); updateMeter();
+new ResizeObserver(layout).observe(stage);
+layout();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+})();
+</script>
+
+</body></html>
