@@ -116,8 +116,10 @@ test("the video counts its start and its end", async ({ page }) => {
 
   await expect.poll(async () => (await nextBatch(page)).events.map((event) => event.event), { timeout: 10_000 })
     .toContain("video_finished");
-  const events = (await mockState(page)).events.filter((event) => event.lesson === "namerenie").map((event) => event.event);
-  expect(events).toEqual(expect.arrayContaining(["lesson_opened", "video_started", "video_finished"]));
+  // The batch was seen leaving the page; the server has it a moment later.
+  await expect.poll(async () => (await mockState(page)).events
+    .filter((event) => event.lesson === "namerenie").map((event) => event.event))
+    .toEqual(expect.arrayContaining(["lesson_opened", "video_started", "video_finished"]));
 });
 
 test("«Сообщить об ошибке» sends a ticket that knows the lesson", async ({ page }) => {
