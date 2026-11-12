@@ -838,7 +838,7 @@ const server = createServer(async (request, response) => {
     const input = request.method === "PUT" ? await readJson(request) : { lessons: {} };
     return sendJson(response, 200, { course: "tajweed", lessons: input.lessons ?? {} });
   }
-  const courseProgress = path.match(/^\/api\/v1\/me\/courses\/progress\/(salah|courses)\/([a-z0-9-]+)$/);
+  const courseProgress = path.match(/^\/api\/v1\/me\/courses\/progress\/(salah|courses|names)\/([a-z0-9-]+)$/);
   if (courseProgress) {
     const input = request.method === "PUT" ? await readJson(request) : { lessons: {} };
     return sendJson(response, 200, { kind: courseProgress[1], course: courseProgress[2], lessons: input.lessons ?? {} });

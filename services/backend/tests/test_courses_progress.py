@@ -13,6 +13,7 @@ from quran_backend.modules.accounts.models import User, UserStatus
 from quran_backend.modules.courses.models import Course, LearnerProgress
 from quran_backend.modules.salah.models import SalahCourse, SalahCourseVersion
 from tests.test_courses import owner, ramadan, release_course  # noqa: F401 - fixtures by name
+from tests.test_names import _published as publish_names
 
 
 def _entry(status: str, step: str, at: str) -> dict[str, str]:
@@ -184,3 +185,39 @@ def test_progress_is_deleted_with_the_account(live: Course) -> None:
     _finalize_account(user=learner, deleted_at=timezone.now() + timedelta(days=30))
 
     assert list(LearnerProgress.objects.values_list("user_id", flat=True)) == [other.pk]
+
+
+@pytest.mark.django_db
+def test_marks_of_the_names_of_allah_are_kept_with_the_account(
+    owner: User, api_client: APIClient
+) -> None:
+    url = _url("names", "asma-al-husna")
+    api_client.force_authenticate(_account())
+    # Nothing is published yet: there is no list to keep marks of.
+    assert api_client.get(url).status_code == 404
+    publish_names(owner)
+    assert api_client.get(url).json() == {"kind": "names", "course": "asma-al-husna", "lessons": {}}
+
+    # A name is a lesson: «in_progress» is seen, «completed» is learned.
+    saved = api_client.put(
+        url,
+        {
+            "lessons": {
+                "ar-rahman": _entry("completed", "", "2026-11-12T10:00:00.000Z"),
+                "al-jamil": _entry("in_progress", "", "2026-11-12T10:05:00.000Z"),
+            }
+        },
+        format="json",
+    )
+    assert saved.status_code == 200
+    assert saved.json()["lessons"]["ar-rahman"]["status"] == "completed"
+    # «Выучено» taken back on another device stays taken back.
+    again = api_client.put(
+        url,
+        {"lessons": {"ar-rahman": _entry("in_progress", "", "2026-11-12T11:00:00.000Z")}},
+        format="json",
+    ).json()
+    assert again["lessons"]["ar-rahman"]["status"] == "in_progress"
+    assert again["lessons"]["al-jamil"]["status"] == "in_progress"
+    assert LearnerProgress.objects.get().kind == "names"
+    assert api_client.get(_url("names", "other")).status_code == 404

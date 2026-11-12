@@ -17,6 +17,7 @@ import {
   writeNamesProgress,
   type NamesDocument,
 } from "@/lib/names";
+import { useAccountProgressSync } from "@/lib/use-account-progress-sync";
 import { useCourseProgress } from "@/lib/use-course-progress";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { NameCard } from "./NameCard";
@@ -57,6 +58,8 @@ export function NamesWheel({ document: list }: { document: NamesDocument }) {
   const count = names.length;
   const reducedMotion = useReducedMotion();
   const progress = useCourseProgress(namesProgressStorageKey(), NAMES_PROGRESS_EVENT, isNameSlug);
+  // A signed-in reader's marks go to the account: when the page opens, after «Выучено», when a card closes.
+  const syncProgress = useAccountProgressSync("names", list.collection.slug, readNamesProgress, writeNamesProgress, isNameSlug);
 
   const [current, setCurrent] = useState(0);
   // The Arabic interface has one way to write a name.
@@ -596,11 +599,13 @@ export function NamesWheel({ document: list }: { document: NamesDocument }) {
           index={card}
           progress={progress}
           voice={voice}
+          onMarked={() => void syncProgress()}
           onStep={(index) => {
             setCard(index);
             goTo(index);
           }}
           onClose={() => {
+            void syncProgress();
             setCard(null);
             dial.current?.focus({ preventScroll: true });
           }}

@@ -19,6 +19,7 @@ from quran_backend.modules.tajweed.models import (
     TajweedPracticeSession,
 )
 from tests.test_courses import owner, ramadan, release_course  # noqa: F401 - fixtures by name
+from tests.test_names import _published as publish_names
 
 LEARNERS = "/admin/courses/learnerprogress/"
 
@@ -114,6 +115,7 @@ def test_learners_lists_registered_accounts_latest_first(studied: dict[str, User
     assert report["options"] == [
         ("salah", "Обучение намазу"),
         ("tajweed", "Таджвид"),
+        ("names", "Имена Аллаха"),
         ("ramadan", "Рамадан"),
     ]
     assert [row["user"].email for row in learners("tajweed")["rows"]] == [
@@ -196,3 +198,26 @@ def test_course_editors_do_not_see_learners_by_default() -> None:
     for name in ("Редактор курсов", "Публикатор"):
         group = Group.objects.get(name=name)
         assert not group.permissions.filter(codename="view_learnerprogress").exists()
+
+
+@pytest.mark.django_db
+def test_the_names_of_allah_are_listed_among_the_learners(owner: User) -> None:
+    publish_names(owner)
+    aisha = User.objects.create_user(email="aisha@example.test", status=UserStatus.ACTIVE)
+    LearnerProgress.objects.create(
+        user=aisha,
+        kind="names",
+        course="asma-al-husna",
+        lessons={
+            # The needle stopped on one name, another is marked as learned.
+            "ar-rahman": _entry("in_progress", "2026-11-12T08:00:00.000Z"),
+            "al-jamil": _entry("completed", "2026-11-12T09:00:00.000Z"),
+            # A name gone from the list is not counted.
+            "gone": _entry("completed", "2026-11-01T08:00:00.000Z"),
+        },
+    )
+
+    assert _summary(learners()["rows"]) == [("aisha@example.test", "Имена Аллаха", 1, 2, 2)]
+    assert _summary(learners("names")["rows"]) == _summary(learners()["rows"])
+    assert learners("salah")["rows"] == []
+    assert _summary(user_learning(aisha)["rows"]) == _summary(learners()["rows"])

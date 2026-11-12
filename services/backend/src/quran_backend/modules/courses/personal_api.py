@@ -75,7 +75,7 @@ class CourseProgressView(TajweedMutationRateLimitMixin, PrivateNoStoreResponseMi
         responses=CourseProgressSerializer,
         description="Сливает переданные уроки с сохранёнными: пройденный урок остаётся "
         "пройденным, иначе побеждает более поздняя запись. Ответ — итог слияния. "
-        "`kind` — `salah` или `courses`. Только для аккаунта, гостю — 403.",
+        "`kind` — `salah`, `courses` или `names`. Только для аккаунта, гостю — 403.",
     )
     def put(self, request: Request, kind: str, course: str) -> Response:
         self._check(kind, course)

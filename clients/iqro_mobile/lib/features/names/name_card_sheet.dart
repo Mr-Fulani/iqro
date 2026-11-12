@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/account_progress_sync.dart';
 import 'names_models.dart';
 import 'names_sound.dart';
 
@@ -67,6 +68,11 @@ class _NameCardState extends ConsumerState<_NameCard> {
       contentVersion: _document.version,
     );
     ref.invalidate(namesProgressProvider(_document.slug));
+    unawaited(
+      ref
+          .read(accountProgressSyncProvider)
+          .sync(AccountProgressSync.names, _document.slug),
+    );
   }
 
   @override

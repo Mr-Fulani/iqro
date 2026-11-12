@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
+import '../courses/account_progress_sync.dart';
 import '../courses/course_progress_store.dart';
 import 'name_card_sheet.dart';
 import 'names_models.dart';
@@ -89,6 +90,20 @@ class _WheelState extends ConsumerState<_Wheel> {
 
   NamesDocument get _document => widget.document;
 
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  /// A signed-in reader's marks go to the account: when the screen opens,
+  /// after «Выучено», when a card closes.
+  void _sync() => unawaited(
+    ref
+        .read(accountProgressSyncProvider)
+        .sync(AccountProgressSync.names, _document.slug),
+  );
+
   String get _album => 'IQRO · ${context.l10n.namesOfAllah}';
 
   void _tick() {
@@ -126,13 +141,16 @@ class _WheelState extends ConsumerState<_Wheel> {
     ref.invalidate(namesProgressProvider(_document.slug));
   }
 
-  Future<void> _openCard() => showNameCard(
-    context,
-    document: _document,
-    index: _current,
-    album: _album,
-    onStep: (index) => _wheel.currentState?.goTo(index),
-  );
+  Future<void> _openCard() async {
+    await showNameCard(
+      context,
+      document: _document,
+      index: _current,
+      album: _album,
+      onStep: (index) => _wheel.currentState?.goTo(index),
+    );
+    if (mounted) _sync();
+  }
 
   @override
   Widget build(BuildContext context) {

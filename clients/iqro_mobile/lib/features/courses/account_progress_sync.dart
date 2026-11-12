@@ -43,6 +43,9 @@ class AccountProgressSync {
   static const salah = 'salah';
   static const courses = 'courses';
 
+  /// «Пройдено» and «выучено» of the Names of Allah: a name is a lesson.
+  static const names = 'names';
+
   final SaveCourseProgress _save;
   final LocalDatabase _database;
   final AuthSession? Function() _session;
