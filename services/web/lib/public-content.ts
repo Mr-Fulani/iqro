@@ -29,6 +29,7 @@ import {
   reciterSourcesForPerson,
   selectHomePopularReciters,
 } from "./reciter-catalog";
+import { parseNamesDocument, type NamesDocument } from "./names";
 import { parseSalahCourseDocument, type SalahCourseDocument } from "./salah";
 import { parseTajweedCourseDocument, type TajweedCourseDocument } from "./tajweed-course";
 import {
@@ -570,6 +571,16 @@ export const getPublishedSalahCourse = cache(
       [`salah:course:${slug}`, `salah:locale:${locale}`],
     );
     return parseSalahCourseDocument(document);
+  },
+);
+
+export const getPublishedNames = cache(
+  async (locale: SupportedLocale, slug: string): Promise<NamesDocument> => {
+    const document = await fetchPublishedJson<unknown>(
+      `/api/v1/names/collections/${encodeURIComponent(slug)}?language=${encodeURIComponent(locale)}`,
+      [`names:collection:${slug}`, `names:locale:${locale}`],
+    );
+    return parseNamesDocument(document);
   },
 );
 

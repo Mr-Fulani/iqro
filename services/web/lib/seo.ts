@@ -18,6 +18,7 @@ export const PUBLIC_INDEXABLE_PATHS = [
   "/salah",
   "/tajweed",
   "/courses",
+  "/names",
   "/legal",
   "/privacy",
   "/terms",

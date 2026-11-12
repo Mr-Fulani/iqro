@@ -54,6 +54,7 @@ export function MobileNavigation() {
     { href: "/courses", label: t("nav.courses"), icon: "courses", also: ["/salah", "/tajweed"] },
     { href: "/calendar", label: t("calendar.title"), icon: "calendar" },
     { href: "/dua", label: t("nav.dua"), icon: "dua" },
+    { href: "/names", label: t("nav.namesOfAllah"), icon: "names" },
     { href: "/memorization", label: t("nav.memorization"), icon: "plan" },
     { href: "/notes", label: t("notes.title"), icon: "notes" },
     { href: "/profile", label: t("nav.profile"), icon: "profile" },
@@ -96,12 +97,6 @@ export function MobileNavigation() {
                 <span className="mobile-more-chevron" aria-hidden="true">›</span>
               </IntentPrefetchLink>
             ))}
-            {/* Announced section without a page yet: shown, but not a link. */}
-            <div className="mobile-more-soon" aria-disabled="true" data-testid="more-names-of-allah">
-              <span className="mobile-more-icon"><NavigationIcon name="names" /></span>
-              <span>{t("nav.namesOfAllah")}</span>
-              <span className="status-chip mobile-more-soon-badge">{t("common.soon")}</span>
-            </div>
           </div>
           <LanguageSwitcher variant="menu" />
         </div>

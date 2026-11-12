@@ -110,6 +110,7 @@ test("robots and sitemap publish only the current public route set", async ({ re
       "/salah",
       "/tajweed",
       "/courses",
+      "/names",
       "/legal",
       "/privacy",
       "/terms",
@@ -449,6 +450,30 @@ test("content revalidation accepts only authenticated allowlisted events", async
   });
   expect(acceptedDua.ok()).toBe(true);
   expect(await acceptedDua.json()).toEqual({ accepted: true, type: duaEvent.type });
+
+  const namesEvent = {
+    type: "names.collection.changed",
+    action: "activated",
+    collection: "asma-al-husna",
+    version: "2026-11-12",
+  };
+  const acceptedNames = await request.post(endpoint, {
+    data: namesEvent,
+    headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+  });
+  expect(acceptedNames.ok()).toBe(true);
+  expect(await acceptedNames.json()).toEqual({ accepted: true, type: namesEvent.type });
+  for (const invalid of [
+    { ...namesEvent, action: "deleted" },
+    { ...namesEvent, collection: "../names" },
+    { ...namesEvent, version: "" },
+    { type: namesEvent.type, action: "activated", collection: "asma-al-husna" },
+  ]) {
+    expect((await request.post(endpoint, {
+      data: invalid,
+      headers: { Authorization: "Bearer test-only-content-revalidation-secret-0001" },
+    })).status()).toBe(422);
+  }
 
   const salahEvent = {
     type: "salah.course.changed",

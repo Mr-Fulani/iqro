@@ -161,12 +161,9 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
     "/ru/prayer",
     "/ru/courses",
     "/ru/calendar",
+    "/ru/names",
     "/ru/profile",
   ]);
-  const names = page.locator(".app-menu").getByTestId("menu-names-of-allah");
-  await expect(names).toBeVisible();
-  await expect(names).toHaveAttribute("aria-disabled", "true");
-  await expect(names).toHaveAttribute("title", "Имена Аллаха — Скоро");
 
   await page.locator('.app-menu a[href="/ru/dua"]').click();
   await expect(page).toHaveURL("/ru/dua");
