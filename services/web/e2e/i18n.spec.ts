@@ -93,6 +93,25 @@ test("language switch persists RU EN AR and TR while Arabic enables RTL", async 
   await expectHeaderWithoutOverlap(page);
 });
 
+test("a language picked before the page comes alive is applied", async ({ page }) => {
+  // A slow phone: the page is on the screen, its scripts are still on the way.
+  let deliverScripts!: () => void;
+  const scriptsHeld = new Promise<void>((resolve) => { deliverScripts = resolve; });
+  await page.route(/\/_next\/static\/.+\.js(\?|$)/, async (route) => {
+    await scriptsHeld;
+    await route.continue();
+  });
+
+  await page.goto("/en/login", { waitUntil: "domcontentloaded" });
+  await page.getByTestId("language-switcher").selectOption("ar");
+  deliverScripts();
+
+  await expect(page).toHaveURL("/ar/login");
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.getByTestId("language-switcher")).toHaveValue("ar");
+  await expect(page.getByRole("heading", { name: "تسجيل الدخول" })).toBeVisible();
+});
+
 test("the labelled desktop menu fits from 1001 to 1366 px in every language and direction", async ({ page }) => {
   for (const locale of ["ru", "tr", "en", "ar"]) {
     await page.setViewportSize({ width: 1366, height: 900 });
@@ -168,8 +187,14 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
   await page.locator('.app-menu a[href="/ru/dua"]').click();
   await expect(page).toHaveURL("/ru/dua");
   await expect(page.getByRole("heading", { level: 1, name: "Ду’а" })).toBeVisible();
-  // Hidden streamed route HTML may still contain another copy of this tag.
-  await expect(page.locator('head meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
+  // Hidden streamed route HTML may still contain another copy of this tag. So may <head>:
+  // a link followed before the first page came alive leaves that page's tags beside the new
+  // ones (docs/tech-debt.md). The new page's own tag is the last, and no copy may disagree.
+  const robots = page.locator('head meta[name="robots"]');
+  await expect(robots.last()).toHaveAttribute("content", /index, follow/);
+  for (const content of await robots.evaluateAll((tags) => tags.map((tag) => tag.getAttribute("content")))) {
+    expect(content).toMatch(/index, follow/);
+  }
   await expect(page.locator(".dua-topic-card")).toHaveAttribute("href", "/ru/dua/topics/sleep");
 });
 
