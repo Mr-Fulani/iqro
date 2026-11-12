@@ -15,9 +15,18 @@ from django.db import models
 
 from quran_backend.modules.announcements.models import PLATFORMS
 from quran_backend.modules.core.models import BaseModel
-from quran_backend.modules.courses.models import COURSE_LANGUAGES, BuiltInCourse, Course
+from quran_backend.modules.courses.models import (
+    COURSE_LANGUAGES,
+    BuiltInCourse,
+    Course,
+    LearnerProgressKind,
+)
 
 MAX_COMMENT_CHARS = 1000
+# The Names of Allah stay a section of their own for readers, yet count like the
+# prayer and the tajweed course: a name is a lesson (docs/names-of-allah/README.md).
+NAMES = LearnerProgressKind.NAMES.value
+BUILTIN_STATS = {**dict(BuiltInCourse.choices), NAMES: str(LearnerProgressKind.NAMES.label)}
 
 
 class CourseStatEvent(models.TextChoices):
@@ -27,6 +36,8 @@ class CourseStatEvent(models.TextChoices):
     LESSON_COMPLETED = "lesson_completed", "Отметили изученной"
     LESSON_HELPFUL = "lesson_helpful", "Полезно"
     LESSON_NOT_HELPFUL = "lesson_not_helpful", "Не очень"
+    # Of the Names of Allah only: the section itself, without a lesson.
+    SECTION_OPENED = "section_opened", "Открыли раздел"
 
 
 class CourseDailyStat(models.Model):
@@ -37,9 +48,12 @@ class CourseDailyStat(models.Model):
     course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name="daily_stats", null=True, blank=True
     )
-    builtin = models.CharField(max_length=16, choices=BuiltInCourse.choices, blank=True, default="")
+    builtin = models.CharField(
+        max_length=16, choices=list(BUILTIN_STATS.items()), blank=True, default=""
+    )
     # The slug, not a key: a lesson removed from the course keeps its history.
-    lesson = models.SlugField(max_length=64)
+    # Empty for «Открыли раздел».
+    lesson = models.SlugField(max_length=64, blank=True)
     platform = models.CharField(max_length=8, choices=[(code, code) for code in PLATFORMS])
     event = models.CharField(max_length=20, choices=CourseStatEvent)
     count = models.PositiveIntegerField(default=0)

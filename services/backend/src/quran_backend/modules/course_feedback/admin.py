@@ -16,8 +16,7 @@ from quran_backend.modules.course_feedback.analytics import (
     period_days,
     summary,
 )
-from quran_backend.modules.course_feedback.models import CourseAnalytics
-from quran_backend.modules.courses.models import BuiltInCourse
+from quran_backend.modules.course_feedback.models import BUILTIN_STATS, NAMES, CourseAnalytics
 
 
 @admin.register(CourseAnalytics)
@@ -68,9 +67,10 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     ) -> HttpResponse:
         days = period_days(request.GET.get("days"))
         reports_url = reverse("admin:feedback_feedbackticket_changelist")
-        if object_id in BuiltInCourse.values:
-            # «Обучение намазу» and «Таджвид» are not rows of the catalog: no editor link.
-            title = BuiltInCourse(object_id).label
+        if object_id in BUILTIN_STATS:
+            # «Обучение намазу», «Таджвид» and «Имена Аллаха» are not rows of the catalog:
+            # no editor link.
+            title = BUILTIN_STATS[object_id]
             context = self._context(request, f"Аналитика: {title}")
             slugs = builtin_slugs(object_id)
             context.update(
@@ -78,6 +78,7 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 report=course_report(object_id, days),
                 reports_url=reports_url + (f"?course={slugs[0]}" if slugs else ""),
                 learners_course=object_id,
+                names=object_id == NAMES,
                 **(extra_context or {}),
             )
             return TemplateResponse(request, "admin/course_feedback/analytics.html", context)

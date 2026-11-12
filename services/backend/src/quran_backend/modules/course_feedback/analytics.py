@@ -10,6 +10,8 @@ from django.db.models import Avg, Count, Sum
 from django.utils import timezone
 
 from quran_backend.modules.course_feedback.models import (
+    BUILTIN_STATS,
+    NAMES,
     CourseDailyStat,
     CourseRating,
     CourseStatEvent,
@@ -18,7 +20,7 @@ from quran_backend.modules.course_feedback.services import (
     builtin_snapshot_lessons,
     live_builtin_versions,
 )
-from quran_backend.modules.courses.models import COURSE_LANGUAGES, BuiltInCourse, Course
+from quran_backend.modules.courses.models import COURSE_LANGUAGES, Course
 from quran_backend.modules.feedback.models import FeedbackTicket
 
 PERIODS = (7, 30, 90)
@@ -60,7 +62,7 @@ def course_lessons(course: Course) -> list[dict[str, str]]:
 
 
 def builtin_lessons(kind: str) -> list[dict[str, str]]:
-    """Lessons of the published prayer or tajweed course, in its own order."""
+    """Lessons of the published prayer or tajweed course, or the names, in their own order."""
     lessons: dict[str, dict[str, str]] = {}
     for _slug, version_id in live_builtin_versions(kind):
         for lesson in builtin_snapshot_lessons(kind, version_id):
@@ -70,12 +72,12 @@ def builtin_lessons(kind: str) -> list[dict[str, str]]:
 
 
 def builtin_slugs(kind: str) -> list[str]:
-    """The slugs the clients send for the prayer or the tajweed course."""
+    """The slugs the clients send for the prayer or the tajweed course, or for the names."""
     return [slug for slug, _version in live_builtin_versions(kind)]
 
 
 def course_report(course: Course | str, days: int, today: date | None = None) -> dict[str, Any]:
-    """The report of a course of the catalog, or of a built-in one by its BuiltInCourse value."""
+    """The report of a course of the catalog, or of a built-in one by its BUILTIN_STATS key."""
     start = since(days, today)
     if isinstance(course, str):
         stats = CourseDailyStat.objects.filter(builtin=course, date__gte=start)
@@ -90,7 +92,11 @@ def course_report(course: Course | str, days: int, today: date | None = None) ->
         rated = ratings(course, start)
     counts: dict[tuple[str, str], int] = {}
     platforms: dict[str, dict[str, int]] = {}
+    visits = 0
     for row in stats.values("lesson", "platform", "event").annotate(total=Sum("count")):
+        if row["event"] == CourseStatEvent.SECTION_OPENED:
+            visits += row["total"]
+            continue
         key = (row["lesson"], row["event"])
         counts[key] = counts.get(key, 0) + row["total"]
         by_platform = platforms.setdefault(row["platform"], {})
@@ -138,6 +144,8 @@ def course_report(course: Course | str, days: int, today: date | None = None) ->
         "days": days,
         "periods": PERIODS,
         "since": start,
+        # «Открыли раздел»: only the Names of Allah count it.
+        "visits": visits if course == NAMES else None,
         "totals": {
             "opened": sum(row["opened"] for row in rows),
             "started": started,
@@ -222,7 +230,7 @@ def summary(days: int, today: date | None = None) -> dict[str, Any]:
     start = since(days, today)
     courses = list(Course.objects.select_related("live_release").prefetch_related("lessons"))
     lessons: dict[Any, list[dict[str, str]]] = {
-        **{kind: builtin_lessons(kind) for kind in BuiltInCourse.values},
+        **{kind: builtin_lessons(kind) for kind in BUILTIN_STATS},
         **{course.pk: course_lessons(course) for course in courses},
     }
     events: dict[Any, dict[str, int]] = {}
@@ -256,9 +264,9 @@ def summary(days: int, today: date | None = None) -> dict[str, Any]:
         .annotate(total=Count("id"))
         .values_list("context__course_slug", "total")
     )
-    # The prayer and the tajweed course first, then the catalog.
+    # The prayer and the tajweed course and the names first, then the catalog.
     entries: list[tuple[Any, str, Course | None, list[str]]] = [
-        (kind, label, None, builtin_slugs(kind)) for kind, label in BuiltInCourse.choices
+        (kind, label, None, builtin_slugs(kind)) for kind, label in BUILTIN_STATS.items()
     ]
     entries += [(course.pk, str(course), course, [course.slug]) for course in courses]
     rows = []
@@ -276,6 +284,8 @@ def summary(days: int, today: date | None = None) -> dict[str, Any]:
                 "course": course,
                 "opened": values.get(CourseStatEvent.LESSON_OPENED, 0),
                 "completed": values.get(CourseStatEvent.LESSON_COMPLETED, 0),
+                # «Открыли раздел»: only the Names of Allah count it.
+                "visits": values.get(CourseStatEvent.SECTION_OPENED, 0) if key == NAMES else None,
                 "started": edges["started"],
                 "finished": edges["finished"],
                 "finished_share": percent(edges["finished"], edges["started"]),

@@ -17,7 +17,9 @@ export type CourseEventName =
   | "video_finished"
   | "lesson_completed"
   | "lesson_helpful"
-  | "lesson_not_helpful";
+  | "lesson_not_helpful"
+  // Of the Names of Allah only: the section itself, with an empty lesson.
+  | "section_opened";
 
 export type CourseEvent = { course: string; lesson: string; event: CourseEventName };
 

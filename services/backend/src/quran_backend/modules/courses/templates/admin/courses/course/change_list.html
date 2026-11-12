@@ -21,7 +21,7 @@
       <tbody>
       {% for row in all.rows %}
         <tr>
-          <td><strong>{{ row.title }}</strong>{% if not row.course %} <span class="ca-quiet">(встроенный курс)</span>{% elif row.course.hidden_at %} <span class="ca-quiet">(скрыт)</span>{% elif not row.course.live_release_id %} <span class="ca-quiet">(не опубликован)</span>{% endif %}</td>
+          <td><strong>{{ row.title }}</strong>{% if row.key == "names" %} <span class="ca-quiet">(отдельный раздел)</span>{% elif not row.course %} <span class="ca-quiet">(встроенный курс)</span>{% elif row.course.hidden_at %} <span class="ca-quiet">(скрыт)</span>{% elif not row.course.live_release_id %} <span class="ca-quiet">(не опубликован)</span>{% endif %}</td>
           {% if all.stats %}
           <td class="num">{{ row.opened }}</td>
           <td class="num">{{ row.completed }}</td>
@@ -37,7 +37,7 @@
       {% endfor %}
       </tbody>
     </table>
-    <p class="ca-quiet">«Обучение намазу» и «Таджвид» — встроенные курсы: у них свои уроки, упражнения и версии, поэтому их правят в своих разделах — туда ведёт «Править». Остальные курсы правятся здесь, в списке ниже.</p>
+    <p class="ca-quiet">«Обучение намазу» и «Таджвид» — встроенные курсы: у них свои уроки, упражнения и версии, поэтому их правят в своих разделах — туда ведёт «Править». «Имена Аллаха» — отдельный раздел, а не курс каталога: он здесь ради статистики, а список имён правят в его разделе. Остальные курсы правятся здесь, в списке ниже.</p>
     {% if all.stats %}<p><a href="{{ all.summary_url }}">Полная сводка: «Статистика и оценки курсов»</a> — там можно выбрать период и увидеть, сколько человек дошли до конца.</p>{% endif %}
   </section>
 </div>

@@ -9,17 +9,20 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../courses/account_progress_sync.dart';
+import '../courses/course_feedback.dart';
 import 'names_models.dart';
 import 'names_sound.dart';
 
 /// The card of one name as a bottom sheet. [onStep] turns the wheel to the
-/// name the card moved to.
+/// name the card moved to; [onCount] takes the counters of «Статистика
+/// курсов»: a [CourseEvent] and the slug of the name.
 Future<void> showNameCard(
   BuildContext context, {
   required NamesDocument document,
   required int index,
   required String album,
   required ValueChanged<int> onStep,
+  required void Function(String event, String name) onCount,
 }) => showIqroSheet<void>(
   context: context,
   isScrollControlled: true,
@@ -30,6 +33,7 @@ Future<void> showNameCard(
     initialIndex: index,
     album: album,
     onStep: onStep,
+    onCount: onCount,
   ),
 );
 
@@ -39,12 +43,14 @@ class _NameCard extends ConsumerStatefulWidget {
     required this.initialIndex,
     required this.album,
     required this.onStep,
+    required this.onCount,
   });
 
   final NamesDocument document;
   final int initialIndex;
   final String album;
   final ValueChanged<int> onStep;
+  final void Function(String event, String name) onCount;
 
   @override
   ConsumerState<_NameCard> createState() => _NameCardState();
@@ -77,9 +83,11 @@ class _NameCardState extends ConsumerState<_NameCard> {
     final count = _document.names.length;
     setState(() => _index = (_index + delta + count) % count);
     widget.onStep(_index);
+    widget.onCount(CourseEvent.lessonOpened, _document.names[_index].slug);
   }
 
   Future<void> _setLearned(DivineName name, bool learned) async {
+    if (learned) widget.onCount(CourseEvent.lessonCompleted, name.slug);
     final store = ref.read(namesProgressStoreProvider);
     await (learned ? store.markDone : store.unmark)(
       course: _document.slug,

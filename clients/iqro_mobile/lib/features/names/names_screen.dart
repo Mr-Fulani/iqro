@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../courses/account_progress_sync.dart';
+import '../courses/course_feedback.dart';
 import '../courses/course_progress_store.dart';
 import 'name_card_sheet.dart';
 import 'names_models.dart';
@@ -87,13 +88,30 @@ class _WheelState extends ConsumerState<_Wheel> {
   var _arabicChosen = false;
   var _soundOn = true;
   DateTime _lastClick = DateTime.fromMillisecondsSinceEpoch(0);
+  late final CourseEventQueue _events;
+  final _counted = <String>{};
 
   NamesDocument get _document => widget.document;
 
   @override
   void initState() {
     super.initState();
+    _events = ref.read(courseEventQueueProvider);
+    _count(CourseEvent.sectionOpened);
     _sync();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_events.flush());
+    super.dispose();
+  }
+
+  /// The counters of «Статистика курсов», as a course sends them: a name is
+  /// a lesson. The section, an opened card and «Выучено» count once per
+  /// visit each, however often a card is reopened.
+  void _count(String event, [String name = '']) {
+    if (_counted.add('$event/$name')) _events.add(_document.slug, name, event);
   }
 
   /// A signed-in reader's marks go to the account: when the screen opens,
@@ -158,12 +176,14 @@ class _WheelState extends ConsumerState<_Wheel> {
   }
 
   Future<void> _openCard() async {
+    _count(CourseEvent.lessonOpened, _document.names[_current].slug);
     await showNameCard(
       context,
       document: _document,
       index: _current,
       album: _album,
       onStep: (index) => _wheel.currentState?.goTo(index),
+      onCount: _count,
     );
     if (mounted) _sync();
   }

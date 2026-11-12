@@ -47,6 +47,7 @@ from quran_backend.modules.core.content_revalidation import enqueue_courses_cata
 from quran_backend.modules.core.editorial.diff import line_diff
 from quran_backend.modules.core.object_storage import ObjectStorageError
 from quran_backend.modules.course_feedback.analytics import DEFAULT_PERIOD, summary
+from quran_backend.modules.course_feedback.models import BUILTIN_STATS, NAMES
 from quran_backend.modules.courses.document import (
     LANGUAGE_NAMES,
     build_document,
@@ -360,7 +361,8 @@ class CourseLessonInline(admin.TabularInline):  # type: ignore[type-arg]
         return " · ".join(parts) or "—"
 
 
-# Where the prayer and the tajweed course are edited: (permission, list of their versions).
+# Where the prayer and the tajweed course and the names are edited: (permission, list of
+# their versions).
 BUILTIN_EDITORS = {
     BuiltInCourse.SALAH: (
         "salah.view_salahcourseversion",
@@ -370,11 +372,12 @@ BUILTIN_EDITORS = {
         "tajweed.view_tajweedcourseversion",
         "admin:tajweed_tajweedcourseversion_changelist",
     ),
+    NAMES: ("names.view_namesversion", "admin:names_namesversion_changelist"),
 }
 
 
 def all_courses(request: HttpRequest) -> dict[str, Any]:
-    """The block above the list: the prayer and the tajweed course, then the catalog.
+    """The block above the list: the prayer and the tajweed course and the names, then the catalog.
 
     The numbers and the links to the statistics need the permission of the analytics pages.
     """
@@ -384,7 +387,7 @@ def all_courses(request: HttpRequest) -> dict[str, Any]:
         rows = summary(DEFAULT_PERIOD)["rows"]
     else:
         rows = [
-            {"key": kind, "title": label, "course": None} for kind, label in BuiltInCourse.choices
+            {"key": kind, "title": label, "course": None} for kind, label in BUILTIN_STATS.items()
         ]
         rows += [
             {"key": course.pk, "title": str(course), "course": course}

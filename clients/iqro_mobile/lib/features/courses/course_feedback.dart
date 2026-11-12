@@ -24,6 +24,9 @@ abstract final class CourseEvent {
   static const lessonCompleted = 'lesson_completed';
   static const lessonHelpful = 'lesson_helpful';
   static const lessonNotHelpful = 'lesson_not_helpful';
+
+  /// Of the Names of Allah only: the section itself, with an empty lesson.
+  static const sectionOpened = 'section_opened';
 }
 
 /// A video counts as watched from this share of its length on.

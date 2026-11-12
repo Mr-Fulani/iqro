@@ -16,6 +16,25 @@ async function openWheel(page: Page, locale = "ru") {
   await expect(page.locator('[data-testid="names-dial"] canvas')).toHaveAttribute("width", /\d+/);
 }
 
+/** The counters of «Статистика курсов» queued on this page view, sent when the page is left. */
+async function sentCourseEvents(page: Page) {
+  const request = page.waitForRequest((item) => item.url().endsWith("/api/v1/courses/events") && item.method() === "POST");
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
+  return ((await request).postDataJSON() as { events: { course: string; lesson: string; event: string }[] }).events;
+}
+
+/** Opens the card of the name under the wheel again, sets «Выучено», takes it back and sets it again. */
+async function learnAgain(page: Page) {
+  await page.getByTestId("names-readout").click();
+  const learned = page.getByTestId("names-card").getByTestId("names-learned");
+  await learned.click();
+  await learned.click();
+  await learned.click();
+  await expect(learned).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("names-card")).toHaveCount(0);
+}
+
 async function stored(page: Page) {
   return page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) || "null"), progressKey);
 }
@@ -86,6 +105,18 @@ test("the wheel turns by keys and by a tap on its centre; the name under it open
   await page.keyboard.press("Escape");
   await expect(card).toHaveCount(0);
   await expect(page.getByTestId("names-seen")).toHaveText("4 из 4");
+
+  // «Статистика курсов» counts like a course's lesson (docs/names-of-allah/README.md, «Статистика»):
+  // the section and each name once per page view, also after «Выучено» was taken back and the card reopened.
+  await learnAgain(page);
+  expect(await sentCourseEvents(page)).toEqual([
+    { course: "asma-al-husna", lesson: "", event: "section_opened" },
+    { course: "asma-al-husna", lesson: "malik-al-mulk", event: "lesson_opened" },
+    { course: "asma-al-husna", lesson: "malik-al-mulk", event: "lesson_completed" },
+    { course: "asma-al-husna", lesson: "al-jamil", event: "lesson_opened" },
+    { course: "asma-al-husna", lesson: "ar-rahman", event: "lesson_opened" },
+    { course: "asma-al-husna", lesson: "ar-rahman", event: "lesson_completed" },
+  ]);
 
   // The marks survive a reload.
   await page.reload();
