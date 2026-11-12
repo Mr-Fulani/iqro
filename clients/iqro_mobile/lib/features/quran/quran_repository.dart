@@ -277,6 +277,7 @@ class QuranRepository {
       MushafAssetVerificationCache();
   final Map<String, List<QuranAyahTranslation>> _translationMemory = {};
   final Map<String, List<QuranAyahTafsir>> _tafsirMemory = {};
+  final Map<int, String> _tafsirVersions = {};
   static final _foundationAssetRequests = <String, Future<File>>{};
   // Hashing a cached font on every use stalled Mushaf page turns: the 1.8 MB
   // surah-header font is read on nearly every page of the last juz.
@@ -438,7 +439,7 @@ class QuranRepository {
     final key = 'quran:tafsirs:catalog:$locale';
     final cached = await _database.readCache(key);
     if (!forceRefresh && cached?.isFresh == true) {
-      return _parseTafsirEditions(cached!.value);
+      return _rememberTafsirVersions(_parseTafsirEditions(cached!.value));
     }
     try {
       final payload = await _api.get(
@@ -447,9 +448,11 @@ class QuranRepository {
         public: true,
       );
       await _database.writeCache(key, payload, maxAge: const Duration(days: 1));
-      return _parseTafsirEditions(payload);
+      return _rememberTafsirVersions(_parseTafsirEditions(payload));
     } on Object {
-      if (cached != null) return _parseTafsirEditions(cached.value);
+      if (cached != null) {
+        return _rememberTafsirVersions(_parseTafsirEditions(cached.value));
+      }
       rethrow;
     }
   }
@@ -460,31 +463,42 @@ class QuranRepository {
     bool forceRefresh = false,
   }) async {
     final key = 'quran:tafsirs:$sourceId:surah:$surah';
+    // Known once the catalog has been read, which every screen does first.
+    // A copy kept from another version is loaded again, so a correction made
+    // on the server does not wait a month for the copy to expire.
+    final version = _tafsirVersions[sourceId] ?? '';
+    final memoryKey = '$key@$version';
     if (!forceRefresh) {
-      final memory = _tafsirMemory.remove(key);
+      final memory = _tafsirMemory.remove(memoryKey);
       if (memory != null) {
-        _tafsirMemory[key] = memory;
+        _tafsirMemory[memoryKey] = memory;
         return memory;
       }
     }
     final cached = await _database.readCache(key);
-    if (!forceRefresh && cached?.isFresh == true) {
-      return _rememberTafsirs(key, _parseTafsirs(cached!.value));
+    final stored = cached?.value;
+    // Copies kept before versions were recorded are a bare list of rows.
+    final versioned = stored is Map && stored.containsKey('rows')
+        ? stored
+        : null;
+    final rows = versioned == null ? stored : versioned['rows'];
+    final sameVersion = version.isEmpty || versioned?['version'] == version;
+    if (!forceRefresh && cached?.isFresh == true && sameVersion) {
+      return _rememberTafsirs(memoryKey, _parseTafsirs(rows));
     }
     try {
       final payload = await _api.get(
         '/quran/tafsirs/$sourceId/surahs/$surah',
         public: true,
       );
-      await _database.writeCache(
-        key,
-        payload,
-        maxAge: const Duration(days: 30),
-      );
-      return _rememberTafsirs(key, _parseTafsirs(payload));
+      await _database.writeCache(key, <String, Object?>{
+        'version': version,
+        'rows': payload,
+      }, maxAge: const Duration(days: 30));
+      return _rememberTafsirs(memoryKey, _parseTafsirs(payload));
     } on Object {
       if (cached != null) {
-        return _rememberTafsirs(key, _parseTafsirs(cached.value));
+        return _rememberTafsirs(memoryKey, _parseTafsirs(rows));
       }
       rethrow;
     }
@@ -880,6 +894,15 @@ class QuranRepository {
       _translationMemory.remove(_translationMemory.keys.first);
     }
     return value;
+  }
+
+  List<QuranTafsirEdition> _rememberTafsirVersions(
+    List<QuranTafsirEdition> editions,
+  ) {
+    for (final edition in editions) {
+      _tafsirVersions[edition.sourceId] = edition.version;
+    }
+    return editions;
   }
 
   List<QuranAyahTafsir> _rememberTafsirs(
