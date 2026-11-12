@@ -26,6 +26,18 @@ bucket, его custom domain и media credential переиспользоват�
 make production-backup-offsite
 ```
 
+Команда около пяти минут ничего не печатает (идёт dump). Если запускать её с другой машины через
+SSH, молчащее соединение по дороге обрывается без уведомления: копия на сервере доделывается и
+проверяется, а `ssh` у запускавшего не возвращается (12.11.2026 так было дважды; опыт 13.11.2026:
+`ssh … 'sleep 420; echo done'` без других обращений к серверу не вернулся и через 14 минут упал с
+`Connection reset by peer`, тот же вызов с keep-alive вернулся вовремя). Поэтому длинные команды
+запускаются с сигналами keep-alive:
+
+```bash
+ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=6 <USER>@<SERVER> \
+  'cd /opt/quran && make production-backup-offsite PRODUCTION_COMPOSE_OVERLAY="-f compose.production.tls.yaml"'
+```
+
 Full-download verification и реальный restore в одноразовую изолированную БД выполняются
 отдельно во время release/ежемесячного recovery drill:
 
