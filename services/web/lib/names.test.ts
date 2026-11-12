@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -17,6 +17,7 @@ import {
   wheelTarget,
   writeNamesProgress,
 } from "./names.ts";
+import { RECORDED_NAMES } from "./names-audio.ts";
 
 // The contract example is the shared source of truth for the backend, the app and the site.
 const example = JSON.parse(
@@ -117,4 +118,22 @@ test("the wheel goes round and takes the short way", () => {
   assert.equal(wheelTarget(98, 0, 99), 99);
   assert.equal(wheelTarget(198, 5, 99), 203);
   assert.equal(wheelTarget(-1, 0, 99), 0);
+});
+
+test("every name of the list is recorded in every language", () => {
+  const list = JSON.parse(
+    readFileSync(
+      new URL("../../backend/src/quran_backend/modules/names/data/asma-al-husna.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { names: { slug: string }[] };
+  const slugs = list.names.map((name) => name.slug).sort();
+  assert.deepEqual([...RECORDED_NAMES].sort(), slugs);
+  // The name with its meaning in ru, en and tr; the name alone in `ar`.
+  for (const language of ["ar", "ru", "en", "tr"]) {
+    const files = readdirSync(new URL(`../public/names-audio/${language}/`, import.meta.url))
+      .filter((file) => file.endsWith(".mp3"))
+      .map((file) => file.replace(".mp3", ""));
+    assert.deepEqual(files.sort(), slugs, language);
+  }
 });

@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
 import type { DivineName } from "@/lib/names";
+import { NAME_ONLY, RECORDED_NAMES } from "@/lib/names-audio";
 import { latestRecitationsByVariant, tajweedCourseRecitation, wordTimingFallbackRecitations } from "@/lib/reciter-catalog";
 import { wordTiming } from "@/lib/tajweed";
 import { loadAyahAudio, useClipPlayer, type Clip } from "../TajweedAudio";
@@ -56,18 +57,55 @@ export type NameVoice = {
   playing: string | null;
   /** The slug of a name no reciter has a recording of, once it was asked for. */
   missing: string | null;
-  play: (name: DivineName) => Promise<void>;
+  /** Whether the card has «Слушать» for the name. */
+  canSay: (name: DivineName) => boolean;
+  /** Says the name with its meaning in `language`; `ar` is the name alone. */
+  play: (name: DivineName, language?: string) => Promise<void>;
   stop: () => void;
 };
 
-/** Plays a name's word in a reciter's voice; a name that is not one word of the Quran stays silent. */
+/**
+ * Says a name from the recordings in `public/names-audio/<language>/`: the name
+ * with its meaning in the interface language, or the name alone. A name without
+ * a recording is said by a reciter, as a word of its ayah; a name with neither
+ * stays silent.
+ */
 export function useNameVoice(): NameVoice {
   const [slug, setSlug] = useState<string | null>(null);
   const [missing, setMissing] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const element = useRef<HTMLAudioElement | null>(null);
   const player = useClipPlayer();
-  const { attach, play: playClip, stop: stopClip, playing } = player;
+  const { attach: attachClip, play: playClip, stop: stopClip, playing } = player;
 
-  const play = useCallback(async (name: DivineName) => {
+  const attach = useCallback((node: HTMLAudioElement | null) => {
+    element.current = node;
+    attachClip(node);
+  }, [attachClip]);
+
+  const stop = useCallback(() => {
+    stopClip();
+    element.current?.pause();
+    setRecording(false);
+  }, [stopClip]);
+
+  const play = useCallback(async (name: DivineName, language: string = NAME_ONLY) => {
+    const audio = element.current;
+    if (RECORDED_NAMES.has(name.slug) && audio) {
+      stopClip();
+      setMissing(null);
+      setSlug(name.slug);
+      setRecording(true);
+      audio.src = `/names-audio/${language}/${name.slug}.mp3`;
+      audio.playbackRate = 1;
+      try {
+        await audio.play();
+      } catch {
+        // A new name interrupted this one, or the browser refused sound.
+        if (audio.paused) setRecording(false);
+      }
+      return;
+    }
     if (!name.ayah || name.ayah.word === null) return;
     const clip = await nameClip(name);
     if (!clip) {
@@ -75,12 +113,17 @@ export function useNameVoice(): NameVoice {
       return;
     }
     setMissing(null);
+    setRecording(false);
     setSlug(name.slug);
     await playClip(clip, 1);
-  }, [playClip]);
+  }, [playClip, stopClip]);
 
   return useMemo(
-    () => ({ attach, playing: playing ? slug : null, missing, play, stop: stopClip }),
-    [attach, missing, play, playing, slug, stopClip],
+    () => ({ attach, playing: playing || recording ? slug : null, missing, canSay, play, stop }),
+    [attach, missing, play, playing, recording, slug, stop],
   );
+}
+
+function canSay(name: DivineName): boolean {
+  return RECORDED_NAMES.has(name.slug) || Boolean(name.ayah && name.ayah.word !== null);
 }

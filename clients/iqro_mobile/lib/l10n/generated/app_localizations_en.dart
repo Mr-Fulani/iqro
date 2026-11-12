@@ -361,7 +361,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get namesSound => 'Sound';
 
   @override
-  String get namesLabelsGroup => 'Labels on the wheel';
+  String get namesLabelsGroup => 'Labels and voice';
 
   @override
   String get namesLabelsLocale => 'Eng';

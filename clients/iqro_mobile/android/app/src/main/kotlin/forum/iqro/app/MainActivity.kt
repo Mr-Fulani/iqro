@@ -21,6 +21,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
     private var lastPagePulse = 0L
+    private var nextPulseAt = 0L
     private var qiblaCompass: QiblaCompassStreamHandler? = null
     private var appUpdates: AppUpdateHandler? = null
 
@@ -49,14 +50,14 @@ class MainActivity : AudioServiceActivity() {
         refreshNotificationIcons()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/reader_haptics")
             .setMethodCallHandler { call, result ->
-                if (call.method != "pageTick") {
-                    result.notImplemented()
-                } else {
-                    try {
-                        result.success(pageTick())
-                    } catch (_: SecurityException) {
-                        result.success("unavailable")
+                try {
+                    when (call.method) {
+                        "pageTick" -> result.success(pageTick())
+                        "pulse" -> result.success(pulse(call.argument<Int>("ms") ?: 45))
+                        else -> result.notImplemented()
                     }
+                } catch (_: SecurityException) {
+                    result.success("unavailable")
                 }
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/notification_settings")
@@ -140,6 +141,38 @@ class MainActivity : AudioServiceActivity() {
                 // Notification permission may have been revoked in Settings.
             }
         }
+    }
+
+    /**
+     * A pulse long enough to feel on a phone with a plain rotating motor: the
+     * 22 ms of [pageTick] end before such a motor has spun up. Without amplitude
+     * control the length is the only strength there is. Honours the phone's
+     * touch-vibration switch like any touch feedback.
+     */
+    @Suppress("DEPRECATION")
+    private fun pulse(requestedMs: Int): String {
+        if (Settings.System.getInt(contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) {
+            return "disabled"
+        }
+        val motor = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            ?: return "unavailable"
+        if (!motor.hasVibrator()) return "unavailable"
+        val ms = requestedMs.coerceIn(10, 150).toLong()
+        val now = SystemClock.uptimeMillis()
+        // Pulses must not run into one buzz while a wheel spins fast.
+        if (now < nextPulseAt) return "throttled"
+        nextPulseAt = now + ms + 45
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val amplitude = if (motor.hasAmplitudeControl()) 255 else VibrationEffect.DEFAULT_AMPLITUDE
+            motor.vibrate(VibrationEffect.createOneShot(ms, amplitude), attributes)
+        } else {
+            motor.vibrate(ms, attributes)
+        }
+        return "played"
     }
 
     @Suppress("DEPRECATION")

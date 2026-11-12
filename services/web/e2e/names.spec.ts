@@ -28,8 +28,11 @@ test("the wheel turns by keys and by a tap on its centre; the name under it open
   await expect(page.getByTestId("names-seen")).toHaveText("0 из 4");
 
   await dial.focus();
+  // The needle stops on a name and it is said at once, with its meaning in the site's language.
+  const said = page.waitForRequest((request) => request.url().endsWith("/names-audio/ru/ar-rahim.mp3"));
   await page.keyboard.press("ArrowRight");
   await expect(readout).toContainText("Ар-Рахим");
+  await said;
   await expect(dial).toHaveAttribute("aria-valuenow", "2");
   await expect(page.getByTestId("names-seen")).toHaveText("1 из 4");
 
@@ -51,9 +54,9 @@ test("the wheel turns by keys and by a tap on its centre; the name under it open
   await expect(card.getByRole("heading", { level: 2 })).toHaveText("Малик аль-Мульк");
   await expect(card).toContainText("Имя 3 из 4");
   await expect(card).toContainText("Источник: Пример: книга толкований");
-  // Two words of the ayah: a link to our reader, no «Слушать».
+  // Two words of the ayah: a link to our reader; «Слушать» plays the name's own recording.
   await expect(card.getByTestId("names-ayah")).toHaveAttribute("href", "/ru/quran?surah=3&ayah=26");
-  await expect(card.getByTestId("names-listen")).toHaveCount(0);
+  await expect(card.getByTestId("names-listen")).toBeVisible();
 
   const learned = card.getByTestId("names-learned");
   await expect(learned).toHaveAttribute("aria-pressed", "false");
@@ -69,7 +72,11 @@ test("the wheel turns by keys and by a tap on its centre; the name under it open
   await card.getByTestId("names-card-next").click();
   await expect(card.getByRole("heading", { level: 2 })).toHaveText("Аль-Джамиль");
   await expect(card).toContainText("Источник: Пример: другая книга для этого имени");
+  // A name from the Sunnah: no ayah to open, but its recording plays, with the meaning in the site's language.
   await expect(card.getByTestId("names-ayah")).toHaveCount(0);
+  const recording = page.waitForRequest((request) => request.url().endsWith("/names-audio/ru/al-jamil.mp3"));
+  await card.getByTestId("names-listen").click();
+  await recording;
   await expect(dial).toHaveAttribute("aria-valuenow", "4");
   await card.getByTestId("names-card-next").click();
   await expect(card.getByRole("heading", { level: 2 })).toHaveText("Ар-Рахман");
@@ -113,8 +120,11 @@ test("labels switch between the interface language and Arabic; the Arabic site h
   await expect(page.getByTestId("names-labels-locale")).toHaveAttribute("aria-pressed", "false");
   // With Arabic labels the wheel runs the other way, and the keys still go to the next name.
   await page.getByTestId("names-dial").focus();
+  // The switch picks the voice too: with Arabic labels the name alone.
+  const nameOnly = page.waitForRequest((request) => request.url().endsWith("/names-audio/ar/ar-rahim.mp3"));
   await page.keyboard.press("ArrowRight");
   await expect(page.getByTestId("names-readout")).toContainText("Ар-Рахим");
+  await nameOnly;
 
   await openWheel(page, "ar");
   await expect(page.getByTestId("names-labels-arabic")).toHaveCount(0);

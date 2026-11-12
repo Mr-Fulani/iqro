@@ -32,10 +32,21 @@ void main() {
       expect(_readout('Ар-Рахим'), findsOneWidget);
       expect(find.byKey(const ValueKey('names-card')), findsNothing);
       expect(harness.click.count, 1);
-      // The needle stopped on the name: it is seen, and the reciter says it.
-      expect(harness.voice.played, <String>['ar-rahim']);
+      // The needle stopped on the name: it is seen and said, with its meaning
+      // in the interface language.
+      expect(harness.voice.played, <String>['ar-rahim@ru']);
       expect(_seen(tester), '1 из 4');
       expect(harness.store.progress.lessons['ar-rahim']!.completed, isFalse);
+
+      // Clicks closer than 45 ms of real time are skipped.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 60)),
+      );
+      await tester.tapAt(tester.getCenter(_dial));
+      await tester.pumpAndSettle();
+      // One click player and one voice serve the whole screen.
+      expect(harness.click.count, 2);
+      expect((harness.click.made, harness.voice.made), (1, 1));
       expect(tester.takeException(), isNull);
     },
   );
@@ -61,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_readout('Ар-Рахим'), findsOneWidget);
-    expect(harness.voice.played, <String>['ar-rahim']);
+    expect(harness.voice.played, <String>['ar-rahim@ru']);
     expect(tester.takeException(), isNull);
   });
 
@@ -133,7 +144,7 @@ void main() {
     harness.voice.played.clear();
     await tester.tap(listen);
     await tester.pump();
-    expect(harness.voice.played, <String>['ar-rahman']);
+    expect(harness.voice.played, <String>['ar-rahman@ru']);
 
     // «В Коране» opens the ayah in the reader.
     await tester.ensureVisible(find.byKey(const ValueKey('names-ayah')));
@@ -160,7 +171,7 @@ void main() {
   testWidgets('labels switch to Arabic; the Arabic interface has one script', (
     tester,
   ) async {
-    await _pump(tester);
+    final harness = await _pump(tester);
     expect(find.byKey(const ValueKey('names-labels')), findsOneWidget);
     await tester.tap(find.text('عربي'));
     await tester.pumpAndSettle();
@@ -169,14 +180,23 @@ void main() {
     await tester.tapAt(tester.getCenter(_dial));
     await tester.pumpAndSettle();
     expect(_readout('Ар-Рахим'), findsOneWidget);
+    // The switch picks the voice too: with Arabic labels the name alone.
+    expect(harness.voice.played, <String>['ar-rahim@ar']);
     expect(tester.takeException(), isNull);
 
     final json = namesFixture();
     for (final name in json['names']! as List) {
       (name as Map)['transliteration'] = '';
     }
-    await _pump(tester, locale: 'ar', document: NamesDocument.fromJson(json));
+    final arabic = await _pump(
+      tester,
+      locale: 'ar',
+      document: NamesDocument.fromJson(json),
+    );
     expect(find.byKey(const ValueKey('names-labels')), findsNothing);
+    await tester.tapAt(tester.getCenter(_dial));
+    await tester.pumpAndSettle();
+    expect(arabic.voice.played, <String>['ar-rahim@ar']);
     expect(find.text('Ар-Рахман'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -278,8 +298,14 @@ Future<_Harness> _pump(
           epoch: 1,
         )),
         accountProgressSyncProvider.overrideWithValue(sync),
-        namesClickProvider.overrideWithValue(click),
-        namesVoiceProvider.overrideWithValue(voice),
+        namesClickProvider.overrideWith((ref) {
+          click.made += 1;
+          return click;
+        }),
+        namesVoiceProvider.overrideWith((ref) {
+          voice.made += 1;
+          return voice;
+        }),
         audioControllerProvider.overrideWith((ref) => audio),
       ],
       child: MaterialApp.router(
@@ -361,6 +387,9 @@ class _Sync implements AccountProgressSync {
 class _Click implements NamesClick {
   var count = 0;
 
+  /// How many times the screen asked for a new one.
+  var made = 0;
+
   @override
   void play() => count += 1;
 
@@ -370,6 +399,7 @@ class _Click implements NamesClick {
 
 class _Voice extends ChangeNotifier implements NamesVoice {
   final played = <String>[];
+  var made = 0;
 
   @override
   final owner = Object();
@@ -378,8 +408,18 @@ class _Voice extends ChangeNotifier implements NamesVoice {
   String? get missing => null;
 
   @override
-  Future<void> play(DivineName name, {required String album}) async {
-    if (name.hasVoice) played.add(name.slug);
+  String? get playing => null;
+
+  @override
+  bool canSay(DivineName name) => name.hasVoice || name.slug == 'al-jamil';
+
+  @override
+  Future<void> play(
+    DivineName name, {
+    required String album,
+    required String language,
+  }) async {
+    if (canSay(name)) played.add('${name.slug}@$language');
   }
 
   @override

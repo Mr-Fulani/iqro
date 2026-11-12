@@ -106,7 +106,7 @@
   "namesSoonTitle": "This section is being prepared",
   "namesSoonText": "The list of names is being checked against the books. It will appear here soon.",
   "namesSound": "Sound",
-  "namesLabelsGroup": "Labels on the wheel",
+  "namesLabelsGroup": "Labels and voice",
   "namesLabelsLocale": "Eng",
   "namesSeen": "Seen",
   "namesSeenCount": "{seen} of {total}",

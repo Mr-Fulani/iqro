@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../core/audio/audio_controller.dart';
+import '../../core/platform/reader_haptics.dart';
 import '../audio/audio_models.dart';
 import '../audio/audio_repository.dart';
 import '../audio/reciter_catalog.dart';
@@ -69,29 +70,116 @@ class AssetNamesClick implements NamesClick {
   }
 }
 
-/// A light tap under the finger for every name that passes the needle.
-void namesHaptic() {
-  unawaited(HapticFeedback.selectionClick().catchError((Object _) {}));
+/// A tap under the finger for every name that passes the needle; [mark] is a
+/// name on a tasbih mark (every 11th), which is felt a little longer.
+void namesHaptic({bool mark = false}) {
+  unawaited(ReaderHaptics.pulse(strong: mark));
 }
 
-/// Says a name in a reciter's voice: the word of its ayah, cut from the surah
+/// Plays one bundled recording of a name.
+abstract interface class NamesClipPlayer {
+  /// Completes when the recording has ended or was stopped.
+  Future<void> play(String asset);
+
+  Future<void> stop();
+
+  Future<void> dispose();
+}
+
+/// A player of its own, outside the audio session: a name is a second long
+/// and must start at once.
+class AssetNamesClipPlayer implements NamesClipPlayer {
+  AudioPlayer? _player;
+  var _request = 0;
+
+  @override
+  Future<void> play(String asset) async {
+    final player = _player ??= AudioPlayer(handleAudioSessionActivation: false);
+    // A newer name takes over at any step: recordings never queue up.
+    final request = ++_request;
+    await player.stop();
+    if (request != _request) return;
+    await player.setAsset(asset);
+    if (request != _request) return;
+    await player.play();
+  }
+
+  @override
+  Future<void> stop() async {
+    _request += 1;
+    await _player?.stop();
+  }
+
+  @override
+  Future<void> dispose() async => _player?.dispose();
+}
+
+/// Says a name from the recordings in `assets/names_audio/<language>/`: the
+/// name with its meaning in the interface language, or the name alone (the
+/// `ar` folder). They sound at once and without a network. A name without a
+/// recording is said by a reciter: the word of its ayah, cut from the surah
 /// track by the word timings, as «Прослушать слово» in the Mushaf does.
 class NamesVoice extends ChangeNotifier {
   NamesVoice({
     required AudioController Function() audio,
     required AudioRepository repository,
+    required Future<Set<String>> recorded,
+    NamesClipPlayer? clips,
   }) : _audio = audio,
-       _repository = repository;
+       _repository = repository,
+       _clipPlayer = clips ?? AssetNamesClipPlayer() {
+    unawaited(
+      recorded.then((slugs) {
+        _recorded = slugs;
+        if (!_disposed) notifyListeners();
+      }, onError: (Object _) {}),
+    );
+  }
 
   final AudioController Function() _audio;
   final AudioRepository _repository;
+  final NamesClipPlayer _clipPlayer;
   final owner = Object();
   final _clips = <String, Future<_Clip?>>{};
   Future<List<Recitation>>? _voices;
+  var _recorded = const <String>{};
+  var _disposed = false;
   String? _missing;
+  String? _playing;
+
+  static const _folder = 'assets/names_audio/';
+
+  /// The folder of the name alone, without a meaning.
+  static const nameOnly = 'ar';
+
+  /// The recordings in the app's assets, as `<language>/<slug>`.
+  static Future<Set<String>> recordedNames(AssetBundle bundle) async {
+    final manifest = await AssetManifest.loadFromAssetBundle(bundle);
+    return <String>{
+      for (final asset in manifest.listAssets())
+        if (asset.startsWith(_folder) && asset.endsWith('.mp3'))
+          asset.substring(_folder.length, asset.length - 4),
+    };
+  }
+
+  /// The recording of [name] for [language], else the name alone.
+  String? _recording(DivineName name, String language) {
+    for (final folder in <String>[language, nameOnly]) {
+      final key = '$folder/${name.slug}';
+      if (_recorded.contains(key)) return key;
+    }
+    return null;
+  }
 
   /// The slug of a name no reciter has a recording of, once it was asked for.
   String? get missing => _missing;
+
+  /// The slug of the name whose own recording sounds now.
+  String? get playing => _playing;
+
+  /// Whether the card has «Слушать» for [name].
+  bool canSay(DivineName name) =>
+      _recording(name, nameOnly) != null || name.hasVoice;
 
   static String clipId(DivineName name) => 'names:${name.slug}';
 
@@ -140,8 +228,25 @@ class NamesVoice extends ChangeNotifier {
     });
   }
 
-  /// Plays [name]; a name that is not one word of the Quran stays silent.
-  Future<void> play(DivineName name, {required String album}) async {
+  /// Plays [name] with its meaning in [language] (`ar`: the name alone); a
+  /// name with nothing to play stays silent.
+  Future<void> play(
+    DivineName name, {
+    required String album,
+    required String language,
+  }) async {
+    final recording = _recording(name, language);
+    if (recording != null) {
+      _setMissing(null);
+      _setPlaying(name.slug);
+      try {
+        await _clipPlayer.play('$_folder$recording.mp3');
+      } on Object {
+        // No sound on this device.
+      }
+      if (_playing == name.slug) _setPlaying(null);
+      return;
+    }
     if (!name.hasVoice) return;
     final clip = await _clip(name);
     if (clip == null) {
@@ -168,12 +273,29 @@ class NamesVoice extends ChangeNotifier {
     }
   }
 
-  Future<void> stop() => _audio().stopStandaloneOf(owner);
+  Future<void> stop() async {
+    _setPlaying(null);
+    await _clipPlayer.stop();
+    await _audio().stopStandaloneOf(owner);
+  }
 
   void _setMissing(String? slug) {
-    if (_missing == slug) return;
+    if (_missing == slug || _disposed) return;
     _missing = slug;
     notifyListeners();
+  }
+
+  void _setPlaying(String? slug) {
+    if (_playing == slug || _disposed) return;
+    _playing = slug;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    unawaited(_clipPlayer.dispose());
+    super.dispose();
   }
 }
 

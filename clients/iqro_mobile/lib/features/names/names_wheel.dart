@@ -106,8 +106,8 @@ class NamesWheel extends StatefulWidget {
   /// The needle stopped on a name.
   final ValueChanged<int> onSettled;
 
-  /// A name passed the needle: the click and the haptic.
-  final VoidCallback onTick;
+  /// The name with this index passed the needle: the click and the haptic.
+  final ValueChanged<int> onTick;
   final String semanticLabel;
   final String nextLabel;
 
@@ -174,7 +174,7 @@ class NamesWheelState extends State<NamesWheel>
     final index = wheelIndex(_position, _count);
     if (index == _index) return;
     _index = index;
-    widget.onTick();
+    widget.onTick(index);
     widget.onChanged(index);
   }
 

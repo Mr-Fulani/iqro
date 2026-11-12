@@ -104,7 +104,7 @@
   "namesSoonTitle": "Раздел готовится",
   "namesSoonText": "Список имён сверяется с книгами. Скоро он появится здесь.",
   "namesSound": "Звук",
-  "namesLabelsGroup": "Подписи на колесе",
+  "namesLabelsGroup": "Подписи и озвучка",
   "namesLabelsLocale": "Рус",
   "namesSeen": "Пройдено",
   "namesSeenCount": "{seen} из {total}",

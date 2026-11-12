@@ -364,7 +364,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get namesSound => 'Звук';
 
   @override
-  String get namesLabelsGroup => 'Подписи на колесе';
+  String get namesLabelsGroup => 'Подписи и озвучка';
 
   @override
   String get namesLabelsLocale => 'Рус';

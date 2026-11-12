@@ -76,7 +76,7 @@ const en: Messages = {
   "names.soonTitle": "This section is being prepared",
   "names.soonText": "The list of names is being checked against the books. It will appear here soon.",
   "names.sound": "Sound",
-  "names.labelsGroup": "Labels on the wheel",
+  "names.labelsGroup": "Labels and voice",
   "names.labelsLocale": "Eng",
   "names.seen": "Seen",
   "names.seenCount": "{seen} of {total}",
