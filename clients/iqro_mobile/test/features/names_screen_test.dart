@@ -32,8 +32,9 @@ void main() {
       expect(_readout('Ар-Рахим'), findsOneWidget);
       expect(find.byKey(const ValueKey('names-card')), findsNothing);
       expect(harness.click.count, 1);
-      // The needle stopped on the name: it is seen, and the reciter says it.
-      expect(harness.voice.played, <String>['ar-rahim@ar']);
+      // The needle stopped on the name: it is seen and said, with its meaning
+      // in the interface language.
+      expect(harness.voice.played, <String>['ar-rahim@ru']);
       expect(_seen(tester), '1 из 4');
       expect(harness.store.progress.lessons['ar-rahim']!.completed, isFalse);
 
@@ -71,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_readout('Ар-Рахим'), findsOneWidget);
-    expect(harness.voice.played, <String>['ar-rahim@ar']);
+    expect(harness.voice.played, <String>['ar-rahim@ru']);
     expect(tester.takeException(), isNull);
   });
 
@@ -170,7 +171,7 @@ void main() {
   testWidgets('labels switch to Arabic; the Arabic interface has one script', (
     tester,
   ) async {
-    await _pump(tester);
+    final harness = await _pump(tester);
     expect(find.byKey(const ValueKey('names-labels')), findsOneWidget);
     await tester.tap(find.text('عربي'));
     await tester.pumpAndSettle();
@@ -179,14 +180,23 @@ void main() {
     await tester.tapAt(tester.getCenter(_dial));
     await tester.pumpAndSettle();
     expect(_readout('Ар-Рахим'), findsOneWidget);
+    // The switch picks the voice too: with Arabic labels the name alone.
+    expect(harness.voice.played, <String>['ar-rahim@ar']);
     expect(tester.takeException(), isNull);
 
     final json = namesFixture();
     for (final name in json['names']! as List) {
       (name as Map)['transliteration'] = '';
     }
-    await _pump(tester, locale: 'ar', document: NamesDocument.fromJson(json));
+    final arabic = await _pump(
+      tester,
+      locale: 'ar',
+      document: NamesDocument.fromJson(json),
+    );
     expect(find.byKey(const ValueKey('names-labels')), findsNothing);
+    await tester.tapAt(tester.getCenter(_dial));
+    await tester.pumpAndSettle();
+    expect(arabic.voice.played, <String>['ar-rahim@ar']);
     expect(find.text('Ар-Рахман'), findsNothing);
     expect(tester.takeException(), isNull);
   });

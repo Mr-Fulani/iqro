@@ -70,12 +70,10 @@ class AssetNamesClick implements NamesClick {
   }
 }
 
-/// A light tap under the finger for every name that passes the needle: the
-/// same short pulse as a Mushaf page turn. On Android it goes straight to the
-/// motor, because the system's own tick is too weak to feel on some phones
-/// (MIUI); it still respects the phone's «touch vibration» setting.
-void namesHaptic() {
-  unawaited(ReaderHaptics.pageChanged(enabled: true));
+/// A tap under the finger for every name that passes the needle; [mark] is a
+/// name on a tasbih mark (every 11th), which is felt a little longer.
+void namesHaptic({bool mark = false}) {
+  unawaited(ReaderHaptics.pulse(strong: mark));
 }
 
 /// Plays one bundled recording of a name.
@@ -92,17 +90,25 @@ abstract interface class NamesClipPlayer {
 /// and must start at once.
 class AssetNamesClipPlayer implements NamesClipPlayer {
   AudioPlayer? _player;
+  var _request = 0;
 
   @override
   Future<void> play(String asset) async {
     final player = _player ??= AudioPlayer(handleAudioSessionActivation: false);
+    // A newer name takes over at any step: recordings never queue up.
+    final request = ++_request;
     await player.stop();
+    if (request != _request) return;
     await player.setAsset(asset);
+    if (request != _request) return;
     await player.play();
   }
 
   @override
-  Future<void> stop() async => _player?.stop();
+  Future<void> stop() async {
+    _request += 1;
+    await _player?.stop();
+  }
 
   @override
   Future<void> dispose() async => _player?.dispose();

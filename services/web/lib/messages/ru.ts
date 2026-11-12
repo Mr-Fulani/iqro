@@ -79,7 +79,7 @@ const ru = {
   "names.soonTitle": "Раздел готовится",
   "names.soonText": "Список имён сверяется с книгами. Скоро он появится здесь.",
   "names.sound": "Звук",
-  "names.labelsGroup": "Подписи на колесе",
+  "names.labelsGroup": "Подписи и озвучка",
   "names.labelsLocale": "Рус",
   "names.seen": "Пройдено",
   "names.seenCount": "{seen} из {total}",

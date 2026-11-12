@@ -76,7 +76,7 @@ const tr: Messages = {
   "names.soonTitle": "Bölüm hazırlanıyor",
   "names.soonText": "İsimlerin listesi kitaplarla karşılaştırılıyor. Yakında burada olacak.",
   "names.sound": "Ses",
-  "names.labelsGroup": "Çarktaki yazılar",
+  "names.labelsGroup": "Yazılar ve ses",
   "names.labelsLocale": "Tür",
   "names.seen": "Geçildi",
   "names.seenCount": "{seen} / {total}",

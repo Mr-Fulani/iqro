@@ -355,7 +355,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get namesSound => 'Ses';
 
   @override
-  String get namesLabelsGroup => 'Çarktaki yazılar';
+  String get namesLabelsGroup => 'Yazılar ve ses';
 
   @override
   String get namesLabelsLocale => 'Tür';

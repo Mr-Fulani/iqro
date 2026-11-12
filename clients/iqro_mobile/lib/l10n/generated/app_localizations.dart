@@ -699,7 +699,7 @@ abstract class AppLocalizations {
   /// No description provided for @namesLabelsGroup.
   ///
   /// In en, this message translates to:
-  /// **'Labels on the wheel'**
+  /// **'Labels and voice'**
   String get namesLabelsGroup;
 
   /// No description provided for @namesLabelsLocale.

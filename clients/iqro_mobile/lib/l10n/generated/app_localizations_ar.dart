@@ -353,7 +353,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get namesSound => 'الصوت';
 
   @override
-  String get namesLabelsGroup => 'الكتابة على العجلة';
+  String get namesLabelsGroup => 'الكتابة والصوت';
 
   @override
   String get namesLabelsLocale => 'عربي';

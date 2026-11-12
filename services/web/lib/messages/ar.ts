@@ -76,7 +76,7 @@ const ar: Messages = {
   "names.soonTitle": "القسم قيد الإعداد",
   "names.soonText": "تُراجَع قائمة الأسماء على الكتب، وستظهر هنا قريبًا.",
   "names.sound": "الصوت",
-  "names.labelsGroup": "الكتابة على العجلة",
+  "names.labelsGroup": "الكتابة والصوت",
   "names.labelsLocale": "عربي",
   "names.seen": "تمّ المرور",
   "names.seenCount": "{seen} من {total}",

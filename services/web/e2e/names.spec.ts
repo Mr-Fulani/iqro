@@ -28,8 +28,11 @@ test("the wheel turns by keys and by a tap on its centre; the name under it open
   await expect(page.getByTestId("names-seen")).toHaveText("0 из 4");
 
   await dial.focus();
+  // The needle stops on a name and it is said at once, with its meaning in the site's language.
+  const said = page.waitForRequest((request) => request.url().endsWith("/names-audio/ru/ar-rahim.mp3"));
   await page.keyboard.press("ArrowRight");
   await expect(readout).toContainText("Ар-Рахим");
+  await said;
   await expect(dial).toHaveAttribute("aria-valuenow", "2");
   await expect(page.getByTestId("names-seen")).toHaveText("1 из 4");
 
@@ -117,8 +120,11 @@ test("labels switch between the interface language and Arabic; the Arabic site h
   await expect(page.getByTestId("names-labels-locale")).toHaveAttribute("aria-pressed", "false");
   // With Arabic labels the wheel runs the other way, and the keys still go to the next name.
   await page.getByTestId("names-dial").focus();
+  // The switch picks the voice too: with Arabic labels the name alone.
+  const nameOnly = page.waitForRequest((request) => request.url().endsWith("/names-audio/ar/ar-rahim.mp3"));
   await page.keyboard.press("ArrowRight");
   await expect(page.getByTestId("names-readout")).toContainText("Ар-Рахим");
+  await nameOnly;
 
   await openWheel(page, "ar");
   await expect(page.getByTestId("names-labels-arabic")).toHaveCount(0);

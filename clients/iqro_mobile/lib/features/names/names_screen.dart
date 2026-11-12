@@ -104,10 +104,19 @@ class _WheelState extends ConsumerState<_Wheel> {
         .sync(AccountProgressSync.names, _document.slug),
   );
 
+  /// The Arabic interface has one way to write and to say a name.
+  bool get _arabicLabels =>
+      _arabicChosen || Localizations.localeOf(context).languageCode == 'ar';
+
+  String get _voiceLanguage => _arabicLabels
+      ? NamesVoice.nameOnly
+      : Localizations.localeOf(context).languageCode;
+
   String get _album => 'IQRO · ${context.l10n.namesOfAllah}';
 
-  void _tick() {
-    namesHaptic();
+  void _tick(int index) {
+    // The tasbih marks, every 11 names, are felt a little longer.
+    namesHaptic(mark: index % 11 == 0);
     if (!_soundOn) return;
     // The players cannot restart faster than this; a fast spin skips clicks.
     final now = DateTime.now();
@@ -122,11 +131,12 @@ class _WheelState extends ConsumerState<_Wheel> {
     final name = _document.names[index];
     // The name is not said over the Quran that plays.
     if (_soundOn && !ref.read(audioControllerProvider).playing) {
-      // The wheel says the name alone; its meaning is on the card.
+      // The labels' switch also picks the voice: the name with its meaning
+      // in the interface language, or the name alone with Arabic labels.
       unawaited(
         ref
             .read(namesVoiceProvider)
-            .play(name, album: _album, language: NamesVoice.nameOnly),
+            .play(name, album: _album, language: _voiceLanguage),
       );
     }
     final CourseProgress progress;

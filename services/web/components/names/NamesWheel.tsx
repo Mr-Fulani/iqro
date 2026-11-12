@@ -17,6 +17,7 @@ import {
   writeNamesProgress,
   type NamesDocument,
 } from "@/lib/names";
+import { NAME_ONLY } from "@/lib/names-audio";
 import { useAccountProgressSync } from "@/lib/use-account-progress-sync";
 import { useCourseProgress } from "@/lib/use-course-progress";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
@@ -84,9 +85,9 @@ export function NamesWheel({ document: list }: { document: NamesDocument }) {
     lastTick: 0,
     audio: null as AudioContext | null,
   });
-  const live = useRef({ arabicLabels, soundOn, reducedMotion, names, version: list.collection.version, voice });
+  const live = useRef({ arabicLabels, soundOn, reducedMotion, names, version: list.collection.version, voice, locale });
   useEffect(() => {
-    live.current = { arabicLabels, soundOn, reducedMotion, names, version: list.collection.version, voice };
+    live.current = { arabicLabels, soundOn, reducedMotion, names, version: list.collection.version, voice, locale };
   });
 
   // Drawing -----------------------------------------------------------------
@@ -303,7 +304,9 @@ export function NamesWheel({ document: list }: { document: NamesDocument }) {
     const before = readNamesProgress();
     const after = markNameSeen(before, name.slug, version);
     if (after !== before) writeNamesProgress(after);
-    if (sound) void reciter.play(name);
+    // The labels' switch also picks the voice: the name with its meaning in the site's language,
+    // or the name alone with Arabic labels.
+    if (sound) void reciter.play(name, live.current.arabicLabels ? NAME_ONLY : live.current.locale);
   }, []);
 
   // Motion ------------------------------------------------------------------
