@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { EmailVerificationResponse, generateUuidV7 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { consumePostAuthReturnPath } from "../lib/auth-navigation";
@@ -28,6 +28,14 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [verificationKey, setVerificationKey] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const emailInput = useRef<HTMLInputElement>(null);
+
+  // An address typed, or filled in by the browser, before the page came alive
+  // is in the field but not in the state: the next drawing would wipe it.
+  useEffect(() => {
+    const typed = emailInput.current?.value;
+    if (typed) setEmail(typed);
+  }, []);
 
   const isActiveAccount = session?.user.status === "active";
   const title = mode === "register" ? t("authForm.registerTitle") : t("authForm.loginTitle");
@@ -133,6 +141,7 @@ export function EmailAuthForm({ mode }: { mode: "login" | "register" }) {
           <label className="form-label" htmlFor="auth-email">Email</label>
           <input
             id="auth-email"
+            ref={emailInput}
             type="email"
             autoComplete="email"
             value={email}
