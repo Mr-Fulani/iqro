@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../core/audio/audio_controller.dart';
+import '../../core/platform/reader_haptics.dart';
 import '../audio/audio_models.dart';
 import '../audio/audio_repository.dart';
 import '../audio/reciter_catalog.dart';
@@ -69,9 +70,12 @@ class AssetNamesClick implements NamesClick {
   }
 }
 
-/// A light tap under the finger for every name that passes the needle.
+/// A light tap under the finger for every name that passes the needle: the
+/// same short pulse as a Mushaf page turn. On Android it goes straight to the
+/// motor, because the system's own tick is too weak to feel on some phones
+/// (MIUI); it still respects the phone's «touch vibration» setting.
 void namesHaptic() {
-  unawaited(HapticFeedback.selectionClick().catchError((Object _) {}));
+  unawaited(ReaderHaptics.pageChanged(enabled: true));
 }
 
 /// Plays one bundled recording of a name.
