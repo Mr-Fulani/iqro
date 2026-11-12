@@ -36,6 +36,12 @@ void main() {
       expect(harness.voice.played, <String>['ar-rahim@ar']);
       expect(_seen(tester), '1 из 4');
       expect(harness.store.progress.lessons['ar-rahim']!.completed, isFalse);
+
+      await tester.tapAt(tester.getCenter(_dial));
+      await tester.pumpAndSettle();
+      // One click player and one voice serve the whole screen.
+      expect(harness.click.count, 2);
+      expect((harness.click.made, harness.voice.made), (1, 1));
       expect(tester.takeException(), isNull);
     },
   );
@@ -278,8 +284,14 @@ Future<_Harness> _pump(
           epoch: 1,
         )),
         accountProgressSyncProvider.overrideWithValue(sync),
-        namesClickProvider.overrideWithValue(click),
-        namesVoiceProvider.overrideWithValue(voice),
+        namesClickProvider.overrideWith((ref) {
+          click.made += 1;
+          return click;
+        }),
+        namesVoiceProvider.overrideWith((ref) {
+          voice.made += 1;
+          return voice;
+        }),
         audioControllerProvider.overrideWith((ref) => audio),
       ],
       child: MaterialApp.router(
@@ -361,6 +373,9 @@ class _Sync implements AccountProgressSync {
 class _Click implements NamesClick {
   var count = 0;
 
+  /// How many times the screen asked for a new one.
+  var made = 0;
+
   @override
   void play() => count += 1;
 
@@ -370,6 +385,7 @@ class _Click implements NamesClick {
 
 class _Voice extends ChangeNotifier implements NamesVoice {
   final played = <String>[];
+  var made = 0;
 
   @override
   final owner = Object();

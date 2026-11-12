@@ -160,6 +160,11 @@ class _WheelState extends ConsumerState<_Wheel> {
 
   @override
   Widget build(BuildContext context) {
+    // The screen keeps the click and the voice alive: read alone, each would
+    // be made anew for every name and start late.
+    ref
+      ..watch(namesClickProvider)
+      ..watch(namesVoiceProvider);
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
