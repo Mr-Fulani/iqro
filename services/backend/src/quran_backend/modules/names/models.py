@@ -145,6 +145,11 @@ class DivineName(BaseModel):
     tafsir_en = models.TextField(blank=True)
     tafsir_tr = models.TextField(blank=True)
     tafsir_ar = models.TextField(blank=True)
+    # Filled in only where the explanation comes from another book than the version's.
+    tafsir_source_ru = models.CharField(max_length=300, blank=True)
+    tafsir_source_en = models.CharField(max_length=300, blank=True)
+    tafsir_source_tr = models.CharField(max_length=300, blank=True)
+    tafsir_source_ar = models.CharField(max_length=300, blank=True)
     tafsir_ref = models.CharField(
         max_length=120,
         blank=True,

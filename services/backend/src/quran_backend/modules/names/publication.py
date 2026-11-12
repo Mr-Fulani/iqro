@@ -70,6 +70,11 @@ def version_problems(version: NamesVersion) -> list[str]:
         ]
         if missing:
             problems.append(f"{name}: не заполнено — {', '.join(missing)}.")
+        own = [
+            bool(getattr(name, f"tafsir_source_{language}").strip()) for language in NAMES_LANGUAGES
+        ]
+        if any(own) and not all(own):
+            problems.append(f"{name}: свой источник толкования указан не на всех языках.")
     return problems
 
 
@@ -91,6 +96,8 @@ def compile_document(version: NamesVersion, language: str) -> dict[str, Any]:
                 "transliteration": getattr(name, f"transliteration_{language}", ""),
                 "meaning": getattr(name, f"meaning_{language}"),
                 "tafsir": getattr(name, f"tafsir_{language}"),
+                "tafsir_source": getattr(name, f"tafsir_source_{language}")
+                or getattr(version, f"tafsir_source_{language}"),
                 "tafsir_ref": name.tafsir_ref,
                 "ayah": {"surah": name.surah, "ayah": name.ayah, "word": name.word_position}
                 if name.surah and name.ayah
@@ -170,6 +177,7 @@ def import_names(data: Mapping[str, Any]) -> NamesVersion:
                     ("transliteration", TRANSLITERATION_LANGUAGES),
                     ("meaning", NAMES_LANGUAGES),
                     ("tafsir", NAMES_LANGUAGES),
+                    ("tafsir_source", NAMES_LANGUAGES),
                 )
                 for language in languages
             },

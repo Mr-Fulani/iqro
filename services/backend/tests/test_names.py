@@ -61,6 +61,7 @@ def _data(version: str = "v1") -> dict[str, Any]:
                 "transliteration": _all("Аль-Джамиль", ("ru", "en", "tr")),
                 "meaning": _all("Прекрасный"),
                 "tafsir": _all("Толкование второго имени"),
+                "tafsir_source": _all("Другая книга"),
             },
         ],
     }
@@ -139,7 +140,11 @@ def test_signing_needs_every_text_in_every_language(owner: User) -> None:
     version.tafsir_source_ar = ""
     version.save()
     problems = version_problems(version)
-    assert len(problems) == 2
+    name.tafsir_source_ar = ""
+    name.save()
+    problems = version_problems(version)
+    assert len(problems) == 3
+    assert "не на всех языках" in problems[2]
     assert "арабский" in problems[0]
     assert "толкование [tr]" in problems[1]
     assert "имя буквами языка [en]" in problems[1]
@@ -191,11 +196,14 @@ def test_publication_serves_the_list_in_the_asked_language(
         "transliteration": "Ар-Рахман [tr]",
         "meaning": "Милостивый [tr]",
         "tafsir": "Толкование первого имени [tr]",
+        "tafsir_source": "Книга толкований [tr]",
         "tafsir_ref": "с. 5",
         "ayah": {"surah": 55, "ayah": 1, "word": 1},
     }
     # A name that is not in the Quran has no ayah: the card shows neither the link nor the sound.
     assert body["names"][1]["ayah"] is None
+    # Its explanation comes from another book than the rest of the list.
+    assert body["names"][1]["tafsir_source"] == "Другая книга [tr]"
 
     arabic = api_client.get(_url(), {"language": "ar"}).json()
     assert arabic["names"][0]["transliteration"] == ""

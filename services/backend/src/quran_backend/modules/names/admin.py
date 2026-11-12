@@ -216,7 +216,21 @@ class DivineNameAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         ("Английский", {"fields": ("transliteration_en", "meaning_en", "tafsir_en")}),
         ("Турецкий", {"fields": ("transliteration_tr", "meaning_tr", "tafsir_tr")}),
         ("Арабский", {"fields": ("meaning_ar", "tafsir_ar")}),
-        ("В Коране и звук", {"fields": ("surah", "ayah", "word_position", "tafsir_ref")}),
+        ("В Коране и звук", {"fields": ("surah", "ayah", "word_position")}),
+        (
+            "Источник толкования",
+            {
+                "description": "Заполняется, только если толкование этого имени взято не из "
+                "книги, указанной у версии. Название книги нужно на всех четырёх языках.",
+                "fields": (
+                    "tafsir_ref",
+                    "tafsir_source_ru",
+                    "tafsir_source_en",
+                    "tafsir_source_tr",
+                    "tafsir_source_ar",
+                ),
+            },
+        ),
     )
 
     @admin.display(description="Имя", ordering="arabic")
