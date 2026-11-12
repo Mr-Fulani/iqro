@@ -343,6 +343,91 @@ class AppLocalizationsAr extends AppLocalizations {
   String get namesOfAllah => 'أسماء الله الحسنى';
 
   @override
+  String get namesSoonTitle => 'القسم قيد الإعداد';
+
+  @override
+  String get namesSoonText =>
+      'تُراجَع قائمة الأسماء على الكتب، وستظهر هنا قريبًا.';
+
+  @override
+  String get namesSound => 'الصوت';
+
+  @override
+  String get namesLabelsGroup => 'الكتابة على العجلة';
+
+  @override
+  String get namesLabelsLocale => 'عربي';
+
+  @override
+  String get namesSeen => 'تمّ المرور';
+
+  @override
+  String namesSeenCount(int seen, int total) {
+    return '$seen من $total';
+  }
+
+  @override
+  String get namesWheelLabel => 'عجلة الأسماء: السهمان الأيمن والأيسر';
+
+  @override
+  String get namesNext => 'الاسم التالي';
+
+  @override
+  String namesOfTotal(int total) {
+    return 'من $total';
+  }
+
+  @override
+  String get namesOpenCard => 'افتح البطاقة';
+
+  @override
+  String get namesHint =>
+      'أدر العجلة بإصبعك. اللمس في الوسط ينتقل إلى الاسم التالي. المس الاسم تحت العجلة لفتح بطاقته.';
+
+  @override
+  String namesCardNumber(int number, int total) {
+    return 'الاسم $number من $total';
+  }
+
+  @override
+  String get namesListen => 'استمع';
+
+  @override
+  String get namesStop => 'إيقاف';
+
+  @override
+  String get namesLearned => 'تمّ الحفظ';
+
+  @override
+  String get namesMarkLearned => 'علِّمه محفوظًا';
+
+  @override
+  String get namesNoRecording =>
+      'التسجيل غير متاح الآن. تحقق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String get namesTafsir => 'الشرح';
+
+  @override
+  String namesSource(String source) {
+    return 'المصدر: $source';
+  }
+
+  @override
+  String get namesInQuran => 'في القرآن';
+
+  @override
+  String namesListSource(String source) {
+    return 'قائمة الأسماء: $source';
+  }
+
+  @override
+  String get namesPrevious => 'السابق';
+
+  @override
+  String get namesFollowing => 'التالي';
+
+  @override
   String get soon => 'قريبًا';
 
   @override

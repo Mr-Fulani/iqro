@@ -111,6 +111,8 @@ flutter:
     # Schematic 3D scene of the prayer course (docs/salah/salah-3d.md): the
     # owner's scene on three.js r149 (MIT, assets/salah3d/LICENSE-three.txt).
     - assets/salah3d/
+    # The click of the Names of Allah wheel, generated for the app (45 ms).
+    - assets/sounds/names_tick.wav
 
   # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to
   # Arabic, ASCII digits and punctuation for Uthmani Quran and dua text.

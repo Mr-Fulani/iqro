@@ -351,6 +351,91 @@ class AppLocalizationsEn extends AppLocalizations {
   String get namesOfAllah => 'Names of Allah';
 
   @override
+  String get namesSoonTitle => 'This section is being prepared';
+
+  @override
+  String get namesSoonText =>
+      'The list of names is being checked against the books. It will appear here soon.';
+
+  @override
+  String get namesSound => 'Sound';
+
+  @override
+  String get namesLabelsGroup => 'Labels on the wheel';
+
+  @override
+  String get namesLabelsLocale => 'Eng';
+
+  @override
+  String get namesSeen => 'Seen';
+
+  @override
+  String namesSeenCount(int seen, int total) {
+    return '$seen of $total';
+  }
+
+  @override
+  String get namesWheelLabel => 'Wheel of names: left and right arrows';
+
+  @override
+  String get namesNext => 'Next name';
+
+  @override
+  String namesOfTotal(int total) {
+    return 'of $total';
+  }
+
+  @override
+  String get namesOpenCard => 'Open the card';
+
+  @override
+  String get namesHint =>
+      'Turn the wheel with a finger. A tap on the centre moves to the next name. Tap the name under the wheel to open its card.';
+
+  @override
+  String namesCardNumber(int number, int total) {
+    return 'Name $number of $total';
+  }
+
+  @override
+  String get namesListen => 'Listen';
+
+  @override
+  String get namesStop => 'Stop';
+
+  @override
+  String get namesLearned => 'Learned';
+
+  @override
+  String get namesMarkLearned => 'Mark as learned';
+
+  @override
+  String get namesNoRecording =>
+      'The recording is not available now. Check your connection and try again.';
+
+  @override
+  String get namesTafsir => 'Explanation';
+
+  @override
+  String namesSource(String source) {
+    return 'Source: $source';
+  }
+
+  @override
+  String get namesInQuran => 'In the Quran';
+
+  @override
+  String namesListSource(String source) {
+    return 'List of names: $source';
+  }
+
+  @override
+  String get namesPrevious => 'Previous';
+
+  @override
+  String get namesFollowing => 'Next';
+
+  @override
   String get soon => 'Soon';
 
   @override

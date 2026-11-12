@@ -354,6 +354,91 @@ class AppLocalizationsRu extends AppLocalizations {
   String get namesOfAllah => 'Имена Аллаха';
 
   @override
+  String get namesSoonTitle => 'Раздел готовится';
+
+  @override
+  String get namesSoonText =>
+      'Список имён сверяется с книгами. Скоро он появится здесь.';
+
+  @override
+  String get namesSound => 'Звук';
+
+  @override
+  String get namesLabelsGroup => 'Подписи на колесе';
+
+  @override
+  String get namesLabelsLocale => 'Рус';
+
+  @override
+  String get namesSeen => 'Пройдено';
+
+  @override
+  String namesSeenCount(int seen, int total) {
+    return '$seen из $total';
+  }
+
+  @override
+  String get namesWheelLabel => 'Колесо имён: стрелки влево и вправо';
+
+  @override
+  String get namesNext => 'Следующее имя';
+
+  @override
+  String namesOfTotal(int total) {
+    return 'из $total';
+  }
+
+  @override
+  String get namesOpenCard => 'Открыть карточку';
+
+  @override
+  String get namesHint =>
+      'Крутите колесо пальцем. Нажатие в центр — следующее имя. Нажмите на имя под колесом, чтобы открыть карточку.';
+
+  @override
+  String namesCardNumber(int number, int total) {
+    return 'Имя $number из $total';
+  }
+
+  @override
+  String get namesListen => 'Слушать';
+
+  @override
+  String get namesStop => 'Остановить';
+
+  @override
+  String get namesLearned => 'Выучено';
+
+  @override
+  String get namesMarkLearned => 'Отметить выученным';
+
+  @override
+  String get namesNoRecording =>
+      'Запись сейчас недоступна. Проверьте соединение и попробуйте ещё раз.';
+
+  @override
+  String get namesTafsir => 'Толкование';
+
+  @override
+  String namesSource(String source) {
+    return 'Источник: $source';
+  }
+
+  @override
+  String get namesInQuran => 'В Коране';
+
+  @override
+  String namesListSource(String source) {
+    return 'Список имён: $source';
+  }
+
+  @override
+  String get namesPrevious => 'Предыдущее';
+
+  @override
+  String get namesFollowing => 'Следующее';
+
+  @override
   String get soon => 'Скоро';
 
   @override

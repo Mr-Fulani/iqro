@@ -60,6 +60,9 @@ import '../features/salah/salah_display.dart';
 import '../features/salah/salah_models.dart';
 import '../features/salah/salah_offline_repository.dart';
 import '../features/salah/salah_progress.dart';
+import '../features/names/names_models.dart';
+import '../features/names/names_repository.dart';
+import '../features/names/names_sound.dart';
 import '../features/salah/salah_repository.dart';
 import '../features/share/share_repository.dart';
 import '../features/settings/offline_storage_repository.dart';
@@ -1229,6 +1232,50 @@ final accountProgressSyncProvider = Provider<AccountProgressSync>(
     ),
   ),
 );
+final namesRepositoryProvider = Provider<NamesRepository>(
+  (ref) => NamesRepository(
+    remote: ApiNamesRemoteGateway(ref.watch(apiClientProvider)),
+    database: ref.watch(localDatabaseProvider),
+  ),
+);
+final namesProvider = FutureProvider.family<NamesDocument, String>((ref, slug) {
+  final locale = ref.watch(
+    appPreferencesProvider.select((value) => value.locale),
+  );
+  return ref.watch(namesRepositoryProvider).collection(slug, locale);
+});
+
+/// «Пройдено» and «выучено» of the Names: the format of course progress
+/// under `names.progress.<collection>`.
+final namesProgressStoreProvider = Provider<CourseProgressStore>(
+  (ref) => CourseProgressStore(ref.watch(localDatabaseProvider), kind: 'names'),
+);
+final namesProgressProvider = FutureProvider.autoDispose
+    .family<CourseProgress, String>((ref, collection) {
+      ref.watch(activeAccountScopeKeyProvider);
+      return ref.watch(namesProgressStoreProvider).read(collection);
+    });
+
+/// The click of the wheel; tests swap it for a silent one.
+final namesClickProvider = Provider.autoDispose<NamesClick>((ref) {
+  final click = AssetNamesClick();
+  ref.onDispose(click.dispose);
+  return click;
+});
+
+/// The reciter's voice of the Names screen; leaving the screen stops it.
+final namesVoiceProvider = Provider.autoDispose<NamesVoice>((ref) {
+  final audio = ref.watch(audioControllerProvider.notifier);
+  final voice = NamesVoice(
+    audio: () => audio,
+    repository: ref.watch(audioRepositoryProvider),
+  );
+  ref.onDispose(() {
+    unawaited(voice.stop());
+    voice.dispose();
+  });
+  return voice;
+});
 final coursePositionsProvider = FutureProvider.autoDispose
     .family<CourseVideoPositions, String>((ref, course) {
       ref.watch(activeAccountScopeKeyProvider);
