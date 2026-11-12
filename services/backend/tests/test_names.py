@@ -270,11 +270,12 @@ def test_import_command(capsys: pytest.CaptureFixture[str], tmp_path: Any) -> No
 
 @pytest.mark.django_db
 def test_the_list_in_the_repository_is_a_complete_draft() -> None:
-    """The data file holds the list checked against the books; only the owner publishes it."""
+    """The data file holds the list the owner approved; it loads unsigned, and he publishes it."""
     call_command("import_names")
     version = NamesVersion.objects.get()
     assert version.status == NamesStatus.DRAFT
-    assert version.version.startswith("draft-")
+    assert version.version == "2026-11-12"
+    assert not version.is_signed
     assert version.names.count() == 99
     assert version_problems(version) == []
     # Al-Qahtani's order: the list opens with «الأول» and closes with «الشافي».
