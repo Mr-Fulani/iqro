@@ -52,6 +52,16 @@ QUEUES: tuple[tuple[str, str, dict[str, str]], ...] = (
         "salah.SalahCourseVersion",
         {"status__exact": "draft", "reviewed_at__isnull": "False"},
     ),
+    (
+        "Имена Аллаха: черновики ждут подписи",
+        "names.NamesVersion",
+        {"status__exact": "draft", "reviewed_at__isnull": "True"},
+    ),
+    (
+        "Имена Аллаха: подписано, не опубликовано",
+        "names.NamesVersion",
+        {"status__exact": "draft", "reviewed_at__isnull": "False"},
+    ),
     ("Новые обращения", "feedback.FeedbackTicket", {"status__exact": "new"}),
     (
         "Новые обращения: религиозное содержание",

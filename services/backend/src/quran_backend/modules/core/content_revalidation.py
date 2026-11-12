@@ -107,6 +107,17 @@ def enqueue_tajweed_content_change(*, action: str, course: str, version: str) ->
     )
 
 
+def enqueue_names_content_change(*, action: str, collection: str, version: str) -> None:
+    enqueue_content_revalidation(
+        {
+            "type": "names.collection.changed",
+            "action": action,
+            "collection": collection,
+            "version": version,
+        }
+    )
+
+
 def enqueue_course_change(*, action: str, course: str, version: str) -> None:
     """A thematic course: `activated` (published, shown again, rolled back) or `withdrawn`."""
     enqueue_content_revalidation(

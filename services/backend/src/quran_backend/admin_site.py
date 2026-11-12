@@ -62,8 +62,8 @@ SECTIONS: tuple[Section, ...] = (
     Section(
         "learning",
         "Обучение",
-        "Курсы, таджвид и обучение намазу: править и публиковать",
-        ("courses", "tajweed", "salah", "quiz"),
+        "Курсы, таджвид, обучение намазу и имена Аллаха: править и публиковать",
+        ("courses", "tajweed", "salah", "quiz", "names"),
         (
             "courses.Course",
             # Also in «Обращения и отзывы»: people look for it next to the courses.
@@ -72,6 +72,8 @@ SECTIONS: tuple[Section, ...] = (
             "courses.LearnerProgress",
             "tajweed.TajweedCourseVersion",
             "salah.SalahCourseVersion",
+            "names.NamesVersion",
+            "names.DivineName",
             "courses.BuiltInCourseCover",
         ),
     ),
