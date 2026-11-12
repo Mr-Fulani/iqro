@@ -152,6 +152,109 @@ void main() {
     harness.dispose();
   });
 
+  testWidgets('the names are a card that opens their section', (tester) async {
+    final list = courseListJson();
+    (list['built_in']! as Map)['names'] = <String, Object?>{
+      'cover': null,
+      'lesson_count': 4,
+    };
+    final harness = await _pump(tester, remote: FakeCourseGateway(list: list));
+    final names = find.byKey(const ValueKey('courses-names'));
+    expect(
+      find.descendant(of: names, matching: find.text('Имена Аллаха')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: names,
+        matching: find.text('Имён: 4 · значение, толкование и аят'),
+      ),
+      findsOneWidget,
+    );
+    // No cover is uploaded: the icon, like a built-in course without one.
+    expect(
+      find.descendant(of: names, matching: find.byType(DuaThematicIcon)),
+      findsOneWidget,
+    );
+    // After prayer and tajweed, before the courses of the API.
+    final top = tester.getRect(names).top;
+    expect(
+      tester.getRect(find.byKey(const ValueKey('courses-tajweed'))).top,
+      lessThan(top),
+    );
+    expect(
+      top,
+      lessThan(
+        tester.getRect(find.byKey(const ValueKey('course-ramadan'))).top,
+      ),
+    );
+    // Nothing is seen or learned on this device yet; a signed-in reader's
+    // marks are asked from the account.
+    expect(find.byKey(const ValueKey('course-status-names')), findsNothing);
+    expect(_synced, contains('names:asma-al-husna'));
+
+    await tester.ensureVisible(names);
+    await tester.tap(names);
+    await _settle(tester);
+    expect(find.text('names-opened'), findsOneWidget);
+    harness.dispose();
+  });
+
+  testWidgets('the names card counts the names marked learned', (tester) async {
+    final list = courseListJson();
+    (list['built_in']! as Map)['names'] = <String, Object?>{
+      'cover': (list['built_in']! as Map)['salah']['cover'],
+      'lesson_count': 4,
+    };
+    final harness = await _pump(tester, remote: FakeCourseGateway(list: list));
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CourseCatalogScreen)),
+    );
+    await tester.runAsync(() async {
+      final store = container.read(namesProgressStoreProvider);
+      // One name is learned, one only seen on the wheel.
+      await store.markDone(
+        course: 'asma-al-husna',
+        lesson: 'ar-rahman',
+        contentVersion: 'v1',
+      );
+      await store.recordOpen(
+        course: 'asma-al-husna',
+        lesson: 'ar-rahim',
+        contentVersion: 'v1',
+      );
+    });
+    container.invalidate(namesProgressProvider('asma-al-husna'));
+    await _settle(tester);
+
+    final names = find.byKey(const ValueKey('courses-names'));
+    // With a cover the card is as large as a thematic course's.
+    expect(
+      find.descendant(of: names, matching: find.byType(CourseCoverImage)),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<CourseStatusChip>(
+            find.byKey(const ValueKey('course-status-names')),
+          )
+          .label,
+      'Выучено 1 из 4',
+    );
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.descendant(
+              of: names,
+              matching: find.byType(LinearProgressIndicator),
+            ),
+          )
+          .value,
+      .25,
+    );
+    harness.dispose();
+  });
+
   testWidgets('the API courses come after prayer and tajweed', (tester) async {
     final harness = await _pump(tester);
     final tajweed = tester.getRect(
@@ -583,6 +686,10 @@ Future<_Harness> _pump(
       GoRoute(
         path: '/tajweed',
         builder: (_, _) => const Scaffold(body: Text('tajweed-opened')),
+      ),
+      GoRoute(
+        path: '/names',
+        builder: (_, _) => const Scaffold(body: Text('names-opened')),
       ),
     ],
   );

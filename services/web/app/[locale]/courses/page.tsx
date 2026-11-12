@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import type { ReactNode } from "react";
 
 import { CourseCardProgress, CourseContinueStrip } from "@/components/courses/CourseProgress";
+import { NamesCardProgress } from "@/components/names/NamesCardProgress";
 import { isLocale, localeTag, type Locale } from "@/lib/i18n";
 import { getPublishedCourse, getPublishedCourseCatalog, PublicContentNotFoundError } from "@/lib/public-content";
 import { localizedPath } from "@/lib/routing";
@@ -32,8 +33,9 @@ type PublishedCourses = {
 };
 
 /**
- * The published courses with their lesson outlines, and the covers of the prayer and tajweed
- * cards; without the API the built-in courses keep their icons.
+ * The published courses with their lesson outlines, the covers of the prayer and tajweed
+ * cards and the card of the Names of Allah; without the API the built-in courses keep their
+ * icons and the names have no card.
  */
 async function publishedCourses(locale: Locale): Promise<PublishedCourses> {
   let catalog: { courses: CourseListItem[]; builtIn: BuiltInCourseCovers };
@@ -41,7 +43,7 @@ async function publishedCourses(locale: Locale): Promise<PublishedCourses> {
     catalog = await getPublishedCourseCatalog(locale);
   } catch (error) {
     if (!(error instanceof PublicContentNotFoundError)) console.error("Courses are temporarily unavailable", error);
-    return { courses: [], builtIn: { salah: null, tajweed: null } };
+    return { courses: [], builtIn: { salah: null, tajweed: null, names: null } };
   }
   const courses = await Promise.all(catalog.courses.map(async (course) => {
     try {
@@ -98,8 +100,9 @@ export default async function CoursesPage({ params }: { params: Promise<RoutePar
   const { courses, builtIn: builtInCovers } = await publishedCourses(locale);
   const format = new Intl.NumberFormat(localeTag(locale));
   const outlines = courses.flatMap(({ outline }) => (outline ? [outline] : []));
-  // The prayer and tajweed courses keep their own pages and come first.
-  const builtIn = [
+  // The prayer and tajweed courses and the Names of Allah keep their own pages and come first.
+  const names = builtInCovers.names;
+  const builtIn: { href: string; title: string; summary: string; meta: string; icon: ReactNode; cover: CourseCover | null; progress?: ReactNode }[] = [
     {
       href: "/salah",
       title: translate(locale, "nav.salah"),
@@ -116,6 +119,18 @@ export default async function CoursesPage({ params }: { params: Promise<RoutePar
       icon: <><path d="M4 10c0 5 3.6 8 8 8s8-3 8-8" /><circle cx="9.5" cy="6" r="1.3" fill="currentColor" stroke="none" /><circle cx="14.5" cy="6" r="1.3" fill="currentColor" stroke="none" /></>,
       cover: builtInCovers.tajweed,
     },
+    // Only while their list is published: the card opens the section with the wheel.
+    ...(names
+      ? [{
+          href: "/names",
+          title: translate(locale, "names.title"),
+          summary: translate(locale, "courses.namesSummary"),
+          meta: translate(locale, "courses.namesMeta", { count: format.format(names.count) }),
+          icon: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3" /><path d="M12 3v6M12 15v6M3 12h6M15 12h6" /></>,
+          cover: names.cover,
+          progress: <NamesCardProgress total={names.count} />,
+        }]
+      : []),
   ];
 
   return (
@@ -145,6 +160,7 @@ export default async function CoursesPage({ params }: { params: Promise<RoutePar
                   <span className="courses-card-title">{item.title}</span>
                   <span className="courses-card-summary">{item.summary}</span>
                   <span className="courses-card-meta">{item.meta}</span>
+                  {item.progress}
                 </span>
               </Link>
             </li>

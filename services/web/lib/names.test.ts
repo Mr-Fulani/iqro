@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   isNameLearned,
+  learnedCount,
   markNameSeen,
   nameLabel,
   namesCounter,
@@ -108,6 +109,17 @@ test("marks are stored in the course-progress format", () => {
   });
   assert.deepEqual(readNamesProgress("asma-al-husna", storage), progress);
   assert.deepEqual(parseNamesProgress("not json"), { lessons: {} });
+});
+
+test("the card of the course catalog counts the names marked learned", () => {
+  let progress = setNameLearned({ lessons: {} }, "ar-rahman", true, "v1");
+  progress = markNameSeen(progress, "ar-rahim", "v1");
+  progress = setNameLearned(progress, "al-jamil", true, "v1");
+  progress = setNameLearned(progress, "al-jamil", false, "v1");
+
+  assert.equal(learnedCount(progress), 1);
+  assert.equal(learnedCount({ lessons: {} }), 0);
+  assert.equal(learnedCount(null), 0);
 });
 
 test("the section and each name count once per page view, like a lesson of a course", () => {

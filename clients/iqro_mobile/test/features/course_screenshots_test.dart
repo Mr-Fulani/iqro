@@ -708,6 +708,50 @@ void main() {
     }, skip: _directory.isEmpty);
   }
 
+  // «Имена Аллаха» as the third card, before its cover is uploaded, with a
+  // few names learned on the device.
+  testWidgets('catalog with the names card', (tester) async {
+    Map<String, Object?> cover(String name) => {
+      'url': 'https://media.iqro.forum/courses/covers/site-$name.webp',
+      'thumb_url':
+          'https://media.iqro.forum/courses/covers/site-$name-640.webp',
+      'width': 1280,
+      'height': 720,
+    };
+    await _pump(
+      tester,
+      location: '/courses',
+      remote: FakeCourseGateway(
+        list: {
+          'language': 'ru',
+          'courses': <Object?>[],
+          'built_in': {
+            'salah': {'cover': cover('salah')},
+            'tajweed': {'cover': cover('tajweed')},
+            'names': {'cover': null, 'lesson_count': 99},
+          },
+        },
+      ),
+    );
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CourseCatalogScreen)),
+    );
+    await tester.runAsync(() async {
+      final store = container.read(namesProgressStoreProvider);
+      for (var name = 1; name <= 12; name++) {
+        await store.markDone(
+          course: 'asma-al-husna',
+          lesson: 'name-$name',
+          contentVersion: '2026-11-12',
+        );
+      }
+    });
+    container.invalidate(namesProgressProvider('asma-al-husna'));
+    await _settle(tester);
+    await tester.ensureVisible(find.byKey(const ValueKey('courses-names')));
+    await _capture(tester, 'app-courses-catalog-names-ru');
+  }, skip: _directory.isEmpty);
+
   testWidgets('catalog offline', (tester) async {
     await _pump(
       tester,

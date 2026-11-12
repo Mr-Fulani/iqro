@@ -47,7 +47,6 @@ from quran_backend.modules.core.content_revalidation import enqueue_courses_cata
 from quran_backend.modules.core.editorial.diff import line_diff
 from quran_backend.modules.core.object_storage import ObjectStorageError
 from quran_backend.modules.course_feedback.analytics import DEFAULT_PERIOD, summary
-from quran_backend.modules.course_feedback.models import BUILTIN_STATS, NAMES
 from quran_backend.modules.courses.document import (
     LANGUAGE_NAMES,
     build_document,
@@ -372,7 +371,7 @@ BUILTIN_EDITORS = {
         "tajweed.view_tajweedcourseversion",
         "admin:tajweed_tajweedcourseversion_changelist",
     ),
-    NAMES: ("names.view_namesversion", "admin:names_namesversion_changelist"),
+    BuiltInCourse.NAMES: ("names.view_namesversion", "admin:names_namesversion_changelist"),
 }
 
 
@@ -387,7 +386,7 @@ def all_courses(request: HttpRequest) -> dict[str, Any]:
         rows = summary(DEFAULT_PERIOD)["rows"]
     else:
         rows = [
-            {"key": kind, "title": label, "course": None} for kind, label in BUILTIN_STATS.items()
+            {"key": kind, "title": label, "course": None} for kind, label in BuiltInCourse.choices
         ]
         rows += [
             {"key": course.pk, "title": str(course), "course": course}
@@ -1653,7 +1652,7 @@ class LearnerProgressAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 @admin.register(BuiltInCourseCover)
 class BuiltInCourseCoverAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    """Covers of the prayer and tajweed cards in the catalog; outside their versions."""
+    """Covers of the prayer, tajweed and names cards in the catalog; outside their versions."""
 
     form = BuiltInCourseCoverForm
     list_display = ("__str__", "has_cover")

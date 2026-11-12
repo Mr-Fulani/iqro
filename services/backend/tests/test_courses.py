@@ -47,7 +47,10 @@ from quran_backend.modules.courses.services import (
     sign_release,
     withdraw_from_review,
 )
+from quran_backend.modules.names.publication import import_names
 from quran_backend.modules.website.models import AllowedLinkSite
+from tests.test_names import _data as names_data
+from tests.test_names import _published as publish_names
 
 DOCS = Path(__file__).resolve().parents[3] / "docs" / "courses"
 MEDIA = "https://media.iqro.forum"
@@ -746,6 +749,42 @@ def test_built_in_courses_are_listed_without_covers_until_uploaded(
         "language": "en",
         "courses": [],
         "built_in": {"salah": {"cover": None}, "tajweed": {"cover": None}},
+    }
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_AUDIO_BASE_URL=MEDIA)
+def test_the_names_of_allah_are_a_card_while_their_list_is_published(
+    owner: User, api_client: APIClient
+) -> None:
+    import_names(names_data())
+    draft = api_client.get("/api/v1/courses").json()["built_in"]
+
+    version = publish_names(owner, "v2")
+    published = api_client.get("/api/v1/courses").json()["built_in"]
+    BuiltInCourseCover.objects.filter(course="names").update(
+        cover_object_key="courses/covers/0123456789abcdef0123.webp",
+        cover_thumb_object_key="courses/covers/0123456789abcdef0123-640.webp",
+        cover_width=1280,
+        cover_height=720,
+    )
+    covered = api_client.get("/api/v1/courses?language=tr").json()["built_in"]["names"]
+    version.status = "withdrawn"
+    version.save(update_fields=["status"])
+    withdrawn = api_client.get("/api/v1/courses").json()["built_in"]
+
+    # No card for a draft or a withdrawn list; the prayer and tajweed cards stay.
+    assert draft == withdrawn == {"salah": {"cover": None}, "tajweed": {"cover": None}}
+    # A name is a lesson: the card counts the names of the list.
+    assert published == {**draft, "names": {"cover": None, "lesson_count": 2}}
+    assert covered == {
+        "cover": {
+            "url": f"{MEDIA}/courses/covers/0123456789abcdef0123.webp",
+            "thumb_url": f"{MEDIA}/courses/covers/0123456789abcdef0123-640.webp",
+            "width": 1280,
+            "height": 720,
+        },
+        "lesson_count": 2,
     }
 
 

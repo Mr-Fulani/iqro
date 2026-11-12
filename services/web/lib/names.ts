@@ -184,6 +184,11 @@ export function isNameLearned(progress: CourseProgress | null, slug: string): bo
   return progress?.lessons[slug]?.status === "completed";
 }
 
+/** How many names are marked learned, for the card of the course catalog. */
+export function learnedCount(progress: CourseProgress | null): number {
+  return progress ? Object.values(progress.lessons).filter((mark) => mark.status === "completed").length : 0;
+}
+
 /** How many names of the current list the needle has settled on. */
 export function seenCount(progress: CourseProgress | null, names: readonly Pick<DivineName, "slug">[]): number {
   return progress ? names.filter((name) => name.slug in progress.lessons).length : 0;

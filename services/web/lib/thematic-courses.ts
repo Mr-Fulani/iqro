@@ -419,15 +419,18 @@ export function parseCourseList(value: unknown): CourseListItem[] {
 }
 
 export type BuiltInCourse = "salah" | "tajweed";
-export type BuiltInCourseCovers = Record<BuiltInCourse, CourseCover | null>;
+/** The card of «Имена Аллаха»: how many names its published list has. */
+export type NamesCourseCard = { cover: CourseCover | null; count: number };
+export type BuiltInCourseCovers = Record<BuiltInCourse, CourseCover | null> & { names: NamesCourseCard | null };
 
 /**
- * `built_in` of `GET /api/v1/courses`: the covers of the prayer and tajweed cards.
+ * `built_in` of `GET /api/v1/courses`: the covers of the prayer and tajweed cards, and the
+ * card of the Names of Allah, which is there only while their list is published.
  * An older server without the field, or a cover that does not parse, means the card's icon.
  */
 export function parseBuiltInCovers(value: unknown): BuiltInCourseCovers {
   const builtIn = isRecord(value) && isRecord(value.built_in) ? value.built_in : {};
-  const card = (course: BuiltInCourse): CourseCover | null => {
+  const card = (course: BuiltInCourse | "names"): CourseCover | null => {
     const item = builtIn[course];
     try {
       return isRecord(item) ? cover(item.cover, `built_in.${course}.cover`) : null;
@@ -435,7 +438,9 @@ export function parseBuiltInCovers(value: unknown): BuiltInCourseCovers {
       return null;
     }
   };
-  return { salah: card("salah"), tajweed: card("tajweed") };
+  const count = isRecord(builtIn.names) ? builtIn.names.lesson_count : null;
+  const names = typeof count === "number" && Number.isInteger(count) && count > 0;
+  return { salah: card("salah"), tajweed: card("tajweed"), names: names ? { cover: card("names"), count } : null };
 }
 
 /** `GET /api/v1/courses/{slug}`; fields this site does not know are ignored. */

@@ -40,10 +40,9 @@ class _Catalog:
         self._lessons: dict[str, list[str]] = {}
 
     def options(self) -> list[tuple[str, str]]:
-        """(filter value, title): the prayer and the tajweed course, then the catalog."""
+        """(filter value, title): the prayer, the tajweed course and the names, then the catalog."""
         return [
             *BuiltInCourse.choices,
-            (LearnerProgressKind.NAMES.value, str(LearnerProgressKind.NAMES.label)),
             *((slug, str(course)) for slug, course in self._courses.items()),
         ]
 

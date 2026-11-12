@@ -703,7 +703,7 @@ def test_admin_pages_show_the_names_of_allah(
     assert "Оценки и комментарии" not in body
     assert "(темы нет в курсе)" not in body
     # The block above the catalog: the statistics and the editor of the list.
-    assert 'Имена Аллаха</strong> <span class="ca-quiet">(отдельный раздел)</span>' in courses
+    assert 'Имена Аллаха</strong> <span class="ca-quiet">(встроенный курс)</span>' in courses
     assert "/admin/course_feedback/courseanalytics/names/change/" in courses
     assert '<a href="/admin/names/namesversion/">Править</a>' in courses
 

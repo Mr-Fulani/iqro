@@ -389,6 +389,39 @@ void main() {
       expect(parseCourseList(broken), hasLength(1));
     });
 
+    test('the names are a card only while their list is published', () {
+      NamesCourseCard? names(Object? card) => BuiltInCourseCovers.fromList(
+        courseListJson()..['built_in'] = <String, Object?>{'names': card},
+      ).names;
+
+      // No list is published: the server leaves the key out.
+      expect(BuiltInCourseCovers.fromList(courseListJson()).names, isNull);
+      final card = names(<String, Object?>{'cover': null, 'lesson_count': 99})!;
+      expect((card.count, card.cover), (99, null));
+      final salah = (courseListJson()['built_in']! as Map)['salah']! as Map;
+      expect(
+        names(<String, Object?>{
+          'cover': salah['cover'],
+          'lesson_count': 99,
+        })!.cover!.width,
+        1280,
+      );
+      // A cover that does not parse leaves the icon; a broken count, no card.
+      expect(
+        names(<String, Object?>{
+          'cover': <String, Object?>{'url': ''},
+          'lesson_count': 4,
+        })!.cover,
+        isNull,
+      );
+      for (final count in <Object?>[0, -1, 1.5, '99', null]) {
+        expect(
+          names(<String, Object?>{'cover': null, 'lesson_count': count}),
+          isNull,
+        );
+      }
+    });
+
     test('a server without the section shows no courses', () async {
       remote.list = notFoundError;
       final catalog = await repository.catalog('ru');

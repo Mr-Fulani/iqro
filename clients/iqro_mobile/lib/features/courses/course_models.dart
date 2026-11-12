@@ -172,12 +172,23 @@ List<CourseSummary> parseCourseList(Object? payload) {
   return courses;
 }
 
+/// The card of «Имена Аллаха» in the catalog: how many names its published
+/// list has.
+@immutable
+class NamesCourseCard {
+  const NamesCourseCard({required this.count, this.cover});
+
+  final int count;
+  final CourseCover? cover;
+}
+
 /// `built_in` of `GET /courses`: the covers of the prayer and tajweed cards,
-/// kept outside their versions. An older server without the field, or a cover
-/// that does not parse, means the card's icon.
+/// kept outside their versions, and the card of the Names of Allah, which is
+/// there only while their list is published. An older server without the
+/// field, or a cover that does not parse, means the card's icon.
 @immutable
 class BuiltInCourseCovers {
-  const BuiltInCourseCovers({this.salah, this.tajweed});
+  const BuiltInCourseCovers({this.salah, this.tajweed, this.names});
 
   factory BuiltInCourseCovers.fromList(Object? payload) {
     final builtIn = payload is Map ? payload['built_in'] : null;
@@ -190,14 +201,20 @@ class BuiltInCourseCovers {
       }
     }
 
+    final names = builtIn is Map ? builtIn['names'] : null;
+    final count = names is Map ? names['lesson_count'] : null;
     return BuiltInCourseCovers(
       salah: cover('salah'),
       tajweed: cover('tajweed'),
+      names: count is int && count > 0
+          ? NamesCourseCard(count: count, cover: cover('names'))
+          : null,
     );
   }
 
   final CourseCover? salah;
   final CourseCover? tajweed;
+  final NamesCourseCard? names;
 }
 
 /// The catalog as shown: [offline] when the list could not be refreshed and

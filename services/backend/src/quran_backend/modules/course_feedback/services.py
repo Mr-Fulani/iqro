@@ -16,8 +16,6 @@ from django.db.models import F
 from django.utils import timezone
 
 from quran_backend.modules.course_feedback.models import (
-    BUILTIN_STATS,
-    NAMES,
     CourseDailyStat,
     CourseRating,
     CourseStatEvent,
@@ -75,7 +73,7 @@ def live_builtin_versions(kind: str) -> list[tuple[str, int]]:
         courses: Any = SalahCourse.objects.filter(
             active_version__status=SalahPublicationStatus.PUBLISHED
         )
-    elif kind == NAMES:
+    elif kind == BuiltInCourse.NAMES:
         courses = NamesCollection.objects.filter(active_version__status=NamesStatus.PUBLISHED)
     else:
         courses = TajweedCourse.objects.filter(active_version__status=TajweedCourseStatus.PUBLISHED)
@@ -83,7 +81,7 @@ def live_builtin_versions(kind: str) -> list[tuple[str, int]]:
 
 
 def builtin_snapshot_lessons(kind: str, version_id: Any) -> list[dict[str, Any]]:
-    if kind == NAMES:
+    if kind == BuiltInCourse.NAMES:
         # A name is a lesson, in the order of the list.
         names = DivineName.objects.filter(version_id=version_id).order_by("position")
         return [
@@ -101,7 +99,7 @@ def live_builtin_courses(slugs: Iterable[str]) -> dict[str, LiveBuiltIn]:
     found: dict[str, LiveBuiltIn] = {}
     if not wanted:
         return found
-    for kind in BUILTIN_STATS:
+    for kind in BuiltInCourse.values:
         for slug, version_id in live_builtin_versions(kind):
             if slug not in wanted or slug in found:
                 continue
@@ -137,8 +135,8 @@ def record_events(
     totals: Counter[tuple[str, object, str, str]] = Counter()
     for course, lesson, event in events:
         if event == CourseStatEvent.SECTION_OPENED:
-            if not lesson and course in builtin and builtin[course].kind == NAMES:
-                totals["builtin", NAMES, "", event] += 1
+            if not lesson and course in builtin and builtin[course].kind == BuiltInCourse.NAMES:
+                totals["builtin", BuiltInCourse.NAMES, "", event] += 1
         elif course in courses and lesson in courses[course].lessons:
             totals["course_id", courses[course].id, lesson, event] += 1
         elif course in builtin and lesson in builtin[course].lessons:

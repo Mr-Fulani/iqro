@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,8 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../dua/dua_thematic_icon.dart';
+import '../names/names_models.dart';
+import 'account_progress_sync.dart';
 import 'course_models.dart';
 import 'course_progress_store.dart';
 import 'course_widgets.dart';
@@ -36,8 +40,9 @@ final courseResumeProvider = FutureProvider.autoDispose<CourseResume?>((
   return lesson == null ? null : (course: latest, lesson: lesson);
 });
 
-/// «Courses»: the prayer and tajweed courses first, then the courses of the
-/// API. Offline it lists the courses kept on the device.
+/// «Courses»: the prayer and tajweed courses and the Names of Allah first,
+/// then the courses of the API. Offline it lists the courses kept on the
+/// device.
 class CourseCatalogScreen extends ConsumerWidget {
   const CourseCatalogScreen({super.key});
 
@@ -90,6 +95,11 @@ class CourseCatalogScreen extends ConsumerWidget {
               onTap: () => context.push('/tajweed'),
             ),
             const SizedBox(height: 12),
+            // Only while their list is published.
+            if (covers?.names case final names?) ...<Widget>[
+              _NamesCourseCard(card: names),
+              const SizedBox(height: 12),
+            ],
             ...switch (catalog) {
               AsyncData(:final value) when value.courses.isEmpty => <Widget>[
                 _EmptyNote(
@@ -173,9 +183,77 @@ class _ResumeCard extends ConsumerWidget {
   }
 }
 
-/// The prayer and tajweed courses open their own screens. With a cover from
-/// the list the card looks like a thematic course's; without one it keeps
-/// its icon.
+/// «Имена Аллаха» as a course: the card opens the section with the wheel
+/// and shows how many names are learned once one was seen. A guest's marks
+/// are the device's; a signed-in reader's are merged with the account when
+/// the catalog opens.
+class _NamesCourseCard extends ConsumerStatefulWidget {
+  const _NamesCourseCard({required this.card});
+
+  final NamesCourseCard card;
+
+  @override
+  ConsumerState<_NamesCourseCard> createState() => _NamesCourseCardState();
+}
+
+class _NamesCourseCardState extends ConsumerState<_NamesCourseCard> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      ref
+          .read(accountProgressSyncProvider)
+          .sync(AccountProgressSync.names, namesDefaultCollection),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final total = widget.card.count;
+    final progress = ref
+        .watch(namesProgressProvider(namesDefaultCollection))
+        .valueOrNull;
+    // A name removed from the list may still be marked on the device.
+    final learned = progress == null
+        ? 0
+        : progress.lessons.values
+              .where((lesson) => lesson.completed)
+              .length
+              .clamp(0, total);
+    return _FixedCourseCard(
+      key: const ValueKey('courses-names'),
+      art: 'remembrance',
+      cover: widget.card.cover,
+      title: l10n.namesOfAllah,
+      subtitle: l10n.coursesNamesHint(total),
+      onTap: () => context.push('/names'),
+      footer: progress == null || progress.isEmpty
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                CourseStatusChip(
+                  key: const ValueKey('course-status-names'),
+                  completed: learned >= total,
+                  label: l10n.coursesNamesLearned(learned, total),
+                ),
+                const SizedBox(height: 10),
+                LinearProgressIndicator(
+                  value: learned / total,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(6),
+                  backgroundColor: context.iqroColors.line,
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+/// The prayer and tajweed courses and the Names of Allah open their own
+/// screens. With a cover from the list the card looks like a thematic
+/// course's; without one it keeps its icon.
 class _FixedCourseCard extends StatelessWidget {
   const _FixedCourseCard({
     required this.art,
@@ -183,6 +261,7 @@ class _FixedCourseCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.footer,
     super.key,
   });
 
@@ -191,6 +270,9 @@ class _FixedCourseCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+
+  /// Under the subtitle: the progress of the names.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -217,6 +299,10 @@ class _FixedCourseCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(subtitle, style: theme.textTheme.bodySmall),
+                  if (footer case final footer?) ...<Widget>[
+                    const SizedBox(height: 8),
+                    footer,
+                  ],
                 ],
               ),
             ),
@@ -246,6 +332,10 @@ class _FixedCourseCard extends StatelessWidget {
                 Text(title, style: theme.textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(subtitle, style: theme.textTheme.bodySmall),
+                if (footer case final footer?) ...<Widget>[
+                  const SizedBox(height: 8),
+                  footer,
+                ],
               ],
             ),
           ),
