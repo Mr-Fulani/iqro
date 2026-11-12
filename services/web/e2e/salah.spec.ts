@@ -358,7 +358,13 @@ test("ayahs of the Quran stand an ayah to a line with their end signs, in the pl
   const html = await (await request.get("/ru/salah/fajr")).text();
   expect(html).toMatch(/<div class="salah-arabic salah-quran" lang="ar" dir="rtl"><p data-ayah="1">/);
 
+  // Once the page has loaded the player draws the ayahs anew, twice: the same text, first as
+  // the stand-in of the Mushaf script's component, then by the component itself, which asks
+  // for the Mushafs when it stands. Measured before that, a line may be one already taken
+  // away, and it has no box.
+  const drawn = page.waitForRequest("**/api/v1/quran/foundation/mushafs");
   await openLesson(page, "/ru/salah/fajr#fajr.r1.fatiha");
+  await drawn;
   const ayahs = page.locator(".salah-step:not([hidden]) .salah-quran p");
   await expect(ayahs).toHaveText(["بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\u00A0﴿١﴾", "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ\u00A0﴿٢﴾"]);
   const [first, second] = await Promise.all([ayahs.nth(0).boundingBox(), ayahs.nth(1).boundingBox()]);
