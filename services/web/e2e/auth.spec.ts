@@ -452,3 +452,35 @@ test("invalid email challenge shows an actionable localized error", async ({ pag
     page.getByText("Код неверен или сессия изменилась. Запросите новый код."),
   ).toBeVisible();
 });
+
+test("an email typed before the page comes alive is kept and sent", async ({ page }) => {
+  await installAuthMocks(page);
+  let sentEmail: string | undefined;
+  await page.unroute("**/api/web-auth/email/start");
+  await page.route("**/api/web-auth/email/start", (route) => {
+    sentEmail = (route.request().postDataJSON() as { email: string }).email;
+    return route.fulfill({
+      status: 202,
+      json: {
+        challenge_id: "00000000-0000-7000-8000-000000000301",
+        expires_in: 600,
+        expires_at: "2026-08-23T18:10:00Z",
+      },
+    });
+  });
+  // A slow phone: the form is on the screen, its scripts are still on the way.
+  let deliverScripts!: () => void;
+  const scriptsHeld = new Promise<void>((resolve) => { deliverScripts = resolve; });
+  await page.route(/\/_next\/static\/.+\.js(\?|$)/, async (route) => {
+    await scriptsHeld;
+    await route.continue();
+  });
+
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Email").fill("reader@example.com");
+  deliverScripts();
+
+  await page.getByRole("button", { name: "Получить код" }).click();
+  await expect(page.getByText(/Код отправлен на reader@example.com/)).toBeVisible();
+  expect(sentEmail).toBe("reader@example.com");
+});
