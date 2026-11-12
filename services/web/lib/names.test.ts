@@ -4,8 +4,10 @@ import test from "node:test";
 
 import {
   isNameLearned,
+  learnedCount,
   markNameSeen,
   nameLabel,
+  namesCounter,
   namesProgressStorageKey,
   parseNamesDocument,
   parseNamesProgress,
@@ -18,6 +20,7 @@ import {
   writeNamesProgress,
 } from "./names.ts";
 import { RECORDED_NAMES } from "./names-audio.ts";
+import { flushCourseEvents, type CourseEvent } from "./course-feedback.ts";
 
 // The contract example is the shared source of truth for the backend, the app and the site.
 const example = JSON.parse(
@@ -106,6 +109,46 @@ test("marks are stored in the course-progress format", () => {
   });
   assert.deepEqual(readNamesProgress("asma-al-husna", storage), progress);
   assert.deepEqual(parseNamesProgress("not json"), { lessons: {} });
+});
+
+test("the card of the course catalog counts the names marked learned", () => {
+  let progress = setNameLearned({ lessons: {} }, "ar-rahman", true, "v1");
+  progress = markNameSeen(progress, "ar-rahim", "v1");
+  progress = setNameLearned(progress, "al-jamil", true, "v1");
+  progress = setNameLearned(progress, "al-jamil", false, "v1");
+
+  assert.equal(learnedCount(progress), 1);
+  assert.equal(learnedCount({ lessons: {} }), 0);
+  assert.equal(learnedCount(null), 0);
+});
+
+test("the section and each name count once per page view, like a lesson of a course", () => {
+  const sent: CourseEvent[] = [];
+  const counter = namesCounter("asma-al-husna", (event) => sent.push(event));
+
+  counter("section_opened");
+  counter("section_opened");
+  counter("lesson_opened", "ar-rahman");
+  // The card was closed and opened again, «Выучено» taken back and set again.
+  counter("lesson_opened", "ar-rahman");
+  counter("lesson_completed", "ar-rahman");
+  counter("lesson_completed", "ar-rahman");
+  counter("lesson_opened", "al-jamil");
+
+  assert.deepEqual(sent, [
+    { course: "asma-al-husna", lesson: "", event: "section_opened" },
+    { course: "asma-al-husna", lesson: "ar-rahman", event: "lesson_opened" },
+    { course: "asma-al-husna", lesson: "ar-rahman", event: "lesson_completed" },
+    { course: "asma-al-husna", lesson: "al-jamil", event: "lesson_opened" },
+  ]);
+
+  // The next page view counts anew, through the queue of the courses.
+  namesCounter("asma-al-husna")("section_opened");
+  const bodies: string[] = [];
+  flushCourseEvents((body) => bodies.push(body));
+  assert.deepEqual(bodies.map((body) => JSON.parse(body)), [
+    { platform: "web", events: [{ course: "asma-al-husna", lesson: "", event: "section_opened" }] },
+  ]);
 });
 
 test("the wheel goes round and takes the short way", () => {

@@ -2965,6 +2965,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get coursesStatusCompleted => 'Пройден';
 
   @override
+  String coursesNamesHint(int count) {
+    return 'Имён: $count · значение, толкование и аят';
+  }
+
+  @override
+  String coursesNamesLearned(int done, int total) {
+    return 'Выучено $done из $total';
+  }
+
+  @override
   String coursesProgress(int done, int total) {
     return 'Пройдено тем: $done из $total';
   }

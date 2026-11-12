@@ -325,6 +325,8 @@ function courseList(language) {
   const list = structuredClone(courseListExample);
   // The prayer course has a cover and tajweed has none, on every language.
   for (const card of Object.values(list.built_in)) card.cover = courseCover(card.cover);
+  // The list of names is published here, so the catalog has their card, without a cover.
+  list.built_in.names = { cover: null, lesson_count: namesExample.names.length };
   list.language = language;
   if (!ramadanLanguages.includes(language)) return { ...list, courses: [] };
   const { course } = ramadanCourse(language);

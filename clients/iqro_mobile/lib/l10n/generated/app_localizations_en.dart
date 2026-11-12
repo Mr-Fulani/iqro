@@ -2940,6 +2940,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coursesStatusCompleted => 'Completed';
 
   @override
+  String coursesNamesHint(int count) {
+    return 'Names: $count · meaning, explanation and an ayah';
+  }
+
+  @override
+  String coursesNamesLearned(int done, int total) {
+    return 'Learned $done of $total';
+  }
+
+  @override
   String coursesProgress(int done, int total) {
     return 'Topics studied: $done of $total';
   }

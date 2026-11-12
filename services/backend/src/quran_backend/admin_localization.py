@@ -194,7 +194,7 @@ MODEL_LABELS: dict[str, tuple[str, str]] = {
     "courses.CourseLesson": ("тема", "темы курсов"),
     "courses.CourseRelease": ("выпуск курса", "выпуски курсов"),
     "courses.CourseDocument": ("документ выпуска", "документы выпусков курсов"),
-    "courses.BuiltInCourseCover": ("обложка встроенного курса", "обложки: намаз и таджвид"),
+    "courses.BuiltInCourseCover": ("обложка встроенного курса", "обложки: намаз, таджвид, имена"),
     "courses.LearnerProgress": ("прогресс ученика", "ученики курсов"),
     "course_feedback.CourseAnalytics": ("аналитика курса", "статистика и оценки курсов"),
 }

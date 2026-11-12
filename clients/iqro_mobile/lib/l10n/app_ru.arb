@@ -881,6 +881,8 @@
   "coursesHoursMinutes": "{hours} ч {minutes} мин",
   "coursesStatusStarted": "Начат · {done}/{total}",
   "coursesStatusCompleted": "Пройден",
+  "coursesNamesHint": "Имён: {count} · значение, толкование и аят",
+  "coursesNamesLearned": "Выучено {done} из {total}",
   "coursesProgress": "Пройдено тем: {done} из {total}",
   "coursesLessonOf": "{course} · тема {number} из {total}",
   "coursesSource": "Автор и источники",

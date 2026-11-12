@@ -389,10 +389,12 @@ class CourseDocument(BaseModel):
 class BuiltInCourse(models.TextChoices):
     SALAH = "salah", "Обучение намазу"
     TAJWEED = "tajweed", "Таджвид"
+    # A section of their own and a card of the catalog; a name is a lesson.
+    NAMES = "names", "Имена Аллаха"
 
 
 class BuiltInCourseCover(BaseModel):
-    """The catalog cover of the prayer or tajweed course (docs/courses/README.md).
+    """The catalog cover of the prayer or tajweed course or of the names (docs/courses/README.md).
 
     Kept outside their immutable versions: a new picture needs no new version.
     """

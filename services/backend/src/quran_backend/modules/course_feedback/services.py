@@ -15,8 +15,13 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.utils import timezone
 
-from quran_backend.modules.course_feedback.models import CourseDailyStat, CourseRating
+from quran_backend.modules.course_feedback.models import (
+    CourseDailyStat,
+    CourseRating,
+    CourseStatEvent,
+)
 from quran_backend.modules.courses.models import BuiltInCourse, Course, CourseRelease
+from quran_backend.modules.names.models import DivineName, NamesCollection, NamesStatus
 from quran_backend.modules.salah.models import (
     SalahCourse,
     SalahCourseVersion,
@@ -63,24 +68,33 @@ class LiveBuiltIn:
 
 
 def live_builtin_versions(kind: str) -> list[tuple[str, int]]:
-    """(course slug, published version) of the prayer or the tajweed courses."""
+    """(course slug, published version) of the prayer or the tajweed courses, or of the names."""
     if kind == BuiltInCourse.SALAH:
         courses: Any = SalahCourse.objects.filter(
             active_version__status=SalahPublicationStatus.PUBLISHED
         )
+    elif kind == BuiltInCourse.NAMES:
+        courses = NamesCollection.objects.filter(active_version__status=NamesStatus.PUBLISHED)
     else:
         courses = TajweedCourse.objects.filter(active_version__status=TajweedCourseStatus.PUBLISHED)
     return list(courses.order_by("slug").values_list("slug", "active_version_id"))
 
 
-def builtin_snapshot_lessons(kind: str, version_id: object) -> list[dict[str, Any]]:
+def builtin_snapshot_lessons(kind: str, version_id: Any) -> list[dict[str, Any]]:
+    if kind == BuiltInCourse.NAMES:
+        # A name is a lesson, in the order of the list.
+        names = DivineName.objects.filter(version_id=version_id).order_by("position")
+        return [
+            {"slug": slug, "title": {"ru": f"{name} — {meaning}"}}
+            for slug, name, meaning in names.values_list("slug", "transliteration_ru", "meaning_ru")
+        ]
     model: Any = SalahCourseVersion if kind == BuiltInCourse.SALAH else TajweedCourseVersion
     snapshot = model.objects.values_list("snapshot", flat=True).get(pk=version_id)
     return list(snapshot.get("lessons", []))
 
 
 def live_builtin_courses(slugs: Iterable[str]) -> dict[str, LiveBuiltIn]:
-    """«Обучение намазу» and «Таджвид» by the slugs their clients send."""
+    """«Обучение намазу», «Таджвид» and «Имена Аллаха» by the slugs their clients send."""
     wanted = set(slugs)
     found: dict[str, LiveBuiltIn] = {}
     if not wanted:
@@ -110,7 +124,8 @@ def record_events(
     """Add (course, lesson, event) to the daily sums of visible courses; return accepted.
 
     Events of unknown or hidden courses and of lessons outside the live release
-    are dropped. The prayer and the tajweed course count like a course of the catalog.
+    are dropped. The prayer and the tajweed course and the Names of Allah count like a
+    course of the catalog; «Открыли раздел» is counted for the names only.
     """
     events = list(events)
     slugs = {course for course, _lesson, _event in events}
@@ -119,7 +134,10 @@ def record_events(
     day = today or timezone.localdate()
     totals: Counter[tuple[str, object, str, str]] = Counter()
     for course, lesson, event in events:
-        if course in courses and lesson in courses[course].lessons:
+        if event == CourseStatEvent.SECTION_OPENED:
+            if not lesson and course in builtin and builtin[course].kind == BuiltInCourse.NAMES:
+                totals["builtin", BuiltInCourse.NAMES, "", event] += 1
+        elif course in courses and lesson in courses[course].lessons:
             totals["course_id", courses[course].id, lesson, event] += 1
         elif course in builtin and lesson in builtin[course].lessons:
             totals["builtin", builtin[course].kind, lesson, event] += 1

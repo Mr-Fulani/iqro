@@ -325,6 +325,9 @@ export function revalidateContentChange(change: ContentChange): void {
     expireTag(`names:collection:${change.collection}`);
     for (const locale of SUPPORTED_LOCALES) expireTag(`names:locale:${locale}`);
     revalidatePath("/[locale]/names", "page");
+    // The course catalog has their card only while a list is published.
+    expireTag("courses:catalog");
+    revalidatePath("/[locale]/courses", "page");
     return;
   }
 

@@ -28,7 +28,10 @@ from quran_backend.modules.courses.models import (
     CourseDocument,
     CourseReleaseStatus,
 )
+from quran_backend.modules.names.models import DivineName, NamesStatus
 
+# The list the clients open from the card of the catalog.
+NAMES_COLLECTION = "asma-al-husna"
 LANGUAGE_PARAMETER = OpenApiParameter(
     "language",
     str,
@@ -64,11 +67,18 @@ class BuiltInCourseCardSerializer(serializers.Serializer[Any]):
     cover = CourseCoverSerializer(allow_null=True)
 
 
+class NamesCardSerializer(BuiltInCourseCardSerializer):
+    lesson_count = serializers.IntegerField(help_text="Число имён опубликованного списка.")
+
+
 class BuiltInCoursesSerializer(serializers.Serializer[Any]):
-    """The prayer and tajweed cards of the catalog; their texts are the clients' own."""
+    """The prayer, tajweed and names cards of the catalog; their texts are the clients' own."""
 
     salah = BuiltInCourseCardSerializer()
     tajweed = BuiltInCourseCardSerializer()
+    names = NamesCardSerializer(
+        required=False, help_text="Есть, только пока список имён опубликован."
+    )
 
 
 class CourseListSerializer(serializers.Serializer[Any]):
@@ -207,6 +217,16 @@ def built_in_courses() -> dict[str, dict[str, Any]]:
                 "height": row.cover_height,
             }
         cards[course] = {"cover": cover_payload(cover)}
+    # «Имена Аллаха» are a card only while their list is published; a name is a lesson.
+    names = DivineName.objects.filter(
+        version__status=NamesStatus.PUBLISHED,
+        version__collection__active_version=F("version"),
+        version__collection__slug=NAMES_COLLECTION,
+    ).count()
+    if names:
+        cards[BuiltInCourse.NAMES]["lesson_count"] = names
+    else:
+        del cards[BuiltInCourse.NAMES]
     return cards
 
 
@@ -224,7 +244,7 @@ class CourseListView(PublicReadOnlyViewMixin, APIView):
         responses={200: CourseListSerializer, 400: BAD_LANGUAGE},
         description=(
             "Видимые курсы с выпуском на этом языке, по порядку каталога, "
-            "и обложки карточек «Обучение намазу» и «Таджвид»."
+            "и обложки карточек «Обучение намазу», «Таджвид» и «Имена Аллаха»."
         ),
     )
     def get(self, request: Request) -> Response:

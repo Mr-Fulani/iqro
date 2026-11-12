@@ -14,7 +14,8 @@ MAX_EVENTS_PER_BATCH = 50
 
 class CourseEventSerializer(serializers.Serializer[Any]):
     course = serializers.SlugField(max_length=64)
-    lesson = serializers.SlugField(max_length=64)
+    # Empty for «section_opened» only; any other event without a lesson is dropped.
+    lesson = serializers.SlugField(max_length=64, allow_blank=True)
     event = serializers.ChoiceField(choices=CourseStatEvent.choices)
 
 

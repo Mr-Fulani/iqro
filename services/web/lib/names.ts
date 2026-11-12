@@ -10,6 +10,7 @@ import {
   writeCourseProgress,
   type CourseProgress,
 } from "./course-progress.ts";
+import { trackCourseEvent, type CourseEvent } from "./course-feedback.ts";
 
 export const NAMES_COLLECTION_SLUG = "asma-al-husna";
 export const NAMES_PROGRESS_EVENT = "iqro:names-progress";
@@ -183,9 +184,33 @@ export function isNameLearned(progress: CourseProgress | null, slug: string): bo
   return progress?.lessons[slug]?.status === "completed";
 }
 
+/** How many names are marked learned, for the card of the course catalog. */
+export function learnedCount(progress: CourseProgress | null): number {
+  return progress ? Object.values(progress.lessons).filter((mark) => mark.status === "completed").length : 0;
+}
+
 /** How many names of the current list the needle has settled on. */
 export function seenCount(progress: CourseProgress | null, names: readonly Pick<DivineName, "slug">[]): number {
   return progress ? names.filter((name) => name.slug in progress.lessons).length : 0;
+}
+
+// «Статистика курсов» (docs/names-of-allah/README.md, «Статистика») ------------
+// The same anonymous counters a course sends: a name is a lesson. The section
+// and each name count once per page view, however often a card is reopened.
+
+export type NamesCounter = (event: "section_opened" | "lesson_opened" | "lesson_completed", name?: string) => void;
+
+export function namesCounter(
+  collection: string,
+  track: (event: CourseEvent) => void = trackCourseEvent,
+): NamesCounter {
+  const counted = new Set<string>();
+  return (event, name = "") => {
+    const key = `${event}/${name}`;
+    if (counted.has(key)) return;
+    counted.add(key);
+    track({ course: collection, lesson: name, event });
+  };
 }
 
 // The wheel ---------------------------------------------------------------
