@@ -79,6 +79,15 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Development browser regression tests
         run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+      # Screenshots, videos and page snapshots of failed attempts, also of those that passed on retry.
+      - name: Keep the evidence of failed attempts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-development-${{ matrix.shard }}
+          path: services/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
   e2e-production:
     name: Production browser regression tests (${{ matrix.shard }}/${{ strategy.job-total }})
@@ -104,6 +113,15 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Production browser regression tests
         run: npm run test:e2e:production -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+      # Screenshots, videos and page snapshots of failed attempts, also of those that passed on retry.
+      - name: Keep the evidence of failed attempts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-production-${{ matrix.shard }}
+          path: services/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
   lighthouse:
     name: Lighthouse budgets
