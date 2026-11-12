@@ -30,6 +30,7 @@ import '../../core/analytics/analytics.dart';
 import '../../core/share/content_share.dart';
 import '../../core/text/arabic_digits.dart';
 import 'surah_open_reporter.dart';
+import 'reader_anchored_list.dart';
 import 'reader_flow_screen.dart';
 import 'reader_page_turn.dart';
 import 'reader_words.dart';
@@ -99,6 +100,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   Timer? _swipeHintTimer;
   var _swipeHint = false;
 
+  /// The cards are on screen: the Mushaf's script of the first of them is
+  /// in, or was not to be had within [mushafScriptWait].
+  var _opened = false;
+  Timer? _scriptTimer;
+
   @override
   void initState() {
     super.initState();
@@ -123,6 +129,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   @override
   void dispose() {
     _swipeHintTimer?.cancel();
+    _scriptTimer?.cancel();
     _audioRequest += 1;
     wordRangePulling.removeListener(_onWords);
     _selectionBounds.dispose();
@@ -253,15 +260,24 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       }
       if (!_scrollController.hasClients) return;
       final position = _scrollController.position;
+      // The list starts at the ayah it opened at, not at the first one.
       _scrollController.jumpTo(
-        (position.maxScrollExtent * (number - 1) / items.length).clamp(
-          0,
-          position.maxScrollExtent,
-        ),
+        position.minScrollExtent +
+            (position.maxScrollExtent - position.minScrollExtent) *
+                (number - 1) /
+                items.length,
       );
       await WidgetsBinding.instance.endOfFrame;
     }
     if (mounted) await _persistPosition(target);
+  }
+
+  bool _scriptSettled(List<QuranAyah> items) {
+    if (_opened) return true;
+    _scriptTimer ??= Timer(mushafScriptWait, () {
+      if (mounted) setState(() => _opened = true);
+    });
+    return _opened = watchMushafScriptSettled(ref, items, widget.initialAyah);
   }
 
   /// The next surah from its first ayah, rising in over this one.
@@ -501,14 +517,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                   key: _stackKey,
                   children: <Widget>[
                     Positioned.fill(
-                      child: _readerList(
-                        items,
-                        surah,
-                        title,
-                        audio,
-                        highlightColors,
-                        presentation,
-                      ),
+                      child: _scriptSettled(items)
+                          ? _readerList(
+                              items,
+                              surah,
+                              title,
+                              audio,
+                              highlightColors,
+                              presentation,
+                            )
+                          : const SizedBox.shrink(),
                     ),
                     if (_words.range != null)
                       Positioned.fill(
@@ -578,9 +596,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         );
         return false;
       },
-      child: ListView.builder(
+      child: ReaderAnchoredList(
         key: _viewportKey,
         controller: _scrollController,
+        // The surah's title comes with its first ayah.
+        initialIndex: widget.initialAyah <= 1
+            ? 0
+            : items.indexWhere((item) => item.number == widget.initialAyah) + 1,
         padding: EdgeInsetsDirectional.fromSTEB(
           14,
           8,
@@ -764,7 +786,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         // ayahs off where ayahs differ in length. From the built cards the
         // jump is measured in real card heights and closes in on the target.
         final offset = built == null
-            ? position.maxScrollExtent * (target.number - 1) / items.length
+            ? position.minScrollExtent +
+                  (position.maxScrollExtent - position.minScrollExtent) *
+                      (target.number - 1) /
+                      items.length
             : position.pixels +
                   (target.number -
                           (target.number < built.first

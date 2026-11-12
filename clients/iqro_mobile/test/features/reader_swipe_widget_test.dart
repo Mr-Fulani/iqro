@@ -295,6 +295,11 @@ void main() {
   testWidgets('the cards and the plain text are written as the selected '
       'Mushaf writes them, at its own page ends', (tester) async {
     await _pump(tester, overrides: _mushafScript);
+    // The second page, which the first screen runs on to, does not come:
+    // the text waits for it a moment, then opens without it.
+    expect(find.byKey(const ValueKey('reader-ayah-2')), findsNothing);
+    await tester.pump(mushafScriptWait);
+    await tester.pumpAndSettle();
     // Ayah 2 is on a page of the Mushaf font, word for word.
     expect(_fonts(tester, 'reader-ayah-2'), contains('qf-page-1'));
     // The first ayah has a word less in this Mushaf: the plain text stays.
@@ -306,8 +311,70 @@ void main() {
     expect(_fonts(tester, 'reader-ayah-4'), isNot(contains('qf-page-2')));
 
     await _swipe(tester, await _card(tester, 2, delta: -120), 220);
+    await tester.pump(mushafScriptWait);
+    await tester.pumpAndSettle();
     expect(_place(tester), 'Аят 2 · стр. 1');
     expect(_fonts(tester, 'reader-flow-ayah-2'), contains('qf-page-1'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the plain text opened at an ayah far down shows it from its '
+      'first frame, never the top of the surah', (tester) async {
+    await _pump(tester);
+    final card = await _card(tester, 25, delta: 300);
+    await tester.timedDragFrom(
+      card,
+      const Offset(220, 0),
+      const Duration(milliseconds: 300),
+    );
+    var frames = 0;
+    for (var frame = 0; frame < 60; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final flow = find.byKey(const ValueKey('reader-flow'));
+      if (find
+          .descendant(of: flow, matching: find.byType(Scrollable))
+          .evaluate()
+          .isEmpty) {
+        continue;
+      }
+      frames++;
+      expect(find.byKey(const ValueKey('reader-flow-ayah-1')), findsNothing);
+      expect(find.byKey(const ValueKey('reader-flow-ayah-25')), findsOneWidget);
+    }
+    expect(frames, greaterThan(10));
+    await tester.pumpAndSettle();
+    expect(_place(tester), 'Аят 25 · стр. 5');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an ayah whose Mushaf page is on disk is never drawn in the '
+      'plain font first, in the cards or in the plain text', (tester) async {
+    var frames = 0;
+    void mushafFontOnly(String key) {
+      if (find.byKey(ValueKey(key)).evaluate().isEmpty) return;
+      frames++;
+      expect(_fonts(tester, key), contains('qf-page-1'));
+    }
+
+    await _pump(
+      tester,
+      overrides: _mushafScriptOf((page) => true),
+      eachFrame: () => mushafFontOnly('reader-ayah-2'),
+    );
+    expect(frames, greaterThan(0));
+
+    frames = 0;
+    await tester.timedDragFrom(
+      await _card(tester, 2, delta: -120),
+      const Offset(220, 0),
+      const Duration(milliseconds: 300),
+    );
+    for (var frame = 0; frame < 60; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      mushafFontOnly('reader-flow-ayah-2');
+    }
+    expect(frames, greaterThan(10));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
@@ -512,7 +579,11 @@ Set<String?> _fonts(WidgetTester tester, String key) {
 
 /// A Mushaf of three ayahs to a page, drawn with a font of each page; its
 /// second page never loads.
-final _mushafScript = <Override>[
+final _mushafScript = _mushafScriptOf((page) => page == 1);
+
+/// The same Mushaf with the pages [onDisk] read from the phone, which takes
+/// a moment; the others never load.
+List<Override> _mushafScriptOf(bool Function(int page) onDisk) => <Override>[
   mushafVersePagesProvider.overrideWith(
     (ref) async => <String, List<int>>{
       for (var ayah = 1; ayah <= 30; ayah++)
@@ -520,12 +591,12 @@ final _mushafScript = <Override>[
     },
   ),
   mushafPageScriptProvider.overrideWith(
-    (ref, page) async => page != 1
+    (ref, page) async => !onDisk(page)
         ? Completer<Map<String, MushafScriptWords>?>().future
         : <String, MushafScriptWords>{
-            for (var ayah = 1; ayah <= 3; ayah++)
+            for (var ayah = page * 3 - 2; ayah <= page * 3; ayah++)
               '2:$ayah': (
-                fontFamily: 'qf-page-1',
+                fontFamily: 'qf-page-$page',
                 colored: false,
                 words: <Map<String, Object?>>[
                   // «الٓمٓ» is one word; the ayah has two here.
@@ -602,6 +673,7 @@ Future<_App> _pump(
   List<QuranDivision> rubs = const <QuranDivision>[],
   Map<String, Object> stored = const <String, Object>{},
   bool reducedMotion = false,
+  VoidCallback? eachFrame,
 }) async {
   tester.view.devicePixelRatio = pixelRatio;
   tester.view.physicalSize = size;
@@ -674,6 +746,11 @@ Future<_App> _pump(
       ),
     ),
   );
+  eachFrame?.call();
+  for (var frame = 0; eachFrame != null && frame < 60; frame++) {
+    await tester.pump(const Duration(milliseconds: 16));
+    eachFrame();
+  }
   await tester.pumpAndSettle();
   return app;
 }

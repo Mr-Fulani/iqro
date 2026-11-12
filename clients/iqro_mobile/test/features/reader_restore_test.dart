@@ -16,6 +16,7 @@ import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
+import 'package:iqro_mobile/features/quran/reader_anchored_list.dart';
 import 'package:iqro_mobile/features/quran/reader_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
@@ -30,6 +31,26 @@ void main() {
     final target = find.byKey(const ValueKey('reader-ayah-250'));
     expect(target, findsOneWidget);
     expect(_topInList(tester, target), inInclusiveRange(0, 60));
+  });
+
+  testWidgets('a surah opened at an ayah far down shows that ayah from its '
+      'first frame, never the top of the surah', (tester) async {
+    var frames = 0;
+    await _pump(
+      tester,
+      initialAyah: 250,
+      ayahs: _mixedAyahs,
+      eachFrame: () {
+        if (find.byType(Scrollable).evaluate().isEmpty) return;
+        frames++;
+        expect(find.byKey(const ValueKey('reader-ayah-1')), findsNothing);
+        final target = find.byKey(const ValueKey('reader-ayah-250'));
+        expect(target, findsOneWidget);
+        expect(_topInList(tester, target), inInclusiveRange(0, 60));
+      },
+    );
+    expect(frames, greaterThan(10));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('the opened ayah stays at the top while translations arrive and '
@@ -79,7 +100,7 @@ void main() {
     tester,
   ) async {
     final harness = await _pump(tester, initialAyah: 40);
-    await tester.drag(find.byType(ListView), const Offset(0, 300));
+    await tester.drag(find.byType(ReaderAnchoredList), const Offset(0, 300));
     await tester.pump(const Duration(milliseconds: 500));
     final scrolled = tester
         .state<ScrollableState>(find.byType(Scrollable).first)
@@ -103,7 +124,7 @@ void main() {
 
 /// The top of [finder]'s card below the top of the list.
 double _topInList(WidgetTester tester, Finder finder) {
-  final list = tester.getTopLeft(find.byType(ListView));
+  final list = tester.getTopLeft(find.byType(ReaderAnchoredList));
   return tester.getTopLeft(finder).dy - list.dy;
 }
 
@@ -111,6 +132,7 @@ Future<({_Quran quran})> _pump(
   WidgetTester tester, {
   required int initialAyah,
   List<QuranAyah>? ayahs,
+  VoidCallback? eachFrame,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(400, 800);
@@ -172,8 +194,10 @@ Future<({_Quran quran})> _pump(
       ),
     ),
   );
+  eachFrame?.call();
   for (var frame = 0; frame < 20; frame++) {
     await tester.pump(const Duration(milliseconds: 16));
+    eachFrame?.call();
   }
   return (quran: quran);
 }

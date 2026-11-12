@@ -16,6 +16,7 @@ import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
+import 'package:iqro_mobile/features/quran/reader_anchored_list.dart';
 import 'package:iqro_mobile/features/quran/reader_screen.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
@@ -50,7 +51,7 @@ void main() {
       'not', (tester) async {
     final app = await _pump(tester);
     await _toEnd(tester);
-    final list = find.byType(ListView).first;
+    final list = find.byType(ReaderAnchoredList).first;
 
     await tester.drag(list, const Offset(0, -60));
     await tester.pumpAndSettle();
