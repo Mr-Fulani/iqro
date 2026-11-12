@@ -479,6 +479,18 @@
   }
 }
 
+/* Ayahs of the Quran, as its readers draw them: the basmala above, each ayah on its own
+   lines; the words take the font of the selected Mushaf once it has loaded. */
+.salah-quran p {
+  margin: 0;
+}
+
+.salah-quran .salah-quran-opening {
+  margin-bottom: 0.3em;
+  color: var(--primary);
+  font-size: 0.78em;
+}
+
 .salah-transliteration {
   font-style: italic;
   color: var(--text-secondary);

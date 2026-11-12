@@ -66,6 +66,31 @@ export function mushafPageEnds(pages: readonly (number | undefined)[]): (number 
   });
 }
 
+export const MUSHAF_VARIANT_PREFERENCE_KEY = "iqro_quran_mushaf_variant_v1";
+
+/** The Mushaf the reader picked in the Quran reader, if any. */
+export function readMushafVariantPreference(): number | null {
+  try {
+    const stored = window.localStorage.getItem(MUSHAF_VARIANT_PREFERENCE_KEY);
+    if (!stored) return null;
+    const sourceId = Number(stored);
+    return Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The Mushaf the readers draw with: the picked one where it can be drawn, else KFGQPC Hafs, else the first that can. */
+export function selectedMushaf<T extends { source_id: number; rendering: { available: boolean; mode?: string } }>(
+  mushafs: readonly T[],
+  preferred: number | null,
+): T | null {
+  const renderable = mushafs.filter((mushaf) =>
+    mushaf.rendering.available && ["page-font", "unicode-font", "word-images"].includes(mushaf.rendering.mode ?? ""));
+  return renderable.find((mushaf) => mushaf.source_id === preferred)
+    ?? renderable.find((mushaf) => mushaf.source_id === 5) ?? renderable[0] ?? null;
+}
+
 const arabicNumber = new Intl.NumberFormat("ar-EG", { useGrouping: false });
 
 /** A number beside words of the interface: Arabic-Indic digits for a reader of Arabic, 0–9 for everyone else. */

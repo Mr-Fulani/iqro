@@ -2,7 +2,7 @@
   "schema_version": 1,
   "course": {
     "slug": "hanbali-umdah",
-    "version": "2026-11-03",
+    "version": "2026-11-12",
     "methodology": "hanbali",
     "source_title": {
       "ru": "Умдат аль-фикх (Ибн Кудама), по муътамаду мазхаба",
@@ -157,7 +157,18 @@
         "kind": "quran",
         "surah": 1,
         "ayah_from": 1,
-        "ayah_to": 1
+        "ayah_to": 1,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm."
+          }
+        }
       }
     },
     {
@@ -166,7 +177,18 @@
         "kind": "quran",
         "surah": 1,
         "ayah_from": 2,
-        "ayah_to": 7
+        "ayah_to": 7,
+        "translations": {
+          "ru": {
+            "transliteration": "Аль-хамду ли-Лляхи Рабби-ль-'алямин. Ар-Рахмани-р-Рахим. Малики йауми-д-дин. Иййа-кя на'буду ва иййа-кя наста'ин. Ихди-на-с-сырата-ль-мустакым. Сырата-ллязина ан'амта 'аляй-хим, гайри-ль-магдуби 'аляй-хим ва ля-д-даллин."
+          },
+          "en": {
+            "transliteration": "Al-hamdu lillahi Rabbi l-'alamin. Ar-Rahmani r-Rahim. Maliki yawmi d-din. Iyyaka na'budu wa iyyaka nasta'in. Ihdina s-sirata l-mustaqim. Sirata lladhina an'amta 'alayhim, ghayri l-maghdubi 'alayhim wa la d-dallin."
+          },
+          "tr": {
+            "transliteration": "Elhamdü lillâhi Rabbi'l-âlemîn. Er-Rahmâni'r-Rahîm. Mâliki yevmi'd-dîn. İyyâke na'büdü ve iyyâke nesteîn. İhdine's-sırâta'l-müstakîm. Sırâta'llezîne en'amte aleyhim, ğayri'l-mağdûbi aleyhim ve le'd-dâllîn."
+          }
+        }
       }
     },
     {
@@ -200,7 +222,18 @@
         "kind": "quran",
         "surah": 112,
         "ayah_from": 1,
-        "ayah_to": 4
+        "ayah_to": 4,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим. Куль хува-Ллаху ахад. Аллаху-с-самад. Лям йалид ва лям йуляд. Ва лям йакун ля-ху куфуван ахад."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim. Qul huwa llahu ahad. Allahu s-samad. Lam yalid wa lam yulad. Wa lam yakun lahu kufuwan ahad."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm. Kul hüvallâhü ehad. Allâhü's-samed. Lem yelid ve lem yûled. Ve lem yekün lehû küfüven ehad."
+          }
+        }
       }
     },
     {
@@ -209,7 +242,18 @@
         "kind": "quran",
         "surah": 108,
         "ayah_from": 1,
-        "ayah_to": 3
+        "ayah_to": 3,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим. Инна а'тайна-кя-ль-каусар. Фа-салли ли-Рабби-кя ва-нхар. Инна шани'а-кя хува-ль-абтар."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim. Inna a'taynaka l-kawthar. Fa-salli li-Rabbika wa-nhar. Inna shani'aka huwa l-abtar."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm. İnnâ a'taynâke'l-kevser. Fe salli li-Rabbike ve'nhar. İnne şânieke hüve'l-ebter."
+          }
+        }
       }
     },
     {
@@ -218,7 +262,18 @@
         "kind": "quran",
         "surah": 103,
         "ayah_from": 1,
-        "ayah_to": 3
+        "ayah_to": 3,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим. Ва-ль-'аср. Инна-ль-инсана ля-фи хуср. Илля-ллязина аману ва 'амилю-с-салихати ва тавасау би-ль-хакки ва тавасау би-с-сабр."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim. Wa-l-'asr. Inna l-insana lafi khusr. Illa lladhina amanu wa 'amilu s-salihati wa tawasaw bi-l-haqqi wa tawasaw bi-s-sabr."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm. Ve'l-asr. İnne'l-insâne lefî husr. İlle'llezîne âmenû ve amilü's-sâlihâti ve tevâsav bi'l-hakkı ve tevâsav bi's-sabr."
+          }
+        }
       }
     },
     {
@@ -227,7 +282,18 @@
         "kind": "quran",
         "surah": 113,
         "ayah_from": 1,
-        "ayah_to": 5
+        "ayah_to": 5,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим. Куль а'узу би-Рабби-ль-фаляк. Мин шарри ма халяк. Ва мин шарри гасикын иза вакаб. Ва мин шарри-н-наффасати фи-ль-'укад. Ва мин шарри хасидин иза хасад."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim. Qul a'udhu bi-Rabbi l-falaq. Min sharri ma khalaq. Wa min sharri ghasiqin idha waqab. Wa min sharri n-naffathati fi l-'uqad. Wa min sharri hasidin idha hasad."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm. Kul eûzü bi-Rabbi'l-felak. Min şerri mâ halak. Ve min şerri ğâsikın izâ vekab. Ve min şerri'n-neffâsâti fi'l-ukad. Ve min şerri hâsidin izâ hased."
+          }
+        }
       }
     },
     {
@@ -236,7 +302,18 @@
         "kind": "quran",
         "surah": 114,
         "ayah_from": 1,
-        "ayah_to": 6
+        "ayah_to": 6,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим. Куль а'узу би-Рабби-н-нас. Малики-н-нас. Иляхи-н-нас. Мин шарри-ль-васваси-ль-ханнас. Аллязи йувасвису фи судури-н-нас. Мина-ль-джиннати ва-н-нас."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim. Qul a'udhu bi-Rabbi n-nas. Maliki n-nas. Ilahi n-nas. Min sharri l-waswasi l-khannas. Alladhi yuwaswisu fi suduri n-nas. Mina l-jinnati wa-n-nas."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm. Kul eûzü bi-Rabbi'n-nâs. Meliki'n-nâs. İlâhi'n-nâs. Min şerri'l-vesvâsi'l-hannâs. Ellezî yüvesvisü fî sudûri'n-nâs. Mine'l-cinneti ve'n-nâs."
+          }
+        }
       }
     },
     {
@@ -245,7 +322,18 @@
         "kind": "quran",
         "surah": 109,
         "ayah_from": 1,
-        "ayah_to": 6
+        "ayah_to": 6,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим. Куль йа аййуха-ль-кяфирун. Ля а'буду ма та'будун. Ва ля антум 'абидуна ма а'буд. Ва ля ана 'абидун ма 'абадтум. Ва ля антум 'абидуна ма а'буд. Ля-кум дину-кум ва лийа дин."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim. Qul ya ayyuha l-kafirun. La a'budu ma ta'budun. Wa la antum 'abiduna ma a'bud. Wa la ana 'abidun ma 'abadtum. Wa la antum 'abiduna ma a'bud. Lakum dinukum wa liya din."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm. Kul yâ eyyühe'l-kâfirûn. Lâ a'büdü mâ ta'büdûn. Ve lâ entüm âbidûne mâ a'büd. Ve lâ ene âbidün mâ abedtüm. Ve lâ entüm âbidûne mâ a'büd. Leküm dînüküm ve liye dîn."
+          }
+        }
       }
     },
     {
@@ -254,7 +342,18 @@
         "kind": "quran",
         "surah": 87,
         "ayah_from": 1,
-        "ayah_to": 19
+        "ayah_to": 19,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим. Саббихи-сма Рабби-кя-ль-А'ля. Аллязи халяка фа-савва. Ва-ллязи каддара фа-хада. Ва-ллязи ахраджа-ль-мар'а. Фа-джа'аля-ху гуса'ан ахва. Са-нукри'у-кя фа-ля танса. Илля ма ша'а-Ллах, инна-ху йа'ляму-ль-джахра ва ма йахфа. Ва нуйассиру-кя ли-ль-йусра. Фа-заккир ин нафа'ати-з-зикра. Са-йаззаккару ман йахша. Ва йатаджаннабу-ха-ль-ашка. Аллязи йасля-н-нара-ль-кубра. Сумма ля йамуту фи-ха ва ля йахйа. Кад афляха ман тазакка. Ва закара-сма Рабби-хи фа-салля. Баль ту'сируна-ль-хайата-д-дунйа. Ва-ль-ахирату хайрун ва абка. Инна хаза ля-фи-с-сухуфи-ль-уля. Сухуфи Ибрахима ва Муса."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim. Sabbihi sma Rabbika l-A'la. Alladhi khalaqa fa-sawwa. Wa-lladhi qaddara fa-hada. Wa-lladhi akhraja l-mar'a. Fa-ja'alahu ghutha'an ahwa. Sanuqri'uka fa-la tansa. Illa ma sha'a llah, innahu ya'lamu l-jahra wa ma yakhfa. Wa nuyassiruka li-l-yusra. Fa-dhakkir in nafa'ati dh-dhikra. Sayadhdhakkaru man yakhsha. Wa yatajannabuha l-ashqa. Alladhi yasla n-nara l-kubra. Thumma la yamutu fiha wa la yahya. Qad aflaha man tazakka. Wa dhakara sma Rabbihi fa-salla. Bal tu'thiruna l-hayata d-dunya. Wa-l-akhiratu khayrun wa abqa. Inna hadha lafi s-suhufi l-ula. Suhufi Ibrahima wa Musa."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm. Sebbihi'sme Rabbike'l-a'lâ. Ellezî halaka fe sevvâ. Ve'llezî kaddera fe hedâ. Ve'llezî ahrace'l-mer'â. Fe cealehû ğusâen ahvâ. Senukriüke fe lâ tensâ. İllâ mâ şâallâh, innehû ya'lemü'l-cehra ve mâ yahfâ. Ve nüyessirüke li'l-yüsrâ. Fe zekkir in nefeati'z-zikrâ. Seyezzekkerü men yahşâ. Ve yetecennebühe'l-eşkâ. Ellezî yasle'n-nâra'l-kübrâ. Sümme lâ yemûtü fîhâ ve lâ yahyâ. Kad efleha men tezekkâ. Ve zekera'sme Rabbihî fe sallâ. Bel tü'sirûne'l-hayâte'd-dünyâ. Ve'l-âhiratü hayrun ve ebkâ. İnne hâzâ lefi's-suhufi'l-ûlâ. Suhufi İbrâhîme ve Mûsâ."
+          }
+        }
       }
     },
     {
@@ -514,7 +613,18 @@
         "kind": "quran",
         "surah": 88,
         "ayah_from": 1,
-        "ayah_to": 26
+        "ayah_to": 26,
+        "translations": {
+          "ru": {
+            "transliteration": "Би-сми-Лляхи-р-Рахмани-р-Рахим. Халь ата-кя хадису-ль-гашийах. Вуджухун йаума'изин хаши'ах. 'Амилятун насыбах. Тасля наран хамийах. Туска мин 'айнин анийах. Ляйса ля-хум та'амун илля мин дари'. Ля йусмину ва ля йугни мин джу'. Вуджухун йаума'изин на'имах. Ли-са'йи-ха радыйах. Фи джаннатин 'алийах. Ля тасма'у фи-ха лягыйах. Фи-ха 'айнун джарийах. Фи-ха сурурун марфу'ах. Ва аквабун мауду'ах. Ва намарику масфуфах. Ва зарабиййу мабсусах. А-фа-ля йанзуруна иля-ль-ибили кяйфа хуликат. Ва иля-с-сама'и кяйфа руфи'ат. Ва иля-ль-джибали кяйфа нусыбат. Ва иля-ль-арды кяйфа сутыхат. Фа-заккир иннама анта музаккир. Ляста 'аляй-хим би-мусайтыр. Илля ман тавалля ва кяфар. Фа-йу'аззибу-ху-Ллаху-ль-'азаба-ль-акбар. Инна иляй-на ийаба-хум. Сумма инна 'аляй-на хисаба-хум."
+          },
+          "en": {
+            "transliteration": "Bismillahi r-Rahmani r-Rahim. Hal ataka hadithu l-ghashiyah. Wujuhun yawma'idhin khashi'ah. 'Amilatun nasibah. Tasla naran hamiyah. Tusqa min 'aynin aniyah. Laysa lahum ta'amun illa min dari'. La yusminu wa la yughni min ju'. Wujuhun yawma'idhin na'imah. Li-sa'yiha radiyah. Fi jannatin 'aliyah. La tasma'u fiha laghiyah. Fiha 'aynun jariyah. Fiha sururun marfu'ah. Wa akwabun mawdu'ah. Wa namariqu masfufah. Wa zarabiyyu mabthuthah. Afala yanzuruna ila l-ibili kayfa khuliqat. Wa ila s-sama'i kayfa rufi'at. Wa ila l-jibali kayfa nusibat. Wa ila l-ardi kayfa sutihat. Fa-dhakkir innama anta mudhakkir. Lasta 'alayhim bi-musaytir. Illa man tawalla wa kafar. Fa-yu'adhdhibuhu llahu l-'adhaba l-akbar. Inna ilayna iyabahum. Thumma inna 'alayna hisabahum."
+          },
+          "tr": {
+            "transliteration": "Bismillâhirrahmânirrahîm. Hel etâke hadîsü'l-ğâşiyeh. Vücûhün yevmeizin hâşiah. Âmiletün nâsıbeh. Taslâ nâran hâmiyeh. Tüskâ min aynin âniyeh. Leyse lehüm taâmün illâ min darî'. Lâ yüsminü ve lâ yuğnî min cû'. Vücûhün yevmeizin nâimeh. Li sa'yihâ râdıyeh. Fî cennetin âliyeh. Lâ tesmeu fîhâ lâğıyeh. Fîhâ aynün câriyeh. Fîhâ sürurun merfûah. Ve ekvâbün mevdûah. Ve nemâriku masfûfeh. Ve zerâbiyyü mebsûseh. E fe lâ yenzurûne ile'l-ibili keyfe hulikat. Ve ile's-semâi keyfe rufiat. Ve ile'l-cibâli keyfe nusıbet. Ve ile'l-ardı keyfe sutıhat. Fe zekkir innemâ ente müzekkir. Leste aleyhim bi musaytır. İllâ men tevellâ ve kefer. Fe yüazzibühü'llâhü'l-azâbe'l-ekber. İnne ileynâ iyâbehüm. Sümme inne aleynâ hisâbehüm."
+          }
+        }
       }
     },
     {

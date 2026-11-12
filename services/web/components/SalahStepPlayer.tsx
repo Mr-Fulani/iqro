@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { preload } from "react-dom";
 
 import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
@@ -16,6 +16,7 @@ import {
   recordSalahStep,
   resumeStepIndex,
   SALAH_COURSE_SLUG,
+  salahQuranAyahs,
   type SalahFormula,
   type SalahFormulaAudio,
   type SalahLessonBundle,
@@ -32,9 +33,14 @@ import { trackCourseEvent } from "../lib/course-feedback";
 import { useSalahProgressSync } from "../lib/use-salah-progress";
 import { useLessonOpened } from "./courses/useLessonOpened";
 import { type Salah3D, useSalah3D } from "./SalahStep3D";
+import { SalahQuranText } from "./SalahQuranText";
 import { SalahStepNotes } from "./SalahStepNotes";
 import { StepNav } from "./StepNav";
 import { useStepNavigation } from "./useStepNavigation";
+
+// The script of the selected Mushaf for the ayahs: its own chunk, fetched once the page has
+// loaded, so the lesson's first paint carries none of it.
+const SalahQuranScript = lazy(() => import("./SalahQuranScript"));
 
 type Mode = "learn" | "practice";
 type Display = { mode: Mode; transliteration: boolean; translation: boolean };
@@ -242,6 +248,11 @@ export function SalahStepPlayer({
 }) {
   const { direction, formatNumber, locale, t } = useI18n();
   const { lesson, formulas, media, courseVersion } = bundle;
+  // The ayahs of each formula of the Quran, split once: its steps draw them an ayah to a line.
+  const quranAyahs = useMemo(
+    () => Object.fromEntries(Object.entries(formulas).map(([id, formula]) => [id, salahQuranAyahs(formula)])),
+    [formulas],
+  );
   const steps = lesson.steps;
   const { index, setIndex, go, onKeyDown } = useStepNavigation(steps.length, direction);
   const [ready, setReady] = useState(false);
@@ -453,14 +464,21 @@ export function SalahStepPlayer({
     );
   };
 
-  const renderFormula = (owner: SalahStep, id: string, formula: SalahFormula) => {
+  const renderFormula = (owner: SalahStep, id: string, formula: SalahFormula, near: boolean) => {
+    const ayahs = quranAyahs[id];
     const key = `${owner.slug}:${id}`;
     const active = activeAudio === key;
     const range = formula.audio ? formulaAudioRange(formula.audio) : null;
     const showTranslation = !practice && display.translation && formula.translation && formula.translation !== formula.arabic;
     return (
       <article className="salah-formula" key={id}>
-        <p className="salah-arabic" lang="ar" dir="rtl">{formula.arabic}</p>
+        {ayahs && formula.source.kind === "quran" ? (
+          formulaFont ? (
+            <Suspense fallback={<SalahQuranText ayahs={ayahs} />}>
+              <SalahQuranScript surah={formula.source.surah} ayahs={ayahs} near={near} />
+            </Suspense>
+          ) : <SalahQuranText ayahs={ayahs} />
+        ) : <p className="salah-arabic" lang="ar" dir="rtl">{formula.arabic}</p>}
         {!practice && display.transliteration && formula.transliteration ? (
           <p className="salah-transliteration">{formula.transliteration}</p>
         ) : null}
@@ -596,7 +614,7 @@ export function SalahStepPlayer({
                     label={t("salah.repeatTimes", { count: formatNumber(repeatTarget) })}
                   />
                 ) : null}
-                {item.formulas.map((id) => renderFormula(item, id, formulas[id]!))}
+                {item.formulas.map((id) => renderFormula(item, id, formulas[id]!, itemIndex === index || itemIndex === index + 1))}
                 {/* As in the app: the lesson's end, in learning only, like the instruction. */}
                 {itemIndex === steps.length - 1 && !practice ? sources : null}
               </div>

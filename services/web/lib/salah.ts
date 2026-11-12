@@ -24,6 +24,7 @@ import {
   parseLessonMedia,
   type CourseMediaBlock,
 } from "./thematic-courses.ts";
+import { splitDuaArabic } from "./dua-arabic.ts";
 
 export const SALAH_COURSE_SLUG = "hanbali-umdah";
 export const SALAH_SCHEMA_VERSION = 1;
@@ -132,6 +133,39 @@ export type SalahFormula = {
   audio?: SalahFormulaAudio;
   source: SalahFormulaSource;
 };
+
+/** One ayah of a formula taken from the Quran. */
+export type SalahQuranAyah = {
+  number: number;
+  /** The basmala written before the first ayah of most surahs. */
+  opening: string | null;
+  text: string;
+};
+
+const AYAH_END = /\s*\uFD3F[\u0660-\u0669]+\uFD3E\s*/u;
+
+/**
+ * The ayahs of a formula taken from the Quran. The course sends them as one
+ * line, each ayah closed by its number in ﴿ ﴾. Null for any other formula and
+ * for a text that is not the ayahs its source names. Port of salahQuranAyahs
+ * (salah_quran_text.dart).
+ */
+export function salahQuranAyahs(formula: SalahFormula): SalahQuranAyah[] | null {
+  const source = formula.source;
+  if (source.kind !== "quran") return null;
+  const texts = formula.arabic.split(AYAH_END);
+  if (texts.length !== source.ayah_to - source.ayah_from + 2 || texts.pop() !== "") return null;
+  return texts.map((text, index) => {
+    const number = source.ayah_from + index;
+    if (number !== 1 || source.surah === 1 || source.surah === 9) return { number, opening: null, text: text.trim() };
+    const parts = splitDuaArabic(text);
+    return {
+      number,
+      opening: parts.find((part) => part.opening)?.text ?? null,
+      text: parts.filter((part) => !part.opening).map((part) => part.text).join(" "),
+    };
+  });
+}
 
 /** The picture is a still of this pose of the schematic 3D scene (docs/salah/salah-3d.md). */
 export type SalahMediaScene = { pose: string; view: SalahSceneView };
