@@ -27,6 +27,8 @@ class CourseStatEvent(models.TextChoices):
     LESSON_COMPLETED = "lesson_completed", "Отметили изученной"
     LESSON_HELPFUL = "lesson_helpful", "Полезно"
     LESSON_NOT_HELPFUL = "lesson_not_helpful", "Не очень"
+    # Of the Names of Allah only: the section itself, without a lesson.
+    SECTION_OPENED = "section_opened", "Открыли раздел"
 
 
 class CourseDailyStat(models.Model):
@@ -39,7 +41,8 @@ class CourseDailyStat(models.Model):
     )
     builtin = models.CharField(max_length=16, choices=BuiltInCourse.choices, blank=True, default="")
     # The slug, not a key: a lesson removed from the course keeps its history.
-    lesson = models.SlugField(max_length=64)
+    # Empty for «Открыли раздел».
+    lesson = models.SlugField(max_length=64, blank=True)
     platform = models.CharField(max_length=8, choices=[(code, code) for code in PLATFORMS])
     event = models.CharField(max_length=20, choices=CourseStatEvent)
     count = models.PositiveIntegerField(default=0)

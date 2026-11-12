@@ -2919,6 +2919,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get coursesStatusCompleted => 'مكتملة';
 
   @override
+  String coursesNamesHint(int count) {
+    return 'عدد الأسماء: $count · المعنى والشرح والآية';
+  }
+
+  @override
+  String coursesNamesLearned(int done, int total) {
+    return 'تمّ حفظ $done من $total';
+  }
+
+  @override
   String coursesProgress(int done, int total) {
     return 'الموضوعات المدروسة: $done من $total';
   }

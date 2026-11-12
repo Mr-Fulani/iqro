@@ -877,6 +877,8 @@
   "coursesHoursMinutes": "{hours} س {minutes} د",
   "coursesStatusStarted": "بدأت · {done}/{total}",
   "coursesStatusCompleted": "مكتملة",
+  "coursesNamesHint": "عدد الأسماء: {count} · المعنى والشرح والآية",
+  "coursesNamesLearned": "تمّ حفظ {done} من {total}",
   "coursesProgress": "الموضوعات المدروسة: {done} من {total}",
   "coursesLessonOf": "{course} · الموضوع {number} من {total}",
   "coursesSource": "المؤلف والمصادر",

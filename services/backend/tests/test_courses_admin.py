@@ -693,11 +693,13 @@ def test_built_in_course_cover_must_be_a_picture(owner_client: Client) -> None:
 
 
 @pytest.mark.django_db
-def test_built_in_course_covers_are_two_rows_the_publisher_changes(owner_client: Client) -> None:
+def test_built_in_course_covers_are_three_rows_the_publisher_changes(owner_client: Client) -> None:
     assert sorted(BuiltInCourseCover.objects.values_list("course", flat=True)) == [
+        "names",
         "salah",
         "tajweed",
     ]
+    assert "Имена Аллаха" in owner_client.get("/admin/courses/builtincoursecover/").content.decode()
     salah = _built_in("salah")
     assert owner_client.get("/admin/courses/builtincoursecover/add/").status_code == 403
     delete = f"/admin/courses/builtincoursecover/{salah.pk}/delete/"

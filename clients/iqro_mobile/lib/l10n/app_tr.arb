@@ -877,6 +877,8 @@
   "coursesHoursMinutes": "{hours} sa {minutes} dk",
   "coursesStatusStarted": "Başlandı · {done}/{total}",
   "coursesStatusCompleted": "Tamamlandı",
+  "coursesNamesHint": "{count} isim · anlamı, açıklaması ve ayeti",
+  "coursesNamesLearned": "Öğrenildi · {done}/{total}",
   "coursesProgress": "Çalışılan konular: {done}/{total}",
   "coursesLessonOf": "{course} · konu {number}/{total}",
   "coursesSource": "Yazar ve kaynaklar",

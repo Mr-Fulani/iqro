@@ -50,11 +50,11 @@ test("catalog → course → lesson → «lesson learned» keeps progress on the
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/ru/courses");
   await expect(page.getByRole("heading", { level: 1, name: "Курсы" })).toBeVisible();
-  // The prayer and tajweed courses come first and keep their own pages.
+  // The prayer and tajweed courses and the Names of Allah come first and keep their own pages.
   const cards = page.locator(".courses-grid > li > a");
-  await expect(cards).toHaveCount(3);
+  await expect(cards).toHaveCount(4);
   expect(await cards.evaluateAll((links) => links.map((link) => link.getAttribute("href"))))
-    .toEqual(["/ru/salah", "/ru/tajweed", "/ru/courses/ramadan"]);
+    .toEqual(["/ru/salah", "/ru/tajweed", "/ru/names", "/ru/courses/ramadan"]);
   await expect(page.getByTestId("courses-continue")).toHaveCount(0);
   await expect(cards.filter({ hasText: "Рамадан" })).toContainText("Тем: 3 · 30 мин. · 10 мин видео");
   await expect(page.locator(".app-menu").getByRole("link", { name: "Курсы" })).toHaveClass(/menu-link-active/);
@@ -108,12 +108,39 @@ test("catalog → course → lesson → «lesson learned» keeps progress on the
   await expect(cards.filter({ hasText: "Рамадан" })).toContainText("Начат · 1 из 3");
 });
 
+test("the Names of Allah are a card that opens their section and shows how many names are learned", async ({ page }) => {
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
+  await page.route(/\.(mp3|m4a)(\?|$)/, (route) => route.fulfill({ status: 404 }));
+  await page.goto("/ru/courses");
+  const card = page.locator('.courses-grid a[href="/ru/names"]');
+  await expect(card).toContainText("Имена Аллаха");
+  await expect(card).toContainText("Имён: 4");
+  // No cover is uploaded: the card keeps its icon, like a built-in course without one.
+  await expect(card.locator(".courses-card-art-builtin .courses-card-icon")).toBeVisible();
+  // Nothing is seen or learned on this device yet.
+  await expect(page.getByTestId("courses-names-progress")).toHaveCount(0);
+
+  // The card opens the same section with the wheel; a name is learned there.
+  await card.click();
+  await expect(page).toHaveURL(/\/ru\/names$/);
+  await expect(page.locator('[data-testid="names-dial"] canvas')).toHaveAttribute("width", /\d+/);
+  await page.getByTestId("names-readout").click();
+  await page.getByTestId("names-learned").click();
+  await expect(page.getByTestId("names-learned")).toHaveAttribute("aria-pressed", "true");
+
+  await page.goto("/ru/courses");
+  const progress = page.getByTestId("courses-names-progress");
+  await expect(progress).toContainText("Выучено 1 из 4");
+  await expect(progress.locator("progress")).toHaveAttribute("value", "1");
+  await expect(progress.locator("progress")).toHaveAttribute("max", "4");
+});
+
 test("the prayer card shows its cover like a thematic course; tajweed without one keeps its icon", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/en/courses");
   const cards = page.locator(".courses-grid > li > a");
   // The covers do not depend on the language: English has no thematic course, the cards stay.
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(3);
   const salah = page.locator('a[href="/en/salah"]');
   const cover = salah.locator(".courses-card-art img");
   await expect(cover).toHaveAttribute("src", "/media/courses/covers/fedcba9876543210fedc-640.webp");
@@ -347,7 +374,8 @@ test("course pages render on the server with release-only hreflang; unknown ones
   expect((await request.get("/ru/courses/ramadan/missing")).status()).toBe(404);
 
   await page.goto("/en/courses");
-  await expect(page.locator(".courses-grid > li")).toHaveCount(2);
+  // The prayer and tajweed courses and the Names of Allah.
+  await expect(page.locator(".courses-grid > li")).toHaveCount(3);
   await expect(page.getByTestId("courses-empty")).toContainText("New courses are coming soon");
 
   // A document from a newer backend asks for a reload instead of guessing.

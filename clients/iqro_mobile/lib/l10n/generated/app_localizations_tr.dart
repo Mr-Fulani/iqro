@@ -2896,6 +2896,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get coursesStatusCompleted => 'Tamamlandı';
 
   @override
+  String coursesNamesHint(int count) {
+    return '$count isim · anlamı, açıklaması ve ayeti';
+  }
+
+  @override
+  String coursesNamesLearned(int done, int total) {
+    return 'Öğrenildi · $done/$total';
+  }
+
+  @override
   String coursesProgress(int done, int total) {
     return 'Çalışılan konular: $done/$total';
   }

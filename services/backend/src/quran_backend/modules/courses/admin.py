@@ -360,7 +360,8 @@ class CourseLessonInline(admin.TabularInline):  # type: ignore[type-arg]
         return " · ".join(parts) or "—"
 
 
-# Where the prayer and the tajweed course are edited: (permission, list of their versions).
+# Where the prayer and the tajweed course and the names are edited: (permission, list of
+# their versions).
 BUILTIN_EDITORS = {
     BuiltInCourse.SALAH: (
         "salah.view_salahcourseversion",
@@ -370,11 +371,12 @@ BUILTIN_EDITORS = {
         "tajweed.view_tajweedcourseversion",
         "admin:tajweed_tajweedcourseversion_changelist",
     ),
+    BuiltInCourse.NAMES: ("names.view_namesversion", "admin:names_namesversion_changelist"),
 }
 
 
 def all_courses(request: HttpRequest) -> dict[str, Any]:
-    """The block above the list: the prayer and the tajweed course, then the catalog.
+    """The block above the list: the prayer and the tajweed course and the names, then the catalog.
 
     The numbers and the links to the statistics need the permission of the analytics pages.
     """
@@ -1650,7 +1652,7 @@ class LearnerProgressAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 @admin.register(BuiltInCourseCover)
 class BuiltInCourseCoverAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    """Covers of the prayer and tajweed cards in the catalog; outside their versions."""
+    """Covers of the prayer, tajweed and names cards in the catalog; outside their versions."""
 
     form = BuiltInCourseCoverForm
     list_display = ("__str__", "has_cover")

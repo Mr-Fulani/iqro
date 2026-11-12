@@ -95,13 +95,28 @@ test("the prayer and tajweed cards take their covers from `built_in`; without on
       height: 720,
     },
     tajweed: null,
+    names: null,
   });
   // An older server without the field, and a cover that does not parse: no cover, the courses stay.
-  assert.deepEqual(parseBuiltInCovers({ language: "ru", courses: [] }), { salah: null, tajweed: null });
+  assert.deepEqual(parseBuiltInCovers({ language: "ru", courses: [] }), { salah: null, tajweed: null, names: null });
   const broken = example("course-list.example.json");
-  broken.built_in = { salah: { cover: { url: "http://example.com/a.webp" } }, tajweed: "?" };
-  assert.deepEqual(parseBuiltInCovers(broken), { salah: null, tajweed: null });
+  broken.built_in = { salah: { cover: { url: "http://example.com/a.webp" } }, tajweed: "?", names: { cover: null } };
+  assert.deepEqual(parseBuiltInCovers(broken), { salah: null, tajweed: null, names: null });
   assert.equal(parseCourseList(broken).length, 1);
+});
+
+test("the Names of Allah are a card of the catalog only while their list is published", () => {
+  const list = example("course-list.example.json");
+  const cover = { url: "https://media.iqro.forum/courses/covers/0123456789abcdef0123.webp", thumb_url: "https://media.iqro.forum/courses/covers/0123456789abcdef0123-640.webp", width: 1280, height: 720 };
+  const withNames = (names: unknown) => parseBuiltInCovers({ ...list, built_in: { names } }).names;
+  // No list is published: the server leaves the key out.
+  assert.equal(parseBuiltInCovers(list).names, null);
+
+  assert.deepEqual(withNames({ cover: null, lesson_count: 99 }), { cover: null, count: 99 });
+  assert.deepEqual(withNames({ cover, lesson_count: 99 }), { cover, count: 99 });
+  // A cover that does not parse leaves the card with its icon; a broken count leaves no card.
+  assert.deepEqual(withNames({ cover: { url: "http://example.com/a.webp" }, lesson_count: 99 }), { cover: null, count: 99 });
+  for (const count of [0, -1, 1.5, "99", null]) assert.equal(withNames({ cover: null, lesson_count: count }), null);
 });
 
 test("a lesson video is the file the server chose for the language; other hosts are left out", () => {

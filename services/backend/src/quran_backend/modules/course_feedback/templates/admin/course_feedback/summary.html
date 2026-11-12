@@ -19,7 +19,7 @@
       <tbody>
       {% for row in report.rows %}
         <tr>
-          <td><a href="{{ row.url }}?days={{ report.days }}">{{ row.title }}</a>{% if row.course.hidden_at %} <span class="ca-quiet">(скрыт)</span>{% elif row.course and not row.course.live_release_id %} <span class="ca-quiet">(не опубликован)</span>{% endif %}</td>
+          <td><a href="{{ row.url }}?days={{ report.days }}">{{ row.title }}</a>{% if row.course.hidden_at %} <span class="ca-quiet">(скрыт)</span>{% elif row.course and not row.course.live_release_id %} <span class="ca-quiet">(не опубликован)</span>{% endif %}{% if row.visits is not None %} <span class="ca-quiet">(раздел открывали: {{ row.visits }})</span>{% endif %}</td>
           <td class="num">{{ row.opened }}</td>
           <td class="num">{{ row.completed }}</td>
           <td class="num">{{ row.started }}</td>
@@ -33,7 +33,7 @@
       {% endfor %}
       </tbody>
     </table>
-    <p class="ca-quiet">«Начали курс» — открыли первую тему, «Дошли до конца» — отметили изученной последнюю. Оценки — выставленные или изменённые за период.</p>
+    <p class="ca-quiet">«Начали курс» — открыли первую тему, «Дошли до конца» — отметили изученной последнюю. Оценки — выставленные или изменённые за период. У «Имён Аллаха» тема — это одно имя: открыли его карточку, отметили «Выучено».</p>
   </section>
 </div>
 {% endblock %}

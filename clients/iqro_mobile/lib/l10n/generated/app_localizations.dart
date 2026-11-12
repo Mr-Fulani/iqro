@@ -5214,6 +5214,18 @@ abstract class AppLocalizations {
   /// **'Completed'**
   String get coursesStatusCompleted;
 
+  /// No description provided for @coursesNamesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Names: {count} · meaning, explanation and an ayah'**
+  String coursesNamesHint(int count);
+
+  /// No description provided for @coursesNamesLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Learned {done} of {total}'**
+  String coursesNamesLearned(int done, int total);
+
   /// No description provided for @coursesProgress.
   ///
   /// In en, this message translates to:

@@ -69,7 +69,8 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         days = period_days(request.GET.get("days"))
         reports_url = reverse("admin:feedback_feedbackticket_changelist")
         if object_id in BuiltInCourse.values:
-            # «Обучение намазу» and «Таджвид» are not rows of the catalog: no editor link.
+            # «Обучение намазу», «Таджвид» and «Имена Аллаха» are not rows of the catalog:
+            # no editor link.
             title = BuiltInCourse(object_id).label
             context = self._context(request, f"Аналитика: {title}")
             slugs = builtin_slugs(object_id)
@@ -78,6 +79,7 @@ class CourseAnalyticsAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 report=course_report(object_id, days),
                 reports_url=reports_url + (f"?course={slugs[0]}" if slugs else ""),
                 learners_course=object_id,
+                names=object_id == BuiltInCourse.NAMES,
                 **(extra_context or {}),
             )
             return TemplateResponse(request, "admin/course_feedback/analytics.html", context)

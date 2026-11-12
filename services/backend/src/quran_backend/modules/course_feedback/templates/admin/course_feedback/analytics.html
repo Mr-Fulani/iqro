@@ -6,8 +6,10 @@
   {% if course_url %}<p><a href="{{ course_url }}">Открыть курс в редакторе</a></p>{% endif %}
   {% if learners_url %}<p><a href="{{ learners_url }}?course={{ learners_course|urlencode }}">Ученики этого курса</a> — кто проходит и докуда дошёл.</p>{% endif %}
   {% include "admin/course_feedback/periods.html" %}
+  {% if names %}<p class="ca-quiet">Тема здесь — одно имя. «Открыли тему» — открыли карточку имени, «Отметили изученной» — нажали «Выучено»; за один заход в раздел имя считается один раз. Имена смотрят в любом порядке, поэтому «Дошли до конца» и «Где чаще бросают» здесь значат меньше, чем у курсов.</p>{% endif %}
 
   <div class="ca-kpis" aria-label="Коротко">
+    {% if report.visits is not None %}<div class="ca-kpi"><span>Открыли раздел</span><strong>{{ report.visits }}</strong><span class="ca-quiet">заходов на страницу с колесом имён</span></div>{% endif %}
     <div class="ca-kpi"><span>Открыли темы</span><strong>{{ report.totals.opened }}</strong><span class="ca-quiet">всего открытий</span></div>
     <div class="ca-kpi"><span>Дошли до конца</span><strong>{% if report.totals.finished_share is not None %}{{ report.totals.finished_share }} %{% else %}—{% endif %}</strong><span class="ca-quiet">{{ report.totals.finished }} из {{ report.totals.started }} начавших</span></div>
     {% if report.ratings %}<div class="ca-kpi"><span>Средняя оценка</span><strong>{% if report.ratings.count %}{{ report.ratings.average|floatformat:1 }} ★{% else %}—{% endif %}</strong><span class="ca-quiet">оценок за период: {{ report.ratings.count }}</span></div>{% endif %}

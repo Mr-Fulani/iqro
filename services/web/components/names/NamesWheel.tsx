@@ -8,6 +8,7 @@ import {
   markNameSeen,
   nameLabel,
   NAMES_PROGRESS_EVENT,
+  namesCounter,
   namesProgressStorageKey,
   readNamesProgress,
   seenCount,
@@ -69,6 +70,12 @@ export function NamesWheel({ document: list }: { document: NamesDocument }) {
   const [soundOn, setSoundOn] = useState(true);
   const [card, setCard] = useState<number | null>(null);
   const voice = useNameVoice();
+  // «Статистика курсов»: the section, an opened card and «Выучено», once per page view each.
+  const [counter] = useState(() => namesCounter(list.collection.slug));
+  useEffect(() => counter("section_opened"), [counter]);
+  useEffect(() => {
+    if (card !== null) counter("lesson_opened", names[card].slug);
+  }, [card, counter, names]);
 
   const stage = useRef<HTMLDivElement | null>(null);
   const dial = useRef<HTMLDivElement | null>(null);
@@ -602,7 +609,10 @@ export function NamesWheel({ document: list }: { document: NamesDocument }) {
           index={card}
           progress={progress}
           voice={voice}
-          onMarked={() => void syncProgress()}
+          onMarked={(learned) => {
+            if (learned) counter("lesson_completed", names[card].slug);
+            void syncProgress();
+          }}
           onStep={(index) => {
             setCard(index);
             goTo(index);

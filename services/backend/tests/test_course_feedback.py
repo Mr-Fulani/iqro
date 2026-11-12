@@ -24,11 +24,15 @@ from quran_backend.modules.course_feedback.throttling import (
 from quran_backend.modules.courses.models import Course
 from quran_backend.modules.courses.services import hide_course
 from quran_backend.modules.feedback.models import FeedbackTicket
+from quran_backend.modules.names.publication import import_names
 from quran_backend.modules.salah.models import SalahCourse, SalahCourseVersion
 from quran_backend.modules.tajweed.models import TajweedCourse, TajweedCourseVersion
 from tests.test_courses import owner, ramadan, release_course  # noqa: F401 - fixtures by name
+from tests.test_names import _data as names_data
+from tests.test_names import _published as publish_names
 
 EVENTS = "/api/v1/courses/events"
+NAMES_LIST = "asma-al-husna"
 RATING = "/api/v1/courses/ramadan/rating"
 
 
@@ -140,6 +144,73 @@ def test_events_of_an_unpublished_builtin_course_are_dropped(
 
     assert response.json() == {"accepted": 0}
     assert not CourseDailyStat.objects.exists()
+
+
+@pytest.mark.django_db
+def test_events_of_the_names_of_allah_are_counted(
+    builtin: None,
+    owner: User,
+    api_client: APIClient,
+) -> None:
+    publish_names(owner)
+
+    response = api_client.post(
+        EVENTS,
+        {
+            "platform": "android",
+            "events": [
+                _event("", "section_opened", course=NAMES_LIST),
+                _event("", "section_opened", course=NAMES_LIST),
+                # A name is a lesson: its card was opened, it was marked learnt.
+                _event("ar-rahman", "lesson_opened", course=NAMES_LIST),
+                _event("al-jamil", "lesson_completed", course=NAMES_LIST),
+                _event("no-such-name", "lesson_opened", course=NAMES_LIST),
+                # The section has no lesson, a card has one.
+                _event("ar-rahman", "section_opened", course=NAMES_LIST),
+                _event("", "lesson_opened", course=NAMES_LIST),
+                # Only the names are a section.
+                _event("", "section_opened", course="hanbali-umdah"),
+                _event("", "section_opened"),
+            ],
+        },
+        format="json",
+    )
+
+    assert response.status_code == 202
+    assert response.json() == {"accepted": 4}
+    assert {
+        (row.builtin, row.lesson, row.platform, row.event): row.count
+        for row in CourseDailyStat.objects.all()
+    } == {
+        ("names", "", "android", "section_opened"): 2,
+        ("names", "ar-rahman", "android", "lesson_opened"): 1,
+        ("names", "al-jamil", "android", "lesson_completed"): 1,
+    }
+
+
+@pytest.mark.django_db
+def test_events_of_an_unpublished_list_of_names_are_dropped(
+    owner: User,
+    api_client: APIClient,
+) -> None:
+    import_names(names_data())
+    events = [
+        _event("", "section_opened", course=NAMES_LIST),
+        _event("ar-rahman", "lesson_opened", course=NAMES_LIST),
+    ]
+
+    draft = api_client.post(EVENTS, {"platform": "web", "events": events}, format="json")
+    version = publish_names(owner, "v2")
+    live = api_client.post(EVENTS, {"platform": "web", "events": events}, format="json")
+    version.status = "withdrawn"
+    version.save(update_fields=["status"])
+    withdrawn = api_client.post(EVENTS, {"platform": "web", "events": events}, format="json")
+
+    assert [draft.json(), live.json(), withdrawn.json()] == [
+        {"accepted": 0},
+        {"accepted": 2},
+        {"accepted": 0},
+    ]
 
 
 @pytest.mark.django_db
@@ -553,18 +624,88 @@ def test_summary_and_report_include_the_builtin_courses(live: Course, builtin: N
     rows = summary(30)["rows"]
     report = course_report("salah", 30)
 
-    assert [row["title"] for row in rows] == ["Обучение намазу", "Таджвид", "Рамадан"]
+    assert [row["title"] for row in rows] == [
+        "Обучение намазу",
+        "Таджвид",
+        "Имена Аллаха",
+        "Рамадан",
+    ]
     assert (rows[0]["opened"], rows[0]["started"], rows[0]["finished"]) == (6, 6, 3)
     assert rows[0]["finished_share"] == 50
     assert (rows[1]["opened"], rows[1]["completed"]) == (2, 0)
-    assert rows[2]["opened"] == 10
+    assert rows[3]["opened"] == 10
+    # Only the names have «Открыли раздел».
+    assert [row["visits"] for row in rows] == [None, None, 0, None]
     assert [(row["slug"], row["title"]) for row in report["lessons"]] == [
         ("wudu", "Урок wudu"),
         ("fajr", "Урок fajr"),
     ]
     assert report["totals"] == {"opened": 6, "started": 6, "finished": 3, "finished_share": 50}
     assert report["ratings"] is None
+    assert report["visits"] is None
     assert [row["label"] for row in report["platforms"]] == ["Android"]
+
+
+@pytest.mark.django_db
+def test_summary_and_report_include_the_names_of_allah(
+    owner: User,
+) -> None:
+    publish_names(owner)
+    _builtin_stat("names", "", "section_opened", 9)
+    _builtin_stat("names", "ar-rahman", "lesson_opened", 5)
+    _builtin_stat("names", "al-jamil", "lesson_opened", 2)
+    _builtin_stat("names", "al-jamil", "lesson_completed", 1)
+
+    row = summary(30)["rows"][2]
+    report = course_report("names", 30)
+
+    assert (row["key"], row["title"], row["course"]) == ("names", "Имена Аллаха", None)
+    assert (row["opened"], row["completed"], row["visits"]) == (7, 1, 9)
+    assert (row["started"], row["finished"], row["rating_count"]) == (5, 1, 0)
+    # A name is a lesson, in the order of the list; the section itself is not one.
+    assert [(item["slug"], item["title"], item["opened"]) for item in report["lessons"]] == [
+        ("ar-rahman", "Ар-Рахман [ru] — Милостивый [ru]", 5),
+        ("al-jamil", "Аль-Джамиль [ru] — Прекрасный [ru]", 2),
+    ]
+    assert report["visits"] == 9
+    assert report["totals"]["opened"] == 7
+    assert report["ratings"] is None
+    assert [(item["label"], item["values"]) for item in report["platforms"]] == [
+        ("Android", [7, 0, 0, 1])
+    ]
+
+
+@pytest.mark.django_db
+def test_admin_pages_show_the_names_of_allah(
+    owner: User,
+) -> None:
+    publish_names(owner)
+    _builtin_stat("names", "", "section_opened", 9)
+    _builtin_stat("names", "ar-rahman", "lesson_opened", 5)
+    client = Client()
+    client.force_login(owner)
+
+    overview = client.get("/admin/course_feedback/courseanalytics/").content.decode()
+    page = client.get("/admin/course_feedback/courseanalytics/names/change/?days=7")
+    courses = client.get("/admin/courses/course/").content.decode()
+
+    assert '<a href="/admin/course_feedback/courseanalytics/names/change/?days=30">' in overview
+    assert "(раздел открывали: 9)" in overview
+    assert page.status_code == 200
+    body = page.content.decode()
+    assert "Аналитика: Имена Аллаха" in body
+    assert "<span>Открыли раздел</span><strong>9</strong>" in body
+    assert "Ар-Рахман [ru] — Милостивый [ru]" in body
+    assert "Тема здесь — одно имя" in body
+    # The learners of the names, by the filter of «Ученики курсов».
+    assert '<a href="/admin/courses/learnerprogress/?course=names">' in body
+    assert "Открыть курс в редакторе" not in body
+    assert "Оценки и комментарии" not in body
+    assert "(темы нет в курсе)" not in body
+    # The block above the catalog: the statistics and the editor of the list.
+    assert 'Имена Аллаха</strong> <span class="ca-quiet">(встроенный курс)</span>' in courses
+    assert "/admin/course_feedback/courseanalytics/names/change/" in courses
+    assert '<a href="/admin/names/namesversion/">Править</a>' in courses
 
 
 @pytest.mark.django_db
@@ -588,6 +729,8 @@ def test_admin_pages_show_the_builtin_courses(builtin: None, owner: User) -> Non
     assert "?course=hanbali-umdah" in body
     assert "Открыть курс в редакторе" not in body
     assert "Оценки и комментарии" not in body
+    # «Открыли раздел» is of the names only.
+    assert "Открыли раздел" not in body
     assert "Урок iqlab" in tajweed.content.decode()
     assert client.get("/admin/course_feedback/courseanalytics/nope/change/").status_code in {
         302,
@@ -628,8 +771,13 @@ def test_courses_list_shows_every_course_with_its_numbers(
 
     assert page.status_code == 200
     rows = page.context["all_courses"]["rows"]
-    assert [row["title"] for row in rows] == ["Обучение намазу", "Таджвид", "Рамадан"]
-    assert [(row["opened"], row["completed"]) for row in rows] == [(6, 0), (0, 4), (7, 0)]
+    assert [row["title"] for row in rows] == [
+        "Обучение намазу",
+        "Таджвид",
+        "Имена Аллаха",
+        "Рамадан",
+    ]
+    assert [(row["opened"], row["completed"]) for row in rows] == [(6, 0), (0, 4), (0, 0), (7, 0)]
     body = page.content.decode()
     assert "Все курсы и их статистика за 30 дней" in body
     assert "встроенный курс" in body
@@ -666,4 +814,6 @@ def test_courses_list_hides_the_numbers_without_the_analytics_permission(
     # No link to the editors of the built-in courses this user may not open.
     assert "/admin/salah/" not in body
     assert "/admin/tajweed/" not in body
+    assert "Имена Аллаха" in body
+    assert "/admin/names/" not in body
     assert all("opened" not in row for row in page.context["all_courses"]["rows"])

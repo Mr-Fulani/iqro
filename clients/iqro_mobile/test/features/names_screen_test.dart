@@ -15,6 +15,7 @@ import 'package:iqro_mobile/features/tajweed_course/tajweed_course_progress.dart
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'course_test_data.dart' show FakeCourseFeedbackGateway;
 import 'names_test_data.dart';
 
 void main() {
@@ -151,6 +152,50 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('names-ayah')));
     await tester.pumpAndSettle();
     expect(find.text('reader 55 ayah 1'), findsOneWidget);
+    // The counters of «Статистика курсов» leave when the section closes: the
+    // section and each name once, like a lesson of a course.
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    expect(harness.feedback.platforms, hasLength(1));
+    expect(harness.feedback.events, [
+      _counted('', 'section_opened'),
+      _counted('malik-al-mulk', 'lesson_opened'),
+      _counted('malik-al-mulk', 'lesson_completed'),
+      _counted('al-jamil', 'lesson_opened'),
+      _counted('ar-rahman', 'lesson_opened'),
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a reopened card and a repeated mark are not counted again', (
+    tester,
+  ) async {
+    final harness = await _pump(tester);
+    final readout = find.byKey(const ValueKey('names-readout'));
+    for (var visit = 0; visit < 2; visit++) {
+      await tester.ensureVisible(readout);
+      await tester.tap(readout);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Отметить выученным'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Выучено'));
+      await tester.pumpAndSettle();
+      // Back to the wheel.
+      Navigator.of(
+        tester.element(find.byKey(const ValueKey('names-card'))),
+      ).pop();
+      await tester.pumpAndSettle();
+    }
+    // The section closes: the queue is sent.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+
+    expect(harness.feedback.events, [
+      _counted('', 'section_opened'),
+      _counted('ar-rahman', 'lesson_opened'),
+      _counted('ar-rahman', 'lesson_completed'),
+    ]);
     expect(tester.takeException(), isNull);
   });
 
@@ -223,11 +268,15 @@ void main() {
   testWidgets('says the section is being prepared until a list is published', (
     tester,
   ) async {
-    await _pump(tester, unavailable: true);
+    final harness = await _pump(tester, unavailable: true);
 
     expect(find.byKey(const ValueKey('names-soon')), findsOneWidget);
     expect(find.text('Раздел готовится'), findsOneWidget);
     expect(_dial, findsNothing);
+    // Nothing is counted for a list that is not published.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    expect(harness.feedback.events, isEmpty);
   });
 }
 
@@ -238,6 +287,12 @@ Finder _readout(String name) => find.descendant(
   matching: find.text(name),
 );
 
+Map<String, Object?> _counted(String name, String event) => <String, Object?>{
+  'course': 'asma-al-husna',
+  'lesson': name,
+  'event': event,
+};
+
 String _text(WidgetTester tester, String key) =>
     tester.widget<Text>(find.byKey(ValueKey(key))).data!;
 
@@ -247,7 +302,13 @@ String _number(WidgetTester tester) => _text(tester, 'names-number');
 
 String _title(WidgetTester tester) => _text(tester, 'names-card-title');
 
-typedef _Harness = ({_Store store, _Click click, _Voice voice, _Sync sync});
+typedef _Harness = ({
+  _Store store,
+  _Click click,
+  _Voice voice,
+  _Sync sync,
+  FakeCourseFeedbackGateway feedback,
+});
 
 Future<_Harness> _pump(
   WidgetTester tester, {
@@ -267,6 +328,7 @@ Future<_Harness> _pump(
   final click = _Click();
   final voice = _Voice();
   final sync = _Sync();
+  final feedback = FakeCourseFeedbackGateway();
   final audio = AudioController(engine: _SilentAudioEngine());
   final router = GoRouter(
     initialLocation: '/names',
@@ -298,6 +360,7 @@ Future<_Harness> _pump(
           epoch: 1,
         )),
         accountProgressSyncProvider.overrideWithValue(sync),
+        courseFeedbackGatewayProvider.overrideWithValue(feedback),
         namesClickProvider.overrideWith((ref) {
           click.made += 1;
           return click;
@@ -325,7 +388,13 @@ Future<_Harness> _pump(
     ),
   );
   await tester.pumpAndSettle();
-  return (store: store, click: click, voice: voice, sync: sync);
+  return (
+    store: store,
+    click: click,
+    voice: voice,
+    sync: sync,
+    feedback: feedback,
+  );
 }
 
 /// Widget tests cannot wait for the database isolate.
