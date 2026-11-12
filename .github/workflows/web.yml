@@ -19,12 +19,15 @@ on:
 permissions:
   contents: read
 
+# The same checks as when they ran back to back in one job (44–45 minutes in November 2026,
+# once cancelled by the 45-minute limit): only side by side on separate runners. Every browser
+# test still runs in both modes: the shards of a matrix split the full list between them, and
+# each shard keeps the one browser worker of playwright.config.ts with a server of its own.
 jobs:
-  checks:
+  static:
+    name: Lint, types, unit tests, build, audit
     runs-on: ubuntu-latest
-    # Dev and production e2e (230+ tests) plus Lighthouse run back to back; 25 minutes
-    # was no longer enough on GitHub runners (runs took 22–27 min in October 2026).
-    timeout-minutes: 45
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: services/web
@@ -49,13 +52,92 @@ jobs:
         run: npm run test:mushaf
       - name: Production build
         run: npm run build
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+  e2e-development:
+    name: Development browser regression tests (${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: services/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+          cache: npm
+          cache-dependency-path: services/web/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Development browser regression tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+  e2e-production:
+    name: Production browser regression tests (${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    defaults:
+      run:
+        working-directory: services/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+          cache: npm
+          cache-dependency-path: services/web/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
       - name: Production browser regression tests
-        run: npm run test:e2e:production
+        run: npm run test:e2e:production -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+  lighthouse:
+    name: Lighthouse budgets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+          cache: npm
+          cache-dependency-path: services/web/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
       - name: Lighthouse budgets
         run: npm run test:lighthouse
-      - name: Dependency audit
-        run: npm audit --omit=dev --audit-level=high
+
+  # One verdict for the whole workflow, under the name the single job had.
+  checks:
+    needs: [static, e2e-development, e2e-production, lighthouse]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job above succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "static, e2e-development, e2e-production, lighthouse: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = "success" ] || exit 1
+          done
