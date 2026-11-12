@@ -268,6 +268,26 @@ def test_import_command(capsys: pytest.CaptureFixture[str], tmp_path: Any) -> No
     assert NamesVersion.objects.get().status == NamesStatus.DRAFT
 
 
+@pytest.mark.django_db
+def test_the_list_in_the_repository_is_a_complete_draft() -> None:
+    """The data file holds the list the owner approved; it loads unsigned, and he publishes it."""
+    call_command("import_names")
+    version = NamesVersion.objects.get()
+    assert version.status == NamesStatus.DRAFT
+    assert version.version == "2026-11-12"
+    assert not version.is_signed
+    assert version.names.count() == 99
+    assert version_problems(version) == []
+    # Al-Qahtani's order: the list opens with «الأول» and closes with «الشافي».
+    assert version.names.get(position=1).slug == "al-awwal"
+    assert version.names.get(position=99).slug == "ash-shafi"
+    # A name that is not one word of the Quran has no recording to play.
+    assert version.names.get(slug="malik-al-mulk").word_position is None
+    assert version.names.get(slug="al-jamil").surah is None
+    # Names as-Sa'di does not explain cite the book their text is from.
+    assert "аль-Кахтани" in version.names.get(slug="as-sayyid").tafsir_source_ru
+
+
 # Admin ---------------------------------------------------------------------
 
 
