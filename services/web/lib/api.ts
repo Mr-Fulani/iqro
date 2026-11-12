@@ -2021,9 +2021,9 @@ export class ApiClient {
     });
   }
 
-  /** The same for the prayer course (`salah`) and a thematic course (`courses`); an account only. */
+  /** The same for the prayer course (`salah`), a thematic course (`courses`) and the Names (`names`); an account only. */
   public async mergeCourseProgress(
-    kind: "salah" | "courses",
+    kind: "salah" | "courses" | "names",
     course: string,
     progress: { lessons: object },
   ): Promise<unknown> {

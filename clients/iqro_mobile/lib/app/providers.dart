@@ -1219,17 +1219,21 @@ final accountProgressSyncProvider = Provider<AccountProgressSync>(
                 accountScope: accountScope,
               )
         : ref
-              .read(courseProgressStoreProvider)
+              .read(
+                kind == AccountProgressSync.names
+                    ? namesProgressStoreProvider
+                    : courseProgressStoreProvider,
+              )
               .merge(
                 course,
                 CourseProgress.fromJson(answer),
                 accountScope: accountScope,
               ),
-    onMerged: (kind, course) => ref.invalidate(
-      kind == AccountProgressSync.salah
-          ? salahProgressProvider(course)
-          : courseProgressProvider(course),
-    ),
+    onMerged: (kind, course) => ref.invalidate(switch (kind) {
+      AccountProgressSync.salah => salahProgressProvider(course),
+      AccountProgressSync.names => namesProgressProvider(course),
+      _ => courseProgressProvider(course),
+    }),
   ),
 );
 final namesRepositoryProvider = Provider<NamesRepository>(

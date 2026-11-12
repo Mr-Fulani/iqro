@@ -11,6 +11,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
+from django.db.models import F
 from django.utils.dateparse import parse_datetime
 
 from quran_backend.modules.accounts.models import UserStatus
@@ -21,6 +22,7 @@ from quran_backend.modules.courses.models import (
     LearnerProgress,
     LearnerProgressKind,
 )
+from quran_backend.modules.names.models import DivineName
 from quran_backend.modules.tajweed.models import TajweedCourseProgress, TajweedPracticeSession
 from quran_backend.modules.tajweed.practice import user_practice_state
 
@@ -41,6 +43,7 @@ class _Catalog:
         """(filter value, title): the prayer and the tajweed course, then the catalog."""
         return [
             *BuiltInCourse.choices,
+            (LearnerProgressKind.NAMES.value, str(LearnerProgressKind.NAMES.label)),
             *((slug, str(course)) for slug, course in self._courses.items()),
         ]
 
@@ -53,6 +56,17 @@ class _Catalog:
             if slug not in self._lessons:
                 self._lessons[slug] = [lesson["slug"] for lesson in course_lessons(course)]
             return slug, str(course), self._lessons[slug]
+        if kind == LearnerProgressKind.NAMES:
+            # A name is a lesson: the names of the published list.
+            key = f"names:{slug}"
+            if key not in self._lessons:
+                self._lessons[key] = list(
+                    DivineName.objects.filter(
+                        version__collection__slug=slug,
+                        version__collection__active_version=F("version"),
+                    ).values_list("slug", flat=True)
+                )
+            return kind, str(LearnerProgressKind.NAMES.label), self._lessons[key]
         if kind not in self._lessons:
             self._lessons[kind] = [lesson["slug"] for lesson in builtin_lessons(kind)]
         return kind, str(BuiltInCourse(kind).label), self._lessons[kind]
@@ -83,7 +97,8 @@ def _sorted(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
 def learners(course: str = "", query: str = "") -> dict[str, Any]:
     """Registered learners and how far they got; guests are not listed.
 
-    `course` is a value of `options`: "salah", "tajweed" or the slug of a thematic course.
+    `course` is a value of `options`: "salah", "tajweed", "names" or the slug of a thematic
+    course.
     """
     catalog = _Catalog()
     account: dict[str, Any] = {"user__status": UserStatus.ACTIVE}
@@ -96,8 +111,8 @@ def learners(course: str = "", query: str = "") -> dict[str, Any]:
     elif course:
         tajweed = tajweed.none()
         stored = (
-            stored.filter(kind=LearnerProgressKind.SALAH)
-            if course == BuiltInCourse.SALAH
+            stored.filter(kind=course)
+            if course in (LearnerProgressKind.SALAH, LearnerProgressKind.NAMES)
             else stored.filter(kind=LearnerProgressKind.COURSES, course=course)
         )
     total = stored.count() + tajweed.count()

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/audio/audio_controller.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
+import 'package:iqro_mobile/features/courses/account_progress_sync.dart';
 import 'package:iqro_mobile/features/courses/course_progress_store.dart';
 import 'package:iqro_mobile/features/names/names_models.dart';
 import 'package:iqro_mobile/features/names/names_repository.dart';
@@ -98,6 +99,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(harness.store.progress.isDone('malik-al-mulk'), isTrue);
     expect(find.text('Выучено'), findsOneWidget);
+    // Once when the screen opened, once for the mark.
+    expect(harness.sync.synced, <String>[
+      'names:asma-al-husna',
+      'names:asma-al-husna',
+    ]);
     await tester.tap(find.text('Выучено'));
     await tester.pumpAndSettle();
     expect(harness.store.progress.isDone('malik-al-mulk'), isFalse);
@@ -221,7 +227,7 @@ String _number(WidgetTester tester) => _text(tester, 'names-number');
 
 String _title(WidgetTester tester) => _text(tester, 'names-card-title');
 
-typedef _Harness = ({_Store store, _Click click, _Voice voice});
+typedef _Harness = ({_Store store, _Click click, _Voice voice, _Sync sync});
 
 Future<_Harness> _pump(
   WidgetTester tester, {
@@ -240,6 +246,7 @@ Future<_Harness> _pump(
   final store = _Store();
   final click = _Click();
   final voice = _Voice();
+  final sync = _Sync();
   final audio = AudioController(engine: _SilentAudioEngine());
   final router = GoRouter(
     initialLocation: '/names',
@@ -270,6 +277,7 @@ Future<_Harness> _pump(
           userId: 'test-owner',
           epoch: 1,
         )),
+        accountProgressSyncProvider.overrideWithValue(sync),
         namesClickProvider.overrideWithValue(click),
         namesVoiceProvider.overrideWithValue(voice),
         audioControllerProvider.overrideWith((ref) => audio),
@@ -291,7 +299,7 @@ Future<_Harness> _pump(
     ),
   );
   await tester.pumpAndSettle();
-  return (store: store, click: click, voice: voice);
+  return (store: store, click: click, voice: voice, sync: sync);
 }
 
 /// Widget tests cannot wait for the database isolate.
@@ -338,6 +346,16 @@ class _Store implements CourseProgressStore {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _Sync implements AccountProgressSync {
+  final synced = <String>[];
+
+  @override
+  Future<bool> sync(String kind, String course) async {
+    synced.add('$kind:$course');
+    return true;
+  }
 }
 
 class _Click implements NamesClick {

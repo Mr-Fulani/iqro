@@ -419,6 +419,8 @@ class LearnerProgressKind(models.TextChoices):
     # The values are the first part of the clients' local keys: `salah.progress.<course>`.
     SALAH = "salah", "Обучение намазу"
     COURSES = "courses", "Курс каталога"
+    # «Пройдено» and «выучено» of the Names of Allah: a name is a lesson.
+    NAMES = "names", "Имена Аллаха"
 
 
 class LearnerProgress(BaseModel):

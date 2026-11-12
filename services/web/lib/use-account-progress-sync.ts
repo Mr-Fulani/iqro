@@ -13,7 +13,8 @@ import {
 } from "./course-progress";
 
 /**
- * Keeps the progress of the prayer course or a thematic course with the account:
+ * Keeps the progress of the prayer course, a thematic course or the Names of
+ * Allah with the account:
  * sends the local copy on mount and whenever the returned function is called,
  * and keeps the merged answer locally. Only for a signed-in account: a guest's
  * progress stays on the device. Offline, it stays local until the next time.
@@ -21,7 +22,7 @@ import {
  * `read`, `write` and `isLessonSlug` must keep their identity between renders.
  */
 export function useAccountProgressSync(
-  kind: "salah" | "courses",
+  kind: "salah" | "courses" | "names",
   courseSlug: string,
   read: (courseSlug: string) => CourseProgress,
   write: (progress: CourseProgress, courseSlug: string) => void,

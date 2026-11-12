@@ -129,3 +129,60 @@ test("the section is in the menus", async ({ page }) => {
   await expect(page).toHaveURL("/ru/names");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Имена Аллаха");
 });
+
+test("a signed-in reader's marks go to the account and come back merged", async ({ page }) => {
+  await page.unroute("**/api/web-auth/refresh");
+  await page.route("**/api/web-auth/refresh", (route) => route.fulfill({
+    json: {
+      token_type: "Bearer",
+      access_token: "active-access-token",
+      expires_in: 900,
+      access_expires_at: "2026-08-24T15:00:00Z",
+      user: {
+        id: "00000000-0000-7000-8000-000000000102",
+        status: "active",
+        preferred_locale: "ru",
+        email: "reader@example.com",
+        deletion_requested_at: null,
+        deletion_scheduled_for: null,
+      },
+      device: {
+        id: "00000000-0000-7000-8000-000000000201",
+        platform: "web",
+        locale: "ru",
+        app_version: "1.0.0",
+        bootstrap_generation: 1,
+      },
+    },
+  }));
+  // The account already has a name learned on another device.
+  const sent: { lessons: Record<string, { status: string }> }[] = [];
+  await page.route("**/api/v1/me/courses/progress/names/asma-al-husna", async (route) => {
+    const body = route.request().postDataJSON() as { lessons: Record<string, { status: string }> };
+    sent.push(body);
+    await route.fulfill({
+      json: {
+        kind: "names",
+        course: "asma-al-husna",
+        lessons: {
+          ...body.lessons,
+          "al-jamil": body.lessons["al-jamil"] ?? {
+            status: "completed",
+            step_slug: "",
+            content_version: "example-1",
+            updated_at: "2026-11-01T10:00:00.000Z",
+          },
+        },
+      },
+    });
+  });
+
+  await openWheel(page);
+  // What the account knows shows up on this device.
+  await expect(page.getByTestId("names-seen")).toHaveText("1 из 4");
+  expect((await stored(page)).lessons["al-jamil"].status).toBe("completed");
+
+  await page.getByTestId("names-readout").click();
+  await page.getByTestId("names-learned").click();
+  await expect.poll(() => sent.at(-1)?.lessons["ar-rahman"]?.status).toBe("completed");
+});

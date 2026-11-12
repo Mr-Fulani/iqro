@@ -513,8 +513,8 @@ PR сайта с этими типами выкатывается **раньше
 
 `GET` / `PUT /api/v1/me/courses/progress/{kind}/{course}`
 
-- `kind` — `salah` (курс намаза, `course` = slug курса, например `hanbali-umdah`) или `courses`
-  (курс каталога, `course` = его slug). Это первая часть локального ключа: `salah.progress.<course>`,
+- `kind` — `salah` (курс намаза, `course` = slug курса, например `hanbali-umdah`), `courses`
+  (курс каталога, `course` = его slug) или `names` (имена Аллаха, ниже). Это первая часть локального ключа: `salah.progress.<course>`,
   `courses.progress.<slug>`. Таджвид остаётся на своём адресе `me/tajweed/progress/{course}` и в
   своей таблице.
 - Тело и ответ — тот же формат, что на устройстве: `{"kind", "course", "lessons": {"<lesson>":
@@ -532,8 +532,11 @@ PR сайта с этими типами выкатывается **раньше
 - Ответ `private, no-store`; запись ограничена тем же лимитом, что прогресс таджвида.
 - Хранение: `courses.LearnerProgress` (`course_learner_progress`), одна строка на аккаунт и курс.
   Удаляется вместе с аккаунтом (`accounts.lifecycle._finalize_account`).
-- Новый раздел («Имена Аллаха») подключается строкой в `LearnerProgressKind` и веткой в
-  `courses.progress.course_exists`.
+- «Имена Аллаха» подключены третьим `kind` — `names` (`course` = slug списка, `asma-al-husna`):
+  имя — это «урок», `in_progress` — стрелка колеса останавливалась на имени («пройдено»),
+  `completed` — имя отмечено выученным. Слияние как у курса каталога: отметку «Выучено» можно снять.
+  `404`, пока список имён не опубликован. Подробности — в
+  [names-of-allah/README.md](../names-of-allah/README.md), «Прогресс».
 
 Клиенты (этап 2):
 

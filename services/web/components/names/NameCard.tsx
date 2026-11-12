@@ -26,6 +26,7 @@ export function NameCard({
   index,
   progress,
   voice,
+  onMarked,
   onStep,
   onClose,
 }: {
@@ -33,6 +34,8 @@ export function NameCard({
   index: number;
   progress: CourseProgress | null;
   voice: NameVoice;
+  /** «Выучено» was set or taken back. */
+  onMarked: () => void;
   /** Shows another name and turns the wheel to it. */
   onStep: (index: number) => void;
   onClose: () => void;
@@ -104,7 +107,10 @@ export function NameCard({
           type="button"
           className={`btn btn-secondary names-learned${learned ? " is-on" : ""}`}
           aria-pressed={learned}
-          onClick={() => writeNamesProgress(setNameLearned(readNamesProgress(), name.slug, !learned, list.collection.version))}
+          onClick={() => {
+            writeNamesProgress(setNameLearned(readNamesProgress(), name.slug, !learned, list.collection.version));
+            onMarked();
+          }}
           data-testid="names-learned"
         >
           {learned ? `✓ ${t("names.learned")}` : t("names.markLearned")}
