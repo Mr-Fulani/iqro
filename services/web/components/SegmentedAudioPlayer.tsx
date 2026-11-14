@@ -468,6 +468,9 @@ export function SegmentedAudioPlayer({
     playAttemptRef.current += 1;
     playWhenReadyRef.current = false;
     clearTransition();
+    // The plan is over until the next play: the seek below reports a time at
+    // its end, which must not finish it again, and seek, without end.
+    hasStartedRef.current = false;
     const audio = audioRef.current;
     const plan = planRef.current;
     if (audio) {
