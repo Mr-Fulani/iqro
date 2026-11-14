@@ -18,6 +18,14 @@ export type ReaderSwipeDirection = "right" | "left";
 /** The strip along each side where a swipe is the browser's back gesture. */
 export const READER_SWIPE_EDGE = 30;
 
+/**
+ * How far a finger goes before its way is told apart, and how many times
+ * flatter than tall that way must be to be a swipe. Less, and a thumb that
+ * shifts on the text or starts a scroll aslant drags the text sideways.
+ */
+const READER_SWIPE_SLOP = 24;
+const READER_SWIPE_FLATNESS = 2;
+
 /** Swipes are for touch screens, phones and tablets: a mouse drag selects text. */
 function touchReader() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -81,8 +89,8 @@ export function useReaderSwipe(
       const dx = touch.clientX - start.x;
       const dy = touch.clientY - start.y;
       if (horizontal === null) {
-        if (Math.hypot(dx, dy) < 10) return;
-        horizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+        if (Math.hypot(dx, dy) < READER_SWIPE_SLOP) return;
+        horizontal = Math.abs(dx) > Math.abs(dy) * READER_SWIPE_FLATNESS;
       }
       // A word held for selection, or up and down first: not a swipe.
       if (!horizontal || selectingText()) {
@@ -93,7 +101,9 @@ export function useReaderSwipe(
       pulled = dx;
       if (!latest.current.right) pulled = Math.min(0, pulled);
       if (!latest.current.left) pulled = Math.max(0, pulled);
-      setOffset(Math.sign(pulled) * Math.min(Math.abs(pulled) * 0.6, window.innerWidth * 0.4));
+      // The text starts from where it lay, not with a jump over the way already gone.
+      const travel = Math.max(0, Math.abs(pulled) - READER_SWIPE_SLOP);
+      setOffset(Math.sign(pulled) * Math.min(travel * 0.6, window.innerWidth * 0.4));
     };
     const touchEnd = (event: TouchEvent) => {
       const began = start;
