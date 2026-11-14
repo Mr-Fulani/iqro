@@ -1147,6 +1147,55 @@ test("reader defaults to Mushaf, selects every fragment and starts ayah playback
   await expect(page.getByText("Воспроизводится", { exact: true })).toBeVisible();
 });
 
+test.describe("a real audio file in the desktop Mushaf", () => {
+  test.use({ nativeMedia: true });
+
+  test("a finished ayah stops once and leaves the audio element at rest", async ({ page }) => {
+    // Four seconds of silence: the ayah ends at 1 s, long before the file does.
+    const samples = 8_000 * 4;
+    const wav = Buffer.alloc(44 + samples * 2);
+    wav.write("RIFF", 0); wav.writeUInt32LE(wav.length - 8, 4); wav.write("WAVEfmt ", 8);
+    wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(8_000, 24); wav.writeUInt32LE(16_000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+    wav.write("data", 36); wav.writeUInt32LE(samples * 2, 40);
+    await page.route("https://audio.example.test/**", (route) => {
+      const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range ?? "");
+      const start = range ? Number(range[1]) : 0;
+      const end = range?.[2] ? Math.min(Number(range[2]), wav.length - 1) : wav.length - 1;
+      return route.fulfill({ status: range ? 206 : 200, contentType: "audio/wav",
+        headers: { "Accept-Ranges": "bytes", ...(range ? { "Content-Range": `bytes ${start}-${end}/${wav.length}` } : {}) },
+        body: wav.subarray(start, end + 1) });
+    });
+    await page.goto("/ru/quran?surah=6");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const audio = layout.locator("audio");
+    const ayah = layout.locator('[data-ayah-key="6:1"]').first();
+    await ayah.click();
+    await layout.getByRole("button", { name: "▶ Аят 6:1", exact: true }).click();
+    await expect(ayah).toHaveClass(/is-playing/);
+
+    await expect(ayah).not.toHaveClass(/is-playing/);
+    await expect(audio).toHaveJSProperty("paused", true);
+    await expect(audio).toHaveJSProperty("currentTime", 1);
+    await expect(audio).toHaveJSProperty("seeking", false);
+    // The seek that parks the sound at the ayah's end may still report itself; nothing seeks after it.
+    const seeks = await audio.evaluate((element) => new Promise<number>((resolve) => {
+      let count = 0;
+      element.addEventListener("seeked", () => { count += 1; });
+      setTimeout(() => resolve(count), 500);
+    }));
+    expect(seeks).toBeLessThanOrEqual(1);
+
+    // The browser's own play button, on the audio element, reads the ayah again.
+    await audio.evaluate((element) => (element as HTMLAudioElement).play());
+    await expect(ayah).toHaveClass(/is-playing/);
+    const resumedAt = await audio.evaluate((element) => (element as HTMLAudioElement).currentTime);
+    expect(resumedAt).toBeLessThan(1);
+    await expect(ayah).not.toHaveClass(/is-playing/);
+    await expect(audio).toHaveJSProperty("currentTime", 1);
+  });
+});
+
 test("Quran review deep link opens and highlights its first ayah", async ({ page }) => {
   await page.goto("/quran?surah=6&ayah=2");
 
