@@ -79,6 +79,36 @@ for (const layout of layouts) {
       await expect(page.locator("#quran-ayah-1-5")).toHaveClass(/is-navigation-target/);
     });
 
+    test("a finger that drifts sideways leaves the text in place; a clear swipe still pulls it", async ({ page }) => {
+      await openText(page);
+      const surface = page.locator(".reader-swipe-surface");
+      const words = page.locator("#quran-ayah-1-5 .quran-arabic-text");
+      await words.scrollIntoViewIfNeeded();
+      const from = await centre(words);
+      const session = await page.context().newCDPSession(page);
+      /** The text's sideways shift with the finger still down, `to` away from where it touched. */
+      const shiftAt = async (to: Point) => {
+        await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [from] });
+        for (let step = 1; step <= 8; step += 1) {
+          await session.send("Input.dispatchTouchEvent", { type: "touchMove",
+            touchPoints: [{ x: from.x + to.x * step / 8, y: from.y + to.y * step / 8 }] });
+        }
+        const shift = await surface.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
+        await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        await expect(surface).toHaveCSS("transform", "none");
+        return shift;
+      };
+      // A thumb resting on the text and shifting a little.
+      expect(await shiftAt({ x: 20, y: 2 })).toBe(0);
+      // A scroll that starts aslant.
+      expect(await shiftAt({ x: 70, y: -40 })).toBe(0);
+      expect(await shiftAt({ x: -70, y: 40 })).toBe(0);
+      // Across the text: it follows the finger.
+      expect(await shiftAt({ x: 90, y: 6 })).toBeGreaterThan(20);
+      await session.detach();
+      await expect(plainText(page)).toHaveCount(0);
+    });
+
     // The page turning in is checked where the test API has the Mushaf page:
     // quran-audio.spec.ts, «a swipe left on the text turns in its Mushaf page».
     test("a swipe left opens the Mushaf", async ({ page }) => {
