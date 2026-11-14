@@ -1185,6 +1185,14 @@ test.describe("a real audio file in the desktop Mushaf", () => {
       setTimeout(() => resolve(count), 500);
     }));
     expect(seeks).toBeLessThanOrEqual(1);
+
+    // The browser's own play button, on the audio element, reads the ayah again.
+    await audio.evaluate((element) => (element as HTMLAudioElement).play());
+    await expect(ayah).toHaveClass(/is-playing/);
+    const resumedAt = await audio.evaluate((element) => (element as HTMLAudioElement).currentTime);
+    expect(resumedAt).toBeLessThan(1);
+    await expect(ayah).not.toHaveClass(/is-playing/);
+    await expect(audio).toHaveJSProperty("currentTime", 1);
   });
 });
 

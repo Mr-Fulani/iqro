@@ -1206,6 +1206,13 @@ export function SegmentedAudioPlayer({
           onPlay={() => {
             claimAudioFocus(audioPlayerId);
             pendingPauseStatusRef.current = null;
+            // The browser's own play button starts where the sound rests: outside
+            // the plan, such as at the end of a finished ayah, the plan starts again.
+            const plan = planRef.current;
+            const restingMs = (audioRef.current?.currentTime ?? 0) * 1000;
+            if (plan && (restingMs >= plan.endMs - 40 || restingMs < plan.startMs - 40)) {
+              setPlanPosition(plan, plan.startIndex);
+            }
             hasStartedRef.current = true;
             setIsPlaying(true);
             onPlayingChangeRef.current?.(true);
