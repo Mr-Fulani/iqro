@@ -13,7 +13,7 @@ for (const viewport of [
   test(`mobile screens fit ${viewport.width}px in ${viewport.locale}`, async ({ page }) => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: viewport.width, height: 844 });
-    for (const route of ["", "/quran", "/audio", "/planner", "/memorization", "/prayer", "/calendar", "/dua", "/profile", "/login", "/more", "/settings"]) {
+    for (const route of ["", "/quran", "/audio", "/planner", "/memorization", "/prayer", "/calendar", "/dua", "/profile", "/login", "/more", "/settings", "/surahs"]) {
       await page.goto(`/${viewport.locale}${route}`);
       await expect(page.locator("html")).toHaveAttribute("dir", viewport.direction);
       await expect(page.locator("main")).toBeVisible();
@@ -49,14 +49,33 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await expect(navigation.locator(":scope > a")).toHaveText(["Главная", "Коран", "План", "Аудио", "Ещё"]);
   await expect(navigation.locator('[aria-current="page"]')).toHaveAttribute("href", "/ru");
 
+  // The Quran tab is the list of surahs, as in the app; a surah opens the reader.
   await navigation.getByRole("link", { name: "Коран", exact: true }).click();
-  await expect(page).toHaveURL("/ru/quran");
+  await expect(page).toHaveURL("/ru/surahs");
+  await expect(navigation.locator('[aria-current="page"]')).toHaveAttribute("href", "/ru/surahs");
+  await expect(page.getByTestId("surahs-continue")).toHaveAttribute("href", "/ru/quran?surah=1&ayah=1");
+  await page.getByTestId("surahs-list").getByRole("link", { name: /Аль-Фатиха/ }).click();
+  await expect(page).toHaveURL("/ru/quran?surah=1&ayah=1");
   await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
   await expect(navigation).toBeHidden();
   await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
   await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
   await expect(navigation).toBeVisible();
-  await expect(navigation.locator('[aria-current="page"]')).toHaveAttribute("href", "/ru/quran");
+  // The reader keeps the Quran tab lit and has a way back to the list.
+  await expect(navigation.locator('[aria-current="page"]')).toHaveAttribute("href", "/ru/surahs");
+  await expect(page.getByTestId("header-back")).toBeVisible();
+
+  // «Text» chosen on the tab opens the reader in the text mode, and is remembered.
+  await page.goto("/ru/surahs");
+  await page.getByTestId("surahs-view-text").click();
+  await page.reload();
+  await expect(page.getByTestId("surahs-view-text")).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("surahs-list").getByRole("link", { name: /Аль-Фатиха/ }).click();
+  await expect(page).toHaveURL("/ru/quran?surah=1&ayah=1&view=text");
+  await expect(page.locator(".quran-page-layout").filter({ visible: true })).not.toHaveClass(/is-mushaf-mode/);
+  await expect(navigation).toBeVisible();
+  await page.goto("/ru/surahs");
+  await page.getByTestId("surahs-view-mushaf").click();
 
   await navigation.getByRole("link", { name: "Главная", exact: true }).click();
   await page.getByTestId("home-reading-read").click();

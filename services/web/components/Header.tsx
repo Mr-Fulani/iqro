@@ -21,7 +21,7 @@ export function Header() {
   const isHome = routePathname === "/";
   // On a phone every screen except the five tabs has a way back, as in the app.
   const router = useRouter();
-  const isTab = ["/", "/quran", "/planner", "/audio", "/more"].includes(routePathname);
+  const isTab = ["/", "/surahs", "/planner", "/audio", "/more"].includes(routePathname);
   const goBack = () => {
     if (window.history.length > 1) router.back();
     else router.push(localizedPath(locale, "/more"));

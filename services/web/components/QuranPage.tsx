@@ -338,6 +338,8 @@ function QuranContent() {
     ? deepLinkPageCandidate
     : null;
   const hasExplicitDeepLink = Boolean(rawSurahParam || deepLinkAyah || deepLinkPageCandidate);
+  // The phone's Quran tab opens the reader in the mode chosen there.
+  const textLink = searchParams.get("view") === "text";
 
   // Server and first browser render must agree. Restore browser state after hydration.
   const [initialLocalPosition, setInitialLocalPosition] =
@@ -463,7 +465,7 @@ function QuranContent() {
   const [currentPage, setCurrentPage] = useState<number>(
     deepLinkPage || 1,
   );
-  const [viewMode, setViewMode] = useState<"text" | "mushaf">("mushaf");
+  const [viewMode, setViewMode] = useState<"text" | "mushaf">(textLink ? "text" : "mushaf");
   const [foundationMushafs, setFoundationMushafs] = useState<QuranFoundationMushaf[]>([]);
   const [selectedFoundationMushafId, setSelectedFoundationMushafId] = useState<number | null>(null);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
@@ -1169,7 +1171,7 @@ function QuranContent() {
     if (deepLinkKey === null || deepLinkAyah === null || handledDeepLink.current === deepLinkKey) {
       return;
     }
-    setViewMode("mushaf");
+    if (!textLink) setViewMode("mushaf");
     if (selectedSurah !== deepLinkSurah) {
       setSelectedSurah(deepLinkSurah);
       return;
@@ -1182,7 +1184,7 @@ function QuranContent() {
     pendingMushafAyah.current = deepLinkKey;
     setCurrentPage(sourcePageFor(deepLinkKey, linkedAyah.pages[0]));
     handledDeepLink.current = deepLinkKey;
-  }, [ayahs, deepLinkAyah, deepLinkKey, deepLinkSurah, selectedSurah, sourcePageFor]);
+  }, [ayahs, deepLinkAyah, deepLinkKey, deepLinkSurah, selectedSurah, sourcePageFor, textLink]);
 
   // Legacy bookmarks may point to a Mushaf page without an ayah reference.
   // Apply the page after the initial surah request, which otherwise resets the
@@ -1195,12 +1197,12 @@ function QuranContent() {
     ) {
       return;
     }
-    setViewMode("mushaf");
+    if (!textLink) setViewMode("mushaf");
     pendingMushafAyah.current = null;
     setSelectedMushafAyah(null);
     setCurrentPage(Math.min(deepLinkPage, mushafPageCount));
     handledPageDeepLink.current = deepLinkPage;
-  }, [deepLinkAyah, deepLinkPage, mushafPageCount]);
+  }, [deepLinkAyah, deepLinkPage, mushafPageCount, textLink]);
 
   useEffect(() => {
     if (

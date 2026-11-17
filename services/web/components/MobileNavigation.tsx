@@ -34,7 +34,8 @@ export function MobileNavigation() {
   );
   const tabs = [
     { href: "/", label: t("nav.home"), icon: "home" },
-    { href: "/quran", label: t("nav.quran"), icon: "quran" },
+    // The tab is the list of surahs; the reader (/quran) opens from it and keeps it lit.
+    { href: "/surahs", label: t("nav.quran"), icon: "quran", also: "/quran" },
     { href: "/planner", label: t("nav.planner"), icon: "plan" },
     { href: "/audio", label: t("nav.audio"), icon: "audio" },
   ] as const;
@@ -46,7 +47,7 @@ export function MobileNavigation() {
   return (
     <nav className="mobile-navigation" aria-label={t("nav.aria")}>
       {tabs.map((tab) => (
-        <IntentPrefetchLink key={tab.href} href={localizedPath(locale, tab.href)} className="mobile-tab" aria-current={active(tab.href) ? "page" : undefined}>
+        <IntentPrefetchLink key={tab.href} href={localizedPath(locale, tab.href)} className="mobile-tab" aria-current={active(tab.href) || ("also" in tab && active(tab.also)) ? "page" : undefined}>
           <span className="mobile-tab-icon"><NavigationIcon name={tab.icon} /></span>
           <span>{tab.label}</span>
         </IntentPrefetchLink>

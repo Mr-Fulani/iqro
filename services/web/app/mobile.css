@@ -2240,3 +2240,142 @@ html.is-mobile-player-open {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The phone's Quran tab (components/QuranTabPage.tsx), like the app's. */
+.surahs-view {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.surahs-view button {
+  min-height: 44px;
+  border: 0;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  cursor: pointer;
+}
+
+.surahs-view button + button {
+  border-inline-start: 1px solid var(--border-strong);
+}
+
+.surahs-view button[aria-pressed="true"] {
+  color: var(--primary-text);
+  background: var(--primary-subtle);
+}
+
+.surahs-continue {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  color: #fff;
+  text-decoration: none;
+  background: var(--mobile-ink, #073e34);
+}
+
+.surahs-continue-copy {
+  display: grid;
+  flex: 1 1 0;
+  gap: 3px;
+  min-width: 0;
+}
+
+.surahs-continue-copy small {
+  color: rgb(255 255 255 / 70%);
+  font-size: 12px;
+}
+
+.surahs-continue-copy strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.surahs-continue .more-row-chevron {
+  color: #fff;
+}
+
+.surahs-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.surahs-picker label,
+.surahs-jump label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.surahs-picker select,
+.surahs-jump select,
+.surahs-jump input {
+  width: 100%;
+  min-height: 48px;
+}
+
+.surahs-jump summary {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.surahs-jump-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.surahs-jump-body form {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.surahs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.surahs-row + .surahs-row {
+  border-top: 1px solid var(--border);
+}
+
+.surahs-row-copy {
+  display: grid;
+  flex: 1 1 0;
+  gap: 2px;
+  min-width: 0;
+}
+
+.surahs-row-copy strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.surahs-row-copy small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
