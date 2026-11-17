@@ -3,8 +3,8 @@ import type { ShareCardGlyph } from "./share-card.ts";
 /** What an ayah or a du'a shares besides its title, as the app's ContentShare. */
 export type ContentShareText = {
   arabic: string;
-  /** The picture's Arabic in the page fonts of the selected Mushaf, the ayah's end sign apart. */
-  arabicGlyphs?: Promise<{ words: ShareCardGlyph[]; end: ShareCardGlyph | null }>;
+  /** The picture's Arabic word by word in the fonts of the selected Mushaf, an ayah's end sign with its last word. */
+  arabicUnits?: Promise<ShareCardGlyph[][] | null>;
   /** The end sign of an ayah drawn from `arabic`, «۝٢٨٦»: the picture has it, the message does not. */
   arabicEnd?: string;
   /** The line under the meaning on the picture: «Аль-Бакара · 2:286», or the du'a's source. */

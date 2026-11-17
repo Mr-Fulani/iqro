@@ -1109,5 +1109,10 @@
   "shareCardTooLong": "Metin görsel için çok uzun. Bağlantıyla birlikte metin olarak gönderebilirsiniz.",
   "shareCardSendText": "Metin olarak gönder",
   "shareCardPreparing": "Görsel hazırlanıyor…",
-  "shareCardFailed": "Görsel oluşturulamadı. Metni ve bağlantıyı yine de gönderebilirsiniz."
+  "shareCardFailed": "Görsel oluşturulamadı. Metni ve bağlantıyı yine de gönderebilirsiniz.",
+  "shareSelection": "Seçimi paylaş",
+  "shareCardFromAyah": "{reference}. ayetten",
+  "@shareCardFromAyah": {"placeholders": {"reference": {"type": "String"}}},
+  "shareCardFromAyahs": "{reference}. ayetlerden",
+  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}}
 }

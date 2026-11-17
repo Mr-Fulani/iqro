@@ -3081,6 +3081,35 @@ test("an ayah picture is drawn in the plain script, unchanged, when the Mushaf's
   expect(arabic.map((run) => run.text).join(" ")).toBe(`${ayahs[0].text_uthmani} \u06dd١`);
 });
 
+test("selected words are shared as a part of the ayah: its words alone, no meaning, no end sign", async ({ page }) => {
+  const cardText = await recordCardText(page);
+  const shared = await captureWebShare(page);
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  const text = page.locator(".quran-content-surface");
+  // The first word of 6:2, then with Shift the second: two of its three words.
+  await text.locator('.quran-word[data-word-key="6:2:1"]').dblclick();
+  await text.locator('.quran-word[data-word-key="6:2:2"]').click({ modifiers: ["Shift"] });
+  await page.getByTestId("word-range-bar").getByTestId("word-range-share").click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByText("Аль-Анам · из аята 6:2")).toBeVisible();
+  await expect(dialog.getByRole("img", { name: "Картинка аята 6:2" })).toBeVisible();
+
+  const words = foundationPage(5, 128).words.filter((word) => [3, 4].includes(Number(word.id))).map((word) => word.text);
+  const runs = (await cardText()).map((run) => run.text);
+  expect(runs.slice(0, 2)).toEqual(words);
+  expect(runs).toContain("Аль-Анам · из аята 6:2");
+  // Neither the third word, nor the ayah's end sign, nor a meaning of the whole ayah.
+  expect(runs).toHaveLength(4);
+
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+  const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href;
+  await expect.poll(shared).toMatchObject({
+    title: "Аль-Анам · из аята 6:2",
+    text: `Аль-Анам · из аята 6:2\n\n${ayahs[1].text_uthmani.split(" ").slice(0, 2).join(" ")}\n\nЧитать в IQRO: ${link}`,
+  });
+});
+
 test("without the share dialog's code an ayah still goes as text, and the next press loads it", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

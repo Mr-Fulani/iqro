@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { useI18n } from "../lib/i18n-context";
 import { wordTiming } from "../lib/tajweed";
 import { compareWords, sameWord, wordRangeBarPlace, wordRangeContains, type QuranWord, type QuranWordRange } from "../lib/word-range";
+import { ShareIcon } from "./ShareIcon";
 import { loadAyahAudio, useClipPlayer, type AyahAudio, type Clip } from "./TajweedAudio";
 
 type Repeat = "once" | "three" | "forever";
@@ -23,6 +24,7 @@ export default function WordRangeBar({
   fallbackVoices = [],
   onClear,
   onMore,
+  onShare,
   onPlayingWord,
 }: {
   range: QuranWordRange;
@@ -34,6 +36,8 @@ export default function WordRangeBar({
   onClear: () => void;
   /** Opens the menu of the selection's first ayah. */
   onMore: () => void;
+  /** Opens the share dialog with a picture of the selected words. */
+  onShare: () => void;
   onPlayingWord: (word: QuranWord | null) => void;
 }) {
   const { t } = useI18n();
@@ -284,6 +288,9 @@ export default function WordRangeBar({
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M17 2l3 3-3 3" /><path d="M4 11V9a4 4 0 0 1 4-4h12" /><path d="M7 22l-3-3 3-3" /><path d="M20 13v2a4 4 0 0 1-4 4H4" /></svg>
           <span aria-hidden="true">{repeat === "once" ? "1×" : repeat === "three" ? "3×" : "∞"}</span>
+        </button>
+        <button type="button" className="word-range-bar-icon" onClick={onShare} aria-label={t("wordRange.share")} title={t("wordRange.share")} data-testid="word-range-share">
+          <ShareIcon />
         </button>
         <button type="button" className="word-range-bar-icon" onClick={onMore} aria-label={t("wordRange.more")} title={t("wordRange.more")} data-testid="word-range-more">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>

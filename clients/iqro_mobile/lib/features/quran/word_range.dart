@@ -14,6 +14,7 @@ import '../audio/audio_repository.dart';
 import '../audio/recitation_style_label.dart';
 import '../audio/reciter_catalog.dart';
 import '../dua/dua_arabic.dart';
+import 'ayah_share.dart';
 import 'quran_models.dart';
 
 /// A word of the Quran: its ayah and its `position_in_verse`.
@@ -285,6 +286,12 @@ class WordRangeController extends ChangeNotifier {
     if (!sameStartAyah || available != true) available = null;
     unawaited(_checkAvailability());
     notifyListeners();
+  }
+
+  /// Opens the share sheet with a picture of the selected words.
+  void share(BuildContext context) {
+    final range = _range;
+    if (range != null) unawaited(shareWordRange(context, _ref, range));
   }
 
   void clear() {
@@ -575,7 +582,8 @@ String wordRangeLabel(BuildContext context, QuranWordRange range) {
   return '$start — ${context.l10n.wordAt(range.end.ayahKey, range.end.position)}';
 }
 
-/// The panel beside a selection: listen, repeat, the ayah's menu and clear.
+/// The panel beside a selection: listen, repeat, share, the ayah's menu and
+/// clear.
 /// A line under it tells which word sounds, whose voice it is, or why the
 /// words cannot play.
 class WordRangePanel extends StatelessWidget {
@@ -719,6 +727,13 @@ class WordRangePanel extends StatelessWidget {
                           semanticsLabel:
                               '${context.l10n.repeat}: $repeatLabel',
                         ),
+                      ),
+                      IconButton(
+                        key: const ValueKey('word-range-share'),
+                        tooltip: context.l10n.shareSelection,
+                        style: iconStyle,
+                        onPressed: () => controller.share(context),
+                        icon: const Icon(Icons.ios_share_outlined),
                       ),
                       IconButton(
                         key: const ValueKey('word-range-more'),

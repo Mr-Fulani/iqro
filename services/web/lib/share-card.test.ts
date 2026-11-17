@@ -54,11 +54,9 @@ test("the card draws the words of the source, unchanged, the end sign with the l
   );
 
   // The Mushaf's glyphs replace the plain words, and bring their own end sign.
-  const glyphs = { words: [{ text: "ﱁ", fontFamily: "p2" }, { text: "ﱂ", fontFamily: "p2" }], end: { text: "ﱃ", fontFamily: "p2" } };
-  assert.deepEqual(
-    shareCardArabicUnits(arabic, "۝٢٥٥", glyphs).map((unit) => unit.map((piece) => piece.text)),
-    [["ﱁ"], ["ﱂ", "ﱃ"]],
-  );
+  const loaded = [[{ text: "ﱁ", fontFamily: "p2" }], [{ text: "ﱂ", fontFamily: "p2" }, { text: "ﱃ", fontFamily: "p2" }]];
+  assert.equal(shareCardArabicUnits(arabic, "\u06dd٢٥٥", loaded), loaded);
+  assert.equal(shareCardArabicUnits(arabic, "\u06dd٢٥٥", []).length, 7);
   assert.deepEqual(shareCardTranslationWords("  Аллах — нет божества  "), ["«Аллах", "—", "нет", "божества»"]);
   assert.deepEqual(shareCardTranslationWords(" "), []);
 });

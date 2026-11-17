@@ -22,11 +22,11 @@ export type ShareCardGlyph = { text: string; fontFamily: string };
 export type ShareCardContent = {
   arabic: string;
   /**
-   * The Arabic word by word in the fonts of the selected Mushaf, loaded, the
-   * ayah's end sign last. When it is empty, fails or is late, the card draws
-   * `arabic`.
+   * The Arabic word by word, each word its pieces: a word in a font of the
+   * selected Mushaf, loaded, or the last word of an ayah with its end sign.
+   * When it is null or empty, fails or is late, the card draws `arabic`.
    */
-  arabicGlyphs?: Promise<{ words: ShareCardGlyph[]; end: ShareCardGlyph | null }>;
+  arabicUnits?: Promise<ShareCardGlyph[][] | null>;
   /** The end sign of an ayah drawn from `arabic`, «۝٢٨٦». */
   arabicEnd?: string;
   translation: string;
@@ -54,7 +54,9 @@ export function parseShareCardStyle(stored: string | null): ShareCardStyle {
   };
 }
 
-const ARABIC_FONT = "IQRO Share Arabic";
+/** The card's own Arabic face, for words drawn in the plain script. */
+export const SHARE_CARD_ARABIC_FONT = "IQRO Share Arabic";
+const ARABIC_FONT = SHARE_CARD_ARABIC_FONT;
 const TEXT_FONT = "IQRO Share Serif";
 const TEXT_FAMILY = `"${TEXT_FONT}", "${ARABIC_FONT}", serif`;
 // How long the picture waits for the pages and fonts of the Mushaf, as the app.
@@ -64,16 +66,10 @@ const GLYPHS_WAIT_MS = 4000;
 type Unit = ShareCardGlyph[];
 
 /** The Arabic as words; the end sign stays with the last word. Whitespace aside, nothing changes. */
-export function shareCardArabicUnits(
-  arabic: string,
-  arabicEnd: string,
-  glyphs: { words: ShareCardGlyph[]; end: ShareCardGlyph | null } | null,
-): Unit[] {
-  const units: Unit[] = glyphs?.words.length
-    ? glyphs.words.map((word) => [word])
-    : arabic.trim().split(/\s+/).map((text) => [{ text, fontFamily: ARABIC_FONT }]);
-  const end = glyphs?.words.length ? glyphs.end : arabicEnd ? { text: arabicEnd, fontFamily: ARABIC_FONT } : null;
-  if (end && units.length > 0) units[units.length - 1].push(end);
+export function shareCardArabicUnits(arabic: string, arabicEnd: string, loaded: Unit[] | null): Unit[] {
+  if (loaded?.length) return loaded;
+  const units: Unit[] = arabic.trim().split(/\s+/).map((text) => [{ text, fontFamily: ARABIC_FONT }]);
+  if (arabicEnd && units.length > 0) units[units.length - 1].push({ text: arabicEnd, fontFamily: ARABIC_FONT });
   return units;
 }
 
@@ -295,9 +291,9 @@ export function shareCardLines<T>(words: readonly T[], lines: readonly ShareCard
  */
 export async function renderShareCards(content: ShareCardContent, style: ShareCardStyle): Promise<Blob[] | null> {
   const layout = shareCardLayout;
-  const glyphs = content.arabicGlyphs
+  const glyphs = content.arabicUnits
     ? Promise.race([
-      content.arabicGlyphs.catch(() => null),
+      content.arabicUnits.catch(() => null),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), GLYPHS_WAIT_MS)),
     ])
     : null;

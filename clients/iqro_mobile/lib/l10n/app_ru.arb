@@ -1113,5 +1113,10 @@
   "shareCardTooLong": "Текст слишком длинный для картинки. Его можно отправить текстом со ссылкой.",
   "shareCardSendText": "Отправить текстом",
   "shareCardPreparing": "Готовим картинку…",
-  "shareCardFailed": "Картинку не удалось создать. Текст и ссылку можно отправить и так."
+  "shareCardFailed": "Картинку не удалось создать. Текст и ссылку можно отправить и так.",
+  "shareSelection": "Поделиться выделенным",
+  "shareCardFromAyah": "из аята {reference}",
+  "@shareCardFromAyah": {"placeholders": {"reference": {"type": "String"}}},
+  "shareCardFromAyahs": "из аятов {reference}",
+  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}}
 }

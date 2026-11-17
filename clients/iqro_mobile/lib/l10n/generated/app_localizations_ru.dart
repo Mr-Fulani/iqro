@@ -29,8 +29,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get bookmarks => 'Закладки';
 
   @override
-  String get emptyBookmarks =>
-      'Пока нет закладок. Сохраните аят с помощью значка закладки в Мусхафе.';
+  String get emptyBookmarks => 'Пока нет закладок. Сохраните аят с помощью значка закладки в Мусхафе.';
 
   @override
   String get bookmarksLoadError => 'Не удалось загрузить закладки';
@@ -39,8 +38,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get notes => 'Заметки';
 
   @override
-  String get emptyNotes =>
-      'Пока нет заметок. Добавьте заметку к аяту в Мусхафе.';
+  String get emptyNotes => 'Пока нет заметок. Добавьте заметку к аяту в Мусхафе.';
 
   @override
   String get addNote => 'Добавить заметку';
@@ -104,8 +102,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get removeHighlight => 'Убрать выделение';
 
   @override
-  String get removeHighlightWithNote =>
-      'Заметка к этому аяту тоже будет удалена.';
+  String get removeHighlightWithNote => 'Заметка к этому аяту тоже будет удалена.';
 
   @override
   String get highlightRemoved => 'Выделение убрано';
@@ -152,15 +149,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hijriMethod => 'Умм аль-Кура · офлайн';
 
   @override
-  String get hijriDisclaimer =>
-      'Расчётные даты могут отличаться от местного наблюдения луны. Начало Рамадана и праздников уточняйте в своей общине. Исламский день начинается с заходом солнца предыдущего гражданского дня.';
+  String get hijriDisclaimer => 'Расчётные даты могут отличаться от местного наблюдения луны. Начало Рамадана и праздников уточняйте в своей общине. Исламский день начинается с заходом солнца предыдущего гражданского дня.';
 
   @override
   String get hijriAdjustment => 'Поправка даты';
 
   @override
-  String get hijriAdjustmentHint =>
-      'Настройте дату по календарю вашей общины. Поправка применяется ко всему календарю.';
+  String get hijriAdjustmentHint => 'Настройте дату по календарю вашей общины. Поправка применяется ко всему календарю.';
 
   @override
   String get hijriSources => 'Основания и источники';
@@ -169,8 +164,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hijriNoEvents => 'Для этого дня нет специальных отметок.';
 
   @override
-  String get hijriUnavailable =>
-      'Дата вне поддерживаемого календаря (1937–2077).';
+  String get hijriUnavailable => 'Дата вне поддерживаемого календаря (1937–2077).';
 
   @override
   String get hijriToday => 'Сегодня по Хиджре';
@@ -182,52 +176,56 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hijriSunsetDate => 'Дата с учётом местного магриба';
 
   @override
-  String get hijriCivilHint =>
-      'Без текущего времени магриба показана дата гражданского дня.';
+  String get hijriCivilHint => 'Без текущего времени магриба показана дата гражданского дня.';
 
   @override
   String get hijriYearSuffix => 'г. х.';
 
   @override
-  String get hijriEventHint =>
-      'Это справочные отметки, а не отдельная фетва. Пост в праздничные дни не отмечается как желательный; день Арафа указан с учётом того, что для паломников действуют отдельные положения.';
+  String get hijriEventHint => 'Это справочные отметки, а не отдельная фетва. Пост в праздничные дни не отмечается как желательный; день Арафа указан с учётом того, что для паломников действуют отдельные положения.';
 
   @override
   String get appLicenses => 'Лицензии компонентов';
 
   @override
   String hijriMonthName(String month) {
-    String _temp0 = intl.Intl.selectLogic(month, {
-      'm1': 'Мухаррам',
-      'm2': 'Сафар',
-      'm3': 'Раби аль-авваль',
-      'm4': 'Раби ас-сани',
-      'm5': 'Джумада аль-уля',
-      'm6': 'Джумада ас-сания',
-      'm7': 'Раджаб',
-      'm8': 'Шаабан',
-      'm9': 'Рамадан',
-      'm10': 'Шавваль',
-      'm11': 'Зуль-каада',
-      'm12': 'Зуль-хиджа',
-      'other': 'Хиджра',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      month,
+      {
+        'm1': 'Мухаррам',
+        'm2': 'Сафар',
+        'm3': 'Раби аль-авваль',
+        'm4': 'Раби ас-сани',
+        'm5': 'Джумада аль-уля',
+        'm6': 'Джумада ас-сания',
+        'm7': 'Раджаб',
+        'm8': 'Шаабан',
+        'm9': 'Рамадан',
+        'm10': 'Шавваль',
+        'm11': 'Зуль-каада',
+        'm12': 'Зуль-хиджа',
+        'other': 'Хиджра',
+      },
+    );
     return '$_temp0';
   }
 
   @override
   String hijriEventName(String event) {
-    String _temp0 = intl.Intl.selectLogic(event, {
-      'ramadan': 'Рамадан',
-      'eidFitr': 'Ид аль-Фитр · Ураза-байрам',
-      'arafah': 'День Арафа',
-      'eidAdha': 'Ид аль-Адха · Курбан-байрам',
-      'tashriq': 'Дни ташрика',
-      'ashura': 'Ашура',
-      'whiteDays': 'Белые дни · 13–15',
-      'lastTenNights': 'Последние десять ночей Рамадана',
-      'other': 'Памятная дата',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      event,
+      {
+        'ramadan': 'Рамадан',
+        'eidFitr': 'Ид аль-Фитр · Ураза-байрам',
+        'arafah': 'День Арафа',
+        'eidAdha': 'Ид аль-Адха · Курбан-байрам',
+        'tashriq': 'Дни ташрика',
+        'ashura': 'Ашура',
+        'whiteDays': 'Белые дни · 13–15',
+        'lastTenNights': 'Последние десять ночей Рамадана',
+        'other': 'Памятная дата',
+      },
+    );
     return '$_temp0';
   }
 
@@ -271,8 +269,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get newsTitle => 'Что нового';
 
   @override
-  String get newsDescription =>
-      'Новые чтецы, функции и материалы на сайте и в приложении.';
+  String get newsDescription => 'Новые чтецы, функции и материалы на сайте и в приложении.';
 
   @override
   String get newsEmpty => 'Пока новостей нет.';
@@ -357,8 +354,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get namesSoonTitle => 'Раздел готовится';
 
   @override
-  String get namesSoonText =>
-      'Список имён сверяется с книгами. Скоро он появится здесь.';
+  String get namesSoonText => 'Список имён сверяется с книгами. Скоро он появится здесь.';
 
   @override
   String get namesSound => 'Звук';
@@ -392,8 +388,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get namesOpenCard => 'Открыть карточку';
 
   @override
-  String get namesHint =>
-      'Крутите колесо пальцем. Нажатие в центр — следующее имя. Нажмите на имя под колесом, чтобы открыть карточку.';
+  String get namesHint => 'Крутите колесо пальцем. Нажатие в центр — следующее имя. Нажмите на имя под колесом, чтобы открыть карточку.';
 
   @override
   String namesCardNumber(int number, int total) {
@@ -413,8 +408,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get namesMarkLearned => 'Отметить выученным';
 
   @override
-  String get namesNoRecording =>
-      'Запись сейчас недоступна. Проверьте соединение и попробуйте ещё раз.';
+  String get namesNoRecording => 'Запись сейчас недоступна. Проверьте соединение и попробуйте ещё раз.';
 
   @override
   String get namesTafsir => 'Толкование';
@@ -451,8 +445,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get welcomeTitle => 'Спокойная ежедневная практика';
 
   @override
-  String get welcomeBody =>
-      'Читайте, слушайте и сохраняйте свой ритм в одном приватном приложении.';
+  String get welcomeBody => 'Читайте, слушайте и сохраняйте свой ритм в одном приватном приложении.';
 
   @override
   String get chooseLanguage => 'Выберите язык';
@@ -488,8 +481,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get startAsGuest => 'Начать приватно';
 
   @override
-  String get guestNote =>
-      'Прогресс начнёт сохраняться на этом устройстве. Аккаунт можно подключить позже.';
+  String get guestNote => 'Прогресс начнёт сохраняться на этом устройстве. Аккаунт можно подключить позже.';
 
   @override
   String get greeting => 'Ас-саляму алейкум';
@@ -566,12 +558,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mushafCatalogEmpty => 'Мусхафы ещё не загружены';
 
   @override
-  String get mushafPreviewDescription =>
-      'Хафс · оформление IQRO · тестовая версия';
+  String get mushafPreviewDescription => 'Хафс · оформление IQRO · тестовая версия';
 
   @override
-  String get mushafPublishedDescription =>
-      'Хафс · чтение онлайн и без интернета';
+  String get mushafPublishedDescription => 'Хафс · чтение онлайн и без интернета';
 
   @override
   String get mushafPickerHint => 'Нажмите на страницу, чтобы рассмотреть её';
@@ -592,19 +582,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mushafUnavailable => 'Вариант временно недоступен у источника';
 
   @override
-  String get mushafCachedDescription =>
-      'Загружается при первом открытии · далее доступен без сети';
+  String get mushafCachedDescription => 'Загружается при первом открытии · далее доступен без сети';
 
   @override
   String get mushafLoading => 'Загружаем страницу и официальный шрифт…';
 
   @override
-  String get mushafFontError =>
-      'Официальный шрифт не удалось открыть. Повторите при подключении к интернету.';
+  String get mushafFontError => 'Официальный шрифт не удалось открыть. Повторите при подключении к интернету.';
 
   @override
-  String get mushafOfflineMissing =>
-      'Эта страница ещё не сохранена на устройстве. Подключитесь к интернету и повторите.';
+  String get mushafOfflineMissing => 'Эта страница ещё не сохранена на устройстве. Подключитесь к интернету и повторите.';
 
   @override
   String get continueSaved => 'Продолжить с сохранённого места';
@@ -692,8 +679,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get focusMode => 'Режим без отвлечений';
 
   @override
-  String get focusModeDescription =>
-      'Скрыть верхнюю панель и служебные подсказки';
+  String get focusModeDescription => 'Скрыть верхнюю панель и служебные подсказки';
 
   @override
   String get exitFocusMode => 'Выйти из режима без отвлечений';
@@ -708,12 +694,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get loadOnDemand => 'Загружать по запросу';
 
   @override
-  String get translationUnavailable =>
-      'Для этого языка пока не подключён одобренный перевод.';
+  String get translationUnavailable => 'Для этого языка пока не подключён одобренный перевод.';
 
   @override
-  String get tafsirUnavailable =>
-      'Тафсир появится после выбора одобренной редакции.';
+  String get tafsirUnavailable => 'Тафсир появится после выбора одобренной редакции.';
 
   @override
   String get bookmarkAdded => 'Добавлено в избранное';
@@ -767,8 +751,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get recitersUpdated => 'Каталог чтецов обновлён';
 
   @override
-  String get recitersRefreshFailed =>
-      'Не удалось обновить каталог. Показаны сохранённые данные.';
+  String get recitersRefreshFailed => 'Не удалось обновить каталог. Показаны сохранённые данные.';
 
   @override
   String get noAudio => 'Нет доступной аудиозаписи';
@@ -925,8 +908,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get savedOnDevice => 'Сохранено на устройстве';
 
   @override
-  String get prayerSettingsSyncPending =>
-      'Настройки уже работают без сети и синхронизируются с аккаунтом после подключения.';
+  String get prayerSettingsSyncPending => 'Настройки уже работают без сети и синхронизируются с аккаунтом после подключения.';
 
   @override
   String get asrCalculation => 'Расчёт Асра';
@@ -938,19 +920,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get asrHanafi => 'Ханафитский';
 
   @override
-  String get asrStandardHint =>
-      'Коэффициент тени 1 — используется в шафиитском, маликитском и ханбалитском мазхабах.';
+  String get asrStandardHint => 'Коэффициент тени 1 — используется в шафиитском, маликитском и ханбалитском мазхабах.';
 
   @override
-  String get asrHanafiHint =>
-      'Коэффициент тени 2 — используется в ханафитском мазхабе.';
+  String get asrHanafiHint => 'Коэффициент тени 2 — используется в ханафитском мазхабе.';
 
   @override
   String get manualPrayerAdjustments => 'Ручные поправки времени';
 
   @override
-  String get manualPrayerAdjustmentsHint =>
-      'Добавляйте или вычитайте минуты только для соответствия доверенному местному расписанию.';
+  String get manualPrayerAdjustmentsHint => 'Добавляйте или вычитайте минуты только для соответствия доверенному местному расписанию.';
 
   @override
   String get advancedCalculationRules => 'Расширенные правила';
@@ -1004,8 +983,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chooseCityInstead => 'Выбрать город вместо геолокации';
 
   @override
-  String get cityFallbackDescription =>
-      'Город — приватный запасной вариант на устройстве, когда точная геолокация недоступна.';
+  String get cityFallbackDescription => 'Город — приватный запасной вариант на устройстве, когда точная геолокация недоступна.';
 
   @override
   String get searchCity => 'Поиск города';
@@ -1023,15 +1001,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fromGeographicNorth => 'от географического севера';
 
   @override
-  String get qiblaNorthHint =>
-      'Это географическое направление, а не живой компас. Сначала совместите верх телефона с севером, затем следуйте стрелке.';
+  String get qiblaNorthHint => 'Это географическое направление, а не живой компас. Сначала совместите верх телефона с севером, затем следуйте стрелке.';
 
   @override
   String get qiblaNorth => 'С';
 
   @override
-  String get qiblaLiveHint =>
-      'Компас устройства включён: держите телефон горизонтально — стрелка показывает Киблу относительно его верха.';
+  String get qiblaLiveHint => 'Компас устройства включён: держите телефон горизонтально — стрелка показывает Киблу относительно его верха.';
 
   @override
   String get qiblaFacing => 'Вы смотрите на Киблу';
@@ -1040,8 +1016,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qiblaCalibrationNeeded => 'Компас нужно откалибровать';
 
   @override
-  String get qiblaCalibrationHint =>
-      'Поводите телефоном в воздухе восьмёркой несколько раз, подальше от металла и магнитов, в том числе магнитных чехлов.';
+  String get qiblaCalibrationHint => 'Поводите телефоном в воздухе восьмёркой несколько раз, подальше от металла и магнитов, в том числе магнитных чехлов.';
 
   @override
   String get qiblaCompassUnavailable => 'Компас на этом устройстве недоступен.';
@@ -1050,16 +1025,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get prayerCalendar => 'Календарь намаза на месяц';
 
   @override
-  String get prayerCalendarHint =>
-      'Все времена на выбранный месяц, доступны без интернета';
+  String get prayerCalendarHint => 'Все времена на выбранный месяц, доступны без интернета';
 
   @override
-  String get prayerCalendarUnavailable =>
-      'Не удалось рассчитать выбранный месяц';
+  String get prayerCalendarUnavailable => 'Не удалось рассчитать выбранный месяц';
 
   @override
-  String get prayerCalendarNeedsLocation =>
-      'Сначала выберите местоположение на экране намаза';
+  String get prayerCalendarNeedsLocation => 'Сначала выберите местоположение на экране намаза';
 
   @override
   String get previousMonth => 'Предыдущий месяц';
@@ -1071,8 +1043,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get prayerWidget => 'Виджет времени намаза';
 
   @override
-  String get prayerWidgetHint =>
-      'Ближайшая молитва и пять времён на главном экране, даже без интернета';
+  String get prayerWidgetHint => 'Ближайшая молитва и пять времён на главном экране, даже без интернета';
 
   @override
   String get homeWidgets => 'Виджеты на рабочем столе';
@@ -1084,8 +1055,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get planWidgetHint => 'Дневная цель, пальма и чтение после намаза';
 
   @override
-  String get planWidgetEmpty =>
-      'Откройте план в IQRO, и здесь появится цель на день';
+  String get planWidgetEmpty => 'Откройте план в IQRO, и здесь появится цель на день';
 
   @override
   String get addPrayerWidget => 'Добавить виджет';
@@ -1094,52 +1064,43 @@ class AppLocalizationsRu extends AppLocalizations {
   String get homeWidgetAlreadyAdded => 'Виджет уже добавлен. Данные обновлены.';
 
   @override
-  String get prayerWidgetPinRequested =>
-      'Выберите место для виджета IQRO на главном экране';
+  String get prayerWidgetPinRequested => 'Выберите место для виджета IQRO на главном экране';
 
   @override
-  String get prayerWidgetManualAndroid =>
-      'Нажмите и удерживайте свободное место на главном экране, откройте «Виджеты» и выберите IQRO.';
+  String get prayerWidgetManualAndroid => 'Нажмите и удерживайте свободное место на главном экране, откройте «Виджеты» и выберите IQRO.';
 
   @override
-  String get prayerWidgetManualIos =>
-      'Нажмите и удерживайте главный экран, нажмите «+», найдите IQRO и добавьте виджет.';
+  String get prayerWidgetManualIos => 'Нажмите и удерживайте главный экран, нажмите «+», найдите IQRO и добавьте виджет.';
 
   @override
-  String get prayerWidgetNeedsLocation =>
-      'Сначала выберите местоположение и рассчитайте время намаза';
+  String get prayerWidgetNeedsLocation => 'Сначала выберите местоположение и рассчитайте время намаза';
 
   @override
-  String get prayerLocationPrivacy =>
-      'Координаты остаются на устройстве и никогда не попадают в аналитику.';
+  String get prayerLocationPrivacy => 'Координаты остаются на устройстве и никогда не попадают в аналитику.';
 
   @override
   String get useMyLocation => 'Использовать моё местоположение';
 
   @override
-  String get locationDenied =>
-      'Доступ к геолокации выключен. Его можно включить в настройках устройства.';
+  String get locationDenied => 'Доступ к геолокации выключен. Его можно включить в настройках устройства.';
 
   @override
   String get locationServicesDisabled => 'Геолокация на телефоне выключена';
 
   @override
-  String get locationServicesDisabledBody =>
-      'Включите геолокацию и вернитесь в IQRO — расчёт продолжится автоматически.';
+  String get locationServicesDisabledBody => 'Включите геолокацию и вернитесь в IQRO — расчёт продолжится автоматически.';
 
   @override
   String get locationPermissionRequired => 'Нужен доступ к местоположению';
 
   @override
-  String get locationPermissionRequiredBody =>
-      'Разрешите доступ для расчёта времени намаза. Координаты останутся на этом устройстве.';
+  String get locationPermissionRequiredBody => 'Разрешите доступ для расчёта времени намаза. Координаты останутся на этом устройстве.';
 
   @override
   String get locationUnavailable => 'Не удалось определить местоположение';
 
   @override
-  String get prayerCalculationFailed =>
-      'Не удалось рассчитать время намаза. Проверьте метод расчёта и повторите.';
+  String get prayerCalculationFailed => 'Не удалось рассчитать время намаза. Проверьте метод расчёта и повторите.';
 
   @override
   String get prayerUnavailable => 'Время намаза ещё не рассчитано';
@@ -1169,8 +1130,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get memorizationEditPlan => 'Изменить план';
 
   @override
-  String get memorizationPlanDescription =>
-      'Выберите суру, диапазон аятов, дневную цель, паузу и чтение. План синхронизируется с вашим аккаунтом.';
+  String get memorizationPlanDescription => 'Выберите суру, диапазон аятов, дневную цель, паузу и чтение. План синхронизируется с вашим аккаунтом.';
 
   @override
   String get memorizationDailyRepetitions => 'Повторений в день';
@@ -1191,8 +1151,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get memorizationPlanSaved => 'План заучивания сохранён';
 
   @override
-  String get memorizationRangeInvalid =>
-      'Проверьте начало и конец диапазона аятов';
+  String get memorizationRangeInvalid => 'Проверьте начало и конец диапазона аятов';
 
   @override
   String get memorizationTodayCompleted => 'Цель на сегодня выполнена';
@@ -1282,22 +1241,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get duaUnavailable => 'Это ду’а недоступно';
 
   @override
-  String get cachedDuaWarning =>
-      'Показана сохранённая копия. Аудио станет доступно после проверки актуальной версии.';
+  String get cachedDuaWarning => 'Показана сохранённая копия. Аудио станет доступно после проверки актуальной версии.';
 
   @override
   String get duaAudio => 'Аудио ду’а';
 
   @override
-  String get duaAudioStreaming =>
-      'Для прослушивания нужно подключение к интернету';
+  String get duaAudioStreaming => 'Для прослушивания нужно подключение к интернету';
 
   @override
   String get duaPractice => 'Практика повторения';
 
   @override
-  String get duaPracticeHint =>
-      'Нажимайте после каждого прочтения. Счётчик хранится только на этом экране.';
+  String get duaPracticeHint => 'Нажимайте после каждого прочтения. Счётчик хранится только на этом экране.';
 
   @override
   String get reset => 'Сбросить';
@@ -1407,8 +1363,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountSwitch => 'Сменить аккаунт';
 
   @override
-  String get accountSwitchHint =>
-      'Выйти и выбрать другой аккаунт Google или почту';
+  String get accountSwitchHint => 'Выйти и выбрать другой аккаунт Google или почту';
 
   @override
   String get devices => 'Устройства';
@@ -1423,8 +1378,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get feedbackTitle => 'Обратная связь и религиозный аудит';
 
   @override
-  String get feedbackAccountHint =>
-      'Сообщите о неточности в тексте, аудио, времени намаза или приложении.';
+  String get feedbackAccountHint => 'Сообщите о неточности в тексте, аудио, времени намаза или приложении.';
 
   @override
   String get feedbackSignInRequired => 'Войдите, чтобы отправить обращение';
@@ -1433,8 +1387,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ayahTimingsMissing => 'без разметки аятов';
 
   @override
-  String get feedbackDescription =>
-      'Сообщите религиозной редакции о неточности в тексте, таймкодах или расчётах молитв.';
+  String get feedbackDescription => 'Сообщите религиозной редакции о неточности в тексте, таймкодах или расчётах молитв.';
 
   @override
   String get feedbackCreate => 'Создать обращение';
@@ -1452,8 +1405,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get feedbackMessage => 'Сообщение';
 
   @override
-  String get feedbackMessagePlaceholder =>
-      'Подробное описание вопроса или замечания…';
+  String get feedbackMessagePlaceholder => 'Подробное описание вопроса или замечания…';
 
   @override
   String get feedbackSend => 'Отправить обращение';
@@ -1490,12 +1442,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get feedbackCloseTicket => 'Закрыть обращение';
 
   @override
-  String get feedbackCloseConfirmation =>
-      'Закрыть обращение? Позже его можно будет открыть снова.';
+  String get feedbackCloseConfirmation => 'Закрыть обращение? Позже его можно будет открыть снова.';
 
   @override
-  String get feedbackNoFurtherActions =>
-      'Для этого обращения больше нельзя отправлять сообщения.';
+  String get feedbackNoFurtherActions => 'Для этого обращения больше нельзя отправлять сообщения.';
 
   @override
   String get feedbackRequiredFields => 'Заполните тему и сообщение.';
@@ -1504,8 +1454,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get feedbackRateLimited => 'Слишком много обращений. Повторите позже.';
 
   @override
-  String get feedbackActionError =>
-      'Не удалось выполнить действие с обращением. Повторите позже.';
+  String get feedbackActionError => 'Не удалось выполнить действие с обращением. Повторите позже.';
 
   @override
   String get feedbackCategoryReligious => 'Религиозный контент';
@@ -1577,8 +1526,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get syncNow => 'Синхронизировать';
 
   @override
-  String get syncHint =>
-      'Отправить локальные изменения и получить обновления с других устройств.';
+  String get syncHint => 'Отправить локальные изменения и получить обновления с других устройств.';
 
   @override
   String get language => 'Язык';
@@ -1602,8 +1550,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get shareTitle => 'Пригласите близких в IQRO';
 
   @override
-  String get shareBody =>
-      'Поделитесь спокойным способом читать и слушать Коран.';
+  String get shareBody => 'Поделитесь спокойным способом читать и слушать Коран.';
 
   @override
   String get shareButton => 'Поделиться приложением';
@@ -1627,8 +1574,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get rewardBalance => 'Баланс бонусов';
 
   @override
-  String get referralRequiresAccount =>
-      'Персональная ссылка станет доступна после подтверждения электронной почты.';
+  String get referralRequiresAccount => 'Персональная ссылка станет доступна после подтверждения электронной почты.';
 
   @override
   String get remoteCopy => 'Текст кампании управляется IQRO';
@@ -1655,8 +1601,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get offlineMushaf => 'Мусхаф без интернета';
 
   @override
-  String get offlineMushafDescription =>
-      'Скачайте все страницы и карту аятов. Файлы проверяются перед включением.';
+  String get offlineMushafDescription => 'Скачайте все страницы и карту аятов. Файлы проверяются перед включением.';
 
   @override
   String get downloadForOffline => 'Скачать';
@@ -1668,8 +1613,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mushafAvailableOffline => 'Доступен без интернета';
 
   @override
-  String get mushafDownloadFailed =>
-      'Загрузка прервана. Можно продолжить с сохранённого места.';
+  String get mushafDownloadFailed => 'Загрузка прервана. Можно продолжить с сохранённого места.';
 
   @override
   String get resumeDownload => 'Продолжить';
@@ -1678,8 +1622,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get offlineAudio => 'Аудио без интернета';
 
   @override
-  String get offlineAudioDescription =>
-      'Скачайте все 114 сур выбранного чтения. Каждый файл проверяется перед включением.';
+  String get offlineAudioDescription => 'Скачайте все 114 сур выбранного чтения. Каждый файл проверяется перед включением.';
 
   @override
   String get audioDownloading => 'Скачиваем аудио';
@@ -1688,19 +1631,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get audioAvailableOffline => 'Аудио доступно без интернета';
 
   @override
-  String get audioDownloadFailed =>
-      'Загрузка аудио прервана. Можно продолжить с сохранённого места.';
+  String get audioDownloadFailed => 'Загрузка аудио прервана. Можно продолжить с сохранённого места.';
 
   @override
-  String get audioOfflineUnavailable =>
-      'Для этой записи право на офлайн-загрузку не предоставлено.';
+  String get audioOfflineUnavailable => 'Для этой записи право на офлайн-загрузку не предоставлено.';
 
   @override
   String get offlineStorage => 'Офлайн-хранилище';
 
   @override
-  String get offlineStorageSettingsSubtitle =>
-      'Скачанные страницы Мусхафа, аудио и картинки курса намаза';
+  String get offlineStorageSettingsSubtitle => 'Скачанные страницы Мусхафа, аудио и картинки курса намаза';
 
   @override
   String offlineStorageUsed(String size) {
@@ -1708,8 +1648,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get offlineStorageDescription =>
-      'Здесь показаны только файлы, скачанные самим приложением. Ничего не удаляется автоматически.';
+  String get offlineStorageDescription => 'Здесь показаны только файлы, скачанные самим приложением. Ничего не удаляется автоматически.';
 
   @override
   String offlineStorageQuota(String size) {
@@ -1717,8 +1656,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get offlineStorageQuotaExceeded =>
-      'Для этого пакета недостаточно места в лимите офлайн-хранилища. Сначала удалите ненужный пакет.';
+  String get offlineStorageQuotaExceeded => 'Для этого пакета недостаточно места в лимите офлайн-хранилища. Сначала удалите ненужный пакет.';
 
   @override
   String downloadOfflineConfirmation(String size) {
@@ -1804,8 +1742,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get analyticsTitle => 'Статистика использования';
 
   @override
-  String get analyticsCardText =>
-      'С вашего согласия мы считаем использование приложения через Google Analytics, чтобы понимать, какие разделы полезны. Без согласия приложение работает так же.';
+  String get analyticsCardText => 'С вашего согласия мы считаем использование приложения через Google Analytics, чтобы понимать, какие разделы полезны. Без согласия приложение работает так же.';
 
   @override
   String get analyticsPolicy => 'Политика конфиденциальности';
@@ -1817,16 +1754,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get analyticsDecline => 'Отклонить';
 
   @override
-  String get analyticsStateGranted =>
-      'Вы разрешили статистику: Google Analytics включён на этом устройстве.';
+  String get analyticsStateGranted => 'Вы разрешили статистику: Google Analytics включён на этом устройстве.';
 
   @override
-  String get analyticsStateDenied =>
-      'Вы отказались от статистики: Google Analytics на этом устройстве выключен.';
+  String get analyticsStateDenied => 'Вы отказались от статистики: Google Analytics на этом устройстве выключен.';
 
   @override
-  String get analyticsStateUnset =>
-      'Вы ещё не выбрали. Пока выбора нет, Google Analytics выключен.';
+  String get analyticsStateUnset => 'Вы ещё не выбрали. Пока выбора нет, Google Analytics выключен.';
 
   @override
   String get reminders => 'Напоминания';
@@ -1838,19 +1772,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get notificationAccess => 'Разрешите уведомления';
 
   @override
-  String get notificationAccessBody =>
-      'IQRO напомнит в выбранное время, даже когда приложение закрыто.';
+  String get notificationAccessBody => 'IQRO напомнит в выбранное время, даже когда приложение закрыто.';
 
   @override
   String get allowNotifications => 'Разрешить уведомления';
 
   @override
-  String get notificationDenied =>
-      'Уведомления выключены в настройках устройства.';
+  String get notificationDenied => 'Уведомления выключены в настройках устройства.';
 
   @override
-  String get approximateDelivery =>
-      'Система может доставлять уведомления с небольшой задержкой для экономии батареи.';
+  String get approximateDelivery => 'Система может доставлять уведомления с небольшой задержкой для экономии батареи.';
 
   @override
   String get prayerReminders => 'Напоминания о намазе';
@@ -1868,12 +1799,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get adhanSystemSound => 'Обычный';
 
   @override
-  String get adhanHint =>
-      'Короткий азан во время намаза. На телефоне должен быть включён звук.';
+  String get adhanHint => 'Короткий азан во время намаза. На телефоне должен быть включён звук.';
 
   @override
-  String get prayerReminderSetup =>
-      'Сначала выберите метод расчёта и определите местоположение в разделе «Время намаза».';
+  String get prayerReminderSetup => 'Сначала выберите метод расчёта и определите местоположение в разделе «Время намаза».';
 
   @override
   String get quranReviewReminders => 'Повторение Корана';
@@ -1960,12 +1889,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get readerHaptics => 'Вибрация при перелистывании';
 
   @override
-  String get readerHapticsHint =>
-      'Короткий отклик при смене страницы Мусхафа. В Android также должна быть включена вибрация касаний.';
+  String get readerHapticsHint => 'Короткий отклик при смене страницы Мусхафа. В Android также должна быть включена вибрация касаний.';
 
   @override
-  String get mushafPageCaching =>
-      'Страницы загружаются по мере чтения. Открытые страницы и их шрифты сохраняются на устройстве и доступны без интернета.';
+  String get mushafPageCaching => 'Страницы загружаются по мере чтения. Открытые страницы и их шрифты сохраняются на устройстве и доступны без интернета.';
 
   @override
   String get planCreditedToday => 'Сегодня засчитано';
@@ -1998,45 +1925,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get planManualEntry => 'Добавить прочитанное вручную';
 
   @override
-  String get planManualHelp =>
-      'Добавьте чтение, которое ещё не было учтено. Это увеличит сегодняшний прогресс, а не дневную цель.';
+  String get planManualHelp => 'Добавьте чтение, которое ещё не было учтено. Это увеличит сегодняшний прогресс, а не дневную цель.';
 
   @override
   String get planHowCounted => 'Как считается прогресс';
 
   @override
-  String get planPagesHelp =>
-      'При переходе на следующую страницу в читалке страница засчитывается автоматически. Ручные записи тоже учитываются. Перелистывание не подтверждает, что страница прочитана.';
+  String get planPagesHelp => 'При переходе на следующую страницу в читалке страница засчитывается автоматически. Ручные записи тоже учитываются. Перелистывание не подтверждает, что страница прочитана.';
 
   @override
-  String get planMinutesHelp =>
-      'Активное время в читалке учитывается автоматически. Минуты, добавленные вручную, тоже входят в прогресс.';
+  String get planMinutesHelp => 'Активное время в читалке учитывается автоматически. Минуты, добавленные вручную, тоже входят в прогресс.';
 
   @override
-  String get planAyahsHelp =>
-      'Последовательное продвижение по аятам в читалке учитывается автоматически. Аяты, добавленные вручную, тоже входят в прогресс.';
+  String get planAyahsHelp => 'Последовательное продвижение по аятам в читалке учитывается автоматически. Аяты, добавленные вручную, тоже входят в прогресс.';
 
   @override
-  String get planDailyHelp =>
-      'Прогресс считается отдельно за каждый день. Смена цели его не обнуляет; предыдущие дни остаются в истории.';
+  String get planDailyHelp => 'Прогресс считается отдельно за каждый день. Смена цели его не обнуляет; предыдущие дни остаются в истории.';
 
   @override
-  String get planResetHelp =>
-      'Отметки после намаза можно уменьшить кнопкой «−». Обнуление всего прогресса за сегодня на этом экране пока недоступно.';
+  String get planResetHelp => 'Отметки после намаза можно уменьшить кнопкой «−». Обнуление всего прогресса за сегодня на этом экране пока недоступно.';
 
   @override
   String get planPrayerTitle => 'Чтение после намаза';
 
   @override
-  String get planPrayerSummary =>
-      'Страницы, отмеченные вами за сегодня. Это выполненное чтение, а не цель.';
+  String get planPrayerSummary => 'Страницы, отмеченные вами за сегодня. Это выполненное чтение, а не цель.';
 
   @override
   String get planEditPrayer => 'Изменить отметки за сегодня';
 
   @override
-  String get planPrayerInstructions =>
-      'Отмечайте страницы, прочитанные после каждого намаза. «+» добавляет одну страницу, «−» убирает одну. Ноль означает, что страницы не отмечены.';
+  String get planPrayerInstructions => 'Отмечайте страницы, прочитанные после каждого намаза. «+» добавляет одну страницу, «−» убирает одну. Ноль означает, что страницы не отмечены.';
 
   @override
   String planRemovePage(String prayer) {
@@ -2049,12 +1968,10 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get planUnavailable =>
-      'Не удалось обновить план. Показан сохранённый прогресс; изменения станут доступны после успешного обновления.';
+  String get planUnavailable => 'Не удалось обновить план. Показан сохранённый прогресс; изменения станут доступны после успешного обновления.';
 
   @override
-  String get planGoalHint =>
-      'Выберите дневную цель в минутах, страницах или аятах. Это настройка цели, а не запись прочитанного.';
+  String get planGoalHint => 'Выберите дневную цель в минутах, страницах или аятах. Это настройка цели, а не запись прочитанного.';
 
   @override
   String planBestStreak(String streak) {
@@ -2068,8 +1985,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String planPages(num count) {
-    final intl.NumberFormat countNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
+    final intl.NumberFormat countNumberFormat = intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
 
     String _temp0 = intl.Intl.pluralLogic(
@@ -2085,8 +2001,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String planMinutes(num count) {
-    final intl.NumberFormat countNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
+    final intl.NumberFormat countNumberFormat = intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
 
     String _temp0 = intl.Intl.pluralLogic(
@@ -2102,8 +2017,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String planAyahs(num count) {
-    final intl.NumberFormat countNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
+    final intl.NumberFormat countNumberFormat = intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
 
     String _temp0 = intl.Intl.pluralLogic(
@@ -2119,8 +2033,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String planStreak(num count) {
-    final intl.NumberFormat countNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
+    final intl.NumberFormat countNumberFormat = intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
 
     String _temp0 = intl.Intl.pluralLogic(
@@ -2156,12 +2069,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get palmStageFruitingPalm => 'Пальма с финиками';
 
   @override
-  String get palmMoodPlanting =>
-      'Посадите косточку: прочитайте первую страницу';
+  String get palmMoodPlanting => 'Посадите косточку: прочитайте первую страницу';
 
   @override
-  String get palmMoodFlourishing =>
-      'Цель на сегодня выполнена — пальма тянется к солнцу';
+  String get palmMoodFlourishing => 'Цель на сегодня выполнена — пальма тянется к солнцу';
 
   @override
   String get palmMoodGrowing => 'Сегодняшнее чтение уже питает пальму';
@@ -2170,8 +2081,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get palmMoodWaiting => 'Пальма ждёт сегодняшнего чтения';
 
   @override
-  String get palmMoodResting =>
-      'Пальма отдыхает в тени и ждёт вас. Даже одна страница её порадует';
+  String get palmMoodResting => 'Пальма отдыхает в тени и ждёт вас. Даже одна страница её порадует';
 
   @override
   String palmNextStage(String stage) {
@@ -2182,8 +2092,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get palmFullyGrown => 'Пальма выросла — пусть приносит плоды';
 
   @override
-  String get palmHowItGrows =>
-      'День чтения — +1, выполненная цель — +2. Пропуски не вредят пальме — она просто отдыхает.';
+  String get palmHowItGrows => 'День чтения — +1, выполненная цель — +2. Пропуски не вредят пальме — она просто отдыхает.';
 
   @override
   String get planSummaryTitle => 'Сводка прогресса';
@@ -2214,8 +2123,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get planCalendarTitle => 'Календарь прогресса';
 
   @override
-  String get planCalendarHint =>
-      'Выберите день, чтобы увидеть норму, чтение и отметки после намаза.';
+  String get planCalendarHint => 'Выберите день, чтобы увидеть норму, чтение и отметки после намаза.';
 
   @override
   String get planCalendarEmpty => 'За этот период нет данных.';
@@ -2252,8 +2160,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get planDeleteEntryTitle => 'Удалить запись?';
 
   @override
-  String get planDeleteEntryConfirm =>
-      'Эта ручная запись будет удалена, а прогресс пересчитан.';
+  String get planDeleteEntryConfirm => 'Эта ручная запись будет удалена, а прогресс пересчитан.';
 
   @override
   String get planReadingAmount => 'Количество';
@@ -2444,15 +2351,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountSignOutEverywhereTitle => 'Завершить все сессии?';
 
   @override
-  String get accountSignOutEverywhereDescription =>
-      'Будут отозваны текущая сессия и входы на остальных устройствах. Для продолжения потребуется снова получить код по email.';
+  String get accountSignOutEverywhereDescription => 'Будут отозваны текущая сессия и входы на остальных устройствах. Для продолжения потребуется снова получить код по email.';
 
   @override
   String get accountSignOutEverywhereConfirm => 'Подтвердить выход везде';
 
   @override
-  String get accountSignOutEverywhereError =>
-      'Не удалось завершить все сессии. Повторите попытку.';
+  String get accountSignOutEverywhereError => 'Не удалось завершить все сессии. Повторите попытку.';
 
   @override
   String get accountDangerZone => 'Опасная зона';
@@ -2461,8 +2366,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountDeletionTitle => 'Удаление аккаунта';
 
   @override
-  String get accountDeletionDescription =>
-      'После повторной проверки email начнётся 7-дневный период отмены. До его окончания безвозвратное удаление не выполняется.';
+  String get accountDeletionDescription => 'После повторной проверки email начнётся 7-дневный период отмены. До его окончания безвозвратное удаление не выполняется.';
 
   @override
   String get accountDelete => 'Удалить аккаунт';
@@ -2471,15 +2375,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountDeletionRequestTitle => 'Запланировать удаление аккаунта?';
 
   @override
-  String get accountDeletionRequestDescription =>
-      'Обычный доступ будет заблокирован сразу. Через 7 дней синхронизируемые данные будут удалены, а аккаунт — анонимизирован.';
+  String get accountDeletionRequestDescription => 'Обычный доступ будет заблокирован сразу. Через 7 дней синхронизируемые данные будут удалены, а аккаунт — анонимизирован.';
 
   @override
   String get accountDeletionCancelTitle => 'Отменить удаление?';
 
   @override
-  String get accountDeletionCancelDescription =>
-      'Для восстановления аккаунта подтвердите владение email новым одноразовым кодом.';
+  String get accountDeletionCancelDescription => 'Для восстановления аккаунта подтвердите владение email новым одноразовым кодом.';
 
   @override
   String accountSendCodeTo(String email) {
@@ -2507,22 +2409,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountCancelDeletion => 'Отменить удаление';
 
   @override
-  String get accountDeletionScheduledNotice =>
-      'Удаление аккаунта запланировано. До указанной даты его можно отменить.';
+  String get accountDeletionScheduledNotice => 'Удаление аккаунта запланировано. До указанной даты его можно отменить.';
 
   @override
   String get accountDeletionCancelledNotice => 'Удаление аккаунта отменено.';
 
   @override
-  String get accountCodeSendError =>
-      'Не удалось отправить код. Повторите попытку.';
+  String get accountCodeSendError => 'Не удалось отправить код. Повторите попытку.';
 
   @override
   String get accountCodeVerifyError => 'Не удалось подтвердить код.';
 
   @override
-  String get accountCodeExpired =>
-      'Подтверждение устарело. Запросите новый код.';
+  String get accountCodeExpired => 'Подтверждение устарело. Запросите новый код.';
 
   @override
   String get accountActionError => 'Не удалось завершить действие с аккаунтом.';
@@ -2543,63 +2442,49 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get apiErrorEmailInvalid =>
-      'Код неверен или сессия изменилась. Запросите новый код.';
+  String get apiErrorEmailInvalid => 'Код неверен или сессия изменилась. Запросите новый код.';
 
   @override
-  String get apiErrorEmailExpired =>
-      'Срок действия кода истёк. Запросите новый код.';
+  String get apiErrorEmailExpired => 'Срок действия кода истёк. Запросите новый код.';
 
   @override
-  String get apiErrorEmailDelivery =>
-      'Не удалось отправить код. Попробуйте ещё раз позже.';
+  String get apiErrorEmailDelivery => 'Не удалось отправить код. Попробуйте ещё раз позже.';
 
   @override
-  String get apiErrorGoogleFailed =>
-      'Не удалось войти через Google. Попробуйте ещё раз или войдите по коду из письма.';
+  String get apiErrorGoogleFailed => 'Не удалось войти через Google. Попробуйте ещё раз или войдите по коду из письма.';
 
   @override
-  String get apiErrorGoogleEmailUnverified =>
-      'Почта этого Google-аккаунта не подтверждена. Войдите по коду из письма.';
+  String get apiErrorGoogleEmailUnverified => 'Почта этого Google-аккаунта не подтверждена. Войдите по коду из письма.';
 
   @override
-  String get apiErrorGoogleUnavailable =>
-      'Вход через Google сейчас недоступен. Войдите по коду из письма.';
+  String get apiErrorGoogleUnavailable => 'Вход через Google сейчас недоступен. Войдите по коду из письма.';
 
   @override
   String get apiErrorRateLimited => 'Слишком много попыток. Повторите позже.';
 
   @override
-  String get apiErrorInstallationMissing =>
-      'Сессия устройства потеряна. Запросите новый код.';
+  String get apiErrorInstallationMissing => 'Сессия устройства потеряна. Запросите новый код.';
 
   @override
-  String get apiErrorLinkUnavailable =>
-      'Этот вход нельзя завершить в текущей сессии.';
+  String get apiErrorLinkUnavailable => 'Этот вход нельзя завершить в текущей сессии.';
 
   @override
-  String get apiErrorIdentityLinked =>
-      'Этот email уже привязан к другому аккаунту.';
+  String get apiErrorIdentityLinked => 'Этот email уже привязан к другому аккаунту.';
 
   @override
-  String get apiErrorReauthRequired =>
-      'Для этого действия нужен новый код из email.';
+  String get apiErrorReauthRequired => 'Для этого действия нужен новый код из email.';
 
   @override
-  String get apiErrorLifecycleUnavailable =>
-      'Это действие с аккаунтом сейчас недоступно.';
+  String get apiErrorLifecycleUnavailable => 'Это действие с аккаунтом сейчас недоступно.';
 
   @override
-  String get apiErrorCurrentDevice =>
-      'Для текущего устройства используйте обычный выход.';
+  String get apiErrorCurrentDevice => 'Для текущего устройства используйте обычный выход.';
 
   @override
-  String get apiErrorDeviceNotFound =>
-      'Устройство уже отключено или недоступно.';
+  String get apiErrorDeviceNotFound => 'Устройство уже отключено или недоступно.';
 
   @override
-  String get apiErrorCursorExpired =>
-      'История синхронизации устарела. Выполняется полная сверка данных.';
+  String get apiErrorCursorExpired => 'История синхронизации устарела. Выполняется полная сверка данных.';
 
   @override
   String get apiErrorUnknown => 'Повторите попытку позже.';
@@ -2647,15 +2532,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tajweedClose => 'Закрыть';
 
   @override
-  String get tajweedReviewNote =>
-      'Пояснения проходят проверку у преподавателя таджвида.';
+  String get tajweedReviewNote => 'Пояснения проходят проверку у преподавателя таджвида.';
 
   @override
   String get tajweedAudioError => 'Не удалось воспроизвести фрагмент.';
 
   @override
-  String get tajweedAudioUnavailable =>
-      'Звука этого места нет ни у одного чтеца: у них нет разметки этих слов. Аят можно послушать целиком.';
+  String get tajweedAudioUnavailable => 'Звука этого места нет ни у одного чтеца: у них нет разметки этих слов. Аят можно послушать целиком.';
 
   @override
   String get tajweedBreakdown => 'Разбор таджвида';
@@ -2776,8 +2659,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get tajweedCourseFindWrong =>
-      'Здесь этого правила нет — попробуйте другое слово.';
+  String get tajweedCourseFindWrong => 'Здесь этого правила нет — попробуйте другое слово.';
 
   @override
   String get tajweedCourseShowAnswer => 'Показать ответ';
@@ -2814,12 +2696,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tajweedPracticeShort => 'Практика';
 
   @override
-  String get tajweedPracticeDescription =>
-      'Задания по пройденным урокам: найдите правило в аяте, назовите его, узнайте на слух.';
+  String get tajweedPracticeDescription => 'Задания по пройденным урокам: найдите правило в аяте, назовите его, узнайте на слух.';
 
   @override
-  String get tajweedPracticeCta =>
-      'Закрепите пройденные правила на аятах всего Корана.';
+  String get tajweedPracticeCta => 'Закрепите пройденные правила на аятах всего Корана.';
 
   @override
   String get tajweedPracticeOpen => 'Открыть практику';
@@ -2828,8 +2708,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tajweedPracticeStart => 'Начать практику';
 
   @override
-  String get tajweedPracticeNoLessons =>
-      'Пройдите хотя бы один урок курса: практика строится по пройденным правилам.';
+  String get tajweedPracticeNoLessons => 'Пройдите хотя бы один урок курса: практика строится по пройденным правилам.';
 
   @override
   String get tajweedPracticeToCourse => 'К курсу';
@@ -2867,8 +2746,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get tajweedPracticeIdentifyPrompt =>
-      'Какое правило в выделенном месте?';
+  String get tajweedPracticeIdentifyPrompt => 'Какое правило в выделенном месте?';
 
   @override
   String get tajweedPracticeListenPrompt => 'Послушайте и определите правило';
@@ -2914,15 +2792,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get coursesSubtitle => 'Темы с конспектами';
 
   @override
-  String get coursesOfflineBanner =>
-      'Нет интернета — показаны сохранённые курсы';
+  String get coursesOfflineBanner => 'Нет интернета — показаны сохранённые курсы';
 
   @override
   String get coursesEmpty => 'Новые курсы появятся здесь.';
 
   @override
-  String get coursesOfflineEmpty =>
-      'Сохранённых курсов пока нет. Откройте курс с интернетом — он останется на телефоне.';
+  String get coursesOfflineEmpty => 'Сохранённых курсов пока нет. Откройте курс с интернетом — он останется на телефоне.';
 
   @override
   String get coursesLoadFailed => 'Не удалось загрузить курсы';
@@ -3046,8 +2922,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get coursesUpdateApp => 'Обновите приложение';
 
   @override
-  String get coursesUpdateAppMessage =>
-      'Этот курс сделан для новой версии IQRO.';
+  String get coursesUpdateAppMessage => 'Этот курс сделан для новой версии IQRO.';
 
   @override
   String get coursesUnavailable => 'Курс сейчас недоступен';
@@ -3077,13 +2952,16 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String coursesVideoLanguage(String language) {
-    String _temp0 = intl.Intl.selectLogic(language, {
-      'ru': 'Видео на русском языке',
-      'en': 'Видео на английском языке',
-      'ar': 'Видео на арабском языке',
-      'tr': 'Видео на турецком языке',
-      'other': 'Видео на другом языке',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      language,
+      {
+        'ru': 'Видео на русском языке',
+        'en': 'Видео на английском языке',
+        'ar': 'Видео на арабском языке',
+        'tr': 'Видео на турецком языке',
+        'other': 'Видео на другом языке',
+      },
+    );
     return '$_temp0';
   }
 
@@ -3259,12 +3137,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingWelcomeTitle => 'Добро пожаловать в IQRO';
 
   @override
-  String get onboardingWelcomeBody =>
-      'Коран, ду‘а, намаз и учёба в одном приложении. Выберите язык: интерфейс сменится сразу.';
+  String get onboardingWelcomeBody => 'Коран, ду‘а, намаз и учёба в одном приложении. Выберите язык: интерфейс сменится сразу.';
 
   @override
-  String get onboardingLanguageHint =>
-      'Заранее выбран язык телефона. Поменять его можно в любой момент в «Настройках».';
+  String get onboardingLanguageHint => 'Заранее выбран язык телефона. Поменять его можно в любой момент в «Настройках».';
 
   @override
   String get onboardingRtl => 'справа налево';
@@ -3289,67 +3165,55 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingTourQuranTitle => 'Коран и Мусхаф';
 
   @override
-  String get onboardingTourQuran1 =>
-      'Текст Корана с переводами и тафсирами на четырёх языках.';
+  String get onboardingTourQuran1 => 'Текст Корана с переводами и тафсирами на четырёх языках.';
 
   @override
-  String get onboardingTourQuran2 =>
-      'Мусхаф по страницам, как печатное издание.';
+  String get onboardingTourQuran2 => 'Мусхаф по страницам, как печатное издание.';
 
   @override
-  String get onboardingTourQuran3 =>
-      'Цветной таджвид, закладки и заметки к аятам.';
+  String get onboardingTourQuran3 => 'Цветной таджвид, закладки и заметки к аятам.';
 
   @override
   String get onboardingTourAudioTitle => 'Аудио и чтецы';
 
   @override
-  String get onboardingTourAudio1 =>
-      'Известные чтецы и плеер с подсветкой текущего аята.';
+  String get onboardingTourAudio1 => 'Известные чтецы и плеер с подсветкой текущего аята.';
 
   @override
-  String get onboardingTourAudio2 =>
-      'Очередь прослушивания и управление с экрана блокировки.';
+  String get onboardingTourAudio2 => 'Очередь прослушивания и управление с экрана блокировки.';
 
   @override
-  String get onboardingTourAudio3 =>
-      'Скачайте суры, чтобы слушать без интернета.';
+  String get onboardingTourAudio3 => 'Скачайте суры, чтобы слушать без интернета.';
 
   @override
   String get onboardingTourStudyTitle => 'Учёба шаг за шагом';
 
   @override
-  String get onboardingTourStudy1 =>
-      'План чтения: дневная норма и чтение после намаза.';
+  String get onboardingTourStudy1 => 'План чтения: дневная норма и чтение после намаза.';
 
   @override
-  String get onboardingTourStudy2 =>
-      'Заучивание сур с повторением по расписанию.';
+  String get onboardingTourStudy2 => 'Заучивание сур с повторением по расписанию.';
 
   @override
-  String get onboardingTourStudy3 =>
-      'Курсы по намазу и таджвиду: видео, упражнения и тесты.';
+  String get onboardingTourStudy3 => 'Курсы по намазу и таджвиду: видео, упражнения и тесты.';
 
   @override
   String get onboardingTourDailyTitle => 'На каждый день';
 
   @override
-  String get onboardingTourDaily1 =>
-      'Время намаза, направление киблы и календарь хиджры.';
+  String get onboardingTourDaily1 => 'Время намаза, направление киблы и календарь хиджры.';
 
   @override
   String get onboardingTourDaily2 => 'Ду‘а и азкары на разные случаи жизни.';
 
   @override
-  String get onboardingTourDaily3 =>
-      'Работает без интернета: скачанное всегда с вами.';
+  String get onboardingTourDaily3 => 'Работает без интернета: скачанное всегда с вами.';
 
   @override
   String get onboardingGoalTitle => 'Ваша цель';
 
   @override
-  String get onboardingGoalBody =>
-      'Подстроим главный экран и дневной план. Изменить можно потом в «Плане».';
+  String get onboardingGoalBody => 'Подстроим главный экран и дневной план. Изменить можно потом в «Плане».';
 
   @override
   String get onboardingDailyNorm => 'Дневная норма';
@@ -3369,15 +3233,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingPrayerTitle => 'Время намаза';
 
   @override
-  String get onboardingPrayerBody =>
-      'Чтобы считать время намаза и киблу, нужен ваш город. Координаты остаются на телефоне.';
+  String get onboardingPrayerBody => 'Чтобы считать время намаза и киблу, нужен ваш город. Координаты остаются на телефоне.';
 
   @override
   String get onboardingUseLocation => 'Определить по геолокации';
 
   @override
-  String get onboardingUseLocationHint =>
-      'Приблизительно, с точностью до района';
+  String get onboardingUseLocationHint => 'Приблизительно, с точностью до района';
 
   @override
   String get onboardingChooseCity => 'Выбрать город из списка';
@@ -3391,8 +3253,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get onboardingPrayerOffline =>
-      'Нет связи с сервером. Время намаза можно настроить позже на экране «Намаз».';
+  String get onboardingPrayerOffline => 'Нет связи с сервером. Время намаза можно настроить позже на экране «Намаз».';
 
   @override
   String get onboardingLater => 'Позже';
@@ -3401,8 +3262,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingRemindersTitle => 'Напоминания';
 
   @override
-  String get onboardingRemindersBody =>
-      'Пришлём уведомление ко времени каждого намаза. Без разрешения всё работает, просто без напоминаний.';
+  String get onboardingRemindersBody => 'Пришлём уведомление ко времени каждого намаза. Без разрешения всё работает, просто без напоминаний.';
 
   @override
   String get onboardingFivePrayers => 'Пять ежедневных намазов';
@@ -3414,22 +3274,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingNotificationsOn => 'Уведомления разрешены';
 
   @override
-  String get onboardingNotificationsBlocked =>
-      'Уведомления выключены. Их можно включить в настройках телефона.';
+  String get onboardingNotificationsBlocked => 'Уведомления выключены. Их можно включить в настройках телефона.';
 
   @override
   String get onboardingExactTitle => 'Минута в минуту';
 
   @override
-  String get onboardingExactBody =>
-      'Android может откладывать уведомления на несколько минут ради экономии батареи. Чтобы напоминание о намазе приходило точно, разрешите IQRO «Будильники и напоминания».';
+  String get onboardingExactBody => 'Android может откладывать уведомления на несколько минут ради экономии батареи. Чтобы напоминание о намазе приходило точно, разрешите IQRO «Будильники и напоминания».';
 
   @override
   String get onboardingExactStep1 => 'Нажмите «Открыть настройки»';
 
   @override
-  String get onboardingExactStep2 =>
-      'Включите «Разрешить установку будильников и напоминаний»';
+  String get onboardingExactStep2 => 'Включите «Разрешить установку будильников и напоминаний»';
 
   @override
   String get onboardingExactStep3 => 'Вернитесь в IQRO';
@@ -3444,8 +3301,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingSoundTitle => 'Звук азана';
 
   @override
-  String get onboardingSoundBody =>
-      'Звук уведомлений выключен. Если его не включить, азана не будет.';
+  String get onboardingSoundBody => 'Звук уведомлений выключен. Если его не включить, азана не будет.';
 
   @override
   String get onboardingSoundSwitch => 'Звук уведомлений';
@@ -3454,19 +3310,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingSoundOn => 'Звук включён, азан будет слышно.';
 
   @override
-  String get onboardingAnalyticsCounts =>
-      'Считаем: открытие сур, запуск аудио, пройденные уроки, «поделиться» и вход в аккаунт';
+  String get onboardingAnalyticsCounts => 'Считаем: открытие сур, запуск аудио, пройденные уроки, «поделиться» и вход в аккаунт';
 
   @override
-  String get onboardingAnalyticsNever =>
-      'Не отправляем: координаты, заметки, имя и почту';
+  String get onboardingAnalyticsNever => 'Не отправляем: координаты, заметки, имя и почту';
 
   @override
   String get onboardingDoneTitle => 'Всё готово';
 
   @override
-  String get onboardingDoneBody =>
-      'Пусть Аллах сделает ваше чтение лёгким и благословенным.';
+  String get onboardingDoneBody => 'Пусть Аллах сделает ваше чтение лёгким и благословенным.';
 
   @override
   String get onboardingSummaryPlan => 'План';
@@ -3481,8 +3334,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingAnalyticsOff => 'Не разрешена';
 
   @override
-  String get onboardingDoneHint =>
-      'Всё это можно поменять в «Настройках». Там же можно пройти знакомство заново.';
+  String get onboardingDoneHint => 'Всё это можно поменять в «Настройках». Там же можно пройти знакомство заново.';
 
   @override
   String get onboardingStart => 'Начать';
@@ -3516,8 +3368,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get memorizationListAlreadyInShort => 'Уже в списке.';
 
   @override
-  String get memorizationListContinuesCurrent =>
-      'Этот аят идёт сразу за текущим отрывком.';
+  String get memorizationListContinuesCurrent => 'Этот аят идёт сразу за текущим отрывком.';
 
   @override
   String memorizationListExtendTo(String range) {
@@ -3579,12 +3430,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appUpdateTitle => 'Доступна новая версия IQRO';
 
   @override
-  String get appUpdateText =>
-      'Обновление загрузится в фоне, а приложением можно пользоваться как обычно.';
+  String get appUpdateText => 'Обновление загрузится в фоне, а приложением можно пользоваться как обычно.';
 
   @override
-  String get appUpdateRequiredText =>
-      'Это важное обновление: установите его, чтобы приложение работало правильно.';
+  String get appUpdateRequiredText => 'Это важное обновление: установите его, чтобы приложение работало правильно.';
 
   @override
   String get appUpdateLater => 'Позже';
@@ -3596,15 +3445,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appUpdateReadyTitle => 'Обновление загружено';
 
   @override
-  String get appUpdateReadyText =>
-      'Перезапустите, чтобы обновить. Приложение закроется на несколько секунд.';
+  String get appUpdateReadyText => 'Перезапустите, чтобы обновить. Приложение закроется на несколько секунд.';
 
   @override
   String get appUpdateRestart => 'Перезапустить';
 
   @override
-  String get appUpdateStoreText =>
-      'Откроется страница IQRO в Google Play, там нажмите «Обновить».';
+  String get appUpdateStoreText => 'Откроется страница IQRO в Google Play, там нажмите «Обновить».';
 
   @override
   String appVersion(String version) {
@@ -3618,8 +3465,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appUpdateDownloadingTitle => 'Обновление загружается';
 
   @override
-  String get appUpdateDownloadingText =>
-      'Пользуйтесь приложением как обычно. Когда загрузка закончится, здесь появится «Перезапустить».';
+  String get appUpdateDownloadingText => 'Пользуйтесь приложением как обычно. Когда загрузка закончится, здесь появится «Перезапустить».';
 
   @override
   String appUpdateInstalled(String version) {
@@ -3675,8 +3521,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get wordRangeError => 'Не удалось воспроизвести выделенное.';
 
   @override
-  String get wordTimingsUnavailable =>
-      'Здесь у этого чтеца нет разметки по словам: этот аят можно слушать только целиком. Разметка есть не у всех чтецов, а у некоторых — не во всех аятах.';
+  String get wordTimingsUnavailable => 'Здесь у этого чтеца нет разметки по словам: этот аят можно слушать только целиком. Разметка есть не у всех чтецов, а у некоторых — не во всех аятах.';
 
   @override
   String wordRangeTeachingVoice(String reciter) {
@@ -3712,8 +3557,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get shareCardTooLong =>
-      'Текст слишком длинный для картинки. Его можно отправить текстом со ссылкой.';
+  String get shareCardTooLong => 'Текст слишком длинный для картинки. Его можно отправить текстом со ссылкой.';
 
   @override
   String get shareCardSendText => 'Отправить текстом';
@@ -3722,6 +3566,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get shareCardPreparing => 'Готовим картинку…';
 
   @override
-  String get shareCardFailed =>
-      'Картинку не удалось создать. Текст и ссылку можно отправить и так.';
+  String get shareCardFailed => 'Картинку не удалось создать. Текст и ссылку можно отправить и так.';
+
+  @override
+  String get shareSelection => 'Поделиться выделенным';
+
+  @override
+  String shareCardFromAyah(String reference) {
+    return 'из аята $reference';
+  }
+
+  @override
+  String shareCardFromAyahs(String reference) {
+    return 'из аятов $reference';
+  }
 }
