@@ -81,8 +81,14 @@ void main() {
       expect(lens, findsNothing);
 
       await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
       expect(speech.listens, 1);
+      // On the first word of the ayah at the top, before a word is said:
+      // at the right end of an Arabic line. A circle.
+      expect(lens, findsOneWidget);
+      final first = tester.getRect(lens);
+      expect(first.right, greaterThan(250));
+      expect(first.width, first.height);
 
       void hear(String words) => speech.onTextRecognition!(
         jsonEncode(<String, Object>{
@@ -93,12 +99,11 @@ void main() {
         }),
       );
 
+      // A word heard: the lens is on the next one, to its left.
       hear('الذين');
       await tester.pumpAndSettle();
-      expect(lens, findsOneWidget);
-      final first = tester.getRect(lens);
-      // The first word of an Arabic line: at its right end.
-      expect(first.right, greaterThan(250));
+      final second = tester.getRect(lens);
+      expect(second.center.dx, lessThan(first.center.dx));
       expect(
         tester
             .widget<Text>(
@@ -110,7 +115,12 @@ void main() {
 
       hear('الذين يؤمنون بالغيب');
       await tester.pumpAndSettle();
-      expect(tester.getRect(lens).right, lessThan(first.left + 8));
+      // Three words on: further left, or on the line below.
+      final third = tester.getRect(lens);
+      expect(
+        third.center.dx < second.center.dx || third.top > second.top,
+        isTrue,
+      );
 
       // The recogniser stops after a pause: the next listen starts.
       speech.onStatus!('doneNoResult');

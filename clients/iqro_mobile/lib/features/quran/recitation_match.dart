@@ -22,7 +22,7 @@ bool similarArabic(String heard, String written) {
   final longest = heard.length > written.length ? heard.length : written.length;
   final allowed = longest <= 2
       ? 0
-      : longest <= 5
+      : longest <= 6
       ? 1
       : 2;
   if (allowed == 0 || (heard.length - written.length).abs() > allowed) {
@@ -81,6 +81,9 @@ class RecitationMatcher {
     _next = at < 0 ? _words.length : at;
   }
 
+  /// The index of the word to read next; null past the last one.
+  int? get next => _next < _indexes.length ? _indexes[_next] : null;
+
   /// The index of the word the reader has reached, once [transcript] moves
   /// the place; null while it does not.
   int? hear(String transcript) {
@@ -92,15 +95,15 @@ class RecitationMatcher {
     if (all.isEmpty) return null;
     final heard = all.length > _tail ? all.sublist(all.length - _tail) : all;
 
-    // The longest run of heard words that ends near the place; of equal
-    // runs the nearest. It starts at the word read last, so a transcript
-    // heard already stays where it is.
+    // The best run of heard words that ends near the place; of equal runs
+    // the nearest. It starts at the word read last, so a transcript heard
+    // already stays where it is.
     var best = -1;
-    var bestRun = 0;
+    var bestRun = (count: 0, score: 0);
     final from = _next > 0 ? _next - 1 : 0;
     for (var at = from; at < _words.length && at <= _next + window; at++) {
       final run = _run(heard, at);
-      if (run > bestRun) {
+      if (run.score > bestRun.score) {
         best = at;
         bestRun = run;
       }
@@ -108,7 +111,7 @@ class RecitationMatcher {
     final accepted =
         best >= _next &&
         (best == _next ||
-            bestRun >= 2 ||
+            bestRun.count >= 2 ||
             // One word skipped or misheard, and not a particle met everywhere.
             (best == _next + 1 && _words[best].length >= 3));
     if (accepted) return _reach(best);
@@ -118,7 +121,7 @@ class RecitationMatcher {
     if (heard.length < 3) return null;
     int? found;
     for (var at = 0; at < _words.length; at++) {
-      if (_run(heard, at) < 3) continue;
+      if (_run(heard, at).count < 3) continue;
       if (at >= _next) return _reach(at);
       found = at;
     }
@@ -131,22 +134,26 @@ class RecitationMatcher {
   }
 
   /// How many written words, back from the one at [at], the last heard
-  /// words match. A recogniser may write one of them as two.
-  int _run(List<String> heard, int at) {
+  /// words match, and how well: a word heard as written counts twice a
+  /// word that is only like it. A recogniser may write one of them as two.
+  ({int count, int score}) _run(List<String> heard, int at) {
     var index = heard.length - 1;
     var count = 0;
+    var score = 0;
     while (index >= 0 && at - count >= 0) {
       final written = _words[at - count];
       if (similarArabic(heard[index], written)) {
+        score += heard[index] == written ? 2 : 1;
         index -= 1;
       } else if (index > 0 &&
           similarArabic(heard[index - 1] + heard[index], written)) {
+        score += 1;
         index -= 2;
       } else {
         break;
       }
       count += 1;
     }
-    return count;
+    return (count: count, score: score);
   }
 }

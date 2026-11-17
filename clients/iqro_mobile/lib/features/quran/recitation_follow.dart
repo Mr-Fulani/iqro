@@ -77,8 +77,8 @@ class RecitationListener {
     if (!_active || _starting) return;
     _starting = true;
     try {
-      // Ends the listen before, with the package's timer for its pause.
-      await _speech.cancel();
+      // Ends a listen the package still counts as running.
+      if (_speech.isListening) await _speech.cancel();
       if (!_active) return;
       await _speech.listen(
         onResult: (result) {
@@ -92,10 +92,11 @@ class RecitationListener {
           localeId: _locale,
           partialResults: true,
           listenMode: ListenMode.dictation,
-          listenFor: const Duration(minutes: 10),
-          pauseFor: const Duration(seconds: 8),
+          // No limit of the package's own: the listen it stops on a timer
+          // does not start again. The phone ends a listen after a silence.
         ),
       );
+      debugPrint('IQRO recitation listen started');
       _listening = true;
       _lastSign = DateTime.now();
     } on Object catch (error) {
@@ -154,8 +155,8 @@ class RecitationListener {
   }
 }
 
-/// The trial's pointer: a lens over the word being read, which glides to
-/// the next one.
+/// The trial's pointer: a round lens over the word to read now, which
+/// glides to the next one.
 class RecitationLens extends StatelessWidget {
   const RecitationLens({required this.word, required this.glide, super.key});
 
@@ -167,28 +168,22 @@ class RecitationLens extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = word.inflate(8);
+    // As wide as the word, within what a line and its neighbours leave.
+    final size =
+        word.width.clamp(word.height * .9, word.height * 1.5).toDouble() + 12;
     return AnimatedPositioned.fromRect(
       key: const ValueKey('recitation-lens'),
-      rect: box,
-      duration: glide ? const Duration(milliseconds: 220) : Duration.zero,
-      curve: Curves.easeOutCubic,
+      rect: Rect.fromCircle(center: word.center, radius: size / 2),
+      duration: glide ? const Duration(milliseconds: 120) : Duration.zero,
+      curve: Curves.easeOut,
       child: IgnorePointer(
         child: RawMagnifier(
-          size: box.size,
-          magnificationScale: 1.25,
+          size: Size.square(size),
+          magnificationScale: 1.2,
           decoration: const MagnifierDecoration(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(14)),
-              side: BorderSide(color: Color(0xFFC49647), width: 2),
+            shape: CircleBorder(
+              side: BorderSide(color: Color(0xFFC49647), width: 2.5),
             ),
-            shadows: <BoxShadow>[
-              BoxShadow(
-                color: Color(0x40000000),
-                blurRadius: 12,
-                offset: Offset(0, 3),
-              ),
-            ],
           ),
         ),
       ),
