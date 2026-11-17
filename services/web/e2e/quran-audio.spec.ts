@@ -1981,7 +1981,17 @@ test.describe("word selection on a phone", () => {
     await expect(top.getByRole("button", { name: "Настройки чтения" })).toBeVisible();
     const row = page.locator(".reader-actions .reader-action-buttons");
     await expect(row.getByTestId("reader-open-text")).toHaveText("Текст");
-    await expect(row.locator(".reader-page-label")).toContainText("Страница 128");
+    // The page scrubber: the page, seven marks around it, right to left like the book.
+    const scrubber = row.getByTestId("reader-scrubber");
+    await expect(scrubber).toContainText("Страница 128");
+    await expect(scrubber.getByRole("button")).toHaveCount(7);
+    await expect(scrubber.locator('[aria-current="page"]')).toHaveAttribute("aria-label", "Страница 128");
+    const marks = await scrubber.getByRole("button").evaluateAll((buttons) => buttons
+      .map((button) => ({ label: button.getAttribute("aria-label"), left: button.getBoundingClientRect().left }))
+      .sort((a, b) => a.left - b.left)
+      .map((button) => button.label));
+    expect(marks[0]).toBe("Страница 131");
+    expect(marks[6]).toBe("Страница 125");
     await expect(row.getByRole("button", { name: "Свернуть меню читалки" })).toBeVisible();
     await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
     await expect(actions).toBeVisible();
@@ -2014,6 +2024,23 @@ test.describe("word selection on a phone", () => {
     await page.getByTestId("word-range-more").click();
     await expect(actions).toBeVisible();
     await expect(actions).toContainText("Аят 6:2");
+  });
+
+  test("the page scrubber under the phone Mushaf opens a tapped page", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const scrubber = page.getByTestId("reader-scrubber");
+    await expect(scrubber).toContainText("Страница 128");
+    await scrubber.getByRole("button", { name: "Страница 129" }).click();
+    await expect(page.locator(".mushaf-page-turn .qf-mushaf-view").first()).toHaveAttribute("data-page-number", "129");
+    await expect(scrubber).toContainText("Страница 129");
+    await scrubber.getByRole("button", { name: "Страница 128" }).click();
+    await expect(scrubber).toContainText("Страница 128");
+    // The turned page leaves; the open one stays alone.
+    await expect(view).toHaveCount(1);
+    await expect(view).toHaveAttribute("data-page-number", "128");
   });
 
   test("a finger grows the selection, then pulls its handles, in the Mushaf and the text", async ({ page }) => {

@@ -46,8 +46,79 @@ function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | 
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
+/**
+ * The page scrubber of the app's Mushaf (mushaf_reader_controls.dart): the
+ * page and its juz over seven marks, the pages around the open one, laid out
+ * right to left like the book. A tap or a drag across them opens that page.
+ */
+function PageScrubber({ page, count, juz, onJump }: { page: number; count: number; juz?: number | ""; onJump: (page: number) => void }) {
+  const { t, formatNumber } = useI18n();
+  const slots = Math.min(7, Math.max(1, count));
+  // While a finger drags, the marks keep their pages.
+  const [dragStart, setDragStart] = useState<number | null>(null);
+  const requested = useRef<number | null>(null);
+  const moved = useRef(false);
+  const start = dragStart ?? Math.min(Math.max(1, page - 3), Math.max(1, count - slots + 1));
+  const pages = Array.from({ length: slots }, (_, index) => start + index);
+  const pageAt = (x: number, box: DOMRect) => {
+    const slot = Math.min(slots - 1, Math.max(0, Math.floor(((x - box.left) / box.width) * slots)));
+    return start + slots - 1 - slot;
+  };
+  const end = () => {
+    setDragStart(null);
+    requested.current = null;
+  };
+  return (
+    <div className="reader-scrubber" data-testid="reader-scrubber">
+      <div className="reader-scrubber-head">
+        <strong>{t("common.page", { page: formatNumber(page) })}</strong>
+        {juz ? <small>{t("quran.markJuz", { juz: formatNumber(juz) })}</small> : null}
+      </div>
+      <div
+        className="reader-scrubber-marks"
+        dir="rtl"
+        role="group"
+        aria-label={t("quran.pageOf", { page, count })}
+        onPointerDown={() => {
+          moved.current = false;
+          requested.current = page;
+          setDragStart(start);
+        }}
+        onPointerMove={(event) => {
+          if (dragStart === null || event.buttons === 0 && event.pointerType === "mouse") return;
+          const target = pageAt(event.clientX, event.currentTarget.getBoundingClientRect());
+          if (target === requested.current) return;
+          moved.current = true;
+          requested.current = target;
+          onJump(target);
+        }}
+        onPointerUp={end}
+        onPointerCancel={end}
+        onPointerLeave={(event) => {
+          if (event.pointerType === "mouse") end();
+        }}
+      >
+        {pages.map((item) => (
+          <button
+            key={item}
+            type="button"
+            aria-label={t("common.page", { page: formatNumber(item) })}
+            aria-current={item === page ? "page" : undefined}
+            style={{ "--away": Math.abs(item - page) } as CSSProperties}
+            onClick={() => {
+              if (!moved.current && item !== page) onJump(item);
+            }}
+          >
+            <span />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Viewport and overlays only. Reader data and all existing controls stay mounted. */
-export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, onOpenText, title, subtitle, juz, bookmark, children }: {
+export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, onOpenText, title, subtitle, juz, bookmark, onJumpPage, children }: {
   active: boolean;
   page: number;
   count: number;
@@ -64,6 +135,8 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   juz?: number | "";
   /** The bookmark of the selected ayah, in the phone's top bar. */
   bookmark?: { saved: boolean; disabled: boolean; label: string; onToggle: () => void };
+  /** Opens a page from the phone's page scrubber. */
+  onJumpPage?: (page: number) => void;
   children: ReactNode;
 }) {
   const { t, formatNumber } = useI18n();
@@ -287,10 +360,12 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
                           <ReaderIcon name="text" /><span>{t("surahs.textMode")}</span>
                         </button>
                       )}
-                        <span className="reader-page-label" aria-label={t("quran.pageOf", { page, count })}>
-                          <strong>{t("common.page", { page: formatNumber(page) })}</strong>
-                          {juz ? <small>{t("quran.markJuz", { juz: formatNumber(juz) })}</small> : null}
-                        </span>
+                        {onJumpPage ? <PageScrubber page={page} count={count} juz={juz} onJump={onJumpPage} /> : (
+                          <span className="reader-page-label" aria-label={t("quran.pageOf", { page, count })}>
+                            <strong>{t("common.page", { page: formatNumber(page) })}</strong>
+                            {juz ? <small>{t("quran.markJuz", { juz: formatNumber(juz) })}</small> : null}
+                          </span>
+                        )}
                         {hasSession && <button type="button" onClick={(event) => openPanel("session", event.currentTarget)} aria-label={t("quran.readerSession")} title={t("quran.readerSession")}><ReaderIcon name="session" /></button>}
                         {hasNotes && (
                           <button type="button" className="reader-labelled" onClick={(event) => openPanel("notes", event.currentTarget)} aria-label={t("quran.readerNotes")} title={t("quran.readerNotes")}>
