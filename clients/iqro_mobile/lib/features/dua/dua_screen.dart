@@ -1566,6 +1566,7 @@ class _DuaEntryCardState extends ConsumerState<DuaEntryCard> {
         locale: Localizations.localeOf(context).languageCode,
         repetitionLabel: context.l10n.repetitionTarget,
         readInIqro: context.l10n.shareReadInIqro,
+        cardReference: duaReference(widget.entry, context.l10n),
       ),
       origin: origin,
     );

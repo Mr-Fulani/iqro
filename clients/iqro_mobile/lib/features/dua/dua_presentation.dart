@@ -63,12 +63,14 @@ class DuaPracticeProgress {
 }
 
 /// The du'a as shared: its chapter, the Arabic, the meaning, how many times
-/// it is said, its sources and a link to it on the site.
+/// it is said, its sources and a link to it on the site. The picture names
+/// the source in [cardReference], as under the du'a on screen.
 ContentShare duaContentShare(
   DuaEntry entry, {
   required String locale,
   required String repetitionLabel,
   required String readInIqro,
+  String cardReference = '',
 }) {
   final repetition = entry.repetitionLabel.trim().isNotEmpty
       ? entry.repetitionLabel.trim()
@@ -89,6 +91,7 @@ ContentShare duaContentShare(
     title:
         '${duaDisplayTitle(entry.categoryTitle, locale)} · #${entry.sourceNumber}',
     arabic: entry.arabicText,
+    cardReference: cardReference,
     translation: duaMeaning(entry, locale),
     note: repetition.isEmpty ? '' : '$repetitionLabel: $repetition',
     reference: provenance.join(' · '),

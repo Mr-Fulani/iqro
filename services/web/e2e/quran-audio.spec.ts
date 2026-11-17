@@ -3017,7 +3017,14 @@ test("text mode ends ayahs with the app's marker and shares an ayah picture thro
   await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
   const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
   await expect(dialog.getByText("Аль-Анам · 6:1")).toBeVisible();
-  await expect(dialog.getByRole("img", { name: "Картинка аята 6:1" })).toBeVisible();
+  const picture = dialog.getByRole("img", { name: "Картинка аята 6:1" });
+  await expect(picture).toBeVisible();
+  // A story by default; a post on dark blue silk when picked, and next time too.
+  await expect(picture).toHaveJSProperty("naturalHeight", 1920);
+  await dialog.getByRole("button", { name: "Пост", exact: true }).click();
+  await dialog.getByRole("button", { name: "Тёмно-синий" }).click();
+  await expect(picture).toHaveJSProperty("naturalHeight", 1350);
+  expect(await page.evaluate(() => window.localStorage.getItem("iqro_share_card_style_v1"))).toBe("post:midnight");
   await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
 
   const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/1", page.url()).href;
@@ -3025,7 +3032,7 @@ test("text mode ends ayahs with the app's marker and shares an ayah picture thro
     .toEqual({
       title: "Аль-Анам · 6:1",
       text: `Аль-Анам · 6:1\n\n${ayahs[0].text_uthmani}\n\n«Хвала Аллаху»\n\nЧитать в IQRO: ${link}`,
-      file: { name: "iqro-6-1.png", type: "image/png", width: 1080, height: 1350 },
+      file: { name: "iqro-6-1.jpg", type: "image/jpeg", width: 1080, height: 1350 },
     });
   await dialog.getByRole("button", { name: "Закрыть" }).click();
   await expect(dialog).toBeHidden();
@@ -3041,12 +3048,6 @@ test("without Web Share the Mushaf ayah picture downloads and the link is copied
     });
   });
   await page.goto("/ru/quran?surah=6");
-  // Linux has neither Times New Roman nor Arial, the local() metric fallbacks
-  // next/font lists after Amiri and Inter; the card must not depend on them.
-  await page.addStyleTag({
-    content: `@font-face { font-family: "Missing Fallback"; src: local("IQRO Missing Font"); }
-      html:root { --font-amiri: "Amiri", "Missing Fallback"; --font-inter: "Inter", "Missing Fallback"; }`,
-  });
   await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"]').first().click();
   await page.locator(".mushaf-ayah-actions").getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
   const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
@@ -3055,12 +3056,10 @@ test("without Web Share the Mushaf ayah picture downloads and the link is copied
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    dialog.getByRole("link", { name: "Скачать картинку" }).click(),
+    dialog.getByRole("button", { name: "Скачать картинку" }).click(),
   ]);
-  expect(download.suggestedFilename()).toBe("iqro-6-2.png");
-  const png = await readFile(await download.path());
-  expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
-  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1080, 1350]);
+  expect(download.suggestedFilename()).toBe("iqro-6-2.jpg");
+  expect([...(await readFile(await download.path())).subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
 
   await dialog.getByRole("button", { name: "Скопировать ссылку" }).click();
   await expect(dialog.getByRole("status").filter({ hasText: "Ссылка скопирована" })).toBeVisible();
@@ -3123,26 +3122,6 @@ test("an ayah whose text cannot load is still shared as a link", async ({ page }
   });
 });
 
-test("an ayah picture is drawn again when its font arrives late", async ({ page }) => {
-  await page.addInitScript(() => {
-    const load = FontFaceSet.prototype.load;
-    FontFaceSet.prototype.load = function (this: FontFaceSet, font: string, text?: string) {
-      const faces = load.call(this, font, text);
-      return /Amiri/.test(font)
-        ? faces.then((loaded) => new Promise<FontFace[]>((resolve) => setTimeout(() => resolve(loaded), 6000)))
-        : faces;
-    };
-  });
-  await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "Текст", exact: true }).click();
-  await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
-  const picture = page.getByRole("dialog", { name: "Поделиться аятом" })
-    .getByRole("img", { name: "Картинка аята 6:1" });
-  await expect(picture).toBeVisible({ timeout: 10_000 });
-  const first = await picture.getAttribute("src");
-  await expect(picture).not.toHaveAttribute("src", first ?? "", { timeout: 10_000 });
-});
-
 // Records what the share card writes on its canvas, with the font of each run.
 async function recordCardText(page: Page) {
   await page.addInitScript(() => {
@@ -3157,13 +3136,13 @@ async function recordCardText(page: Page) {
   return () => page.evaluate(() => (window as unknown as { cardText: { text: string; font: string }[] }).cardText);
 }
 
-test("an ayah picture has its tajweed Mushaf glyphs from every page it spans and no translator's name", async ({ page }) => {
+test("an ayah picture has the glyphs of the selected Mushaf from every page it spans and no translator's name", async ({ page }) => {
   const cardText = await recordCardText(page);
-  // 6:2 begins on page 128 of Mushaf 19 and ends on page 129.
+  // 6:2 begins on page 128 of the Mushaf and ends on page 129.
   for (const [pageNumber, ids] of [[128, [1, 2, 3, 4]], [129, [5, 6]]] as const) {
-    await page.route(`**/api/v1/quran/foundation/mushafs/19/pages/${pageNumber}`, (route) => {
-      const data = foundationPage(19, pageNumber);
-      route.fulfill({ json: { ...data, words: foundationPage(19, 128).words
+    await page.route(`**/api/v1/quran/foundation/mushafs/5/pages/${pageNumber}`, (route) => {
+      const data = foundationPage(5, pageNumber);
+      route.fulfill({ json: { ...data, words: foundationPage(5, 128).words
         .filter((word) => (ids as readonly number[]).includes(Number(word.id)))
         .map((word) => ({ ...word, page_number: pageNumber })) } });
     });
@@ -3175,32 +3154,58 @@ test("an ayah picture has its tajweed Mushaf glyphs from every page it spans and
     .getByRole("img", { name: "Картинка аята 6:2" })).toBeVisible();
 
   const runs = await cardText();
-  expect(runs.filter((run) => run.font.includes("qf-mushaf-19-page-")).map((run) => [run.text, run.font.match(/page-\d+/)?.[0]]))
-    .toEqual([["ﱃ", "page-128"], ["ﱄ", "page-128"], ["ﱅ", "page-129"], ["ﱆ", "page-129"]]);
-  expect(runs.map((run) => run.text)).not.toContain(ayahs[1].text_uthmani);
+  // Word by word in the Mushaf's font, the ayah's end sign last.
+  expect(runs.filter((run) => run.font.includes("qf-mushaf-5")).map((run) => run.text))
+    .toEqual(foundationPage(5, 128).words.filter((word) => Number(word.id) > 2).map((word) => word.text));
+  expect(runs.map((run) => run.text)).toContain("Аль-Анам · 6:2");
+  expect(runs.map((run) => run.text)).toContain("iqro.forum");
   expect(runs.some((run) => /Elmir Kuliev/.test(run.text))).toBe(false);
 });
 
-test("an ayah picture is drawn in the plain script while the tajweed font is late, then again in it", async ({ page }) => {
+test("an ayah picture is drawn in the plain script, unchanged, when the Mushaf's pages are late", async ({ page }) => {
   const cardText = await recordCardText(page);
-  await page.route("https://verses.quran.foundation/fonts/quran/hafs/v4/**", async (route) => {
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
+  await page.route("**/api/v1/quran/foundation/mushafs/5/pages/*", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 6000));
     await route.fallback();
   });
-  await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
   const picture = page.getByRole("dialog", { name: "Поделиться аятом" })
     .getByRole("img", { name: "Картинка аята 6:1" });
   await expect(picture).toBeVisible({ timeout: 10_000 });
-  const first = await picture.getAttribute("src");
-  const plain = await cardText();
-  expect(plain.map((run) => run.text)).toContain(ayahs[0].text_uthmani);
-  expect(plain.some((run) => run.font.includes("qf-mushaf-19"))).toBe(false);
+  const arabic = (await cardText()).filter((run) => run.font.includes("IQRO Share Arabic") && !run.font.includes("Serif"));
+  // The ayah's own words, then its end sign.
+  expect(arabic.map((run) => run.text).join(" ")).toBe(`${ayahs[0].text_uthmani} \u06dd١`);
+});
 
-  await expect(picture).not.toHaveAttribute("src", first ?? "", { timeout: 10_000 });
-  expect((await cardText()).filter((run) => run.font.includes("qf-mushaf-19-page-128")).map((run) => run.text))
-    .toEqual(["ﱁ", "ﱂ"]);
+test("selected words are shared as a part of the ayah: its words alone, no meaning, no end sign", async ({ page }) => {
+  const cardText = await recordCardText(page);
+  const shared = await captureWebShare(page);
+  await page.goto("/ru/quran?surah=6");
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
+  const text = page.locator(".quran-content-surface");
+  // The first word of 6:2, then with Shift the second: two of its three words.
+  await text.locator('.quran-word[data-word-key="6:2:1"]').dblclick();
+  await text.locator('.quran-word[data-word-key="6:2:2"]').click({ modifiers: ["Shift"] });
+  await page.getByTestId("word-range-bar").getByTestId("word-range-share").click();
+  const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
+  await expect(dialog.getByText("Аль-Анам · из аята 6:2")).toBeVisible();
+  await expect(dialog.getByRole("img", { name: "Картинка аята 6:2" })).toBeVisible();
+
+  const words = foundationPage(5, 128).words.filter((word) => [3, 4].includes(Number(word.id))).map((word) => word.text);
+  const runs = (await cardText()).map((run) => run.text);
+  expect(runs.slice(0, 2)).toEqual(words);
+  expect(runs).toContain("Аль-Анам · из аята 6:2");
+  // Neither the third word, nor the ayah's end sign, nor a meaning of the whole ayah.
+  expect(runs).toHaveLength(4);
+
+  await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
+  const link = new URL("/ru/quran/madani-hafs/surah/6/ayah/2", page.url()).href;
+  await expect.poll(shared).toMatchObject({
+    title: "Аль-Анам · из аята 6:2",
+    text: `Аль-Анам · из аята 6:2\n\n${ayahs[1].text_uthmani.split(" ").slice(0, 2).join(" ")}\n\nЧитать в IQRO: ${link}`,
+  });
 });
 
 test("without the share dialog's code an ayah still goes as text, and the next press loads it", async ({ page }) => {
@@ -3244,7 +3249,7 @@ test("an ayah picture that cannot be drawn is reported and the link still copies
   const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
   await expect(dialog.getByRole("alert")).toHaveText("Не удалось подготовить картинку. Ссылкой поделиться можно.");
   await expect(dialog.getByRole("img")).toHaveCount(0);
-  await expect(dialog.getByRole("link", { name: "Скачать картинку" })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Скачать картинку" })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Скопировать ссылку" }).click();
   await expect(dialog.getByRole("status").filter({ hasText: "Ссылка скопирована" })).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { copiedLink?: string }).copiedLink))

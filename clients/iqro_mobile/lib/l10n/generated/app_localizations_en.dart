@@ -3662,4 +3662,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String wordRangeOtherVoice(String reciter, String style) {
     return 'Voice: $reciter · $style. The chosen reciter has no word-by-word timing here.';
   }
+
+  @override
+  String get shareCardSend => 'Share';
+
+  @override
+  String get shareCardStory => 'Story';
+
+  @override
+  String get shareCardPost => 'Post';
+
+  @override
+  String get shareCardColourEmerald => 'Emerald';
+
+  @override
+  String get shareCardColourTurquoise => 'Turquoise';
+
+  @override
+  String get shareCardColourMidnight => 'Midnight blue';
+
+  @override
+  String shareCardPart(int number, int total) {
+    return 'Picture $number of $total';
+  }
+
+  @override
+  String get shareCardTooLong =>
+      'This text is too long for a picture. You can send it as text with a link.';
+
+  @override
+  String get shareCardSendText => 'Send as text';
+
+  @override
+  String get shareCardPreparing => 'Preparing the picture…';
+
+  @override
+  String get shareCardFailed =>
+      'The picture could not be made. The text and the link can still be sent.';
+
+  @override
+  String get shareSelection => 'Share the selection';
+
+  @override
+  String shareCardFromAyah(String reference) {
+    return 'from ayah $reference';
+  }
+
+  @override
+  String shareCardFromAyahs(String reference) {
+    return 'from ayahs $reference';
+  }
 }

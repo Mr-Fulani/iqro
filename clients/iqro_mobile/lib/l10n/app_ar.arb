@@ -1097,5 +1097,22 @@
   "wordRangeTeachingVoice": "الصوت: {reciter}، قراءة تعليمية. لا يوجد توقيت للكلمات لدى القارئ المختار.",
   "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}},
   "wordRangeOtherVoice": "الصوت: {reciter} · {style}. لا يوجد هنا توقيت للكلمات لدى القارئ المختار.",
-  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}}
+  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}},
+  "shareCardSend": "مشاركة",
+  "shareCardStory": "قصة",
+  "shareCardPost": "منشور",
+  "shareCardColourEmerald": "زمردي",
+  "shareCardColourTurquoise": "فيروزي",
+  "shareCardColourMidnight": "أزرق داكن",
+  "shareCardPart": "الصورة {number} من {total}",
+  "@shareCardPart": {"placeholders": {"number": {"type": "int"}, "total": {"type": "int"}}},
+  "shareCardTooLong": "النص طويل جدًا للصورة. يمكنك إرساله نصًا مع الرابط.",
+  "shareCardSendText": "إرسال كنص",
+  "shareCardPreparing": "جارٍ تجهيز الصورة…",
+  "shareCardFailed": "تعذّر إنشاء الصورة. يمكنك إرسال النص والرابط.",
+  "shareSelection": "مشاركة المحدد",
+  "shareCardFromAyah": "من الآية {reference}",
+  "@shareCardFromAyah": {"placeholders": {"reference": {"type": "String"}}},
+  "shareCardFromAyahs": "من الآيات {reference}",
+  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}}
 }

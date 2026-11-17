@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 1000" font-family="Helvetica, Arial, sans-serif" font-size="15">
+  <defs>
+    <pattern id="orn" width="18" height="18" patternUnits="userSpaceOnUse">
+      <rect width="18" height="18" fill="#d9ccae"/>
+      <path d="M0 9 L9 0 L18 9 L9 18 Z" fill="none" stroke="#f2e5cb" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="1220" height="1000" fill="#ffffff"/>
+  <text x="20" y="28" font-size="18" font-weight="bold" fill="#1b1b1b">Слои картинки 9:16 (1080 × 1920). Доли — от ширины W и высоты H холста</text>
+
+  <!-- A: широкая рамка, как на референсе. Холст 270×480 => 1 % W = 2.7, 1 % H = 4.8 -->
+  <g transform="translate(20,60)">
+    <text x="0" y="-8" font-weight="bold" fill="#1b1b1b">А. Широкая рамка — короткий текст</text>
+    <rect width="270" height="480" fill="#2e6a62"/>
+    <rect x="12.2" y="50.4" width="245.6" height="362.4" fill="url(#orn)"/>
+    <rect x="51.3" y="144" width="167.4" height="182.4" fill="#245a52"/>
+    <rect x="62.1" y="153.6" width="145.8" height="163.2" fill="none" stroke="#ffffff" stroke-dasharray="4 3"/>
+    <rect x="75" y="160" width="120" height="20" fill="#f2e5cb"/>
+    <rect x="95" y="186" width="80" height="20" fill="#f2e5cb"/>
+    <path d="M73 222 H125 M145 222 H197" stroke="#f2e5cb" stroke-width="2"/><circle cx="135" cy="222" r="5" fill="#f2e5cb"/>
+    <rect x="72" y="238" width="126" height="8" fill="#f2e5cb" opacity=".85"/>
+    <rect x="80" y="254" width="110" height="8" fill="#f2e5cb" opacity=".85"/>
+    <rect x="76" y="270" width="118" height="8" fill="#f2e5cb" opacity=".85"/>
+    <path d="M73 294 H105 M165 294 H197" stroke="#f2e5cb" stroke-width="2"/>
+    <rect x="111" y="290" width="48" height="8" fill="#f2e5cb"/>
+    <rect x="115" y="306" width="40" height="5" fill="#f2e5cb" opacity=".6"/>
+    <path d="M0 67.2 H270 M0 412.8 H270" stroke="#ff8a5c" stroke-dasharray="6 4"/>
+  </g>
+
+  <!-- B: тонкая рамка -->
+  <g transform="translate(330,60)">
+    <text x="0" y="-8" font-weight="bold" fill="#1b1b1b">Б. Тонкая рамка — средний и длинный текст</text>
+    <rect width="270" height="480" fill="#2e6a62"/>
+    <rect x="12.2" y="50.4" width="245.6" height="362.4" fill="url(#orn)"/>
+    <rect x="31.1" y="72" width="207.8" height="319.2" fill="#245a52"/>
+    <rect x="41.9" y="81.6" width="186.2" height="300" fill="none" stroke="#ffffff" stroke-dasharray="4 3"/>
+    <g fill="#f2e5cb">
+      <rect x="50" y="92" width="170" height="13"/><rect x="50" y="113" width="170" height="13"/>
+      <rect x="50" y="134" width="170" height="13"/><rect x="50" y="155" width="170" height="13"/>
+      <rect x="50" y="176" width="170" height="13"/><rect x="85" y="197" width="100" height="13"/>
+    </g>
+    <path d="M73 228 H125 M145 228 H197" stroke="#f2e5cb" stroke-width="2"/><circle cx="135" cy="228" r="5" fill="#f2e5cb"/>
+    <g fill="#f2e5cb" opacity=".85">
+      <rect x="52" y="244" width="166" height="7"/><rect x="52" y="258" width="166" height="7"/>
+      <rect x="52" y="272" width="166" height="7"/><rect x="52" y="286" width="166" height="7"/>
+      <rect x="52" y="300" width="166" height="7"/><rect x="52" y="314" width="166" height="7"/>
+      <rect x="80" y="328" width="110" height="7"/>
+    </g>
+    <path d="M73 352 H105 M165 352 H197" stroke="#f2e5cb" stroke-width="2"/>
+    <rect x="111" y="348" width="48" height="8" fill="#f2e5cb"/>
+    <rect x="115" y="366" width="40" height="5" fill="#f2e5cb" opacity=".6"/>
+    <path d="M0 67.2 H270 M0 412.8 H270" stroke="#ff8a5c" stroke-dasharray="6 4"/>
+  </g>
+
+  <!-- Подписи -->
+  <g transform="translate(640,60)" fill="#1b1b1b">
+    <text y="6" font-weight="bold">Слои снизу вверх</text>
+    <rect x="0" y="22" width="22" height="16" fill="#2e6a62"/><text x="32" y="35">1. Ткань: весь холст, 0–100 % W и H</text>
+    <rect x="0" y="50" width="22" height="16" fill="url(#orn)"/><text x="32" y="63">2. Рамка-орнамент без букв: по ширине 4,5–95,5 % W,</text>
+    <text x="32" y="82">по высоте 10,5–86 % H (обе рамки снаружи одинаковы)</text>
+    <rect x="0" y="98" width="22" height="16" fill="#245a52"/><text x="32" y="111">3. Поле текста: ткань без резких складок, затемнена</text>
+    <text x="32" y="130">А: 19–81 % W, 30–68 % H · Б: 11,5–88,5 % W, 15–81,5 % H</text>
+    <rect x="0" y="146" width="22" height="16" fill="none" stroke="#777" stroke-dasharray="4 3"/><text x="32" y="159">4. Граница набора: отступ 4 % W от края поля</text>
+    <text x="32" y="178">ширина строки А: 54 % W (583 px) · Б: 69 % W (745 px)</text>
+    <path d="M0 200 H22" stroke="#ff8a5c" stroke-dasharray="6 4" stroke-width="2"/><text x="32" y="205">Зона сторис: сверху и снизу 14 % H занято кнопками</text>
+    <text x="32" y="224">соцсетей — текста там нет, только ткань и край рамки</text>
+
+    <text y="270" font-weight="bold">Содержимое поля сверху вниз (по центру)</text>
+    <text y="295">• Арабский текст: кегль от 8,9 % W (96 px) до 4,3 % W (46 px),</text>
+    <text x="12" y="314">справа налево, по центру, строки по целым словам</text>
+    <text y="339">• Разделитель: линия 46 % W с розеткой 4 % W посередине</text>
+    <text y="364">• Перевод в кавычках: от 4,6 % W (50 px) до 2,8 % W (30 px),</text>
+    <text x="12" y="383">шрифт с засечками, по центру</text>
+    <text y="408">• Ссылка между двумя линиями: «Аль-Бакара · 2:286», 3,1 % W</text>
+    <text y="433">• Подпись «iqro.forum»: 2,4 % W, прозрачность 70 %</text>
+    <text y="458">• Промежутки: 2,6 % H между блоками, 1,6 % H у подписи</text>
+  </g>
+
+  <!-- Палитра -->
+  <g transform="translate(20,590)" fill="#1b1b1b">
+    <text y="0" font-weight="bold">Палитра, снятая с референса</text>
+    <g transform="translate(0,16)">
+      <rect width="90" height="60" fill="#122b1a"/><text y="78" font-size="13">#122B1A</text><text y="95" font-size="13">глубокая складка</text>
+      <g transform="translate(130,0)"><rect width="90" height="60" fill="#184b40"/><text y="78" font-size="13">#184B40</text><text y="95" font-size="13">тень ткани</text></g>
+      <g transform="translate(260,0)"><rect width="90" height="60" fill="#2e6a62"/><text y="78" font-size="13">#2E6A62</text><text y="95" font-size="13">основной тон</text></g>
+      <g transform="translate(390,0)"><rect width="90" height="60" fill="#437e74"/><text y="78" font-size="13">#437E74</text><text y="95" font-size="13">свет ткани</text></g>
+      <g transform="translate(520,0)"><rect width="90" height="60" fill="#88c5bd"/><text y="78" font-size="13">#88C5BD</text><text y="95" font-size="13">блик</text></g>
+      <g transform="translate(650,0)"><rect width="90" height="60" fill="#fff8e6" stroke="#bbb"/><text y="78" font-size="13">#FFF8E6</text><text y="95" font-size="13">свет рельефа</text></g>
+      <g transform="translate(780,0)"><rect width="90" height="60" fill="#f2e5cb" stroke="#bbb"/><text y="78" font-size="13">#F2E5CB</text><text y="95" font-size="13">текст и орнамент</text></g>
+      <g transform="translate(910,0)"><rect width="90" height="60" fill="#cabba3"/><text y="78" font-size="13">#CABBA3</text><text y="95" font-size="13">тень рельефа</text></g>
+      <g transform="translate(1040,0)"><rect width="90" height="60" fill="#13291c"/><text y="78" font-size="13">#13291C</text><text y="95" font-size="13">тень под текстом</text></g>
+    </g>
+  </g>
+
+  <!-- Длинный текст -->
+  <g transform="translate(20,760)" fill="#1b1b1b">
+    <text y="0" font-weight="bold">Длинный текст: серия картинок, ничего не обрезается</text>
+    <g transform="translate(0,16)">
+      <g><rect width="112" height="200" fill="#2e6a62"/><rect x="6" y="21" width="100" height="151" fill="url(#orn)"/><rect x="13" y="30" width="86" height="133" fill="#245a52"/>
+        <g fill="#f2e5cb"><rect x="20" y="38" width="72" height="6"/><rect x="20" y="50" width="72" height="6"/><rect x="20" y="62" width="72" height="6"/><rect x="20" y="74" width="72" height="6"/><rect x="20" y="86" width="72" height="6"/><rect x="20" y="98" width="72" height="6"/><rect x="20" y="110" width="72" height="6"/><rect x="20" y="122" width="72" height="6"/><rect x="40" y="148" width="32" height="5"/></g></g>
+      <text x="124" y="60">1/3 — арабский текст,</text><text x="124" y="80">первая часть</text>
+      <g transform="translate(330,0)"><rect width="112" height="200" fill="#2e6a62"/><rect x="6" y="21" width="100" height="151" fill="url(#orn)"/><rect x="13" y="30" width="86" height="133" fill="#245a52"/>
+        <g fill="#f2e5cb"><rect x="20" y="38" width="72" height="6"/><rect x="20" y="50" width="72" height="6"/><rect x="20" y="62" width="72" height="6"/><rect x="20" y="74" width="72" height="6"/><rect x="20" y="86" width="72" height="6"/><rect x="34" y="98" width="44" height="6"/><rect x="40" y="148" width="32" height="5"/></g></g>
+      <text x="454" y="60">2/3 — арабский текст,</text><text x="454" y="80">окончание со знаком</text><text x="454" y="100">конца аята</text>
+      <g transform="translate(660,0)"><rect width="112" height="200" fill="#2e6a62"/><rect x="6" y="21" width="100" height="151" fill="url(#orn)"/><rect x="13" y="30" width="86" height="133" fill="#245a52"/>
+        <g fill="#f2e5cb" opacity=".85"><rect x="20" y="38" width="72" height="4"/><rect x="20" y="47" width="72" height="4"/><rect x="20" y="56" width="72" height="4"/><rect x="20" y="65" width="72" height="4"/><rect x="20" y="74" width="72" height="4"/><rect x="20" y="83" width="72" height="4"/><rect x="20" y="92" width="72" height="4"/><rect x="20" y="101" width="72" height="4"/><rect x="20" y="110" width="72" height="4"/><rect x="20" y="119" width="72" height="4"/><rect x="30" y="128" width="52" height="4"/><rect x="40" y="148" width="32" height="5"/></g></g>
+      <text x="784" y="60">3/3 — перевод целиком</text><text x="784" y="80">(или тоже по частям)</text>
+      <text x="784" y="120">На каждой: ссылка на аят</text><text x="784" y="140">и номер части «2/3»</text>
+    </g>
+  </g>
+</svg>

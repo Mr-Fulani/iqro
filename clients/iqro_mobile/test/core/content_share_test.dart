@@ -1,9 +1,59 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/share/content_share.dart';
+import 'package:iqro_mobile/core/share/share_card_layout.dart';
 import 'package:iqro_mobile/features/quran/ayah_share.dart';
+
+// Where `--dart-define=SCREENSHOT_DIR=…` writes the cards as JPEG, drawn in
+// the app's own fonts, for a look at them without a phone.
+const _screenshots = String.fromEnvironment('SCREENSHOT_DIR');
+
+const _kursi =
+    'ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُۥ مَا فِى ٱلسَّمَٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَىْءٍ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ';
+const _kursiMeaning =
+    'Аллах — нет божества, кроме Него, Живого, Вседержителя. Им не овладевают ни дремота, ни сон. Ему принадлежит то, что на небесах, и то, что на земле. Кто станет заступаться перед Ним без Его дозволения? Он знает их будущее и прошлое. Они постигают из Его знания только то, что Он пожелает. Его Престол объемлет небеса и землю, и не тяготит Его оберегание их. Он — Возвышенный, Великий.';
+
+ContentShare _ayah(String arabic, String meaning, int ayah) => ayahContentShare(
+  locale: 'ru',
+  surahName: 'Аль-Бакара',
+  surah: 2,
+  ayah: ayah,
+  arabic: arabic,
+  translation: meaning,
+  readInIqro: 'Читать в IQRO',
+);
+
+Future<BuildContext> _context(WidgetTester tester) async {
+  late BuildContext context;
+  await tester.pumpWidget(
+    Directionality(
+      textDirection: TextDirection.ltr,
+      child: Builder(
+        builder: (built) {
+          context = built;
+          return const SizedBox();
+        },
+      ),
+    ),
+  );
+  return context;
+}
+
+Future<void> _loadFonts() async {
+  for (final (family, file) in [
+    ('Amiri Quran', 'AmiriQuran-Regular.ttf'),
+    ('PT Serif', 'PTSerif-Regular.ttf'),
+  ]) {
+    final bytes = File('assets/fonts/$file').readAsBytesSync();
+    await (FontLoader(
+      family,
+    )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
+  }
+}
 
 void main() {
   const share = ContentShare(
@@ -38,38 +88,102 @@ void main() {
     );
   });
 
-  testWidgets('the preview card renders to a PNG', (tester) async {
-    late BuildContext context;
-    await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: Builder(
-          builder: (built) {
-            context = built;
-            return const SizedBox();
-          },
+  test('the card draws the words of the source, unchanged', () {
+    final text = ShareCardText(_ayah(_kursi, _kursiMeaning, 255));
+    final words = text.arabicWords.map((word) => word.toPlainText()).toList();
+    // The end sign rides on the last word; the rest is the ayah byte for byte.
+    expect(words.last, endsWith(' ۝٢٥٥'));
+    words.last = words.last.replaceFirst(' ۝٢٥٥', '');
+    expect(words.join(' '), _kursi);
+    expect(text.translationWords.join(' '), '«$_kursiMeaning»');
+  });
+
+  testWidgets('a short ayah is one story card, or one post card', (
+    tester,
+  ) async {
+    final context = await _context(tester);
+    for (final (format, height) in [
+      (ShareCardFormat.story, 1920),
+      (ShareCardFormat.post, 1350),
+    ]) {
+      final pictures = await tester.runAsync(
+        () => renderShareCards(
+          context,
+          _ayah(share.arabic, share.translation, 255),
+          format: format,
+          colour: 'emerald',
+        ),
+      );
+      expect(pictures, hasLength(1));
+      expect(pictures!.single.width, 1080);
+      expect(pictures.single.height, height);
+    }
+  });
+
+  testWidgets('a long text is a series, never cut; too long gives no card', (
+    tester,
+  ) async {
+    final context = await _context(tester);
+    await tester.runAsync(_loadFonts);
+    final long = _ayah(
+      List.filled(3, _kursi).join(' '),
+      List.filled(3, _kursiMeaning).join(' '),
+      282,
+    );
+    final layout = ShareCardLayout.parse(
+      File('assets/share_card/layout.json').readAsStringSync(),
+    );
+    final text = ShareCardText(long);
+    final pages = composeShareCard(
+      layout,
+      ShareCardFormat.story,
+      text.arabic,
+      text.translation,
+    )!;
+    expect(pages.length, greaterThan(1));
+    // Every word is on exactly one card, in order.
+    expect([
+      for (final page in pages)
+        for (final line in page.arabicLines)
+          for (var word = line.start; word < line.end; word++) word,
+    ], List.generate(text.arabicWords.length, (index) => index));
+    expect([
+      for (final page in pages)
+        for (final line in page.translationLines)
+          for (var word = line.start; word < line.end; word++) word,
+    ], List.generate(text.translationWords.length, (index) => index));
+
+    final endless = _ayah(List.filled(40, _kursi).join(' '), '', 1);
+    expect(
+      await tester.runAsync(
+        () => renderShareCards(
+          context,
+          endless,
+          format: ShareCardFormat.story,
+          colour: 'emerald',
         ),
       ),
+      isNull,
     );
+  });
+
+  testWidgets('a card is sent as a JPEG', (tester) async {
+    final context = await _context(tester);
     final bytes = await tester.runAsync(() async {
-      final recorder = ui.PictureRecorder();
-      Canvas(recorder).drawRect(
-        const Rect.fromLTWH(0, 0, 4, 4),
-        Paint()..color = const Color(0xFFD5A34C),
+      final pictures = await renderShareCards(
+        context,
+        share,
+        format: ShareCardFormat.post,
+        colour: 'midnight',
       );
-      final logo = await recorder.endRecording().toImage(4, 4);
-      return renderShareCard(context, share, logo: logo);
+      return encodeShareCard(pictures!.single);
     });
-    // PNG signature, at twice the card's logical size.
-    expect(bytes!.sublist(0, 4), <int>[0x89, 0x50, 0x4E, 0x47]);
-    final codec = await tester.runAsync(() => ui.instantiateImageCodec(bytes));
-    final frame = await tester.runAsync(() => codec!.getNextFrame());
-    expect(frame!.image.width, (shareCardSize.width * 2).round());
-    expect(frame.image.height, (shareCardSize.height * 2).round());
+    expect(bytes!.sublist(0, 3), <int>[0xFF, 0xD8, 0xFF]);
+    expect(bytes.length, lessThan(700 * 1024));
   });
 
   testWidgets(
-    'an ayah card has its tajweed glyphs; neither it nor the message names the translator',
+    'an ayah card has the glyphs of the Mushaf; neither it nor the message names the translator',
     (tester) async {
       final ayah = ayahContentShare(
         locale: 'ru',
@@ -99,24 +213,113 @@ void main() {
         'https://iqro.forum/ru/quran/madani-hafs/surah/6/ayah/2',
       );
 
-      final recorder = ui.PictureRecorder();
-      Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 4, 4), Paint());
-      final logo = await tester.runAsync(
-        () => recorder.endRecording().toImage(4, 4),
+      final layout = ShareCardLayout.parse(
+        File('assets/share_card/layout.json').readAsStringSync(),
       );
+      final text = ShareCardText(ayah);
+      final background = await tester.runAsync(() async {
+        final recorder = ui.PictureRecorder();
+        Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 4, 4), Paint());
+        return recorder.endRecording().toImage(4, 4);
+      });
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       await tester.pumpWidget(
         Directionality(
           textDirection: TextDirection.ltr,
-          child: ShareCard(share: ayah, logo: logo!),
+          child: ShareCard(
+            share: ayah,
+            text: text,
+            page: composeShareCard(
+              layout,
+              ShareCardFormat.story,
+              text.arabic,
+              text.translation,
+            )!.single,
+            part: 1,
+            parts: 1,
+            layout: layout,
+            format: ShareCardFormat.story,
+            background: background!,
+          ),
         ),
       );
-      expect(find.text('Он — Тот, Кто сотворил вас'), findsOneWidget);
-      expect(find.text('هُوَ ٱلَّذِى خَلَقَكُم'), findsNothing);
-      final glyphs = tester
+      final lines = tester
           .widgetList<RichText>(find.byType(RichText))
-          .map((text) => text.text.toPlainText())
-          .where((text) => text.contains('ﱃ'));
-      expect(glyphs, ['ﱃ ﱅ']);
+          .map((line) => line.text.toPlainText())
+          .toList();
+      expect(lines, contains('ﱃ ﱅ'));
+      expect(lines.join(' '), contains('«Он — Тот, Кто сотворил вас»'));
+      expect(lines, contains('Аль-Анам · 6:2'));
+      expect(lines, contains('iqro.forum'));
+      expect(lines.any((line) => line.contains('خَلَقَكُم')), isFalse);
     },
   );
+
+  testWidgets('pictures', skip: _screenshots.isEmpty, (tester) async {
+    final context = await _context(tester);
+    await tester.runAsync(_loadFonts);
+    final cases = <(String, ContentShare, ShareCardFormat, String)>[
+      (
+        'short-story-emerald',
+        _ayah(
+          'لَا يُكَلِّفُ ٱللَّهُ نَفْسًا إِلَّا وُسْعَهَا',
+          'Аллах не возлагает на человека сверх его возможностей',
+          286,
+        ),
+        ShareCardFormat.story,
+        'emerald',
+      ),
+      (
+        'short-post-turquoise',
+        _ayah(share.arabic, share.translation, 255),
+        ShareCardFormat.post,
+        'turquoise',
+      ),
+      (
+        'kursi-story-midnight',
+        _ayah(_kursi, _kursiMeaning, 255),
+        ShareCardFormat.story,
+        'midnight',
+      ),
+      (
+        'kursi-post-emerald',
+        _ayah(_kursi, _kursiMeaning, 255),
+        ShareCardFormat.post,
+        'emerald',
+      ),
+      (
+        'dua-story-emerald',
+        const ContentShare(
+          title: 'Слова поминания Аллаха · #16',
+          arabic:
+              'اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ',
+          translation:
+              'Allah’ım, Senin sayende sabaha çıktık, Senin sayende akşama erdik; Senin sayende yaşar, Senin sayende ölürüz. Dönüş yalnız Sanadır.',
+          cardReference: 'Hısnu’l-Müslim, № 16',
+          url: 'https://iqro.forum/tr/dua/hisn-al-muslim/16',
+          readInIqro: 'IQRO’da oku',
+        ),
+        ShareCardFormat.story,
+        'emerald',
+      ),
+    ];
+    for (final (name, content, format, colour) in cases) {
+      final files = await tester.runAsync(() async {
+        final pictures = await renderShareCards(
+          context,
+          content,
+          format: format,
+          colour: colour,
+        );
+        return [
+          for (final picture in pictures!) await encodeShareCard(picture),
+        ];
+      });
+      for (final (index, bytes) in files!.indexed) {
+        File('$_screenshots/$name-${index + 1}.jpg').writeAsBytesSync(bytes);
+      }
+    }
+  });
 }

@@ -3687,4 +3687,54 @@ class AppLocalizationsRu extends AppLocalizations {
   String wordRangeOtherVoice(String reciter, String style) {
     return 'Голос: $reciter · $style. У выбранного чтеца здесь нет разметки по словам.';
   }
+
+  @override
+  String get shareCardSend => 'Поделиться';
+
+  @override
+  String get shareCardStory => 'Сторис';
+
+  @override
+  String get shareCardPost => 'Пост';
+
+  @override
+  String get shareCardColourEmerald => 'Изумруд';
+
+  @override
+  String get shareCardColourTurquoise => 'Бирюза';
+
+  @override
+  String get shareCardColourMidnight => 'Тёмно-синий';
+
+  @override
+  String shareCardPart(int number, int total) {
+    return 'Картинка $number из $total';
+  }
+
+  @override
+  String get shareCardTooLong =>
+      'Текст слишком длинный для картинки. Его можно отправить текстом со ссылкой.';
+
+  @override
+  String get shareCardSendText => 'Отправить текстом';
+
+  @override
+  String get shareCardPreparing => 'Готовим картинку…';
+
+  @override
+  String get shareCardFailed =>
+      'Картинку не удалось создать. Текст и ссылку можно отправить и так.';
+
+  @override
+  String get shareSelection => 'Поделиться выделенным';
+
+  @override
+  String shareCardFromAyah(String reference) {
+    return 'из аята $reference';
+  }
+
+  @override
+  String shareCardFromAyahs(String reference) {
+    return 'из аятов $reference';
+  }
 }

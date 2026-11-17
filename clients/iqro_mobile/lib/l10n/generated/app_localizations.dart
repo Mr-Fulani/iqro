@@ -6419,6 +6419,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Voice: {reciter} · {style}. The chosen reciter has no word-by-word timing here.'**
   String wordRangeOtherVoice(String reciter, String style);
+
+  /// No description provided for @shareCardSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get shareCardSend;
+
+  /// No description provided for @shareCardStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Story'**
+  String get shareCardStory;
+
+  /// No description provided for @shareCardPost.
+  ///
+  /// In en, this message translates to:
+  /// **'Post'**
+  String get shareCardPost;
+
+  /// No description provided for @shareCardColourEmerald.
+  ///
+  /// In en, this message translates to:
+  /// **'Emerald'**
+  String get shareCardColourEmerald;
+
+  /// No description provided for @shareCardColourTurquoise.
+  ///
+  /// In en, this message translates to:
+  /// **'Turquoise'**
+  String get shareCardColourTurquoise;
+
+  /// No description provided for @shareCardColourMidnight.
+  ///
+  /// In en, this message translates to:
+  /// **'Midnight blue'**
+  String get shareCardColourMidnight;
+
+  /// No description provided for @shareCardPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture {number} of {total}'**
+  String shareCardPart(int number, int total);
+
+  /// No description provided for @shareCardTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'This text is too long for a picture. You can send it as text with a link.'**
+  String get shareCardTooLong;
+
+  /// No description provided for @shareCardSendText.
+  ///
+  /// In en, this message translates to:
+  /// **'Send as text'**
+  String get shareCardSendText;
+
+  /// No description provided for @shareCardPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing the picture…'**
+  String get shareCardPreparing;
+
+  /// No description provided for @shareCardFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The picture could not be made. The text and the link can still be sent.'**
+  String get shareCardFailed;
+
+  /// No description provided for @shareSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Share the selection'**
+  String get shareSelection;
+
+  /// No description provided for @shareCardFromAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'from ayah {reference}'**
+  String shareCardFromAyah(String reference);
+
+  /// No description provided for @shareCardFromAyahs.
+  ///
+  /// In en, this message translates to:
+  /// **'from ayahs {reference}'**
+  String shareCardFromAyahs(String reference);
 }
 
 class _AppLocalizationsDelegate

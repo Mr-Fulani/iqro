@@ -36,6 +36,7 @@ import { ReadingActivityTracker } from "./ReadingActivityTracker";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
 import { ShareIcon } from "./ShareIcon";
 import type { AyahShareTarget } from "./AyahShareDialog";
+import { wordRangeShare } from "../lib/word-range-share";
 import { ShareDialogBoundary } from "./ShareDialogBoundary";
 import { MushafReaderLayout, MushafReaderPanel, MushafReaderSettings } from "./MushafReaderLayout";
 import type {
@@ -1872,6 +1873,35 @@ function QuranContent() {
     });
   };
 
+  // The selected words: a part of an ayah goes without a meaning, whole ayahs with theirs.
+  const openWordRangeShare = (range: QuranWordRange) => {
+    const surahNumber = range.start.surah;
+    const surah = surahs.find((item) => item.number === surahNumber);
+    const surahAyahs = ayahs.filter((item) => item.surah_number === surahNumber);
+    const content = wordRangeShare({
+      range,
+      surahName: surah ? localizedSurahName(surah, locale) : t("common.surah", { surah: surahNumber }),
+      ayahs: surahAyahs,
+      partOf: (reference, several) => t(several ? "contentShare.fromAyahs" : "contentShare.fromAyah", { reference }),
+      plainFont: "",
+      translations: new Map(translationLoading ? [] : surahAyahs
+        .map((item) => [item.number, translationsByVerse[`${surahNumber}:${item.number}`]?.text ?? ""] as const)),
+    });
+    setShareTarget({
+      ayahKey: `${surahNumber}:${range.start.ayah}`,
+      edition: selectedEdition,
+      title: content.title,
+      url: new URL(
+        localizedPath(locale, quranAyahPath(selectedEdition, surahNumber, range.start.ayah)),
+        window.location.origin,
+      ).href,
+      arabic: content.arabic,
+      translationId: null,
+      translation: content.translation,
+      part: { range, ayahs: surahAyahs },
+    });
+  };
+
   // Without the dialog's code the ayah still goes, as the text the reader has
   // and the link.
   const shareAyahWithoutPicture = async (target: AyahShareTarget) => {
@@ -3158,6 +3188,7 @@ function QuranContent() {
             leavePlainText(wordRange.range.start.ayah);
             window.requestAnimationFrame(() => openAyahMenu(ayahKey));
           }}
+          onShare={() => openWordRangeShare(wordRange.range)}
           onPlayingWord={setPlayingWord}
         />
       )}
