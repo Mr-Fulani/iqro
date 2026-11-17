@@ -673,18 +673,26 @@ body:has(.quran-reader-boot) .app-footer {
 .reader-top-title small { color: #4b5b53; font-size: 12px; }
 .reader-top-actions { display: flex; border-radius: 22px; }
 
-.reader-actions.is-app .reader-action-buttons { flex-wrap: nowrap; gap: 8px; }
+.reader-actions.is-app .reader-action-buttons { flex-wrap: nowrap; gap: 6px; }
 
+/* The icon over its name, so the page scrubber keeps the middle of the row. */
 .reader-actions button.reader-labelled {
-  grid-auto-flow: column;
   flex: 0 0 auto;
-  gap: 6px;
+  gap: 1px;
   width: auto;
-  padding: 0 12px;
-  border-radius: 22px;
+  min-width: 52px;
+  height: 48px;
+  padding: 0 4px;
+  border-radius: 14px;
   font: inherit;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1.2;
+}
+
+.reader-actions.is-app .reader-action-buttons > button:last-child {
+  flex-basis: 36px;
+  width: 36px;
 }
 
 .reader-actions.is-app .reader-page-label {
@@ -697,3 +705,53 @@ body:has(.quran-reader-boot) .app-footer {
 
 .reader-actions.is-app .reader-page-label strong { font-size: 13px; font-weight: 600; }
 .reader-actions.is-app .reader-page-label small { font-size: 11px; }
+
+/* The page scrubber in the phone reader's row, as in the app. */
+.reader-scrubber {
+  display: grid;
+  flex: 1 1 0;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reader-scrubber-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-inline: 4px;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.reader-scrubber-head strong { font-weight: 600; }
+
+.reader-scrubber-marks {
+  display: flex;
+  border-radius: 7px;
+  background: #e8e6e3;
+  touch-action: none;
+}
+
+.reader-actions .reader-scrubber-marks button {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.reader-scrubber-marks button span {
+  width: 5px;
+  height: 10px;
+  border-radius: 4px;
+  background: #aaa8a3;
+  opacity: max(0.3, calc(1 - var(--away) * 0.12));
+}
+
+.reader-scrubber-marks button[aria-current="page"] span {
+  height: 12px;
+  background: var(--primary);
+  opacity: 1;
+}

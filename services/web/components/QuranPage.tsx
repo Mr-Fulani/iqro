@@ -1782,6 +1782,17 @@ function QuranContent() {
     queueReadingPlace({ pageNumber: nextPage });
   }, [currentPage, mushafPageCount, queueReadingPlace]);
 
+  // The phone reader's page scrubber opens a page by its number.
+  const jumpToMushafPage = useCallback((page: number) => {
+    const nextPage = Math.min(mushafPageCount, Math.max(1, page));
+    setPageTurnDirection(nextPage >= currentPage ? "next" : "previous");
+    pendingMushafAyah.current = null;
+    pendingNavigationPage.current = null;
+    setSelectedMushafAyah(null);
+    setCurrentPage(nextPage);
+    queueReadingPlace({ pageNumber: nextPage });
+  }, [currentPage, mushafPageCount, queueReadingPlace]);
+
   const annotationTarget = (ayahKey: string) => {
     const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
     const ayah = ayahs.find(
@@ -1999,6 +2010,7 @@ function QuranContent() {
       subtitle={selectedMushafAyah ? t("common.ayah", { ayah: selectedMushafAyah }) : t("surahs.mushafMode")}
       juz={divisionAtAyah(juz, currentAyahKey)}
       bookmark={readerBookmark}
+      onJumpPage={jumpToMushafPage}
     >
       <MushafReaderPanel name="session" label={t("quran.readerSession")}>
         {prayerReadingConfig === null ? (
