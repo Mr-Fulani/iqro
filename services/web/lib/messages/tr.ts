@@ -326,6 +326,7 @@ const tr: Messages = {
   "quran.ayahCopy": "Ayeti kopyala",
   "quran.ayahCopied": "Ayet kopyalandı",
   "quran.ayahCopyFailed": "Ayet kopyalanamadı",
+  "quran.readerTranslation": "Meal",
   "home.surahCatalog": "Sure kataloğu",
   "home.surahTitle": "Kur'an-ı Kerim sureleri",
   "home.allSurahs": "114 surenin tümü →",

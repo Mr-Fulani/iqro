@@ -1971,9 +1971,22 @@ test.describe("word selection on a phone", () => {
     const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
     await expect(view).toHaveAttribute("data-font-status", "ready");
     const actions = page.getByTestId("mushaf-ayah-actions");
+    // The phone reader has the app's chrome: the surah and the bookmark on top,
+    // the text, the page with its juz and the explicit hide button below.
+    const top = page.locator(".reader-top");
+    await expect(top).toContainText("6. Аль-Анам");
+    await expect(top).toContainText("Мусхаф");
+    await expect(top.getByRole("button", { name: "Выйти из читалки" })).toBeVisible();
+    await expect(top.getByTestId("reader-bookmark")).toHaveAttribute("aria-pressed", "false");
+    await expect(top.getByRole("button", { name: "Настройки чтения" })).toBeVisible();
+    const row = page.locator(".reader-actions .reader-action-buttons");
+    await expect(row.getByTestId("reader-open-text")).toHaveText("Текст");
+    await expect(row.locator(".reader-page-label")).toContainText("Страница 128");
+    await expect(row.getByRole("button", { name: "Свернуть меню читалки" })).toBeVisible();
     await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
     await expect(actions).toBeVisible();
     await expect(actions).toContainText("Аят 6:2");
+    await expect(top).toContainText("Аят 6:2");
     // One menu, in the app's order: listen and the bookmark, the breakdown and
     // learning, repeat, the note, copy, sharing.
     await expect(actions.getByRole("button")).toHaveCount(9);

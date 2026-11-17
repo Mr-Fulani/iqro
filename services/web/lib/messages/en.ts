@@ -326,6 +326,7 @@ const en: Messages = {
   "quran.ayahCopy": "Copy ayah",
   "quran.ayahCopied": "Ayah copied",
   "quran.ayahCopyFailed": "Couldn't copy ayah",
+  "quran.readerTranslation": "Translation",
   "home.surahCatalog": "Surah catalog",
   "home.surahTitle": "Surahs of the Holy Quran",
   "home.allSurahs": "All 114 surahs →",
