@@ -1999,14 +1999,14 @@ test.describe("word selection on a phone", () => {
     await expect(top).toContainText("Аят 6:2");
     // One menu, in the app's order: listen and the bookmark, the breakdown and
     // learning, repeat, the note, copy, sharing.
-    await expect(actions.getByRole("button")).toHaveCount(9);
+    await expect(actions.getByRole("button")).toHaveCount(11);
     const order = await actions.getByRole("button").evaluateAll((buttons) => buttons
       .map((button) => ({ text: (button.textContent ?? "").replace(/\s+/g, " ").trim(), box: button.getBoundingClientRect() }))
       .sort((a, b) => a.box.top - b.box.top || a.box.left - b.box.left)
       .map((button) => button.text));
     expect(order).toEqual([
       "Слушать", "Избранное", "Разбор таджвида", "Выучить", "Повторять выбранный аят",
-      "✎ Заметка и выделение", "Копировать аят", "Поделиться", "✕",
+      "✎ Заметка и выделение", "Копировать аят", "Поделиться", "Закладки", "Выберите Мусхаф", "✕",
     ]);
     const box = (await actions.boundingBox())!;
     expect(box.y).toBeGreaterThanOrEqual(0);
@@ -2024,6 +2024,42 @@ test.describe("word selection on a phone", () => {
     await page.getByTestId("word-range-more").click();
     await expect(actions).toBeVisible();
     await expect(actions).toContainText("Аят 6:2");
+  });
+
+  test("the ayah menu holds the reader's tools: the zoom, the bookmarks and the Mushaf choice", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const sheet = page.locator(".mushaf-page-transition").filter({ visible: true }).first();
+    const width = () => sheet.evaluate((element) => element.getBoundingClientRect().width);
+    const fitted = await width();
+    await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
+    const tools = page.getByTestId("ayah-menu-reader");
+    await expect(tools).toBeVisible();
+
+    // The zoom: the sheet doubles and pans; 100% fits it again.
+    await tools.getByTestId("reader-zoom").fill("200");
+    await expect(tools.locator("output")).toHaveText("200%");
+    await expect(layout).toHaveAttribute("data-reader-zoomed", "true");
+    await expect.poll(width).toBeGreaterThan(fitted * 1.9);
+    await tools.getByTestId("reader-zoom").fill("100");
+    await expect(layout).not.toHaveAttribute("data-reader-zoomed", "true");
+    await expect.poll(width).toBeLessThan(fitted * 1.05);
+
+    // The bookmarks open as a list; nothing saved yet says how to save.
+    await tools.getByRole("button", { name: "Закладки" }).click();
+    const bookmarks = page.getByTestId("reader-bookmarks");
+    await expect(bookmarks.getByRole("heading", { name: "Закладки" })).toBeVisible();
+    await bookmarks.getByRole("button", { name: "Закрыть" }).click();
+    await expect(bookmarks).toHaveCount(0);
+
+    await expect(tools.getByRole("link", { name: "Заметки" })).toHaveAttribute("href", "/ru/notes");
+    // The Mushaf is chosen in the reading settings.
+    await tools.getByRole("button", { name: "Выберите Мусхаф" }).click();
+    await expect(page.locator("#mushaf-variant")).toBeVisible();
+    await expect(layout).not.toHaveClass(/is-reader-immersive/);
   });
 
   test("the page scrubber under the phone Mushaf opens a tapped page", async ({ page }) => {

@@ -118,7 +118,7 @@ function PageScrubber({ page, count, juz, onJump }: { page: number; count: numbe
 }
 
 /** Viewport and overlays only. Reader data and all existing controls stay mounted. */
-export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, onOpenText, title, subtitle, juz, bookmark, onJumpPage, children }: {
+export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, onOpenText, title, subtitle, juz, bookmark, onJumpPage, zoom = 1, settingsRequest = 0, children }: {
   active: boolean;
   page: number;
   count: number;
@@ -137,6 +137,10 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   bookmark?: { saved: boolean; disabled: boolean; label: string; onToggle: () => void };
   /** Opens a page from the phone's page scrubber. */
   onJumpPage?: (page: number) => void;
+  /** The phone reader's page zoom, 1 to 3. */
+  zoom?: number;
+  /** Counts requests to show the reading settings (the Mushaf choice of the ayah menu). */
+  settingsRequest?: number;
   children: ReactNode;
 }) {
   const { t, formatNumber } = useI18n();
@@ -269,6 +273,25 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
     setSettingsTarget(target);
     leaveReader();
   };
+  // The ayah menu's «Choose the Mushaf» leads to the reading settings.
+  const handledSettingsRequest = useRef(settingsRequest);
+  useEffect(() => {
+    if (handledSettingsRequest.current === settingsRequest) return;
+    handledSettingsRequest.current = settingsRequest;
+    setSettingsExpanded(true);
+    setSettingsTarget("settings");
+    setFocused(false);
+    setPanel(null);
+    if (document.fullscreenElement === root.current) void document.exitFullscreen().catch(() => {});
+  }, [settingsRequest]);
+
+  // A zoomed sheet opens on its middle, then follows the finger.
+  useEffect(() => {
+    if (!immersive || zoom <= 1) return;
+    const stage = root.current?.querySelector<HTMLElement>(".mushaf-page-container");
+    if (stage) stage.scrollLeft = (stage.scrollWidth - stage.clientWidth) / 2 * (getComputedStyle(stage).direction === "rtl" ? -1 : 1);
+  }, [immersive, zoom]);
+
   const toggleFullscreen = async () => {
     setFullscreenError(false);
     try {
@@ -284,7 +307,8 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
       <div
         ref={root}
         className={`quran-page-layout${active ? " is-mushaf-mode" : ""}${immersive ? " is-reader-immersive" : ""}`}
-        style={{ "--reader-page-ratio": pageRatio } as CSSProperties}
+        style={{ "--reader-page-ratio": pageRatio, "--reader-zoom": zoom } as CSSProperties}
+        data-reader-zoomed={immersive && zoom > 1 ? true : undefined}
         data-reader-orientation={landscape ? "landscape" : "portrait"}
         data-reader-compact={compact}
         onClick={(event) => {
