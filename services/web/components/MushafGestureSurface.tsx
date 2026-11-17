@@ -42,7 +42,8 @@ export function MushafGestureSurface({ children, label, onTurnPage }: {
     const begin = (source: Gesture["source"], id: number, x: number, y: number, time: number, target: EventTarget | null) => {
       gesture = null;
       resetDrag();
-      if ((window.visualViewport?.scale ?? 1) > 1.05 || !(target instanceof Element)) {
+      // A zoomed page, by the browser or by the reader's own zoom, pans instead of turning.
+      if ((window.visualViewport?.scale ?? 1) > 1.05 || element.closest("[data-reader-zoomed]") || !(target instanceof Element)) {
         suppressClick = true;
         return;
       }

@@ -581,6 +581,11 @@
     background: var(--panel);
   }
 
+  /* The Plan tab opens with the palm and today's progress, as in the app. */
+  .planner-page > .today-reading {
+    order: -1;
+  }
+
   .home-page .prayer-reading-plan {
     background: var(--accent-gold-subtle);
     border-color: var(--accent-gold-border);
@@ -2426,4 +2431,74 @@ html.is-mobile-player-open {
   .ayah-icon-button.ayah-copy-button {
     display: inline-flex;
   }
+}
+
+/* The reader's own tools at the end of the phone's ayah menu, as in the app:
+   the page zoom, the bookmarks, the Mushaf choice and the notes. */
+.is-reader-immersive .mushaf-ayah-actions.is-open .ayah-menu-reader {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 8px;
+  order: 3;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open > button.mushaf-ayah-actions-close {
+  order: 4;
+}
+
+.ayah-menu-zoom {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ayah-menu-zoom input {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 32px;
+  accent-color: var(--primary);
+}
+
+.ayah-menu-zoom output {
+  min-width: 44px;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.reader-bookmarks-state {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+}
+
+.reader-bookmarks-list {
+  max-height: 60dvh;
+  margin: 12px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.reader-bookmarks-list button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 4px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  background: none;
+  cursor: pointer;
+}
+
+.reader-bookmarks-list small {
+  color: var(--text-secondary);
 }

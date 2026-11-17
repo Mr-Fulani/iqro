@@ -59,7 +59,7 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
   await expect(navigation).toBeHidden();
   await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(navigation).toBeVisible();
   // The reader keeps the Quran tab lit and has a way back to the list.
   await expect(navigation.locator('[aria-current="page"]')).toHaveAttribute("href", "/ru/surahs");
@@ -91,7 +91,7 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await expect(page).toHaveURL("/ru/quran");
   await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
   await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
 
   // More is a screen of its own, opened from the fifth tab with the keyboard too.
   const more = navigation.getByTestId("mobile-more-tab");
@@ -270,4 +270,14 @@ test("the phone home follows the app; the desktop home keeps its own blocks", as
     await expect(page.getByTestId(testId)).toBeHidden();
   }
   await expect(page.locator(".header-actions")).toBeVisible();
+});
+
+test("the phone's Plan opens with the palm and today's progress; the desktop keeps its order", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/planner");
+  const top = async (testId: string) => (await page.getByTestId(testId).boundingBox())!.y;
+  await expect(page.getByTestId("today-reading")).toBeVisible();
+  expect(await top("today-reading")).toBeLessThan(await top("reading-planner-dashboard"));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  expect(await top("reading-planner-dashboard")).toBeLessThan(await top("today-reading"));
 });

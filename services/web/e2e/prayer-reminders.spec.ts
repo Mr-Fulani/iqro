@@ -147,7 +147,8 @@ test("prayer profile persists the complete revisioned calculation preferences", 
   await expect(page.getByLabel("Широта (Latitude)")).toHaveValue("40.7128");
   await expect(page.getByLabel("Долгота (Longitude)")).toHaveValue("-74.0060");
   await expect(page.getByLabel("Часовой пояс (IANA)")).toHaveValue("America/New_York");
-  await expect(page.getByLabel("Быстрый выбор города")).toHaveValue("custom");
+  // The saved place is New York, one of the quick list's cities.
+  await expect(page.getByLabel("Быстрый выбор города").locator("option:checked")).toHaveText("Нью-Йорк (США)");
   await expect.poll(() => captured.calculations.at(-1)).toMatchObject({
     timezone: "America/New_York",
     location: { latitude: 40.7128, longitude: -74.006 },

@@ -238,6 +238,16 @@ test("formula cards play audio, count repetitions and switch text and modes", as
   await expect(step.locator(".salah-transliteration")).toHaveCount(0);
   await page.getByLabel("Перевод").uncheck();
   await expect(step.locator(".salah-translation")).toHaveCount(0);
+  // The Arabic can be put away while learning, as in the app; the choice is kept.
+  const arabic = step.locator('.salah-formula [lang="ar"]');
+  await expect(arabic.first()).toBeVisible();
+  await page.getByLabel("Арабский текст").uncheck();
+  await expect(arabic).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel("Арабский текст")).not.toBeChecked();
+  await expect(arabic).toHaveCount(0);
+  await page.getByLabel("Арабский текст").check();
+  await expect(arabic.first()).toBeVisible();
 
   await page.getByRole("button", { name: "Практика" }).click();
   await expect(page.getByRole("button", { name: "Практика" })).toHaveAttribute("aria-pressed", "true");
