@@ -47,7 +47,12 @@
 @media (max-width: 720px) { .columns { grid-template-columns: minmax(0, 1fr); }.panel { padding: 16px; }.hero { padding: 24px; }.grid { gap: 2px; }.day { min-height: 70px; }.legend > span { padding-inline: 7px; }.markerHint { display: none; } }
 
 @media (max-width: 768px) {
-  .page { padding-block: 0 16px; }
+  /* On a phone the month comes first, then the day's events, then the date and
+     adjustment controls, as in the app's calendar. */
+  .page { display: flex; flex-direction: column; padding-block: 0 16px; }
+  .columns { order: 1; }
+  .controls, .page > .note { order: 2; }
+  .disclaimer { order: 3; }
   .hero { padding: 22px; border-radius: 22px; background: var(--mobile-ink); }
   .hero h1 { font-family: Georgia, "Times New Roman", serif; font-size: 28px; font-weight: 600; line-height: 1.15; }
   .hero p { color: #d9eee7; font-size: 14px; }

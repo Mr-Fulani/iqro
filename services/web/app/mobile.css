@@ -581,6 +581,11 @@
     background: var(--panel);
   }
 
+  /* The Plan tab opens with the palm and today's progress, as in the app. */
+  .planner-page > .today-reading {
+    order: -1;
+  }
+
   .home-page .prayer-reading-plan {
     background: var(--accent-gold-subtle);
     border-color: var(--accent-gold-border);

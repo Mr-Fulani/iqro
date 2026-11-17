@@ -54,6 +54,13 @@ for (const locale of ["ru", "en", "ar", "tr"] as const) {
     await expect(page.getByRole("heading", {name: copy.title, exact: true})).toBeVisible();
     await expect(page.getByRole("button", {name: copy.next, exact: true})).toBeEnabled();
     await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    // On a phone the month and the day's events come before the date controls, as in the app.
+    const top = async (selector: string) => (await page.locator(selector).first().boundingBox())!.y;
+    expect(await top('[data-testid="calendar-day-1"]')).toBeLessThan(await top('input[type="date"]'));
+    expect(await top("aside")).toBeLessThan(await top('input[type="date"]'));
+    await page.setViewportSize({width: 1280, height: 900});
+    expect(await top('input[type="date"]')).toBeLessThan(await top('[data-testid="calendar-day-1"]'));
+    await page.setViewportSize({width: 390, height: 844});
     await page.getByRole("button", {name: /^٢٣ |^23 /}).click();
     await expect(page.getByRole("heading", {name: seed.events.find((e: {code: string}) => e.code === "last_ten_nights").titles[locale]})).toBeVisible();
     await expect(page.getByRole("link", {name: /Sahih al-Bukhari 2017/})).toHaveAttribute("href", "https://sunnah.com/bukhari:2017");
