@@ -271,3 +271,13 @@ test("the phone home follows the app; the desktop home keeps its own blocks", as
   }
   await expect(page.locator(".header-actions")).toBeVisible();
 });
+
+test("the phone's Plan opens with the palm and today's progress; the desktop keeps its order", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/planner");
+  const top = async (testId: string) => (await page.getByTestId(testId).boundingBox())!.y;
+  await expect(page.getByTestId("today-reading")).toBeVisible();
+  expect(await top("today-reading")).toBeLessThan(await top("reading-planner-dashboard"));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  expect(await top("reading-planner-dashboard")).toBeLessThan(await top("today-reading"));
+});
