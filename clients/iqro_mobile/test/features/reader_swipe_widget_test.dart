@@ -26,6 +26,7 @@ import 'package:iqro_mobile/features/quran/reader_screen.dart';
 import 'package:iqro_mobile/features/quran/reader_words.dart';
 import 'package:iqro_mobile/features/quran/recitation_match.dart';
 import 'package:iqro_mobile/features/quran/rub_mark.dart';
+import 'package:iqro_mobile/features/quran/word_range.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -64,6 +65,50 @@ void main() {
     expect(find.byKey(const ValueKey('reader-flow')), findsNothing);
     expect(find.byKey(const ValueKey('reader-open-mushaf')), findsOneWidget);
     expect(app.quran.saved.last, reached);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('two fingers pulled apart make the plain text larger, pulled '
+      'together smaller; a double tap brings back the size it starts with', (
+    tester,
+  ) async {
+    final app = await _pump(tester);
+    await _swipe(tester, await _card(tester, 3), 220);
+    final ayah = find.byKey(const ValueKey('reader-flow-ayah-3'));
+    final before = tester.getSize(ayah).height;
+
+    Future<void> pinch(double from, double to) async {
+      final one = await tester.startGesture(Offset(180 - from / 2, 400));
+      final two = await tester.startGesture(Offset(180 + from / 2, 400));
+      for (var step = 1; step <= 5; step++) {
+        final half = (from + (to - from) * step / 5) / 2;
+        await one.moveTo(Offset(180 - half, 400));
+        await two.moveTo(Offset(180 + half, 400));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await one.up();
+      await two.up();
+      await tester.pumpAndSettle();
+    }
+
+    await pinch(100, 150);
+    expect(app.preferences.readerFlowFontSize, defaultReaderFlowFontSize * 1.5);
+    expect(tester.getSize(ayah).height, greaterThan(before));
+    // Still the plain text, at its ayah: neither a swipe nor a scroll.
+    expect(find.byKey(const ValueKey('reader-flow')), findsOneWidget);
+    expect(_place(tester), 'Аят 3 · стр. 1');
+
+    await pinch(200, 50);
+    expect(app.preferences.readerFlowFontSize, minReaderFlowFontSize);
+    expect(tester.getSize(ayah).height, lessThan(before));
+
+    await tester.tapAt(const Offset(180, 400));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tapAt(const Offset(180, 400));
+    await tester.pumpAndSettle();
+    expect(app.preferences.readerFlowFontSize, defaultReaderFlowFontSize);
+    expect(tester.getSize(ayah).height, before);
+    expect(_place(tester), 'Аят 3 · стр. 1');
     expect(tester.takeException(), isNull);
   });
 
@@ -126,6 +171,30 @@ void main() {
         third.center.dx < second.center.dx || third.top > second.top,
         isTrue,
       );
+
+      // A larger text: the lens is still on its word, which has moved.
+      const word = QuranWord(2, 3, 3);
+      Rect onWord() {
+        final registry = tester
+            .widget<ReaderAyahWords>(
+              find.byKey(const ValueKey('reader-flow-ayah-3')),
+            )
+            .registry;
+        return registry.wordRect(word)!;
+      }
+
+      expect(onWord().contains(tester.getCenter(lens)), isTrue);
+      final small = onWord();
+      final one = await tester.startGesture(const Offset(130, 600));
+      final two = await tester.startGesture(const Offset(230, 600));
+      await one.moveTo(const Offset(100, 600));
+      await two.moveTo(const Offset(260, 600));
+      await tester.pump(const Duration(milliseconds: 16));
+      await one.up();
+      await two.up();
+      await tester.pumpAndSettle();
+      expect(onWord().height, greaterThan(small.height));
+      expect(onWord().contains(tester.getCenter(lens)), isTrue);
 
       // The recogniser stops after a pause: the next listen starts.
       speech.onStatus!('doneNoResult');

@@ -335,7 +335,74 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       _keepScheduled = false;
       _alignTo(ayah);
       _reportBounds();
+      if (_followWord == null) return;
+      // The lens goes with its word, once the text has moved.
+      _followGlide = false;
+      WidgetsBinding.instance
+        ..addPostFrameCallback((_) => _placeLens())
+        ..scheduleFrame();
     });
+  }
+
+  /// The fingers on the text. Two of them pulled apart or together change
+  /// the size of the text, as a pinch does a picture.
+  final _fingers = <int, Offset>{};
+  ({double distance, double size})? _pinch;
+  ScrollHoldController? _pinchHold;
+
+  double get _fingerDistance {
+    final points = _fingers.values.toList();
+    return (points[0] - points[1]).distance;
+  }
+
+  void _fingerDown(PointerDownEvent event, double size) {
+    _fingers[event.pointer] = event.position;
+    if (_fingers.length != 2 ||
+        _words.range != null ||
+        wordRangePulling.value ||
+        _fingerDistance < 1) {
+      return;
+    }
+    // The text does not scroll under two fingers.
+    _pinchHold = _scrollController.hasClients
+        ? _scrollController.position.hold(() {})
+        : null;
+    setState(() => _pinch = (distance: _fingerDistance, size: size));
+  }
+
+  void _fingerMove(PointerMoveEvent event) {
+    if (!_fingers.containsKey(event.pointer)) return;
+    _fingers[event.pointer] = event.position;
+    final pinch = _pinch;
+    if (pinch == null || _fingers.length != 2) return;
+    final size = (pinch.size * _fingerDistance / pinch.distance).clamp(
+      minReaderFlowFontSize,
+      maxReaderFlowFontSize,
+    );
+    if (size == _fontSize) return;
+    setState(() => _fontSize = size);
+    _keepPlace();
+  }
+
+  void _fingerUp(PointerEvent event) {
+    _fingers.remove(event.pointer);
+    if (_pinch == null) return;
+    _pinchHold?.cancel();
+    _pinchHold = null;
+    setState(() => _pinch = null);
+    final size = _fontSize;
+    if (size != null) _saveSize(size);
+  }
+
+  void _saveSize(double size) => unawaited(
+    ref.read(appPreferencesProvider.notifier).setReaderFlowFontSize(size),
+  );
+
+  /// A double tap: the size the text has from the start.
+  void _resetSize() {
+    setState(() => _fontSize = defaultReaderFlowFontSize);
+    _keepPlace();
+    _saveSize(defaultReaderFlowFontSize);
   }
 
   var _placeUpdateScheduled = false;
@@ -532,9 +599,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         setState(() => _fontSize = value);
         _keepPlace();
       },
-      onChangeEnd: (value) => unawaited(
-        ref.read(appPreferencesProvider.notifier).setReaderFlowFontSize(value),
-      ),
+      onChangeEnd: _saveSize,
     );
     // A sheet on a phone; on a tablet a panel by the button.
     if (MediaQuery.sizeOf(context).shortestSide < 600) {
@@ -697,219 +762,235 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         _width = constraints.maxWidth;
         // Lines no longer than a page of a book, on a tablet too.
         final side = math.max(20.0, (constraints.maxWidth - 820) / 2);
-        return ReaderSwipeArea(
-          background: mushafPaperColor,
-          enabled: _words.range == null && !wordRangePulling.value,
-          left: ReaderSwipeTarget(
-            icon: Icons.subject_rounded,
-            label: context.l10n.textMode,
-          ),
-          onSwipe: (direction, start) {
-            if (direction == ReaderSwipeDirection.left) _leave();
-          },
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _words.range == null ? null : _words.clear,
-            child: Stack(
-              key: _stackKey,
-              children: <Widget>[
-                Positioned.fill(
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (notification) {
-                      if (notification.depth != 0) return false;
-                      if (notification is ScrollStartNotification &&
-                          notification.dragDetails != null) {
-                        _dragged = true;
-                      }
-                      if (notification is ScrollEndNotification && _dragged) {
-                        unawaited(_markVisibleRub());
-                      }
-                      if (notification is ScrollUpdateNotification) {
-                        // The lens stays on its word as the text moves.
-                        if (_followRect case final rect?) {
-                          setState(() {
-                            _followGlide = false;
-                            _followRect = rect.shift(
-                              Offset(0, -(notification.scrollDelta ?? 0)),
-                            );
-                          });
-                        }
-                        if (_words.range != null) _reportBounds();
-                        // A jump to keep the place reports nothing new.
-                        if (!_jumping) _schedulePlaceUpdate();
-                      }
-                      _nextPull.handle(
-                        notification,
-                        enabled:
-                            _words.range == null && widget.surah < lastSurah,
-                      );
-                      return false;
-                    },
-                    child: ReaderAnchoredList(
-                      key: _viewportKey,
-                      controller: _scrollController,
-                      // The surah's title comes with its first ayah.
-                      initialIndex: widget.initialAyah <= 1
-                          ? 0
-                          : items.indexWhere(
-                                  (item) => item.number == widget.initialAyah,
-                                ) +
-                                1,
-                      padding: EdgeInsets.fromLTRB(
-                        side,
-                        0,
-                        side,
-                        _words.range == null ? 32 : 280,
-                      ),
-                      itemCount: items.length + 2,
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          return _FlowHeader(
-                            name: surah?.nameAr,
-                            opening: opening,
-                            size: size,
-                            style: style,
-                          );
-                        }
-                        if (index == items.length + 1) {
-                          return widget.surah >= lastSurah
-                              ? QuranEndCard(surah: surah, paper: true)
-                              : NextSurahCard(
-                                  number: widget.surah + 1,
-                                  surah: surahs
-                                      .where(
-                                        (item) =>
-                                            item.number == widget.surah + 1,
-                                      )
-                                      .firstOrNull,
-                                  progress: _nextPull.progress,
-                                  onTap: _words.range == null
-                                      ? _openNext
-                                      : null,
-                                  paper: true,
-                                );
-                        }
-                        final ayah = items[index - 1];
-                        final words = ayahWords(ayah);
-                        final page = pageOf(ayah);
-                        final pageEnded =
-                            index > 1 &&
-                            page != null &&
-                            page != pageOf(items[index - 2]);
-                        final text = Consumer(
-                          builder: (context, ref, _) {
-                            final script = watchMushafAyahScript(
-                              ref,
-                              surah: widget.surah,
-                              ayah: ayah.number,
-                              wordCount: words.length,
-                            );
-                            // The Mushaf's script reflows the text when it
-                            // arrives: the ayah at the top stays there.
-                            // Once the reader scrolls, pages load ahead of
-                            // the screen and move nothing on it.
-                            if (script == null) {
-                              _plainAyahs.add(ayah.number);
-                            } else if (_plainAyahs.remove(ayah.number) &&
-                                !_dragged) {
-                              _keepPlace();
-                            }
-                            return ReaderAyahWords.flow(
-                              key: ValueKey('reader-flow-ayah-${ayah.number}'),
-                              surah: widget.surah,
-                              ayahs: <ReaderAyahText>[
-                                ReaderAyahText(
-                                  ayah: ayah.number,
-                                  words: words,
-                                  marker:
-                                      '\u00A0﴿${arabicIndicDigits(ayah.number)}﴾',
-                                  spans: script?.words,
-                                  markerSpan: script == null
-                                      ? null
-                                      : TextSpan(
-                                          children: <InlineSpan>[
-                                            const TextSpan(text: '\u00A0'),
-                                            ?script.marker,
-                                          ],
-                                        ),
-                                ),
-                              ],
-                              textAlign: TextAlign.start,
-                              markerStyle: const TextStyle(color: _markerColor),
-                              kashida: true,
-                              style: style,
-                              registry: _wordRegistry,
-                              range: _words.range,
-                              // The ayah a quarter of a hizb starts at, while
-                              // it is announced.
-                              marked:
-                                  _marked ??
-                                  (_rubMark.mark?.startAyah.ayah ==
-                                              ayah.number &&
-                                          words.isNotEmpty
-                                      ? QuranWordRange.between(
-                                          QuranWord(
-                                            widget.surah,
-                                            ayah.number,
-                                            1,
-                                          ),
-                                          QuranWord(
-                                            widget.surah,
-                                            ayah.number,
-                                            words.length,
-                                          ),
-                                        )
-                                      : null),
-                              playingWord: _words.playingWord,
-                              onRange: (range) => _selectWords(items, range),
-                              onDrag: _followWordDrag,
-                            );
-                          },
-                        );
-                        // Each ayah a paragraph of its own, a blank line
-                        // between them.
-                        return Padding(
-                          key: _ayahKeys.putIfAbsent(
-                            ayah.number,
-                            GlobalKey.new,
-                          ),
-                          padding: EdgeInsets.only(bottom: size * .9),
-                          child: pageEnded
-                              ? Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: <Widget>[
-                                    ReaderPageBreak(
-                                      key: ValueKey(
-                                        'reader-flow-page-end-${page - 1}',
-                                      ),
-                                      paper: true,
-                                      label:
-                                          '${context.l10n.page} ${readerDigits(language, page - 1)}',
-                                    ),
-                                    SizedBox(height: size * .5),
-                                    text,
-                                  ],
-                                )
-                              : text,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                if (_words.range != null)
+        return Listener(
+          onPointerDown: (event) => _fingerDown(event, size),
+          onPointerMove: _fingerMove,
+          onPointerUp: _fingerUp,
+          onPointerCancel: _fingerUp,
+          child: ReaderSwipeArea(
+            background: mushafPaperColor,
+            enabled:
+                _words.range == null &&
+                !wordRangePulling.value &&
+                _pinch == null,
+            left: ReaderSwipeTarget(
+              icon: Icons.subject_rounded,
+              label: context.l10n.textMode,
+            ),
+            onSwipe: (direction, start) {
+              if (direction == ReaderSwipeDirection.left) _leave();
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _words.range == null ? null : _words.clear,
+              onDoubleTap: _words.range == null ? _resetSize : null,
+              child: Stack(
+                key: _stackKey,
+                children: <Widget>[
                   Positioned.fill(
-                    child: WordRangePanelLayer(
-                      controller: _words,
-                      selection: _selectionBounds,
-                      onMore: () => unawaited(_showMore(items)),
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (notification.depth != 0) return false;
+                        if (notification is ScrollStartNotification &&
+                            notification.dragDetails != null) {
+                          _dragged = true;
+                        }
+                        if (notification is ScrollEndNotification && _dragged) {
+                          unawaited(_markVisibleRub());
+                        }
+                        if (notification is ScrollUpdateNotification) {
+                          // The lens stays on its word as the text moves.
+                          if (_followRect case final rect?) {
+                            setState(() {
+                              _followGlide = false;
+                              _followRect = rect.shift(
+                                Offset(0, -(notification.scrollDelta ?? 0)),
+                              );
+                            });
+                          }
+                          if (_words.range != null) _reportBounds();
+                          // A jump to keep the place reports nothing new.
+                          if (!_jumping && _pinch == null) {
+                            _schedulePlaceUpdate();
+                          }
+                        }
+                        _nextPull.handle(
+                          notification,
+                          enabled:
+                              _words.range == null && widget.surah < lastSurah,
+                        );
+                        return false;
+                      },
+                      child: ReaderAnchoredList(
+                        key: _viewportKey,
+                        controller: _scrollController,
+                        // The surah's title comes with its first ayah.
+                        initialIndex: widget.initialAyah <= 1
+                            ? 0
+                            : items.indexWhere(
+                                    (item) => item.number == widget.initialAyah,
+                                  ) +
+                                  1,
+                        padding: EdgeInsets.fromLTRB(
+                          side,
+                          0,
+                          side,
+                          _words.range == null ? 32 : 280,
+                        ),
+                        itemCount: items.length + 2,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return _FlowHeader(
+                              name: surah?.nameAr,
+                              opening: opening,
+                              size: size,
+                              style: style,
+                            );
+                          }
+                          if (index == items.length + 1) {
+                            return widget.surah >= lastSurah
+                                ? QuranEndCard(surah: surah, paper: true)
+                                : NextSurahCard(
+                                    number: widget.surah + 1,
+                                    surah: surahs
+                                        .where(
+                                          (item) =>
+                                              item.number == widget.surah + 1,
+                                        )
+                                        .firstOrNull,
+                                    progress: _nextPull.progress,
+                                    onTap: _words.range == null
+                                        ? _openNext
+                                        : null,
+                                    paper: true,
+                                  );
+                          }
+                          final ayah = items[index - 1];
+                          final words = ayahWords(ayah);
+                          final page = pageOf(ayah);
+                          final pageEnded =
+                              index > 1 &&
+                              page != null &&
+                              page != pageOf(items[index - 2]);
+                          final text = Consumer(
+                            builder: (context, ref, _) {
+                              final script = watchMushafAyahScript(
+                                ref,
+                                surah: widget.surah,
+                                ayah: ayah.number,
+                                wordCount: words.length,
+                              );
+                              // The Mushaf's script reflows the text when it
+                              // arrives: the ayah at the top stays there.
+                              // Once the reader scrolls, pages load ahead of
+                              // the screen and move nothing on it.
+                              if (script == null) {
+                                _plainAyahs.add(ayah.number);
+                              } else if (_plainAyahs.remove(ayah.number) &&
+                                  !_dragged) {
+                                _keepPlace();
+                              }
+                              return ReaderAyahWords.flow(
+                                key: ValueKey(
+                                  'reader-flow-ayah-${ayah.number}',
+                                ),
+                                surah: widget.surah,
+                                ayahs: <ReaderAyahText>[
+                                  ReaderAyahText(
+                                    ayah: ayah.number,
+                                    words: words,
+                                    marker:
+                                        '\u00A0﴿${arabicIndicDigits(ayah.number)}﴾',
+                                    spans: script?.words,
+                                    markerSpan: script == null
+                                        ? null
+                                        : TextSpan(
+                                            children: <InlineSpan>[
+                                              const TextSpan(text: '\u00A0'),
+                                              ?script.marker,
+                                            ],
+                                          ),
+                                  ),
+                                ],
+                                textAlign: TextAlign.start,
+                                markerStyle: const TextStyle(
+                                  color: _markerColor,
+                                ),
+                                kashida: true,
+                                style: style,
+                                registry: _wordRegistry,
+                                range: _words.range,
+                                // The ayah a quarter of a hizb starts at, while
+                                // it is announced.
+                                marked:
+                                    _marked ??
+                                    (_rubMark.mark?.startAyah.ayah ==
+                                                ayah.number &&
+                                            words.isNotEmpty
+                                        ? QuranWordRange.between(
+                                            QuranWord(
+                                              widget.surah,
+                                              ayah.number,
+                                              1,
+                                            ),
+                                            QuranWord(
+                                              widget.surah,
+                                              ayah.number,
+                                              words.length,
+                                            ),
+                                          )
+                                        : null),
+                                playingWord: _words.playingWord,
+                                onRange: (range) => _selectWords(items, range),
+                                onDrag: _followWordDrag,
+                              );
+                            },
+                          );
+                          // Each ayah a paragraph of its own, a blank line
+                          // between them.
+                          return Padding(
+                            key: _ayahKeys.putIfAbsent(
+                              ayah.number,
+                              GlobalKey.new,
+                            ),
+                            padding: EdgeInsets.only(bottom: size * .9),
+                            child: pageEnded
+                                ? Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: <Widget>[
+                                      ReaderPageBreak(
+                                        key: ValueKey(
+                                          'reader-flow-page-end-${page - 1}',
+                                        ),
+                                        paper: true,
+                                        label:
+                                            '${context.l10n.page} ${readerDigits(language, page - 1)}',
+                                      ),
+                                      SizedBox(height: size * .5),
+                                      text,
+                                    ],
+                                  )
+                                : text,
+                          );
+                        },
+                      ),
                     ),
                   ),
-                if (_loupe case final point?) WordRangeLoupe(point: point),
-                if (_followRect case final rect?)
-                  RecitationLens(word: rect, glide: _followGlide),
-                RubMarkToast(controller: _rubMark),
-              ],
+                  if (_words.range != null)
+                    Positioned.fill(
+                      child: WordRangePanelLayer(
+                        controller: _words,
+                        selection: _selectionBounds,
+                        onMore: () => unawaited(_showMore(items)),
+                      ),
+                    ),
+                  if (_loupe case final point?) WordRangeLoupe(point: point),
+                  if (_followRect case final rect?)
+                    RecitationLens(word: rect, glide: _followGlide),
+                  RubMarkToast(controller: _rubMark),
+                ],
+              ),
             ),
           ),
         );
