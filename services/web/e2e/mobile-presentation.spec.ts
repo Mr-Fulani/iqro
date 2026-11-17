@@ -74,6 +74,15 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await expect(page).toHaveURL("/ru/quran?surah=1&ayah=1&view=text");
   await expect(page.locator(".quran-page-layout").filter({ visible: true })).not.toHaveClass(/is-mushaf-mode/);
   await expect(navigation).toBeVisible();
+  // On a phone each ayah card can copy its Arabic text, as the app's ayah menu does.
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  const copy = page.getByTestId("ayah-copy").first();
+  await copy.click();
+  await expect(copy).toHaveAttribute("aria-label", "Аят скопирован");
+  expect((await page.evaluate(() => navigator.clipboard.readText())).length).toBeGreaterThan(5);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(copy).toBeHidden();
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/ru/surahs");
   await page.getByTestId("surahs-view-mushaf").click();
 

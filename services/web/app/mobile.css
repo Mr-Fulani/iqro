@@ -10,6 +10,7 @@
 }
 
 /* Phone-only parts of the home page (the app's Home); see the block below. */
+.ayah-icon-button.ayah-copy-button,
 .brand-date,
 .header-back,
 .header-settings,
@@ -2378,4 +2379,51 @@ html.is-mobile-player-open {
 .surahs-row-copy small {
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+/* The phone's ayah menu over the full-screen reader, in the app's order:
+   listen and the bookmark first, then the breakdown, learning, repeat, the
+   note, copy and sharing. The desktop row keeps its own buttons and order. */
+.is-reader-immersive .mushaf-ayah-actions.is-open {
+  justify-content: flex-start;
+  gap: 8px;
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open > span:first-child {
+  flex: 1 1 100%;
+  order: -3;
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open .ayah-menu-listen,
+.is-reader-immersive .mushaf-ayah-actions.is-open .ayah-menu-bookmark {
+  flex: 1 1 40%;
+  order: -2;
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open [data-testid="tajweed-breakdown-open"],
+.is-reader-immersive .mushaf-ayah-actions.is-open [data-testid="mushaf-memorize-ayah"] {
+  order: -1;
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open .ayah-menu-copy {
+  order: 1;
+}
+
+/* Sharing and the close button come last. */
+.is-reader-immersive .mushaf-ayah-actions.is-open > button:nth-last-of-type(-n + 2) {
+  order: 2;
+}
+
+.mushaf-ayah-actions .ayah-menu-bookmark svg {
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+}
+
+@media (max-width: 768px) {
+  .ayah-icon-button.ayah-copy-button {
+    display: inline-flex;
+  }
 }

@@ -1867,6 +1867,22 @@ function QuranContent() {
     if (result === "failed") setFeedbackMessage({ text: t("contentShare.shareError"), type: "err" });
   };
 
+  // The phone's ayah menu copies the ayah's Arabic text, as the app's does.
+  const [copiedAyah, setCopiedAyah] = useState<{ key: string; ok: boolean } | null>(null);
+  const copyAyah = async (ayahKey: string) => {
+    const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
+    let ok = true;
+    try {
+      const known = ayahs.find((item) => item.surah_number === surahNumber && item.number === ayahNumber);
+      const text = known?.text_uthmani ?? (await api.getAyah(selectedEdition, surahNumber, ayahNumber)).text_uthmani;
+      await navigator.clipboard.writeText(text);
+    } catch {
+      ok = false;
+    }
+    setCopiedAyah({ key: ayahKey, ok });
+    window.setTimeout(() => setCopiedAyah((current) => current?.key === ayahKey ? null : current), 1800);
+  };
+
   const openMemorizeAyah = async (ayahKey: string) => {
     if (!isLoggedIn && !(await loginGuest())) {
       setFeedbackMessage({ text: t("reading.sessionUnavailable"), type: "err" });
@@ -2512,6 +2528,23 @@ function QuranContent() {
                           >
                             <span aria-hidden="true">✎</span>
                           </button>
+                          {/* Phones only, as in the app's ayah menu. */}
+                          <button
+                            className={`btn btn-sm ayah-icon-button ayah-copy-button${copiedAyah?.key === ayahKey ? " is-active" : ""}`}
+                            type="button"
+                            onClick={() => void copyAyah(ayahKey)}
+                            aria-label={copiedAyah?.key === ayahKey
+                              ? t(copiedAyah.ok ? "quran.ayahCopied" : "quran.ayahCopyFailed")
+                              : `${t("quran.ayahCopy")}: ${t("common.ayah", { ayah: ayahKey })}`}
+                            title={t("quran.ayahCopy")}
+                            data-testid="ayah-copy"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              {copiedAyah?.key === ayahKey && copiedAyah.ok
+                                ? <path d="m5 13 4 4L19 7" />
+                                : <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></>}
+                            </svg>
+                          </button>
                           <button
                             className="btn btn-sm ayah-icon-button"
                             type="button"
@@ -2756,6 +2789,56 @@ function QuranContent() {
               data-testid="mushaf-ayah-actions"
             >
               <span>{t("common.ayah", { ayah: selectedMushafAyah })}</span>
+              {/* Over the phone's full-screen reader the sheet is the app's ayah
+                  menu: listening, the bookmark, repeat and copy join the rest. */}
+              {ayahMenu === selectedMushafAyah && isImmersiveReader && (() => {
+                const ayahNumber = Number(selectedMushafAyah.split(":")[1]);
+                const active = playingMushafAyah === selectedMushafAyah;
+                const repeating = active && audioSettings.repeatMode === "ayah";
+                const saved = Boolean(savedAyahBookmarks[selectedMushafAyah]);
+                const copied = copiedAyah?.key === selectedMushafAyah ? copiedAyah : null;
+                return (
+                  <>
+                    <button
+                      className="btn btn-primary btn-sm ayah-menu-listen"
+                      type="button"
+                      onClick={() => handleToggleAyahPlayback(ayahNumber)}
+                      data-testid="ayah-menu-listen"
+                    >
+                      {active && isAudioPlaying ? t("quran.ayahPause") : t("quran.ayahListen")}
+                    </button>
+                    <button
+                      className={`btn btn-secondary btn-sm ayah-menu-bookmark${saved ? " is-active" : ""}`}
+                      type="button"
+                      onClick={() => void handleToggleBookmark(ayahNumber)}
+                      aria-pressed={saved}
+                      aria-label={saved ? t("quran.bookmarkRemoveTitle") : t("quran.bookmarkTitle")}
+                      disabled={!bookmarkStateReady || bookmarkBusyKeys.has(selectedMushafAyah)}
+                      data-testid="ayah-menu-bookmark"
+                    >
+                      <FavoriteBookmarkIcon active={saved} /> {t("profile.favoritesTitle")}
+                    </button>
+                    <button
+                      className={`btn btn-secondary btn-sm ayah-menu-repeat${repeating ? " is-active" : ""}`}
+                      type="button"
+                      onClick={() => handleToggleAyahRepeat(ayahNumber)}
+                      aria-pressed={repeating}
+                      data-testid="ayah-menu-repeat"
+                    >
+                      {t("quran.ayahRepeat")}
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm ayah-menu-copy"
+                      type="button"
+                      onClick={() => void copyAyah(selectedMushafAyah)}
+                      aria-live="polite"
+                      data-testid="ayah-menu-copy"
+                    >
+                      {copied ? t(copied.ok ? "quran.ayahCopied" : "quran.ayahCopyFailed") : t("quran.ayahCopy")}
+                    </button>
+                  </>
+                );
+              })()}
               {tajweedPage?.ayahs.some((ayah) => ayah.verse_key === selectedMushafAyah && ayah.words.length > 0) && (
                 <button
                   className="btn btn-secondary btn-sm"
