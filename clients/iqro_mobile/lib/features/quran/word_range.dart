@@ -633,9 +633,13 @@ class WordRangePanel extends StatelessWidget {
         WordRepeat.three => context.l10n.repeatThreeTimes,
         WordRepeat.forever => context.l10n.repeatForever,
       };
+      // Four icons beside «▶» and the repeat: narrow enough for the panel
+      // to fit a small phone.
       final iconStyle = IconButton.styleFrom(
         foregroundColor: ink,
-        minimumSize: const Size(44, 44),
+        minimumSize: const Size(40, 44),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       );
       return ValueListenableBuilder<bool>(
         valueListenable: wordRangePulling,
@@ -661,95 +665,101 @@ class WordRangePanel extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      FilledButton.icon(
-                        key: const ValueKey('word-range-play'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: wordRangePanelPlay,
-                          foregroundColor: ink,
-                          disabledBackgroundColor: Colors.white12,
-                          disabledForegroundColor: Colors.white54,
-                          minimumSize: const Size(44, 44),
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                        ),
-                        onPressed: unavailable || checking
-                            ? null
-                            : () => controller.toggle(
-                                title: '${context.l10n.ayah} $title',
-                              ),
-                        icon: controller.loading || checking
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Icon(
-                                controller.playing
-                                    ? Icons.pause
-                                    : Icons.play_arrow,
-                              ),
-                        label: Text(
-                          controller.playing
-                              ? context.l10n.pause
-                              : range.single
-                              ? context.l10n.wordRangeWord
-                              : context.l10n.noteWordCount(
-                                  controller.wordCount,
-                                ),
-                          semanticsLabel: controller.playing
+                  // On a narrow screen the row shrinks rather than overflows.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        FilledButton.icon(
+                          key: const ValueKey('word-range-play'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: wordRangePanelPlay,
+                            foregroundColor: ink,
+                            disabledBackgroundColor: Colors.white12,
+                            disabledForegroundColor: Colors.white54,
+                            minimumSize: const Size(44, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                          ),
+                          onPressed: unavailable || checking
                               ? null
-                              : range.single
-                              ? context.l10n.listenWord
-                              : context.l10n.listenSelection,
+                              : () => controller.toggle(
+                                  title: '${context.l10n.ayah} $title',
+                                ),
+                          icon: controller.loading || checking
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  controller.playing
+                                      ? Icons.pause
+                                      : Icons.play_arrow,
+                                ),
+                          label: Text(
+                            controller.playing
+                                ? context.l10n.pause
+                                : range.single
+                                ? context.l10n.wordRangeWord
+                                : context.l10n.noteWordCount(
+                                    controller.wordCount,
+                                  ),
+                            semanticsLabel: controller.playing
+                                ? null
+                                : range.single
+                                ? context.l10n.listenWord
+                                : context.l10n.listenSelection,
+                          ),
                         ),
-                      ),
-                      TextButton.icon(
-                        key: const ValueKey('word-range-repeat'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: controller.repeat == WordRepeat.once
-                              ? ink
-                              : wordRangePanelAccent,
-                          minimumSize: const Size(52, 44),
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        TextButton.icon(
+                          key: const ValueKey('word-range-repeat'),
+                          style: TextButton.styleFrom(
+                            foregroundColor:
+                                controller.repeat == WordRepeat.once
+                                ? ink
+                                : wordRangePanelAccent,
+                            minimumSize: const Size(52, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onPressed: () =>
+                              controller.setRepeat(_next[controller.repeat]!),
+                          icon: const Icon(Icons.repeat_rounded, size: 18),
+                          label: Text(
+                            switch (controller.repeat) {
+                              WordRepeat.once => '1×',
+                              WordRepeat.three => '3×',
+                              WordRepeat.forever => '∞',
+                            },
+                            semanticsLabel:
+                                '${context.l10n.repeat}: $repeatLabel',
+                          ),
                         ),
-                        onPressed: () =>
-                            controller.setRepeat(_next[controller.repeat]!),
-                        icon: const Icon(Icons.repeat_rounded, size: 18),
-                        label: Text(
-                          switch (controller.repeat) {
-                            WordRepeat.once => '1×',
-                            WordRepeat.three => '3×',
-                            WordRepeat.forever => '∞',
-                          },
-                          semanticsLabel:
-                              '${context.l10n.repeat}: $repeatLabel',
+                        IconButton(
+                          key: const ValueKey('word-range-share'),
+                          tooltip: context.l10n.shareSelection,
+                          style: iconStyle,
+                          onPressed: () => controller.share(context),
+                          icon: const Icon(Icons.ios_share_outlined),
                         ),
-                      ),
-                      IconButton(
-                        key: const ValueKey('word-range-share'),
-                        tooltip: context.l10n.shareSelection,
-                        style: iconStyle,
-                        onPressed: () => controller.share(context),
-                        icon: const Icon(Icons.ios_share_outlined),
-                      ),
-                      IconButton(
-                        key: const ValueKey('word-range-more'),
-                        tooltip: context.l10n.ayahMenu,
-                        style: iconStyle,
-                        onPressed: onMore,
-                        icon: const Icon(Icons.more_horiz),
-                      ),
-                      IconButton(
-                        key: const ValueKey('word-range-clear'),
-                        tooltip: context.l10n.clearSelection,
-                        style: iconStyle,
-                        onPressed: controller.clear,
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
+                        IconButton(
+                          key: const ValueKey('word-range-more'),
+                          tooltip: context.l10n.ayahMenu,
+                          style: iconStyle,
+                          onPressed: onMore,
+                          icon: const Icon(Icons.more_horiz),
+                        ),
+                        IconButton(
+                          key: const ValueKey('word-range-clear'),
+                          tooltip: context.l10n.clearSelection,
+                          style: iconStyle,
+                          onPressed: controller.clear,
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
                   ),
                   if (note.isNotEmpty)
                     Padding(
