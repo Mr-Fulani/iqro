@@ -126,6 +126,7 @@ const ar: Messages = {
   "salah.mode": "الوضع",
   "salah.modeLearn": "تعلّم",
   "salah.modePractice": "تطبيق",
+  "salah.showArabic": "النص العربي",
   "salah.showTransliteration": "النطق اللاتيني",
   "salah.showTranslation": "الترجمة",
   "salah.rulingShart": "شرط",

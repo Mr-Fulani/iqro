@@ -126,6 +126,7 @@ const en: Messages = {
   "salah.mode": "Mode",
   "salah.modeLearn": "Learn",
   "salah.modePractice": "Practice",
+  "salah.showArabic": "Arabic text",
   "salah.showTransliteration": "Transliteration",
   "salah.showTranslation": "Translation",
   "salah.rulingShart": "Condition (shart)",
