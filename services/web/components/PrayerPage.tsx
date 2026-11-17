@@ -39,6 +39,11 @@ const PRESET_CITIES = [
   { label: "prayer.city.tashkent" as MessageKey, lat: "41.2995", lng: "69.2401", tz: "Asia/Tashkent" },
   { label: "prayer.city.istanbul" as MessageKey, lat: "41.0082", lng: "28.9784", tz: "Europe/Istanbul" },
   { label: "prayer.city.london" as MessageKey, lat: "51.5074", lng: "-0.1278", tz: "Europe/London" },
+  // The rest of the app's list (clients/iqro_mobile/lib/features/prayer/prayer_places.dart).
+  { label: "prayer.city.cairo" as MessageKey, lat: "30.0444", lng: "31.2357", tz: "Africa/Cairo" },
+  { label: "prayer.city.dubai" as MessageKey, lat: "25.2048", lng: "55.2708", tz: "Asia/Dubai" },
+  { label: "prayer.city.jakarta" as MessageKey, lat: "-6.2088", lng: "106.8456", tz: "Asia/Jakarta" },
+  { label: "prayer.city.newYork" as MessageKey, lat: "40.7128", lng: "-74.0060", tz: "America/New_York" },
 ];
 
 // The month engine is loaded only when the visitor opens the month tab.

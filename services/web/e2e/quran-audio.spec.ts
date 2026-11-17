@@ -546,7 +546,7 @@ test("empty source catalog explains missing data and keeps canonical text access
   await page.goto("/ru/quran?surah=6");
   await expect(page.getByRole("status").filter({hasText: "Мусхафы ещё не загружены"})).toBeVisible();
   await expect(page.locator(".qf-mushaf-view, .mushaf-image")).toHaveCount(0);
-  await page.getByRole("button", {name: "📜 Текст", exact: true}).click();
+  await page.getByRole("button", {name: "Текст", exact: true}).click();
   await expect(page.locator(".ayah-card")).toHaveCount(2);
 });
 
@@ -566,7 +566,7 @@ test("canonical text stays accessible while the source page is still loading", a
     // Assert the requested loading state rather than their shared styling class.
     await expect(loadingMessage).toHaveCount(1);
     await expect(loadingMessage).toBeVisible();
-    const textMode = page.getByRole("button", { name: "📜 Текст", exact: true });
+    const textMode = page.getByRole("button", { name: "Текст", exact: true });
     await expect(textMode).toBeEnabled();
     await textMode.click();
     await expect(page.locator(".ayah-card")).toHaveCount(2);
@@ -609,15 +609,15 @@ test("reading position survives text and Mushaf switches without a selected ayah
   const layout = page.locator(".quran-page-layout").filter({ visible: true });
   await expect(layout.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   await expect(layout.locator("#surah-navigation")).toHaveValue("6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(page.locator("#quran-ayah-6-2")).toBeInViewport();
   await expect(layout.locator("#ayah-navigation")).toHaveValue("2");
-  await page.getByRole("button", { name: /📖 Мусхаф/ }).click();
+  await page.getByRole("button", { name: /^Мусхаф/ }).click();
   await expect(layout.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "129");
   await expect(layout.locator('[data-ayah-key="6:2"]').last()).toHaveClass(/is-selected/);
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await layout.locator("#ayah-navigation").selectOption("1");
-  await page.getByRole("button", { name: /📖 Мусхаф/ }).click();
+  await page.getByRole("button", { name: /^Мусхаф/ }).click();
   await expect(layout.locator(".qf-mushaf-view")).toHaveAttribute("data-page-number", "128");
   await expect(layout.locator('[data-ayah-key="6:1"]')).toHaveClass(/is-selected/);
 });
@@ -714,7 +714,7 @@ test.describe("rotation recovery and native media", () => {
 
 test("reader shows a saved semantic translation in text and Mushaf modes", async ({ page }) => {
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
 
   const translationToggle = page.locator("#translation-enabled").filter({ visible: true });
   await expect(translationToggle).toBeChecked();
@@ -746,7 +746,7 @@ test("reader shows a saved semantic translation in text and Mushaf modes", async
 
 test("English reader keeps English translations and footnotes isolated", async ({ page }) => {
   await page.goto("/en/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Text", exact: true }).click();
+  await page.getByRole("button", { name: "Text", exact: true }).click();
 
   const translationSelect = page.getByLabel("Translation and author");
   await expect(translationSelect).toHaveValue("20");
@@ -811,7 +811,7 @@ test("catalog loads all 114 surahs and starts the first track on one click", asy
   await player.getByRole("button", { name: "Развернуть плеер", exact: true }).click();
   await expect(page.getByLabel("Режим повтора")).toBeVisible();
   await expect(page.getByLabel("Режим повтора")).toBeDisabled();
-  await expect(page.getByLabel("Скорость воспроизведения")).toBeVisible();
+  await expect(page.getByLabel("Скорость")).toBeVisible();
   await expect(page.getByLabel("Таймер сна")).toBeVisible();
   await expect(page.getByRole("button", { name: "▶ Воспроизвести диапазон" })).toBeDisabled();
   await player.getByRole("button", { name: "Свернуть плеер", exact: true }).click();
@@ -1971,9 +1971,51 @@ test.describe("word selection on a phone", () => {
     const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
     await expect(view).toHaveAttribute("data-font-status", "ready");
     const actions = page.getByTestId("mushaf-ayah-actions");
+    // The phone reader has the app's chrome: the surah and the bookmark on top,
+    // the text, the page with its juz and the explicit hide button below.
+    const top = page.locator(".reader-top");
+    await expect(top).toContainText("6. Аль-Анам");
+    await expect(top).toContainText("Мусхаф");
+    await expect(top.getByRole("button", { name: "Выйти из читалки" })).toBeVisible();
+    await expect(top.getByTestId("reader-bookmark")).toHaveAttribute("aria-pressed", "false");
+    await expect(top.getByRole("button", { name: "Настройки чтения" })).toBeVisible();
+    const row = page.locator(".reader-actions .reader-action-buttons");
+    await expect(row.getByTestId("reader-open-text")).toHaveText("Текст");
+    // The page scrubber: the page, seven marks around it, right to left like the book.
+    const scrubber = row.getByTestId("reader-scrubber");
+    await expect(scrubber).toContainText("Страница 128");
+    await expect(scrubber.getByRole("button")).toHaveCount(7);
+    await expect(scrubber.locator('[aria-current="page"]')).toHaveAttribute("aria-label", "Страница 128");
+    const marks = await scrubber.getByRole("button").evaluateAll((buttons) => buttons
+      .map((button) => ({ label: button.getAttribute("aria-label"), left: button.getBoundingClientRect().left }))
+      .sort((a, b) => a.left - b.left)
+      .map((button) => button.label));
+    expect(marks[0]).toBe("Страница 131");
+    expect(marks[6]).toBe("Страница 125");
+    await expect(row.getByRole("button", { name: "Свернуть меню читалки" })).toBeVisible();
     await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
     await expect(actions).toBeVisible();
     await expect(actions).toContainText("Аят 6:2");
+    await expect(top).toContainText("Аят 6:2");
+    // One menu, in the app's order: listen and the bookmark, the breakdown and
+    // learning, repeat, the note, copy, sharing.
+    await expect(actions.getByRole("button")).toHaveCount(11);
+    const order = await actions.getByRole("button").evaluateAll((buttons) => buttons
+      .map((button) => ({ text: (button.textContent ?? "").replace(/\s+/g, " ").trim(), box: button.getBoundingClientRect() }))
+      .sort((a, b) => a.box.top - b.box.top || a.box.left - b.box.left)
+      .map((button) => button.text));
+    expect(order).toEqual([
+      "Слушать", "Избранное", "Разбор таджвида", "Выучить", "Повторять выбранный аят",
+      "✎ Заметка и выделение", "Копировать аят", "Поделиться", "Закладки", "Выберите Мусхаф", "✕",
+    ]);
+    const box = (await actions.boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    // Copy puts the ayah's Arabic text on the clipboard and says so.
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await actions.getByTestId("ayah-menu-copy").click();
+    await expect(actions.getByTestId("ayah-menu-copy")).toHaveText("Аят скопирован");
+    expect((await page.evaluate(() => navigator.clipboard.readText())).length).toBeGreaterThan(5);
     await actions.getByRole("button", { name: "Закрыть" }).click();
     await expect(actions).toBeHidden();
 
@@ -1982,6 +2024,59 @@ test.describe("word selection on a phone", () => {
     await page.getByTestId("word-range-more").click();
     await expect(actions).toBeVisible();
     await expect(actions).toContainText("Аят 6:2");
+  });
+
+  test("the ayah menu holds the reader's tools: the zoom, the bookmarks and the Mushaf choice", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const layout = page.locator(".quran-page-layout").filter({ visible: true });
+    const sheet = page.locator(".mushaf-page-transition").filter({ visible: true }).first();
+    const width = () => sheet.evaluate((element) => element.getBoundingClientRect().width);
+    const fitted = await width();
+    await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
+    const tools = page.getByTestId("ayah-menu-reader");
+    await expect(tools).toBeVisible();
+
+    // The zoom: the sheet doubles and pans; 100% fits it again.
+    await tools.getByTestId("reader-zoom").fill("200");
+    await expect(tools.locator("output")).toHaveText("200%");
+    await expect(layout).toHaveAttribute("data-reader-zoomed", "true");
+    await expect.poll(width).toBeGreaterThan(fitted * 1.9);
+    await tools.getByTestId("reader-zoom").fill("100");
+    await expect(layout).not.toHaveAttribute("data-reader-zoomed", "true");
+    await expect.poll(width).toBeLessThan(fitted * 1.05);
+
+    // The bookmarks open as a list; nothing saved yet says how to save.
+    await tools.getByRole("button", { name: "Закладки" }).click();
+    const bookmarks = page.getByTestId("reader-bookmarks");
+    await expect(bookmarks.getByRole("heading", { name: "Закладки" })).toBeVisible();
+    await bookmarks.getByRole("button", { name: "Закрыть" }).click();
+    await expect(bookmarks).toHaveCount(0);
+
+    await expect(tools.getByRole("link", { name: "Заметки" })).toHaveAttribute("href", "/ru/notes");
+    // The Mushaf is chosen in the reading settings.
+    await tools.getByRole("button", { name: "Выберите Мусхаф" }).click();
+    await expect(page.locator("#mushaf-variant")).toBeVisible();
+    await expect(layout).not.toHaveClass(/is-reader-immersive/);
+  });
+
+  test("the page scrubber under the phone Mushaf opens a tapped page", async ({ page }) => {
+    await installTajweedMocks(page);
+    await page.goto("/ru/quran?surah=6");
+    const view = page.locator('.qf-mushaf-view[data-mushaf-id="19"]');
+    await expect(view).toHaveAttribute("data-font-status", "ready");
+    const scrubber = page.getByTestId("reader-scrubber");
+    await expect(scrubber).toContainText("Страница 128");
+    await scrubber.getByRole("button", { name: "Страница 129" }).click();
+    await expect(page.locator(".mushaf-page-turn .qf-mushaf-view").first()).toHaveAttribute("data-page-number", "129");
+    await expect(scrubber).toContainText("Страница 129");
+    await scrubber.getByRole("button", { name: "Страница 128" }).click();
+    await expect(scrubber).toContainText("Страница 128");
+    // The turned page leaves; the open one stays alone.
+    await expect(view).toHaveCount(1);
+    await expect(view).toHaveAttribute("data-page-number", "128");
   });
 
   test("a finger grows the selection, then pulls its handles, in the Mushaf and the text", async ({ page }) => {
@@ -2187,7 +2282,8 @@ test("tajweed breakdown on a phone keeps the step of a long ayah in view", async
   await expect(view).toHaveAttribute("data-font-status", "ready");
   await trackPausedMedia(page);
   await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
-  // The phone reader hides the ayah menu; the breakdown opens over the chips.
+  // The ayah's menu opens over the chips: closed, the breakdown opens from them.
+  await page.locator(".mushaf-ayah-actions-close").click();
   await page.getByTestId("tajweed-breakdown-open-reader").click();
   const breakdown = page.getByRole("dialog", { name: /^Разбор таджвида/ });
   const counter = breakdown.getByTestId("tajweed-step-counter");
@@ -2471,6 +2567,8 @@ test.describe("tajweed breakdown on a narrow phone", () => {
     await openPhoneReader(page, "/ar/quran?surah=6");
     await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end')
       .filter({ visible: true }).first().click();
+    // The ayah's menu opens over the chips: closed, the breakdown opens from them.
+    await page.locator(".mushaf-ayah-actions-close").click();
     await page.getByTestId("tajweed-breakdown-open-reader").click();
     const breakdown = page.getByTestId("tajweed-breakdown");
     await expect(breakdown).toBeVisible();
@@ -2582,7 +2680,7 @@ test("Quran favorite uses an animated bookmark and toggles the saved ayah", asyn
 
   await page.goto("/quran?surah=6");
   const addFavorite = page.getByRole("button", { name: "Добавить в закладки" }).first();
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(addFavorite.locator(".favorite-bookmark-icon")).toBeVisible();
   await expect(addFavorite).toHaveAttribute("aria-pressed", "false");
 
@@ -2723,7 +2821,7 @@ test("ayah notes and highlights sync with the app in Mushaf, text and notes view
     },
   });
 
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(page.locator("#quran-ayah-6-2")).toHaveAttribute("data-highlight", "pink");
   await page.getByRole("button", { name: "Заметка и выделение: Аят 6:2" }).click();
   const appDialog = page.getByRole("dialog", { name: "Аят 6:2" });
@@ -2810,7 +2908,7 @@ test("a note from the app that arrives while the dialog is open is kept, not ove
   });
 
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   const opener = page.getByRole("button", { name: /^Заметка и выделение: Аят 6:1/ });
   await opener.click();
   const dialog = page.getByRole("dialog", { name: "Аят 6:1" });
@@ -2849,7 +2947,7 @@ test("a server error after the note is queued reports it as saved for a later sy
   });
 
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await page.getByRole("button", { name: /^Заметка и выделение: Аят 6:1/ }).click();
   const dialog = page.getByRole("dialog", { name: "Аят 6:1" });
   await dialog.getByLabel("Ваша заметка").fill("Сохранить позже");
@@ -2865,7 +2963,7 @@ test("an ayah note saved offline stays highlighted and waits in the outbox", asy
   await page.route("**/api/v1/sync/**", (route) => route.abort("internetdisconnected"));
 
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await page.getByRole("button", { name: "Заметка и выделение: Аят 6:1" }).click();
   const dialog = page.getByRole("dialog", { name: "Аят 6:1" });
   await dialog.getByLabel("Ваша заметка").fill("Без сети");
@@ -2907,7 +3005,7 @@ test("text mode ends ayahs with the app's marker and shares an ayah picture thro
     });
   });
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(page.locator("#quran-ayah-6-2 .ayah-end-marker")).toHaveText("﴿٢﴾");
   await expect(page.locator("#quran-ayah-6-2 .quran-arabic-text"))
     .toHaveJSProperty("textContent", `${ayahs[1].text_uthmani}\u00A0\uFD3F\u0662\uFD3E`);
@@ -2991,7 +3089,7 @@ test("sharing while another translation loads uses that translation, without the
     await route.fulfill({ json: translatedAyahs.map((verse) => ({ ...verse, text: `${verse.text} (Абу Адель)` })) });
   });
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
   await page.getByLabel("Перевод и автор").selectOption("79");
   await page.getByRole("button", { name: "Поделиться аятом: Аят 6:1" }).click();
@@ -3050,7 +3148,7 @@ test("an ayah picture has the glyphs of the selected Mushaf from every page it s
     });
   }
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await page.getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
   await expect(page.getByRole("dialog", { name: "Поделиться аятом" })
     .getByRole("img", { name: "Картинка аята 6:2" })).toBeVisible();
@@ -3067,7 +3165,7 @@ test("an ayah picture has the glyphs of the selected Mushaf from every page it s
 test("an ayah picture is drawn in the plain script, unchanged, when the Mushaf's pages are late", async ({ page }) => {
   const cardText = await recordCardText(page);
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await page.route("**/api/v1/quran/foundation/mushafs/5/pages/*", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 6000));
     await route.fallback();
@@ -3085,7 +3183,7 @@ test("selected words are shared as a part of the ayah: its words alone, no meani
   const cardText = await recordCardText(page);
   const shared = await captureWebShare(page);
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   const text = page.locator(".quran-content-surface");
   // The first word of 6:2, then with Shift the second: two of its three words.
   await text.locator('.quran-word[data-word-key="6:2:1"]').dblclick();
@@ -3115,7 +3213,7 @@ test("without the share dialog's code an ayah still goes as text, and the next p
   page.on("pageerror", (error) => pageErrors.push(error.message));
   const shared = await captureWebShare(page);
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(page.getByText("Хвала Аллаху", { exact: true })).toBeVisible();
 
   await page.route("**/_next/static/chunks/**", (route) => route.abort());
@@ -3146,7 +3244,7 @@ test("an ayah picture that cannot be drawn is reported and the link still copies
     });
   });
   await page.goto("/ru/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await page.getByRole("button", { name: "Поделиться аятом: Аят 6:2" }).click();
   const dialog = page.getByRole("dialog", { name: "Поделиться аятом" });
   await expect(dialog.getByRole("alert")).toHaveText("Не удалось подготовить картинку. Ссылкой поделиться можно.");
@@ -3245,7 +3343,7 @@ test("reading place is remembered automatically and retries a revision conflict"
 
 test("text Quran exposes the shared reciter controls and plays each ayah", async ({ page }) => {
   await page.goto("/quran?surah=6");
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
 
   const recitationSelect = page.getByLabel("Чтец Quran.Foundation");
   await expect(recitationSelect).toBeVisible();
@@ -3255,7 +3353,7 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
   const secondAyah = page.locator(".ayah-card").nth(1);
   const playButton = firstAyah.getByRole("button", { name: "Воспроизвести: Аят 6:1" });
   const repeatButton = firstAyah.getByRole("button", { name: "Повтор аята: Аят 6:1" });
-  const speedButton = firstAyah.getByRole("button", { name: "Скорость воспроизведения: 1×" });
+  const speedButton = firstAyah.getByRole("button", { name: "Скорость: 1×" });
   await expect(playButton).toHaveText("▶");
   await expect(playButton).not.toHaveClass(/is-active/);
   await expect(repeatButton).toHaveText("🔁");
@@ -3269,9 +3367,9 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
 
   await speedButton.click();
   const advancedPlayer = page.getByRole("region", { name: "Расширенный аудиоплеер" });
-  await expect(advancedPlayer.getByLabel("Скорость воспроизведения", { exact: true }))
+  await expect(advancedPlayer.getByLabel("Скорость", { exact: true }))
     .toHaveValue("1.25");
-  const fasterButton = firstAyah.getByRole("button", { name: "Скорость воспроизведения: 1,25×" });
+  const fasterButton = firstAyah.getByRole("button", { name: "Скорость: 1,25×" });
   await expect(fasterButton).toHaveText("1,25×");
   await expect(fasterButton).toHaveClass(/is-active/);
 
@@ -3305,8 +3403,8 @@ test("text Quran exposes the shared reciter controls and plays each ayah", async
 
   await secondAyah.getByRole("button", { name: "Режим повтора: Без повтора" }).click();
   await expect(page.getByLabel("Режим повтора", { exact: true })).toHaveValue("off");
-  await page.getByLabel("Скорость воспроизведения", { exact: true }).selectOption("1.5");
-  await expect(firstAyah.getByRole("button", { name: "Скорость воспроизведения: 1,5×" })).toBeVisible();
+  await page.getByLabel("Скорость", { exact: true }).selectOption("1.5");
+  await expect(firstAyah.getByRole("button", { name: "Скорость: 1,5×" })).toBeVisible();
 });
 
 test("advanced player handles ranges, repeat, learning pauses, speed and sleep", async ({ page }) => {
@@ -3316,7 +3414,7 @@ test("advanced player handles ranges, repeat, learning pauses, speed and sleep",
   await expect(page.getByLabel("Начало диапазона аятов").locator("option")).toHaveCount(2);
   await page.getByLabel("Начало диапазона аятов").selectOption("1");
   await page.getByLabel("Конец диапазона аятов").selectOption("2");
-  await page.getByLabel("Скорость воспроизведения").selectOption("1.5");
+  await page.getByLabel("Скорость").selectOption("1.5");
   await page.getByLabel("Пауза между аятами").selectOption("500");
   await page.getByRole("button", { name: "▶ Воспроизвести диапазон" }).click();
 
@@ -3682,7 +3780,7 @@ test("quran navigation exposes juz, hizb, rub and exact ayah jumps", async ({ pa
   await expect(page.getByLabel("Руб аль-хизб (1-240)").locator("option")).toHaveCount(241);
   await expect(page.getByLabel(/Аят суры/).locator("option")).toHaveCount(3);
 
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await page.getByLabel("Выбор суры (1–114)").selectOption("7");
   await expect(page.getByRole("button", { name: /Текст/ })).toHaveClass(/btn-primary/);
   await expect(page.locator(".qf-mushaf-view")).toHaveCount(0);
@@ -4462,7 +4560,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
       await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
       const bar = page.getByTestId("mobile-audio-player");
       await expect(bar.locator("audio")).toHaveAttribute("src", /\S/);
-      await page.locator(".mobile-navigation a[href='/ru/quran']").first().click();
+      // The Quran tab is the list of surahs; the saved place opens the reader.
+      await page.locator(".mobile-navigation a[href='/ru/surahs']").first().click();
+      await page.getByTestId("surahs-continue").click();
       await expect(page).toHaveURL(/\/ru\/quran/);
       // Hidden under the full-screen reader, back once the reader is left.
       const exit = page.getByRole("button", { name: "Выйти из читалки" });
