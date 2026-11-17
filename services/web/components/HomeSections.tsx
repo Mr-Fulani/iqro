@@ -44,6 +44,25 @@ export function HomeSections() {
             <span className="home-section-name">{t(section.label)}</span>
           </IntentPrefetchLink>
         ))}
+        {/* Phones only, as the app's ninth tile: opens the More list. */}
+        {drawn && (
+          <button
+            type="button"
+            className="home-section-tile home-section-all"
+            data-testid="home-section-all"
+            onClick={() => {
+              const more = document.querySelector<HTMLDetailsElement>(".mobile-more");
+              if (!more) return;
+              more.open = true;
+              more.querySelector("summary")?.focus();
+            }}
+          >
+            <span className="home-section-art">
+              <HomeSectionIcon section="all" />
+            </span>
+            <span className="home-section-name">{t("home.allSections")}</span>
+          </button>
+        )}
       </div>
     </section>
   );

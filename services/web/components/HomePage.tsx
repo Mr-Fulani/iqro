@@ -48,8 +48,8 @@ export default function HomePage({
   announcements?: Announcement[];
 }) {
   // The first hero slide is the LCP element; as a CSS background it would
-  // otherwise be fetched late and at low priority.
-  preload(HERO_SLIDES[0].src, { as: "image", fetchPriority: "high" });
+  // otherwise be fetched late and at low priority. Phones have no hero.
+  preload(HERO_SLIDES[0].src, { as: "image", fetchPriority: "high", media: "(min-width: 769px)" });
   const { session, isLoggedIn, isLoading: authLoading } = useAuth();
   const { locale, t } = useI18n();
   // Arabic names are shown after hydration so their Amiri faces do not compete
@@ -226,7 +226,7 @@ export default function HomePage({
 
       <HomeSkyBand prayer={todayPrayer} />
 
-      <TodayReadingCard />
+      <TodayReadingCard home surahs={featuredSurahs} />
 
       <HomeSections />
 
@@ -344,7 +344,7 @@ export default function HomePage({
       </section>
 
       {/* Featured Surahs */}
-      <section className="surface">
+      <section className="surface home-surah-catalog">
         <div className="surface-head">
           <div>
             <p className="eyebrow">{t("home.surahCatalog")}</p>
