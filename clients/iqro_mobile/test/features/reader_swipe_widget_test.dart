@@ -133,11 +133,25 @@ void main() {
             find.byKey(const ValueKey('reader-flow-follow-hint')),
           )
           .opacity;
+      bool pulse() => tester
+          .widget<RecitationMicPulse>(
+            find.byKey(const ValueKey('reader-flow-follow-pulse')),
+          )
+          .active;
+      Color? mic() => tester
+          .widget<IconButton>(find.byKey(const ValueKey('reader-flow-follow')))
+          .color;
+      expect(pulse(), isFalse);
       await tester.pump(recitationHintDelay);
       expect(hint(), 1);
+      // The microphone answers with it: gold and beating.
+      expect(pulse(), isTrue);
+      expect(mic(), recitationGold);
       expect(find.text('Нажмите и читайте вслух'), findsOneWidget);
       await tester.pump(recitationHintTime);
       expect(hint(), 0);
+      expect(pulse(), isFalse);
+      expect(mic(), isNot(recitationGold));
       await tester.pump(recitationHintPause);
       expect(hint(), 1);
 

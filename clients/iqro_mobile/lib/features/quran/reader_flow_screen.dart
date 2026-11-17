@@ -697,16 +697,22 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                           ),
                         ),
                       if (recitationFollowEnabled && items.isNotEmpty)
-                        IconButton(
-                          key: const ValueKey('reader-flow-follow'),
-                          onPressed: () => unawaited(_toggleFollow(items)),
-                          color: _listener == null
-                              ? mushafInkColor
-                              : const Color(0xFFB3261E),
-                          icon: Icon(
-                            _listener == null
-                                ? Icons.mic_none_rounded
-                                : Icons.mic_rounded,
+                        RecitationMicPulse(
+                          key: const ValueKey('reader-flow-follow-pulse'),
+                          active: _followHint,
+                          child: IconButton(
+                            key: const ValueKey('reader-flow-follow'),
+                            onPressed: () => unawaited(_toggleFollow(items)),
+                            color: _listener != null
+                                ? const Color(0xFFB3261E)
+                                : _followHint
+                                ? recitationGold
+                                : mushafInkColor,
+                            icon: Icon(
+                              _listener == null
+                                  ? Icons.mic_none_rounded
+                                  : Icons.mic_rounded,
+                            ),
                           ),
                         ),
                       IconButton(

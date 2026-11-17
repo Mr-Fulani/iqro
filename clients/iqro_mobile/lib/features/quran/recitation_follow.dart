@@ -159,6 +159,9 @@ class RecitationListener {
   }
 }
 
+/// The gold of the lens and of the microphone when its hint is up.
+const recitationGold = Color(0xFFC49647);
+
 /// The trial's pointer: a round lens over the word the reader has said,
 /// which glides to the next one.
 class RecitationLens extends StatelessWidget {
@@ -186,7 +189,7 @@ class RecitationLens extends StatelessWidget {
           magnificationScale: 1.2,
           decoration: const MagnifierDecoration(
             shape: CircleBorder(
-              side: BorderSide(color: Color(0xFFC49647), width: 2.5),
+              side: BorderSide(color: recitationGold, width: 2.5),
             ),
           ),
         ),
@@ -229,4 +232,88 @@ class RecitationHint extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The microphone while its hint is up: gold, breathing, with rings going
+/// out from it, so the hint is seen to be about this button.
+class RecitationMicPulse extends StatefulWidget {
+  const RecitationMicPulse({
+    required this.active,
+    required this.child,
+    super.key,
+  });
+
+  final bool active;
+  final Widget child;
+
+  @override
+  State<RecitationMicPulse> createState() => _RecitationMicPulseState();
+}
+
+class _RecitationMicPulseState extends State<RecitationMicPulse>
+    with SingleTickerProviderStateMixin {
+  late final _beat = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
+
+  @override
+  void didUpdateWidget(covariant RecitationMicPulse oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active == oldWidget.active) return;
+    if (widget.active && !MediaQuery.disableAnimationsOf(context)) {
+      unawaited(_beat.repeat());
+    } else {
+      _beat
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _beat.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _beat,
+    child: widget.child,
+    builder: (context, child) {
+      if (!widget.active) return child!;
+      // Larger and back, once a beat.
+      final swell = 1 - (2 * _beat.value - 1).abs();
+      return CustomPaint(
+        painter: _RingsPainter(_beat.value),
+        child: Transform.scale(scale: 1 + .18 * swell, child: child),
+      );
+    },
+  );
+}
+
+class _RingsPainter extends CustomPainter {
+  const _RingsPainter(this.beat);
+
+  final double beat;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    // Two rings, half a beat apart, fading as they grow.
+    for (final shift in const <double>[0, .5]) {
+      final at = (beat + shift) % 1;
+      canvas.drawCircle(
+        center,
+        14 + 16 * at,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = recitationGold.withValues(alpha: .8 * (1 - at)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RingsPainter oldDelegate) => oldDelegate.beat != beat;
 }
