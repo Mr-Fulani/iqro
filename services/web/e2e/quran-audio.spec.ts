@@ -4457,7 +4457,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
       await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
       const bar = page.getByTestId("mobile-audio-player");
       await expect(bar.locator("audio")).toHaveAttribute("src", /\S/);
-      await page.locator(".mobile-navigation a[href='/ru/quran']").first().click();
+      // The Quran tab is the list of surahs; the saved place opens the reader.
+      await page.locator(".mobile-navigation a[href='/ru/surahs']").first().click();
+      await page.getByTestId("surahs-continue").click();
       await expect(page).toHaveURL(/\/ru\/quran/);
       // Hidden under the full-screen reader, back once the reader is left.
       const exit = page.getByRole("button", { name: "Выйти из читалки" });
