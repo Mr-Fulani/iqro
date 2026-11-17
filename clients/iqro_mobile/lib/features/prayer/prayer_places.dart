@@ -9,6 +9,17 @@ class PrayerCity {
     required this.timezone,
   });
 
+  /// A place found by the server's city search (GeoNames): it carries one
+  /// name, in the language it was searched in.
+  PrayerCity.found({
+    required int geonameId,
+    required String name,
+    required this.latitude,
+    required this.longitude,
+    required this.timezone,
+  }) : id = 'geonames:$geonameId',
+       names = <String, String>{'en': name};
+
   final String id;
   final Map<String, String> names;
   final double latitude;
