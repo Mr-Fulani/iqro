@@ -97,6 +97,19 @@ export default async function SourcesPage({ params }: { params: Promise<RoutePar
           </article>
         </div>
       </section>
+      <section className="surface legal-section">
+        <h2 className="surface-title">{copy.citiesTitle}</h2>
+        <p>{copy.citiesBody}</p>
+        <div className="legal-license-list">
+          <article>
+            <h3>GeoNames</h3>
+            <dl>
+              <div><dt>{copy.source}</dt><dd><a href="https://www.geonames.org/" target="_blank" rel="noreferrer">geonames.org</a></dd></div>
+              <div><dt>{copy.license}</dt><dd><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a></dd></div>
+            </dl>
+          </article>
+        </div>
+      </section>
       <aside className="surface legal-section"><h2 className="surface-title">{copy.noticeTitle}</h2><p>{copy.noticeBody}</p></aside>
     </article>
   );

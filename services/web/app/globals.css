@@ -9879,3 +9879,47 @@ html:has(.reader-swipe-surface) body {
     transition: none;
   }
 }
+
+/* The city search of the prayer times: found places as a list of buttons. */
+.prayer-city-search {
+  grid-column: 1 / -1;
+}
+
+.prayer-city-results {
+  display: grid;
+  max-height: 320px;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  list-style: none;
+}
+
+.prayer-city-results li + li {
+  border-top: 1px solid var(--border);
+}
+
+.prayer-city-results button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 0;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: start;
+  background: none;
+  cursor: pointer;
+}
+
+.prayer-city-results button:hover,
+.prayer-city-results button:focus-visible {
+  background: var(--primary-subtle);
+}
+
+.prayer-city-results small {
+  color: var(--text-secondary);
+}

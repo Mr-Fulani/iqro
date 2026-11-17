@@ -7,6 +7,7 @@ import {
   ApiError,
   PrayerAdjustments,
   PrayerCalculationResponse,
+  PrayerCity,
   PrayerMethod,
   PrayerMethodsResponse,
   PrayerProfile,
@@ -18,6 +19,7 @@ import { localizedPath } from "../lib/routing";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { ReminderManager } from "./ReminderManager";
 import { PrayerQibla } from "./PrayerQibla";
+import { PrayerCitySearch } from "./PrayerCitySearch";
 import type { PrayerMonthInput } from "./PrayerMonthCalendar";
 import {
   dateInTimezone,
@@ -208,6 +210,14 @@ export default function PrayerPage() {
       setTimezone(city.tz);
       setQuickCity(String(cityIndex));
     }
+  };
+
+  // A city found by the search: its place and timezone fill the form like a quick city's.
+  const handleCityPick = (city: PrayerCity) => {
+    setLatitude(city.latitude);
+    setLongitude(city.longitude);
+    setTimezone(city.timezone);
+    setQuickCity("custom");
   };
 
   const handleDetectLocation = () => {
@@ -406,6 +416,8 @@ export default function PrayerPage() {
           style={{ display: "flex", flexDirection: "column", gap: 16 }}
         >
           <div className="form-row">
+            <PrayerCitySearch onPick={handleCityPick} />
+
             <div className="form-group">
               <label className="form-label" htmlFor="prayer-quick-city">{t("prayer.quickCity")}</label>
               <select

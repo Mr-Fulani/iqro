@@ -1102,6 +1102,8 @@ const ar: Messages = {
   "prayer.title": "جدول مواقيت الصلاة",
   "prayer.description": "حساب مواقيت الصلوات المفروضة وفق الطرق المعتمدة (رابطة العالم الإسلامي وأم القرى وISNA وغيرها).",
   "prayer.myLocation": "📍 موقعي",
+  "prayer.citySearch": "البحث عن مدينة",
+  "prayer.cityNotFound": "لم يتم العثور على مدينة مطابقة",
   "prayer.quickCity": "اختيار سريع للمدينة",
   "prayer.customLocation": "إحداثيات محفوظة أو يدوية",
   "prayer.method": "طريقة الحساب",

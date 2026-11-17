@@ -1102,6 +1102,8 @@ const en: Messages = {
   "prayer.title": "Prayer time schedule",
   "prayer.description": "Calculate obligatory prayer times using recognized methods (MWL, Umm al-Qura, ISNA, and others).",
   "prayer.myLocation": "📍 My location",
+  "prayer.citySearch": "Search city",
+  "prayer.cityNotFound": "No matching city",
   "prayer.quickCity": "Quick city selection",
   "prayer.customLocation": "Saved or manual coordinates",
   "prayer.method": "Calculation method",

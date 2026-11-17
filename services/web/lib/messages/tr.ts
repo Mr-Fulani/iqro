@@ -1102,6 +1102,8 @@ const tr: Messages = {
   "prayer.title": "Namaz vakitleri çizelgesi",
   "prayer.description": "Farz namaz vakitlerini kabul görmüş yöntemlerle hesaplayın (MWL, Ümmü'l-Kura, ISNA ve diğerleri).",
   "prayer.myLocation": "📍 Konumum",
+  "prayer.citySearch": "Şehir ara",
+  "prayer.cityNotFound": "Eşleşen şehir yok",
   "prayer.quickCity": "Hızlı şehir seçimi",
   "prayer.customLocation": "Kayıtlı veya manuel koordinatlar",
   "prayer.method": "Hesaplama yöntemi",
