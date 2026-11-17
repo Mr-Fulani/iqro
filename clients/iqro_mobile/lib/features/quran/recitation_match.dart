@@ -81,9 +81,6 @@ class RecitationMatcher {
     _next = at < 0 ? _words.length : at;
   }
 
-  /// The index of the word to read next; null past the last one.
-  int? get next => _next < _indexes.length ? _indexes[_next] : null;
-
   /// The index of the word the reader has reached, once [transcript] moves
   /// the place; null while it does not.
   int? hear(String transcript) {

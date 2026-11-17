@@ -99,8 +99,13 @@ void main() {
         }),
       );
 
-      // A word heard: the lens is on the next one, to its left.
+      // The first word heard: the lens is on it already.
       hear('الذين');
+      await tester.pumpAndSettle();
+      expect(tester.getRect(lens).center, first.center);
+
+      // The next: the lens goes to it, to the left.
+      hear('الذين يؤمنون');
       await tester.pumpAndSettle();
       final second = tester.getRect(lens);
       expect(second.center.dx, lessThan(first.center.dx));
@@ -110,12 +115,12 @@ void main() {
               find.byKey(const ValueKey('reader-flow-follow-heard')),
             )
             .data,
-        'الذين',
+        'الذين يؤمنون',
       );
 
       hear('الذين يؤمنون بالغيب');
       await tester.pumpAndSettle();
-      // Three words on: further left, or on the line below.
+      // On: further left, or on the line below.
       final third = tester.getRect(lens);
       expect(
         third.center.dx < second.center.dx || third.top > second.top,

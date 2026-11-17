@@ -61,9 +61,7 @@ void main() {
 
     test('after a pause a word like the one before it still moves on', () {
       final matcher = RecitationMatcher(_fatiha);
-      expect(matcher.next, 0);
       expect(matcher.hear('بسم الله الرحمن'), 2);
-      expect(matcher.next, 3);
       // «ٱلرَّحِيمِ» is two letters from «ٱلرَّحْمَٰنِ».
       expect(matcher.hear('الرحيم'), 3);
       expect(matcher.hear('الحمد لله رب العالمين'), 7);

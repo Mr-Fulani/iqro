@@ -438,8 +438,8 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     final listener = RecitationListener(onHeard: _onHeard);
     setState(() {
       _listener = listener;
-      // The lens is on the word to read from the start.
-      _followWord = _nextFollowWord;
+      // The lens shows where to read from.
+      _followWord = words.isEmpty ? null : words[start < 0 ? 0 : start];
       _followGlide = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _placeLens());
@@ -464,17 +464,11 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     );
   }
 
-  /// The word to read now: the lens goes a word ahead of what was heard,
-  /// as a recogniser reports a word a moment after it is said.
-  QuranWord? get _nextFollowWord => _followWords.isEmpty
-      ? null
-      : _followWords[_matcher?.next ?? _followWords.length - 1];
-
   void _onHeard(String transcript) {
     final index = _matcher?.hear(transcript);
     if (index == null || !mounted || _listener == null) return;
     setState(() {
-      _followWord = _nextFollowWord;
+      _followWord = _followWords[index];
       _followGlide = true;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _placeLens());

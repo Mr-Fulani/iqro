@@ -76,26 +76,30 @@ class RecitationListener {
   Future<void> _listen() async {
     if (!_active || _starting) return;
     _starting = true;
+    const patience = Duration(seconds: 4);
     try {
-      // Ends a listen the package still counts as running.
-      if (_speech.isListening) await _speech.cancel();
+      // Ends the listen before: the package keeps a timer of it.
+      await _speech.cancel().timeout(patience);
       if (!_active) return;
-      await _speech.listen(
-        onResult: (result) {
-          if (!_active) return;
-          _lastSign = DateTime.now();
-          debugPrint('IQRO recitation heard: ${result.recognizedWords}');
-          _show(heard: result.recognizedWords, error: null);
-          onHeard(result.recognizedWords);
-        },
-        listenOptions: SpeechListenOptions(
-          localeId: _locale,
-          partialResults: true,
-          listenMode: ListenMode.dictation,
-          // No limit of the package's own: the listen it stops on a timer
-          // does not start again. The phone ends a listen after a silence.
-        ),
-      );
+      await _speech
+          .listen(
+            onResult: (result) {
+              if (!_active) return;
+              _lastSign = DateTime.now();
+              debugPrint('IQRO recitation heard: ${result.recognizedWords}');
+              _show(heard: result.recognizedWords, error: null);
+              onHeard(result.recognizedWords);
+            },
+            listenOptions: SpeechListenOptions(
+              localeId: _locale,
+              partialResults: true,
+              listenMode: ListenMode.dictation,
+              // A reader stops for breath: the listen goes on through it,
+              // or the first words after it are lost.
+              pauseFor: const Duration(seconds: 60),
+            ),
+          )
+          .timeout(patience);
       debugPrint('IQRO recitation listen started');
       _listening = true;
       _lastSign = DateTime.now();
@@ -112,7 +116,7 @@ class RecitationListener {
   void _check() {
     if (_again?.isActive ?? false) return;
     if (_listening &&
-        DateTime.now().difference(_lastSign) < const Duration(seconds: 15)) {
+        DateTime.now().difference(_lastSign) < const Duration(seconds: 70)) {
       return;
     }
     _listening = false;
@@ -147,7 +151,7 @@ class RecitationListener {
   void _listenAgain() {
     if (!_active) return;
     _again?.cancel();
-    _again = Timer(const Duration(milliseconds: 300), _listen);
+    _again = Timer(const Duration(milliseconds: 150), _listen);
   }
 
   void _show({String? heard, required String? error}) {
@@ -155,8 +159,8 @@ class RecitationListener {
   }
 }
 
-/// The trial's pointer: a round lens over the word to read now, which
-/// glides to the next one.
+/// The trial's pointer: a round lens over the word the reader has said,
+/// which glides to the next one.
 class RecitationLens extends StatelessWidget {
   const RecitationLens({required this.word, required this.glide, super.key});
 
