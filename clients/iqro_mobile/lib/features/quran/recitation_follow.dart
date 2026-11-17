@@ -20,6 +20,7 @@ class RecitationListener {
   final ear = ValueNotifier<RecitationEar>((heard: '', error: null));
 
   final _speech = SpeechToText();
+  static RecitationListener? _current;
   var _active = false;
   String? _locale;
   Timer? _again;
@@ -31,11 +32,14 @@ class RecitationListener {
   /// False when the phone has no speech recognition, or the reader refused
   /// the microphone.
   Future<bool> start() async {
+    // The package keeps the callbacks of its first start only: they pass
+    // what it reports on to the listener of the moment.
+    _current = this;
     final ready = await _speech.initialize(
-      onStatus: _onStatus,
-      onError: _onError,
+      onStatus: (status) => _current?._onStatus(status),
+      onError: (error) => _current?._onError(error),
     );
-    if (!ready) return false;
+    if (!ready || !identical(_current, this)) return false;
     final locales = await _speech.locales();
     final arabic = locales
         .map((locale) => locale.localeId)
@@ -46,13 +50,15 @@ class RecitationListener {
         arabic.firstOrNull ??
         'ar-SA';
     _active = true;
-    debugPrint('IQRO recitation locale: $_locale of ${arabic.length} Arabic');
+    debugPrint('IQRO recitation on: $_locale of ${arabic.length} Arabic');
     _watch = Timer.periodic(const Duration(seconds: 2), (_) => _check());
     await _listen();
     return true;
   }
 
   Future<void> stop() async {
+    debugPrint('IQRO recitation off');
+    if (identical(_current, this)) _current = null;
     _active = false;
     _again?.cancel();
     _watch?.cancel();
@@ -60,6 +66,7 @@ class RecitationListener {
   }
 
   void dispose() {
+    if (identical(_current, this)) _current = null;
     _active = false;
     _again?.cancel();
     _watch?.cancel();
@@ -124,6 +131,7 @@ class RecitationListener {
   }
 
   void _onStatus(String status) {
+    if (!_active) return;
     debugPrint('IQRO recitation status: $status');
     // What ending the listen before reports.
     if (_starting) return;
@@ -234,16 +242,21 @@ class RecitationHint extends StatelessWidget {
   );
 }
 
-/// The microphone while its hint is up: gold, breathing, with rings going
-/// out from it, so the hint is seen to be about this button.
+/// The microphone while its hint is up or while it listens: breathing,
+/// with rings going out from it, so the hint is seen to be about this
+/// button and a listening microphone is not taken for one that is off.
 class RecitationMicPulse extends StatefulWidget {
   const RecitationMicPulse({
     required this.active,
+    required this.color,
     required this.child,
     super.key,
   });
 
   final bool active;
+
+  /// The colour of the rings.
+  final Color color;
   final Widget child;
 
   @override
@@ -285,7 +298,7 @@ class _RecitationMicPulseState extends State<RecitationMicPulse>
       // Larger and back, once a beat.
       final swell = 1 - (2 * _beat.value - 1).abs();
       return CustomPaint(
-        painter: _RingsPainter(_beat.value),
+        painter: _RingsPainter(_beat.value, widget.color),
         child: Transform.scale(scale: 1 + .18 * swell, child: child),
       );
     },
@@ -293,9 +306,10 @@ class _RecitationMicPulseState extends State<RecitationMicPulse>
 }
 
 class _RingsPainter extends CustomPainter {
-  const _RingsPainter(this.beat);
+  const _RingsPainter(this.beat, this.color);
 
   final double beat;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -309,11 +323,12 @@ class _RingsPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = recitationGold.withValues(alpha: .8 * (1 - at)),
+          ..color = color.withValues(alpha: .8 * (1 - at)),
       );
     }
   }
 
   @override
-  bool shouldRepaint(_RingsPainter oldDelegate) => oldDelegate.beat != beat;
+  bool shouldRepaint(_RingsPainter oldDelegate) =>
+      oldDelegate.beat != beat || oldDelegate.color != color;
 }

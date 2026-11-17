@@ -121,7 +121,8 @@ void main() {
       final speech = _Speech();
       SpeechToTextPlatform.instance = speech;
       WakelockPlusPlatformInterface.instance = _Wakelock();
-      await _pump(tester);
+      // Animations off: the rings of a listening microphone never settle.
+      await _pump(tester, reducedMotion: true);
       await _swipe(tester, await _card(tester, 3), 220);
       final lens = find.byKey(const ValueKey('recitation-lens'));
       expect(lens, findsNothing);
@@ -155,10 +156,16 @@ void main() {
       await tester.pump(recitationHintPause);
       expect(hint(), 1);
 
+      // Pressed, and again at once as a finger bounces: it is on, once.
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pump(const Duration(milliseconds: 80));
       await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
       await tester.pumpAndSettle();
       expect(speech.listens, 1);
       expect(hint(), 0);
+      // A listening microphone sends out rings too, in its own colour.
+      expect(pulse(), isTrue);
+      expect(mic(), isNot(recitationGold));
       await tester.pump(recitationHintPause + recitationHintTime);
       expect(hint(), 0);
       // On the first word of the ayah at the top, before a word is said:

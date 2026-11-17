@@ -132,6 +132,9 @@ class _FlowPage extends ConsumerStatefulWidget {
   ConsumerState<_FlowPage> createState() => _FlowPageState();
 }
 
+/// The microphone of the recitation trial while it listens.
+const _micOnColor = Color(0xFFB3261E);
+
 /// The ayah numbers on the paper: the app's gold, apart from the ink.
 const _markerColor = Color(0xFF9A6D22);
 
@@ -497,7 +500,22 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
 
   /// Turns the microphone on, to follow the reader from the ayah at the top
   /// of the screen, or off.
+  /// A press on the microphone is being carried out, or was a moment ago:
+  /// another one then, a finger's bounce, would undo it at once.
+  var _followBusy = false;
+
   Future<void> _toggleFollow(List<QuranAyah> items) async {
+    if (_followBusy) return;
+    _followBusy = true;
+    try {
+      await _switchFollow(items);
+    } finally {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      _followBusy = false;
+    }
+  }
+
+  Future<void> _switchFollow(List<QuranAyah> items) async {
     // The microphone is found: no more hints.
     _followHintTimer?.cancel();
     _followHint = false;
@@ -699,12 +717,15 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                       if (recitationFollowEnabled && items.isNotEmpty)
                         RecitationMicPulse(
                           key: const ValueKey('reader-flow-follow-pulse'),
-                          active: _followHint,
+                          active: _followHint || _listener != null,
+                          color: _listener != null
+                              ? _micOnColor
+                              : recitationGold,
                           child: IconButton(
                             key: const ValueKey('reader-flow-follow'),
                             onPressed: () => unawaited(_toggleFollow(items)),
                             color: _listener != null
-                                ? const Color(0xFFB3261E)
+                                ? _micOnColor
                                 : _followHint
                                 ? recitationGold
                                 : mushafInkColor,
