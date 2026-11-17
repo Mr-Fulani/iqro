@@ -1091,7 +1091,7 @@ packages:
     source: hosted
     version: "7.4.0"
   speech_to_text_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: speech_to_text_platform_interface
       sha256: "7e447356be3074c471223c9d179ef3f822475350b67ca923ec71ab3bf2ede214"
@@ -1371,7 +1371,7 @@ packages:
     source: hosted
     version: "1.7.0"
   wakelock_plus_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: wakelock_plus_platform_interface
       sha256: "0618d1799f0b28bcf98255b4ee8313e6fc4d38589dc4ee5fe5840d57d1aff6da"

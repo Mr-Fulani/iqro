@@ -24,10 +24,13 @@ import 'package:iqro_mobile/features/quran/reader_page_turn.dart';
 import 'package:iqro_mobile/features/quran/mushaf_script.dart';
 import 'package:iqro_mobile/features/quran/reader_screen.dart';
 import 'package:iqro_mobile/features/quran/reader_words.dart';
+import 'package:iqro_mobile/features/quran/recitation_match.dart';
 import 'package:iqro_mobile/features/quran/rub_mark.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_to_text_platform_interface/speech_to_text_platform_interface.dart';
+import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 
 void main() {
   // The real Arabic face: the test font's square glyphs would put each
@@ -63,6 +66,76 @@ void main() {
     expect(app.quran.saved.last, reached);
     expect(tester.takeException(), isNull);
   });
+
+  // The trial of following a recitation: run with
+  // --dart-define=RECITATION_FOLLOW=true.
+  testWidgets(
+    'the microphone puts a lens on the word the reader says',
+    (tester) async {
+      final speech = _Speech();
+      SpeechToTextPlatform.instance = speech;
+      WakelockPlusPlatformInterface.instance = _Wakelock();
+      await _pump(tester);
+      await _swipe(tester, await _card(tester, 3), 220);
+      final lens = find.byKey(const ValueKey('recitation-lens'));
+      expect(lens, findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(speech.listens, 1);
+
+      void hear(String words) => speech.onTextRecognition!(
+        jsonEncode(<String, Object>{
+          'alternates': [
+            <String, Object>{'recognizedWords': words, 'confidence': .9},
+          ],
+          'resultType': 0,
+        }),
+      );
+
+      hear('الذين');
+      await tester.pumpAndSettle();
+      expect(lens, findsOneWidget);
+      final first = tester.getRect(lens);
+      // The first word of an Arabic line: at its right end.
+      expect(first.right, greaterThan(250));
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey('reader-flow-follow-heard')),
+            )
+            .data,
+        'الذين',
+      );
+
+      hear('الذين يؤمنون بالغيب');
+      await tester.pumpAndSettle();
+      expect(tester.getRect(lens).right, lessThan(first.left + 8));
+
+      // The recogniser stops after a pause: the next listen starts.
+      speech.onStatus!('doneNoResult');
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(speech.listens, 2);
+      // Or fails at once and says nothing more, as on a phone without its
+      // own model for Arabic.
+      speech.onError!(
+        jsonEncode(<String, Object>{
+          'errorMsg': 'error_client',
+          'permanent': true,
+        }),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(speech.listens, 3);
+
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pumpAndSettle();
+      expect(lens, findsNothing);
+      // The package waits a moment for a last result.
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.takeException(), isNull);
+    },
+    skip: !recitationFollowEnabled,
+  );
 
   testWidgets('the plain Arabic text announces a quarter of a hizb each time '
       'the reader scrolls to its first ayah', (tester) async {
@@ -910,4 +983,45 @@ class _Engine implements IqroAudioEngine {
   Future<void> dispose() async {}
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A phone's speech recognition that hears what the test tells it.
+class _Speech extends SpeechToTextPlatform {
+  var listens = 0;
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<bool> initialize({
+    debugLogging = false,
+    List<SpeechConfigOption>? options,
+  }) async => true;
+
+  @override
+  Future<List<dynamic>> locales() async => <String>['ar_SA:Arabic'];
+
+  @override
+  Future<bool> listen({
+    String? localeId,
+    partialResults = true,
+    onDevice = false,
+    int listenMode = 0,
+    sampleRate = 0,
+    SpeechListenOptions? options,
+  }) async {
+    listens += 1;
+    return true;
+  }
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> cancel() async {}
+}
+
+class _Wakelock extends WakelockPlusPlatformInterface {
+  @override
+  Future<void> toggle({required bool enable}) async {}
 }

@@ -5,30 +5,28 @@ import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 /// What the trial shows under the text while it listens.
-typedef RecitationEar = ({bool onDevice, String heard, String? error});
+typedef RecitationEar = ({String heard, String? error});
 
 /// The phone's speech recognition, listening for Arabic until stopped: a
-/// recogniser ends a listen after a pause, so each one is followed by the
-/// next. It tries the phone's own model first and, where the phone has none
-/// for Arabic, goes on through the network.
+/// recogniser ends a listen after a pause or an error, so each one is
+/// followed by the next. The phone chooses between its own model for Arabic,
+/// where it has one, and the network.
 class RecitationListener {
   RecitationListener({required this.onHeard});
 
   /// Gets the words of the current listen so far, as they grow.
   final ValueChanged<String> onHeard;
 
-  final ear = ValueNotifier<RecitationEar>((
-    onDevice: true,
-    heard: '',
-    error: null,
-  ));
+  final ear = ValueNotifier<RecitationEar>((heard: '', error: null));
 
   final _speech = SpeechToText();
   var _active = false;
-  var _onDevice = true;
-  var _heardOnDevice = false;
   String? _locale;
   Timer? _again;
+
+  /// Starts a listen whenever none runs: a recogniser does not always say
+  /// that it has stopped.
+  Timer? _watch;
 
   /// False when the phone has no speech recognition, or the reader refused
   /// the microphone.
@@ -48,6 +46,8 @@ class RecitationListener {
         arabic.firstOrNull ??
         'ar-SA';
     _active = true;
+    debugPrint('IQRO recitation locale: $_locale of ${arabic.length} Arabic');
+    _watch = Timer.periodic(const Duration(seconds: 2), (_) => _check());
     await _listen();
     return true;
   }
@@ -55,55 +55,91 @@ class RecitationListener {
   Future<void> stop() async {
     _active = false;
     _again?.cancel();
+    _watch?.cancel();
     await _speech.stop();
   }
 
   void dispose() {
     _active = false;
     _again?.cancel();
+    _watch?.cancel();
     unawaited(_speech.cancel());
     ear.dispose();
   }
 
-  Future<void> _listen() async {
-    if (!_active || _speech.isListening) return;
-    _show(error: null);
-    await _speech.listen(
-      onResult: (result) {
-        if (!_active) return;
-        if (_onDevice) _heardOnDevice = true;
-        _show(heard: result.recognizedWords, error: null);
-        onHeard(result.recognizedWords);
-      },
-      listenOptions: SpeechListenOptions(
-        localeId: _locale,
-        onDevice: _onDevice,
-        partialResults: true,
-        listenMode: ListenMode.dictation,
-        listenFor: const Duration(minutes: 10),
-        pauseFor: const Duration(seconds: 8),
-      ),
-    );
-  }
+  /// A listen runs, as far as the recogniser has said: the package's own
+  /// flag stays set after an error.
+  var _listening = false;
+  var _starting = false;
+  var _lastSign = DateTime.now();
 
-  void _onStatus(String status) {
-    if (status == SpeechToText.doneStatus ||
-        status == SpeechToText.notListeningStatus) {
-      _listenAgain();
+  Future<void> _listen() async {
+    if (!_active || _starting) return;
+    _starting = true;
+    try {
+      // Ends the listen before, with the package's timer for its pause.
+      await _speech.cancel();
+      if (!_active) return;
+      await _speech.listen(
+        onResult: (result) {
+          if (!_active) return;
+          _lastSign = DateTime.now();
+          debugPrint('IQRO recitation heard: ${result.recognizedWords}');
+          _show(heard: result.recognizedWords, error: null);
+          onHeard(result.recognizedWords);
+        },
+        listenOptions: SpeechListenOptions(
+          localeId: _locale,
+          partialResults: true,
+          listenMode: ListenMode.dictation,
+          listenFor: const Duration(minutes: 10),
+          pauseFor: const Duration(seconds: 8),
+        ),
+      );
+      _listening = true;
+      _lastSign = DateTime.now();
+    } on Object catch (error) {
+      debugPrint('IQRO recitation listen failed: $error');
+      if (_active) _show(error: '$error');
+    } finally {
+      _starting = false;
     }
   }
 
+  /// Starts a listen when none runs, or when the one that should has been
+  /// silent longer than a pause may last.
+  void _check() {
+    if (_again?.isActive ?? false) return;
+    if (_listening &&
+        DateTime.now().difference(_lastSign) < const Duration(seconds: 15)) {
+      return;
+    }
+    _listening = false;
+    unawaited(_listen());
+  }
+
+  void _onStatus(String status) {
+    debugPrint('IQRO recitation status: $status');
+    // What ending the listen before reports.
+    if (_starting) return;
+    _lastSign = DateTime.now();
+    if (status == SpeechToText.listeningStatus) {
+      _listening = true;
+      return;
+    }
+    _listening = false;
+    _listenAgain();
+  }
+
   void _onError(SpeechRecognitionError error) {
-    if (!_active) return;
+    if (!_active || _starting) return;
+    debugPrint('IQRO recitation error: ${error.errorMsg}');
     // Silence is not a fault: the next listen starts.
     final silence =
         error.errorMsg == 'error_no_match' ||
         error.errorMsg == 'error_speech_timeout';
-    if (!silence) {
-      _show(error: error.errorMsg);
-      // No Arabic model on the phone: through the network from here on.
-      if (_onDevice && !_heardOnDevice) _onDevice = false;
-    }
+    if (!silence) _show(error: error.errorMsg);
+    _listening = false;
     _listenAgain();
   }
 
@@ -114,11 +150,7 @@ class RecitationListener {
   }
 
   void _show({String? heard, required String? error}) {
-    ear.value = (
-      onDevice: _onDevice,
-      heard: heard ?? ear.value.heard,
-      error: error,
-    );
+    ear.value = (heard: heard ?? ear.value.heard, error: error);
   }
 }
 

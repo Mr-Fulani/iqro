@@ -948,8 +948,7 @@ class _FlowHeader extends StatelessWidget {
   }
 }
 
-/// What the phone hears, under the text while the trial listens: whether
-/// its own model recognises the speech or the network does, and the last
+/// What the phone hears, under the text while the trial listens: the last
 /// words heard, or the recogniser's error.
 class _FollowEar extends StatelessWidget {
   const _FollowEar({required this.ear});
@@ -964,11 +963,7 @@ class _FollowEar extends StatelessWidget {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(
-            value.onDevice ? Icons.phone_android_rounded : Icons.cloud_outlined,
-            size: 16,
-            color: mushafAccentColor,
-          ),
+          const Icon(Icons.hearing_rounded, size: 16, color: mushafAccentColor),
           const SizedBox(width: 8),
           Text(
             value.error ??
