@@ -59,7 +59,7 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
   await expect(navigation).toBeHidden();
   await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(navigation).toBeVisible();
   // The reader keeps the Quran tab lit and has a way back to the list.
   await expect(navigation.locator('[aria-current="page"]')).toHaveAttribute("href", "/ru/surahs");
@@ -91,7 +91,7 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await expect(page).toHaveURL("/ru/quran");
   await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
   await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
 
   // More is a screen of its own, opened from the fifth tab with the keyboard too.
   const more = navigation.getByTestId("mobile-more-tab");

@@ -168,7 +168,7 @@ for (const phone of PHONES) {
     await expect(full.getByTestId("player-equalizer")).toHaveCSS("opacity", "1");
     await expect(full.getByRole("slider", { name: "Позиция воспроизведения" })).toBeVisible();
     await expect(full.getByLabel("Быстрая смена чтеца")).toBeVisible();
-    await expect(full.getByLabel("Скорость воспроизведения")).toBeVisible();
+    await expect(full.getByLabel("Скорость")).toBeVisible();
     await expect(full.getByLabel("Таймер сна")).toBeVisible();
     await expect(full.getByLabel("Режим повтора")).toBeVisible();
     await expect(full.getByRole("button", { name: "Фон плеера" })).toBeVisible();

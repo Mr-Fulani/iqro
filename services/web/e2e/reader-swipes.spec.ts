@@ -24,7 +24,7 @@ async function centre(locator: Locator): Promise<Point> {
 /** The Quran text, the cards with translation and buttons. */
 async function openText(page: Page, surah = 1) {
   await page.goto(surah === 1 ? "/ru/quran" : `/ru/quran?surah=${surah}`);
-  const toText = page.getByRole("button", { name: "📜 Текст", exact: true });
+  const toText = page.getByRole("button", { name: "Текст", exact: true });
   const toolbar = page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true });
   // A phone opens the full-screen Mushaf: the switch is in its settings.
   const immersive = await toolbar.waitFor({ timeout: 4000 }).then(() => true, () => false);

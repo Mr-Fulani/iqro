@@ -379,7 +379,7 @@ test("creates a synced plan, tests recall, and records self-assessment", async (
   const writes = await installMocks(page);
 
   await page.goto("/ru/memorization");
-  await expect(page.getByRole("heading", { name: "Заучивание Корана" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Практика заучивания" })).toBeVisible();
   await page.getByLabel("Чтец для повторения").selectOption(recitation.id);
   await page.reload();
   await expect(page.getByLabel("Чтец для повторения")).toHaveValue(recitation.id);
@@ -397,7 +397,7 @@ test("creates a synced plan, tests recall, and records self-assessment", async (
   await expect(page.getByLabel(ayahs[0].text_uthmani)).toBeVisible();
 
   await page.getByRole("button", { name: "+ 1 повтор" }).click();
-  await page.getByRole("button", { name: "Запомнил" }).click();
+  await page.getByRole("button", { name: "Хорошо" }).click();
 
   await expect(page.getByText("1 / 5", { exact: true })).toBeVisible();
   page.once("dialog", (dialog) => dialog.accept());

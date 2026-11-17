@@ -69,7 +69,7 @@ async function openText(page: Page) {
   const toolbar = page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true });
   // A phone opens the full-screen Mushaf: the switch is in its settings.
   if (await toolbar.waitFor({ timeout: 4000 }).then(() => true, () => false)) await toolbar.click();
-  await page.getByRole("button", { name: "📜 Текст", exact: true }).click();
+  await page.getByRole("button", { name: "Текст", exact: true }).click();
   await expect(page.locator("#quran-ayah-1-5")).toBeVisible();
 }
 
