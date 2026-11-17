@@ -588,8 +588,8 @@ test.describe("on a phone", () => {
     await expect(bar).toHaveAttribute("data-completed", "true");
 
     // The catalog is in «More» on a phone.
-    await tabs.locator(".mobile-more > summary").click();
-    await expect(tabs.locator(".mobile-more-links").getByRole("link", { name: "Курсы" }))
+    await tabs.getByTestId("mobile-more-tab").click();
+    await expect(page.getByTestId("more-tools").getByRole("link", { name: "Курсы" }))
       .toHaveAttribute("href", "/ru/courses");
   });
 });
