@@ -9,12 +9,14 @@ import 'package:iqro_mobile/features/quran/mushaf_edition.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
 
-// 6:2 begins on page 128 of Mushaf 19 and ends on page 129.
+// 6:2 begins on page 128 of the Mushaf and ends on page 129, with its end
+// sign; a [coloured] page font paints its own colours (tajweed).
 Map<String, Object?> _page(
   int number,
   String version,
-  List<(int, String, String)> words,
-) => {
+  List<(int, String, String)> words, {
+  bool coloured = false,
+}) => {
   'mushaf_id': 19,
   'page_number': number,
   'pages_count': 604,
@@ -25,6 +27,7 @@ Map<String, Object?> _page(
     'available': true,
     'version': 2,
     'mode': 'page-font',
+    if (coloured) 'color_format': 'colrv1',
     'native_font_url':
         'https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/ttf/p$number.ttf',
   },
@@ -36,14 +39,14 @@ Map<String, Object?> _page(
         'line_number': 15,
         'position_in_verse': index + 1,
         'position_in_page': index + 1,
-        'char_type_name': 'word',
+        'char_type_name': text == 'ﱆ' ? 'end' : 'word',
         'text': text,
       },
   ],
 };
 
 class _Repository extends QuranRepository {
-  _Repository({this.fontsFail = false})
+  _Repository({this.fontsFail = false, this.coloured = false})
     : super(
         api: _UnusedApi(),
         database: _UnusedDatabase(),
@@ -51,9 +54,16 @@ class _Repository extends QuranRepository {
       );
 
   final bool fontsFail;
+  final bool coloured;
 
   // A version of its own, as loaded fonts are kept for the next share.
-  String get _version => fontsFail ? 'b' * 64 : 'a' * 64;
+  String get _version =>
+      (fontsFail
+          ? 'b'
+          : coloured
+          ? 'c'
+          : 'a') *
+      64;
 
   @override
   Future<Map<String, List<int>>> foundationPageIndex() async => {
@@ -70,8 +80,12 @@ class _Repository extends QuranRepository {
             (1, '6:1', 'ﱁ'),
             (3, '6:2', 'ﱃ'),
             (4, '6:2', 'ﱄ'),
-          ])
-        : _page(129, _version, [(5, '6:2', 'ﱅ'), (7, '6:3', 'ﱇ')]),
+          ], coloured: coloured)
+        : _page(129, _version, [
+            (5, '6:2', 'ﱅ'),
+            (6, '6:2', 'ﱆ'),
+            (7, '6:3', 'ﱇ'),
+          ], coloured: coloured),
   );
 
   @override
@@ -94,17 +108,25 @@ class _UnusedDatabase implements LocalDatabase {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('an ayah over two pages takes its words from both page fonts', () async {
+  test('an ayah over two pages takes its words from both page fonts, the end '
+      'sign with the last word', () async {
     final spans = await ayahShareGlyphs(_Repository(), 6, 2);
-    expect(spans.map((span) => span.toPlainText()), ['ﱃ', 'ﱄ', 'ﱅ']);
+    expect(spans.map((span) => span.toPlainText()), ['ﱃ', 'ﱄ', 'ﱅ\u00a0ﱆ']);
     final families = spans
         .map((span) => (span as TextSpan).style?.fontFamily)
         .toList();
     expect(families[0], families[1]);
-    expect(families[1], isNot(families[2]));
+    expect(families[0], isNotNull);
+    final last = (spans[2] as TextSpan).children!;
+    expect((last.first as TextSpan).style?.fontFamily, isNot(families[1]));
   });
 
   test('without the page fonts the card keeps the plain script', () async {
     expect(await ayahShareGlyphs(_Repository(fontsFail: true), 6, 2), isEmpty);
+  });
+
+  test('a font that paints its own colours cannot take the ink of the card: '
+      'the plain script is drawn', () async {
+    expect(await ayahShareGlyphs(_Repository(coloured: true), 6, 2), isEmpty);
   });
 }

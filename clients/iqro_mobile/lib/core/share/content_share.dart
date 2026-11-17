@@ -760,7 +760,7 @@ class _ShareCardSheetState extends State<ShareCardSheet> {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: colour == _colour
-                                ? theme.colorScheme.primary
+                                ? theme.colorScheme.secondary
                                 : theme.colorScheme.outlineVariant,
                             width: colour == _colour ? 3 : 1,
                           ),
