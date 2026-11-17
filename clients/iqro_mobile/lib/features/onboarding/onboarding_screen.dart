@@ -254,8 +254,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) =>
-          PrayerCitySheet(locale: Localizations.localeOf(context).languageCode),
+      builder: (context) {
+        final locale = Localizations.localeOf(context).languageCode;
+        return PrayerCitySheet(
+          locale: locale,
+          search: (query) =>
+              ref.read(prayerRepositoryProvider).searchCities(query, locale),
+        );
+      },
     );
     if (city == null || !mounted) return;
     setState(() {
@@ -591,10 +597,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final locale = ref.watch(appPreferencesProvider).locale;
     final analytics = ref.read(analyticsProvider.notifier);
     final consent = ref.watch(analyticsProvider);
-    final city = prayerCityById(_location?.cityId);
     final place = _location == null
         ? null
-        : city?.nameFor(locale) ?? l10n.currentLocation;
+        : _location!.placeName(locale) ?? l10n.currentLocation;
     return <(String, String, bool)>[
       (l10n.language, _languageName(locale), true),
       if (!widget.replay)

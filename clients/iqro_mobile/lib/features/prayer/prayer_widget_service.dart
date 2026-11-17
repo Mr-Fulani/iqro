@@ -7,7 +7,6 @@ import '../../core/auth/account_scope.dart';
 import '../../core/widgets/home_widget_pinning.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/widgets/prayer_times.home_widget.dart';
-import 'prayer_places.dart';
 import 'prayer_repository.dart';
 
 const prayerWidgetVisibleDays = 8;
@@ -163,8 +162,8 @@ class PrayerWidgetService {
     ).wait;
     _database.ensureCurrent(scope);
     final copy = PrayerWidgetCopy.forLocale(locale);
-    final city = prayerCityById(values.$2?.cityId);
-    final locationName = city?.nameFor(copy.locale) ?? copy.currentLocation;
+    final locationName =
+        values.$2?.placeName(copy.locale) ?? copy.currentLocation;
     final timeline = buildPrayerWidgetTimeline(
       schedules: values.$1,
       locationName: locationName,

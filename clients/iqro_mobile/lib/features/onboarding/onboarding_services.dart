@@ -129,12 +129,7 @@ class AppOnboardingServices implements OnboardingServices {
 
   @override
   Future<PrayerLocation> useCity(PrayerCity city, PrayerMethod method) async {
-    final location = PrayerLocation(
-      latitude: city.latitude,
-      longitude: city.longitude,
-      timezone: city.timezone,
-      cityId: city.id,
-    );
+    final location = PrayerLocation.ofCity(city);
     await _prayer.calculateForLocation(
       method: method,
       location: location,

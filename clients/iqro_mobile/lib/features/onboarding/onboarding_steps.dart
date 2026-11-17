@@ -676,8 +676,10 @@ class _PrayerStep extends StatelessWidget {
     final setup = this.setup;
     final methods = setup?.methods ?? const <PrayerMethod>[];
     final ready = methods.isNotEmpty && !locating;
-    final city = prayerCityById(location?.cityId);
-    final fromDevice = location != null && city == null;
+    final cityName = location?.cityId == null
+        ? null
+        : location!.placeName(locale);
+    final fromDevice = location != null && cityName == null;
     return _StepFrame(
       top: const _Badge(iqroSalahIcon),
       title: l10n.onboardingPrayerTitle,
@@ -712,8 +714,8 @@ class _PrayerStep extends StatelessWidget {
               optionKey: const Key('onboarding-choose-city'),
               icon: Icons.search,
               title: l10n.onboardingChooseCity,
-              subtitle: city?.nameFor(locale) ?? l10n.onboardingChooseCityHint,
-              selected: city != null,
+              subtitle: cityName ?? l10n.onboardingChooseCityHint,
+              selected: cityName != null,
               busy: false,
               onTap: ready ? onChooseCity : null,
             ),
@@ -723,7 +725,7 @@ class _PrayerStep extends StatelessWidget {
                 liveRegion: true,
                 child: Text(
                   l10n.onboardingLocationSelected(
-                    city?.nameFor(locale) ?? l10n.currentLocation,
+                    cityName ?? l10n.currentLocation,
                   ),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.primary,

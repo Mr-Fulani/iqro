@@ -8,6 +8,7 @@ import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'prayer_local_engine.dart';
 import 'prayer_location_gateway.dart';
+import 'prayer_places.dart';
 
 class PrayerSchedule {
   const PrayerSchedule({
@@ -338,18 +339,37 @@ class PrayerLocation {
     required this.longitude,
     required this.timezone,
     this.cityId,
+    this.cityName,
   });
+
+  /// The place of a chosen city. A found city (not one of the curated list)
+  /// keeps the name it was chosen under.
+  PrayerLocation.ofCity(PrayerCity city)
+    : latitude = city.latitude,
+      longitude = city.longitude,
+      timezone = city.timezone,
+      cityId = city.id,
+      cityName = prayerCityById(city.id) == null
+          ? city.names.values.first
+          : null;
 
   final double latitude;
   final double longitude;
   final String timezone;
   final String? cityId;
+  final String? cityName;
+
+  /// The chosen city's name: a curated city's in this language, else the saved
+  /// one; null for a place taken from the device.
+  String? placeName(String locale) =>
+      prayerCityById(cityId)?.nameFor(locale) ?? cityName;
 
   factory PrayerLocation.fromJson(Map<String, Object?> json) => PrayerLocation(
     latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
     longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
     timezone: json['timezone']?.toString() ?? 'UTC',
     cityId: json['city_id']?.toString(),
+    cityName: json['city_name']?.toString(),
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -357,6 +377,7 @@ class PrayerLocation {
     'longitude': longitude,
     'timezone': timezone,
     if (cityId != null) 'city_id': cityId,
+    if (cityName != null) 'city_name': cityName,
   };
 }
 
@@ -373,6 +394,29 @@ class PrayerRepository {
   final LocalDatabase _database;
   final PrayerLocationGateway _locationGateway;
   final LocalPrayerEngine _localEngine = const LocalPrayerEngine();
+
+  /// Cities whose name starts with [query], largest first, from the server's
+  /// own copy of GeoNames. Throws when the search cannot be reached; the city
+  /// sheet then keeps its curated list.
+  Future<List<PrayerCity>> searchCities(String query, String locale) async {
+    final payload = await _api.get(
+      '/prayer/cities',
+      query: <String, Object?>{'q': query, 'locale': locale},
+      public: true,
+    );
+    final results = payload is Map ? payload['results'] : null;
+    if (results is! List) throw const FormatException('Invalid city search');
+    return <PrayerCity>[
+      for (final item in results.whereType<Map<Object?, Object?>>())
+        PrayerCity.found(
+          geonameId: (item['id'] as num).toInt(),
+          name: item['name'].toString(),
+          latitude: double.parse(item['latitude'].toString()),
+          longitude: double.parse(item['longitude'].toString()),
+          timezone: item['timezone'].toString(),
+        ),
+    ];
+  }
 
   Future<List<PrayerMethod>> methods() async {
     const key = 'prayer:methods';
