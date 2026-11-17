@@ -997,3 +997,33 @@ class PrayerProfile(BaseModel):
         # cannot be represented portably as SQL constraints.
         self.full_clean(validate_unique=False, validate_constraints=False)
         super().save(*args, **kwargs)
+
+
+class PrayerCity(models.Model):
+    """A populated place of the city search, loaded from the bundled GeoNames extract.
+
+    Reference data replaced as a whole by ``import_prayer_cities``; the ``search_*``
+    columns hold the names as ``normalize_city_name`` writes them, for prefix lookups.
+    """
+
+    geoname_id = models.PositiveIntegerField(primary_key=True)
+    name = models.CharField(max_length=200)
+    name_ru = models.CharField(max_length=200, blank=True)
+    name_ar = models.CharField(max_length=200, blank=True)
+    name_tr = models.CharField(max_length=200, blank=True)
+    search_name = models.CharField(max_length=200, db_index=True)
+    search_local = models.CharField(max_length=200, blank=True, db_index=True)
+    search_ru = models.CharField(max_length=200, blank=True, db_index=True)
+    search_ar = models.CharField(max_length=200, blank=True, db_index=True)
+    search_tr = models.CharField(max_length=200, blank=True, db_index=True)
+    country_code = models.CharField(max_length=2)
+    latitude = models.DecimalField(max_digits=7, decimal_places=5)
+    longitude = models.DecimalField(max_digits=8, decimal_places=5)
+    timezone = models.CharField(max_length=64)
+    population = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "prayer_city"
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.country_code})"

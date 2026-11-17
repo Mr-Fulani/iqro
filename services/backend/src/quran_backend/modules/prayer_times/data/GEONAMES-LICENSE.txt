@@ -1,0 +1,7 @@
+prayer_cities_v1.tsv.gz is an extract of the GeoNames geographical database
+(https://www.geonames.org/), made by scripts/build_prayer_cities.py from
+cities1000.zip and alternateNamesV2.zip (https://download.geonames.org/export/dump/).
+
+GeoNames data is licensed under a Creative Commons Attribution 4.0 License,
+https://creativecommons.org/licenses/by/4.0/. The data is provided "as is" without
+warranty or any representation of accuracy, timeliness or completeness.

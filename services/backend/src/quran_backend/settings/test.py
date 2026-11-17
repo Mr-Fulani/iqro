@@ -57,9 +57,13 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
     "referral_redirect": "10000/minute",
     "prayer_calculate": "10000/minute",
     "dua_search": "10000/minute",
+    "prayer_city_search": "10000/minute",
     "prayer_profile_mutation": "10000/minute",
     "reading_mutation": "10000/minute",
     "reminder_mutation": "10000/minute",
     "sync_push": "10000/minute",
     "sync_push_daily": "100000/day",
 }
+
+# Migrations do not load the 172 thousand places of the city search into test databases.
+QURAN_PRAYER_CITIES_IMPORT_ON_MIGRATE = False

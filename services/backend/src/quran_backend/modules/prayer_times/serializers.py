@@ -201,3 +201,21 @@ class PrayerCalculationResponseSerializer(serializers.Serializer[Any]):
     fallback = PrayerFallbackSerializer()
     warnings = serializers.ListField(child=serializers.CharField())
     next_recalculation_at = PrayerTimeEventSerializer()
+
+
+class PrayerCitySearchQuerySerializer(StrictFieldsSerializer):
+    q = serializers.CharField(min_length=2, max_length=80, trim_whitespace=True)
+    locale = serializers.ChoiceField(choices=("en", "ru", "ar", "tr"), default="en")
+
+
+class PrayerCitySerializer(serializers.Serializer[Any]):
+    id = serializers.IntegerField(source="geoname_id")
+    name = serializers.CharField()
+    country_code = serializers.CharField()
+    latitude = serializers.DecimalField(max_digits=7, decimal_places=5)
+    longitude = serializers.DecimalField(max_digits=8, decimal_places=5)
+    timezone = serializers.CharField()
+
+
+class PrayerCitySearchResponseSerializer(serializers.Serializer[Any]):
+    results = PrayerCitySerializer(many=True)
