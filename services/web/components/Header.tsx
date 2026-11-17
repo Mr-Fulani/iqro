@@ -2,7 +2,7 @@
 
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -19,6 +19,13 @@ export function Header() {
   const { locale, t } = useI18n();
   const routePathname = stripLocalePrefix(pathname);
   const isHome = routePathname === "/";
+  // On a phone every screen except the five tabs has a way back, as in the app.
+  const router = useRouter();
+  const isTab = ["/", "/quran", "/planner", "/audio", "/more"].includes(routePathname);
+  const goBack = () => {
+    if (window.history.length > 1) router.back();
+    else router.push(localizedPath(locale, "/more"));
+  };
   // Today's date in the phone's home top bar, as in the app. It follows the
   // visitor's clock, so it is drawn after hydration.
   const hydrated = useHydrated();
@@ -52,6 +59,13 @@ export function Header() {
   return (
     <header className={isHome ? "app-header is-home" : "app-header"}>
       <div className="brand-block">
+        {!isTab && (
+          <button type="button" className="header-back" onClick={goBack} aria-label={t("more.back")} data-testid="header-back">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M19 12H5m6-6-6 6 6 6" />
+            </svg>
+          </button>
+        )}
         <IntentPrefetchLink href={localizedPath(locale, "/")} className="brand-link">
           <Image src="/iqro-wax-seal-128.webp" alt="" width={56} height={56} className="brand-logo" preload unoptimized />
           <div>
@@ -117,7 +131,7 @@ export function Header() {
 
       {isHome && (
         <IntentPrefetchLink
-          href={localizedPath(locale, "/profile")}
+          href={localizedPath(locale, "/settings")}
           className="header-settings"
           aria-label={t("home.settings")}
           data-testid="home-settings"
