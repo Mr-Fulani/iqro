@@ -9,6 +9,14 @@
   display: none;
 }
 
+/* Phone-only parts of the home page (the app's Home); see the block below. */
+.brand-date,
+.header-settings,
+.surface.home-reading,
+.home-section-tile.home-section-all {
+  display: none;
+}
+
 @media (max-width: 768px) {
   :root {
     --bg: #f7f4ec;
@@ -401,9 +409,201 @@
     overflow-wrap: anywhere;
   }
 
-  /* Keep the original photographic hero, with accessible carousel controls. */
+  /* Home follows the app's Home (lib/features/home/home_screen.dart): the top
+     bar with today's date, the sky of prayers, the reading to continue with
+     the day's goal, then the sections. The desktop's other blocks stay off. */
   .home-page {
     gap: 12px;
+  }
+
+  .home-page .hero-card,
+  .home-page .today-reading-full,
+  .home-page .prayer-reading-plan,
+  .home-page .memorization-planner-card,
+  .home-page .home-planner-cta,
+  .home-page .kpi-grid,
+  .home-page .reciter-showcase,
+  .home-page .home-surah-catalog {
+    display: none;
+  }
+
+  .app-header.is-home {
+    flex-wrap: nowrap;
+  }
+
+  .app-header.is-home .header-actions {
+    display: none;
+  }
+
+  .app-header.is-home .brand-block {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app-header.is-home .brand-link {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .app-header.is-home .brand-link > div {
+    min-width: 0;
+  }
+
+  .app-header.is-home .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-header.is-home .brand-link .eyebrow {
+    font-size: 22px;
+    line-height: 1.15;
+  }
+
+  .brand-date {
+    display: block;
+    /* Holds its line before the date is drawn in the browser. */
+    min-height: 17px;
+    margin: 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .header-settings {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    color: var(--text-primary);
+  }
+
+  .surface.home-reading {
+    display: block;
+    padding: 16px;
+    background: var(--panel);
+  }
+
+  .home-reading-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .home-reading-top > img {
+    flex: none;
+    width: 36px;
+    height: 36px;
+  }
+
+  .home-reading-copy {
+    flex: 1 1 0;
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .home-reading-copy strong {
+    color: var(--text-primary);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .home-reading-plan {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .home-reading-plan-main {
+    display: grid;
+    flex: 1 1 0;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .home-reading-plan-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .home-reading-plan-head strong {
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  .home-reading-plan-rail {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  /* The mark rides the middle of a 6px bar that ends at the palm. */
+  .home-reading-plan-rail .today-progress-walk {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-bottom: 12px;
+    padding-top: 18px;
+  }
+
+  .home-reading-plan-rail .today-progress-track {
+    display: block;
+    height: 6px;
+  }
+
+  .home-reading-plan-rail .plan-mark {
+    top: 9px;
+  }
+
+  .home-reading-palm {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    object-fit: cover;
+  }
+
+  .home-reading-chevron {
+    display: inline-block;
+    color: var(--primary);
+    font-size: 20px;
+  }
+
+  [dir="rtl"] .home-reading-chevron {
+    transform: scaleX(-1);
+  }
+
+  .home-sections {
+    margin-top: 6px;
+  }
+
+  .home-sections-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* The tiles are drawn in the browser: three rows hold their place so the
+       page below does not jump. */
+    min-height: 344px;
+  }
+
+  .home-section-tile.home-section-all {
+    display: grid;
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
   }
 
   .hero-card {

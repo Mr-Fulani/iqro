@@ -7,11 +7,15 @@ import {
   ReadingGoalMetric,
   ReadingPlanner,
   ReadingToday,
+  Surah,
 } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useI18n } from "../lib/i18n-context";
-import { PALM_HISTORY_DAYS, palmGrowthFor, palmPlanFrom } from "../lib/palm-growth";
+import { PALM_HISTORY_DAYS, palmGrowthFor, palmPlanFrom, palmStageImage } from "../lib/palm-growth";
 import { localizedPath } from "../lib/routing";
+import { readLocalReadingPosition } from "../lib/reading-position-storage";
+import { useHydrated } from "../lib/use-hydrated";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { PalmGrowthCard } from "./PalmGrowthCard";
 import { PlanMark } from "./PlanMark";
 import { useOpenReplay } from "../lib/use-open-replay";
@@ -44,7 +48,14 @@ function todayInTimezone(timezoneName: string): string {
   return `${value.year}-${value.month}-${value.day}`;
 }
 
-export function TodayReadingCard() {
+const HOME_EDITION = "madani-hafs";
+
+/**
+ * `home`: on a phone the home page shows the app's compact card instead —
+ * the reading to continue with the day's goal under it (mobile.css swaps
+ * the two); `surahs` names the surah without another request when it can.
+ */
+export function TodayReadingCard({ home = false, surahs }: { home?: boolean; surahs?: Surah[] }) {
   const { session, isLoading: authLoading, loginGuest } = useAuth();
   const { formatNumber, locale, t } = useI18n();
   const [today, setToday] = useState<ReadingToday | null>(null);
@@ -240,8 +251,95 @@ export function TodayReadingCard() {
   const showGoalForm = !today?.goal || editingGoal;
   const palm = today && palmHistory ? palmGrowthFor(palmPlanFrom(today, palmHistory)) : null;
 
+  // The compact card: the account's position, else this device's, else the start.
+  const hydrated = useHydrated();
+  const localPlace = home && hydrated && !today?.continue_reading ? readLocalReadingPosition(HOME_EDITION) : null;
+  const place = {
+    surah: today?.continue_reading?.ayah?.surah_number ?? localPlace?.surahNumber ?? 1,
+    ayah: today?.continue_reading?.ayah?.ayah_number ?? localPlace?.ayahNumber ?? 1,
+    page: today?.continue_reading?.page_number ?? localPlace?.pageNumber ?? 1,
+  };
+  const [allSurahs, setAllSurahs] = useState<Surah[]>([]);
+  const placeSurah = [...(surahs ?? []), ...allSurahs].find((surah) => surah.number === place.surah);
+  const needsSurahName = home && hydrated && !placeSurah;
+  useEffect(() => {
+    if (!needsSurahName) return;
+    let active = true;
+    api.getSurahs(HOME_EDITION).then((result) => {
+      if (active) setAllSurahs(result);
+    }).catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [needsSurahName]);
+  const placeHref = today?.continue_reading?.ayah || !localPlace
+    ? continueHref
+    : localizedPath(locale, `/quran?surah=${place.surah}&ayah=${place.ayah}`);
+  const placeName = placeSurah
+    ? locale === "ar" ? placeSurah.name_ar : locale === "ru" ? placeSurah.name_ru : placeSurah.name_en
+    : t("common.surah", { surah: formatNumber(place.surah) });
+  const amount = (value: number) => formatNumber(value, { maximumFractionDigits: 2 });
+
   return (
-    <section id="reading-goal" className="surface today-reading" data-testid="today-reading">
+    <>
+    {home && (
+      <section className="surface home-reading" data-testid="home-reading">
+        <div className="home-reading-top">
+          {/* eslint-disable-next-line @next/next/no-img-element -- the header's small seal, already cached. */}
+          <img src="/iqro-wax-seal-128.webp" alt="" width={36} height={36} />
+          <div className="home-reading-copy">
+            {/* One block of text: the largest of the phone's first screen, and it is in the HTML. */}
+            <span>{t("reading.continue")}</span>
+            <br />
+            <strong>{placeName}</strong>
+            <br />
+            <span>{t("common.ayah", { ayah: formatNumber(place.ayah) })} · {t("common.page", { page: formatNumber(place.page) })}</span>
+          </div>
+          <IntentPrefetchLink href={placeHref} className="btn btn-primary" data-testid="home-reading-read">
+            {t("home.read")}
+          </IntentPrefetchLink>
+        </div>
+        <IntentPrefetchLink href={localizedPath(locale, "/planner")} className="home-reading-plan" data-testid="home-plan">
+          <span className="home-reading-plan-main">
+            <span className="home-reading-plan-head">
+              <strong>{t("home.dailyGoal")}</strong>
+              <span>
+                {today?.goal
+                  ? `${amount(achieved)} / ${amount(goalTarget)} ${t(unitKey)}${progress?.is_completed ? ` · ${t("home.completed")}` : ""}`
+                  : (authLoading || loading) ? t("common.loading") : t("reading.createGoal")}
+              </span>
+            </span>
+            {today?.goal && (
+              <span className="home-reading-plan-rail">
+                <span className="today-progress-walk" key={replay}>
+                  <PlanMark percent={percent} />
+                  <span
+                    className="today-progress-track"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent}
+                    aria-label={t("home.dailyGoal")}
+                  >
+                    <span style={{ width: `${percent}%` }} />
+                  </span>
+                </span>
+                {palm && (
+                  // eslint-disable-next-line @next/next/no-img-element -- the smallest static palm, shown at 34px.
+                  <img className="home-reading-palm" src={palmStageImage(palm.stage).src} alt="" width={34} height={34} loading="lazy" />
+                )}
+              </span>
+            )}
+          </span>
+          <span className="home-reading-chevron" aria-hidden="true">›</span>
+        </IntentPrefetchLink>
+      </section>
+    )}
+    <section
+      id="reading-goal"
+      className={home ? "surface today-reading today-reading-full" : "surface today-reading"}
+      data-testid="today-reading"
+    >
       <div className="surface-head today-reading-head">
         <div>
           <p className="eyebrow">{t("reading.todayEyebrow")}</p>
@@ -396,5 +494,6 @@ export function TodayReadingCard() {
         </div>
       )}
     </section>
+    </>
   );
 }

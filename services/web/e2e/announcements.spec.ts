@@ -58,7 +58,8 @@ test("phone bubble pops into the window and then stays away", async ({ page }) =
   await expect(bubble).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Единая исламская платформа: Коран, аудио, Ду’а и время намаза" })).toBeVisible();
+  // A phone's home has no hero heading: the sky of prayers shows it is drawn.
+  await expect(page.getByTestId("home-sky")).toBeVisible();
   await expect(page.getByTestId("announcement-bubble")).toHaveCount(0);
 });
 
@@ -224,7 +225,7 @@ test.describe("«Показать снова» in the admin", () => {
       ],
     );
     await page.goto("/ru");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByTestId("home-sky")).toBeVisible();
     await expect(page.getByTestId("announcement-bubble")).toHaveCount(0);
 
     await showAgain(page, RECITER_ID);

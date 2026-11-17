@@ -59,7 +59,7 @@ test("five mobile tabs and More preserve localized destinations and keyboard acc
   await expect(navigation.locator('[aria-current="page"]')).toHaveAttribute("href", "/ru/quran");
 
   await navigation.getByRole("link", { name: "Главная", exact: true }).click();
-  await page.getByTestId("home-hero").getByRole("link", { name: "📖 Читать Коран" }).click();
+  await page.getByTestId("home-reading-read").click();
   await expect(page).toHaveURL("/ru/quran");
   await expect(page.locator(".quran-page-layout").filter({ visible: true })).toHaveClass(/is-mushaf-mode/);
   await page.getByRole("toolbar").getByRole("button", { name: "Настройки чтения", exact: true }).click();
@@ -194,4 +194,53 @@ test("mobile More fits landscape and the compact breakpoint does not alter deskt
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--bg").trim())).toBe("#f8fafc");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
+});
+
+test("the phone home follows the app; the desktop home keeps its own blocks", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru");
+
+  // The top bar: the name with today's date and the way to the settings.
+  await expect(page.getByTestId("home-date")).toContainText(" · ");
+  await expect(page.getByTestId("home-settings")).toHaveAttribute("href", "/ru/profile");
+  await expect(page.locator(".header-actions")).toBeHidden();
+
+  // The sky of prayers, the reading to continue with the day's goal, the sections.
+  await expect(page.getByTestId("home-sky")).toBeVisible();
+  const reading = page.getByTestId("home-reading");
+  await expect(reading.getByText("Продолжить чтение")).toBeVisible();
+  await expect(reading.getByText("Аль-Фатиха")).toBeVisible();
+  await expect(reading.getByText("Аят 1 · Страница 1")).toBeVisible();
+  await expect(reading.getByRole("link", { name: "Читать" })).toHaveAttribute("href", "/ru/quran");
+  await expect(page.getByTestId("home-plan")).toHaveAttribute("href", "/ru/planner");
+  const tiles = page.locator(".home-section-tile");
+  await expect(tiles).toHaveCount(9);
+  expect(
+    await page.locator(".home-sections-grid").evaluate((grid) =>
+      getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(3);
+
+  // The desktop's other blocks are not on the phone.
+  for (const testId of ["home-hero", "today-reading", "featured-reciters"]) {
+    await expect(page.getByTestId(testId)).toBeHidden();
+  }
+  await expect(page.locator(".home-surah-catalog, .home-planner-cta, .home-page .kpi-grid")).toHaveCount(3);
+  for (const block of await page.locator(".home-surah-catalog, .home-planner-cta, .home-page .kpi-grid").all()) {
+    await expect(block).toBeHidden();
+  }
+
+  // The ninth tile opens the More list.
+  await page.getByTestId("home-section-all").click();
+  await expect(page.locator(".mobile-more-panel")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const testId of ["home-hero", "today-reading", "featured-reciters"]) {
+    await expect(page.getByTestId(testId)).toBeVisible();
+  }
+  for (const testId of ["home-date", "home-settings", "home-reading", "home-section-all"]) {
+    await expect(page.getByTestId(testId)).toBeHidden();
+  }
+  await expect(page.locator(".header-actions")).toBeVisible();
 });
