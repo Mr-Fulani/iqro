@@ -1101,5 +1101,17 @@
   "wordRangeTeachingVoice": "Голос: {reciter}, учебное чтение. У выбранного чтеца нет разметки по словам.",
   "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}},
   "wordRangeOtherVoice": "Голос: {reciter} · {style}. У выбранного чтеца здесь нет разметки по словам.",
-  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}}
+  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}},
+  "shareCardSend": "Поделиться",
+  "shareCardStory": "Сторис",
+  "shareCardPost": "Пост",
+  "shareCardColourEmerald": "Изумруд",
+  "shareCardColourTurquoise": "Бирюза",
+  "shareCardColourMidnight": "Тёмно-синий",
+  "shareCardPart": "Картинка {number} из {total}",
+  "@shareCardPart": {"placeholders": {"number": {"type": "int"}, "total": {"type": "int"}}},
+  "shareCardTooLong": "Текст слишком длинный для картинки. Его можно отправить текстом со ссылкой.",
+  "shareCardSendText": "Отправить текстом",
+  "shareCardPreparing": "Готовим картинку…",
+  "shareCardFailed": "Картинку не удалось создать. Текст и ссылку можно отправить и так."
 }

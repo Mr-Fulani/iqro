@@ -1259,5 +1259,17 @@
   "wordRangeTeachingVoice": "Voice: {reciter}, teaching recitation. The chosen reciter has no word-by-word timing.",
   "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}},
   "wordRangeOtherVoice": "Voice: {reciter} · {style}. The chosen reciter has no word-by-word timing here.",
-  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}}
+  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}},
+  "shareCardSend": "Share",
+  "shareCardStory": "Story",
+  "shareCardPost": "Post",
+  "shareCardColourEmerald": "Emerald",
+  "shareCardColourTurquoise": "Turquoise",
+  "shareCardColourMidnight": "Midnight blue",
+  "shareCardPart": "Picture {number} of {total}",
+  "@shareCardPart": {"placeholders": {"number": {"type": "int"}, "total": {"type": "int"}}},
+  "shareCardTooLong": "This text is too long for a picture. You can send it as text with a link.",
+  "shareCardSendText": "Send as text",
+  "shareCardPreparing": "Preparing the picture…",
+  "shareCardFailed": "The picture could not be made. The text and the link can still be sent."
 }

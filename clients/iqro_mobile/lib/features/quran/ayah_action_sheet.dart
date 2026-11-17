@@ -18,7 +18,6 @@ import '../audio/reciter_portraits.dart';
 import 'ayah_annotations.dart';
 import 'mushaf_paper.dart';
 import 'mushaf_ayah_excerpt.dart';
-import 'mushaf_edition.dart';
 import 'quran_models.dart';
 import 'quran_repository.dart';
 import '../../core/share/content_share.dart';
@@ -990,7 +989,7 @@ class _AyahActionSheetState extends ConsumerState<AyahActionSheet> {
     final box = context.findRenderObject();
     final analytics = ref.read(analyticsProvider.notifier);
     final glyphs = await ayahShareGlyphs(
-      ref.read(mushafRepositoryProvider(MushafIdentity.defaultEdition)),
+      ref.read(selectedMushafRepositoryProvider),
       reference.surah,
       reference.ayah,
     );

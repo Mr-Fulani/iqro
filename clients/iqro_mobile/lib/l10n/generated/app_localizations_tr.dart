@@ -3615,4 +3615,41 @@ class AppLocalizationsTr extends AppLocalizations {
   String wordRangeOtherVoice(String reciter, String style) {
     return 'Ses: $reciter · $style. Seçilen kârinin burada kelime kelime zamanlaması yok.';
   }
+
+  @override
+  String get shareCardSend => 'Paylaş';
+
+  @override
+  String get shareCardStory => 'Hikâye';
+
+  @override
+  String get shareCardPost => 'Gönderi';
+
+  @override
+  String get shareCardColourEmerald => 'Zümrüt';
+
+  @override
+  String get shareCardColourTurquoise => 'Turkuaz';
+
+  @override
+  String get shareCardColourMidnight => 'Gece mavisi';
+
+  @override
+  String shareCardPart(int number, int total) {
+    return 'Görsel $number / $total';
+  }
+
+  @override
+  String get shareCardTooLong =>
+      'Metin görsel için çok uzun. Bağlantıyla birlikte metin olarak gönderebilirsiniz.';
+
+  @override
+  String get shareCardSendText => 'Metin olarak gönder';
+
+  @override
+  String get shareCardPreparing => 'Görsel hazırlanıyor…';
+
+  @override
+  String get shareCardFailed =>
+      'Görsel oluşturulamadı. Metni ve bağlantıyı yine de gönderebilirsiniz.';
 }
