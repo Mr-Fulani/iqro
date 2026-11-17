@@ -764,7 +764,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         // margin grows with the text: the tail of a letter that ends a line
         // is drawn past the word's own box.
         final side = math.max(
-          math.max(20.0, size * .6),
+          20 + math.max(0, size - defaultReaderFlowFontSize) * .6,
           (constraints.maxWidth - 820) / 2,
         );
         return Listener(
