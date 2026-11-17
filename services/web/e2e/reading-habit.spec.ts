@@ -627,7 +627,7 @@ test("planner shows honest history and lets users correct manual entries", async
   await page.goto("/ru/planner");
 
   const planner = page.getByTestId("reading-planner-dashboard");
-  await expect(planner.getByRole("heading", { name: "Планировщик чтения" })).toBeVisible();
+  await expect(planner.getByRole("heading", { name: "План на день" })).toBeVisible();
   await expect(planner.getByText("Пропуск не становится долгом", { exact: false })).toBeVisible();
   await expect(planner.locator(".planner-day.is-partial")).toHaveCount(1);
 

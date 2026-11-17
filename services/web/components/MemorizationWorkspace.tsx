@@ -497,8 +497,9 @@ export function MemorizationWorkspace() {
               <div className="memorization-assessment">
                 <p>{t("memorization.assessmentQuestion")}</p>
                 <div className="memorization-assessment-actions">
-                  <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => void finishSession("difficult")}>{t("memorization.assessment.difficult")}</button>
+                  {/* The app's order: again, hard, good. */}
                   <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => void finishSession("repeat")}>{t("memorization.assessment.repeat")}</button>
+                  <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => void finishSession("difficult")}>{t("memorization.assessment.difficult")}</button>
                   <button type="button" className="btn btn-primary" disabled={saving} onClick={() => void finishSession("memorized")}>{t("memorization.assessment.memorized")}</button>
                 </div>
               </div>

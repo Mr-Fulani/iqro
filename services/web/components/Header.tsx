@@ -51,7 +51,8 @@ export function Header() {
     { href: "/prayer", label: t("nav.prayer"), icon: "🕌" },
     // One entry for every course: the prayer and tajweed courses open from its catalog.
     { href: "/courses", label: t("nav.courses"), icon: "📚", also: ["/salah", "/tajweed"] },
-    { href: "/calendar", label: t("calendar.title"), icon: "☾" },
+    // The menu keeps short names: the app's longer ones do not fit its row.
+    { href: "/calendar", label: t("nav.calendar"), icon: "☾" },
     { href: "/names", label: t("nav.namesOfAllah"), icon: "۞" },
     { href: "/profile", label: t("nav.profile"), icon: "👤" },
   ];
