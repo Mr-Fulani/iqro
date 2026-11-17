@@ -7,7 +7,7 @@ import { claimAudioFocus, registerAudioPlayer } from "../lib/audio-focus";
 import { useAuth } from "../lib/auth-context";
 import { contentShareText, shareTextOnly, type ContentShareText } from "../lib/content-share";
 import { nextPlaybackSpeed } from "../lib/dua-practice";
-import { duaEntryKey, duaEntryPath } from "../lib/dua-presentation";
+import { duaEntryKey, duaEntryPath, duaReference } from "../lib/dua-presentation";
 import { trackEvent } from "../lib/analytics";
 import { duaShareText, duaShareTitle } from "../lib/dua-share";
 import { useI18n } from "../lib/i18n-context";
@@ -221,7 +221,7 @@ export function useDuaShare(onStatus: (message: string) => void) {
   const [share, setShare] = useState<DuaShare | null>(null);
 
   const open = (entry: DuaEntry) => {
-    const content = duaShareText(entry, locale, t("duaShare.repetitions"));
+    const content = { ...duaShareText(entry, locale, t("duaShare.repetitions")), cardReference: duaReference(entry, t) };
     setShare({
       entry,
       title: duaShareTitle(entry, locale),
@@ -250,7 +250,7 @@ export function useDuaShare(onStatus: (message: string) => void) {
         heading={t("duaShare.action")}
         title={share.title}
         url={share.url}
-        fileName={`iqro-${share.entry.collection}-${share.entry.source_number}.png`}
+        fileName={`iqro-${share.entry.collection}-${share.entry.source_number}`}
         contentType="dua"
         previewAlt={t("duaShare.previewAlt", { number: share.entry.source_number })}
         load={share.load}

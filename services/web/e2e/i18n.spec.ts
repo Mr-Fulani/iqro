@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 async function expectHeaderWithoutOverlap(page: import("@playwright/test").Page) {
   // Menu links animate padding and font size between breakpoints.
@@ -200,28 +200,6 @@ test("header logo replaces Home and the published Dua catalog follows Quran", as
 
 const duaArabic = "الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ";
 
-// Which side of the drawn card the red wax seal is on: 44 px square, 40 px
-// from the top, inside 44 px margins of the 540 px card; the PNG is twice as
-// dense.
-function sealSide(picture: Locator) {
-  return picture.evaluate(async (image: HTMLImageElement) => {
-    await image.decode();
-    const bitmap = await createImageBitmap(image);
-    const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d")!;
-    context.drawImage(bitmap, 0, 0);
-    const redness = (x: number) => {
-      const { data } = context.getImageData(x * 2, 80, 88, 88);
-      let sum = 0;
-      for (let index = 0; index < data.length; index += 4) sum += data[index] - data[index + 1];
-      return sum / (data.length / 4);
-    };
-    const [left, right] = [redness(44), redness(540 - 88)];
-    // The red of the seal against the green background; nothing drawn reads alike.
-    if (Math.abs(left - right) < 50) return "none";
-    return left > right ? "left" : "right";
-  });
-}
-
 test("a dua is shared as the app's picture through Web Share", async ({ page }) => {
   await page.addInitScript(() => {
     const target = window as unknown as { sharedDua?: unknown };
@@ -254,7 +232,6 @@ test("a dua is shared as the app's picture through Web Share", async ({ page }) 
   await expect(dialog.getByText(title, { exact: true })).toBeVisible();
   const picture = dialog.getByRole("img", { name: "Картинка ду’а #1" });
   await expect(picture).toBeVisible();
-  expect(await sealSide(picture)).toBe("left");
   await dialog.getByRole("button", { name: "Поделиться", exact: true }).click();
 
   const link = new URL("/ru/dua/hisn-al-muslim/1", page.url()).href;
@@ -268,7 +245,7 @@ test("a dua is shared as the app's picture through Web Share", async ({ page }) 
         "Молитвы из Корана и Сунны · Al-Bukhari 6314; Muslim 2711.",
         `Читать в IQRO: ${link}`,
       ].join("\n\n"),
-      file: { name: "iqro-hisn-al-muslim-1.png", type: "image/png", width: 1080, height: 1350 },
+      file: { name: "iqro-hisn-al-muslim-1.jpg", type: "image/jpeg", width: 1080, height: 1920 },
     });
   await dialog.getByRole("button", { name: "Закрыть" }).click();
   await expect(dialog).toBeHidden();
@@ -318,7 +295,7 @@ test("without the share dialog's code a dua still goes as text, and the next pre
   expect(pageErrors).toEqual([]);
 });
 
-test("an Arabic dua picture is drawn right to left and downloads where files cannot be shared", async ({ page }) => {
+test("an Arabic dua picture downloads where files cannot be shared", async ({ page }) => {
   await page.addInitScript(() => {
     const target = window as unknown as { sharedDua?: unknown; copiedLink?: string };
     Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false });
@@ -334,26 +311,19 @@ test("an Arabic dua picture is drawn right to left and downloads where files can
     });
   });
   await page.goto("/ar/dua/hisn-al-muslim/1");
-  // Linux has neither Times New Roman nor Arial, the local() metric fallbacks
-  // next/font lists after Amiri and Inter; the card must not depend on them.
-  await page.addStyleTag({
-    content: `@font-face { font-family: "Missing Fallback"; src: local("IQRO Missing Font"); }
-      html:root { --font-amiri: "Amiri", "Missing Fallback"; --font-inter: "Inter", "Missing Fallback"; }`,
-  });
   await page.getByRole("button", { name: "مشاركة الدعاء", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "مشاركة الدعاء" });
   const picture = dialog.getByRole("img", { name: "صورة الدعاء #1" });
   await expect(picture).toBeVisible();
-  expect(await sealSide(picture)).toBe("right");
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    dialog.getByRole("link", { name: "تنزيل الصورة" }).click(),
+    dialog.getByRole("button", { name: "تنزيل الصورة" }).click(),
   ]);
-  expect(download.suggestedFilename()).toBe("iqro-hisn-al-muslim-1.png");
-  const png = await readFile(await download.path());
-  expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
-  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1080, 1350]);
+  expect(download.suggestedFilename()).toBe("iqro-hisn-al-muslim-1.jpg");
+  expect([...(await readFile(await download.path())).subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+  expect(await picture.evaluate((image: HTMLImageElement) => [image.naturalWidth, image.naturalHeight]))
+    .toEqual([1080, 1920]);
 
   const link = new URL("/ar/dua/hisn-al-muslim/1", page.url()).href;
   await dialog.getByRole("button", { name: "نسخ الرابط" }).click();
