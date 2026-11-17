@@ -26,6 +26,22 @@ class PrayerCalculationThrottle(AtomicFixedWindowRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": digest}
 
 
+class PrayerCitySearchThrottle(AtomicFixedWindowRateThrottle):
+    """Bound the public city search without retaining its IP or query as cache data."""
+
+    scope = "prayer_city_search"
+
+    def get_cache_key(self, request: Request, view: Any) -> str:  # noqa: ARG002
+        identity = self.get_ident(request)
+        key = str(settings.QURAN_PRAYER_THROTTLE_HASH_KEY).encode()
+        digest = hmac.new(
+            key,
+            f"prayer-city-search\x00{identity}".encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        return self.cache_format % {"scope": self.scope, "ident": digest}
+
+
 class PrayerProfileMutationThrottle(AtomicFixedWindowRateThrottle):
     scope = "prayer_profile_mutation"
 

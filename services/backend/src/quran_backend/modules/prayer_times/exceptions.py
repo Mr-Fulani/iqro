@@ -50,6 +50,11 @@ class PrayerCalculationRateLimitedError(Throttled):
     default_code = "prayer_calculation_rate_limited"
 
 
+class PrayerCitySearchRateLimitedError(Throttled):
+    default_detail = "City search rate limit exceeded. Retry later."
+    default_code = "prayer_city_search_rate_limited"
+
+
 class PrayerProfileNotFoundError(NotFound):
     default_detail = "Prayer profile was not found."
     default_code = "prayer_profile_not_found"
