@@ -588,6 +588,16 @@
 }
 
 @media (max-width: 768px) {
+  /* Three switches on a phone: each keeps its name on one line. */
+  .salah-text-toggles {
+    gap: 2px 14px;
+  }
+
+  .salah-text-toggles label {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   .salah-step {
     grid-template-columns: minmax(0, 1fr);
   }

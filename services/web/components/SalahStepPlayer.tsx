@@ -43,10 +43,10 @@ import { useStepNavigation } from "./useStepNavigation";
 const SalahQuranScript = lazy(() => import("./SalahQuranScript"));
 
 type Mode = "learn" | "practice";
-type Display = { mode: Mode; transliteration: boolean; translation: boolean };
+type Display = { mode: Mode; arabic: boolean; transliteration: boolean; translation: boolean };
 
 const DISPLAY_STORAGE_KEY = "iqro_salah_display_v1";
-const DEFAULT_DISPLAY: Display = { mode: "learn", transliteration: true, translation: true };
+const DEFAULT_DISPLAY: Display = { mode: "learn", arabic: true, transliteration: true, translation: true };
 const RULING_LABELS: Record<SalahRuling, MessageKey> = {
   shart: "salah.rulingShart",
   rukn: "salah.rulingRukn",
@@ -59,6 +59,7 @@ function readDisplay(): Display {
     const parsed = JSON.parse(window.localStorage.getItem(DISPLAY_STORAGE_KEY) || "{}") as Partial<Display>;
     return {
       mode: parsed.mode === "practice" ? "practice" : "learn",
+      arabic: parsed.arabic !== false,
       transliteration: parsed.transliteration !== false,
       translation: parsed.translation !== false,
     };
@@ -472,7 +473,8 @@ export function SalahStepPlayer({
     const showTranslation = !practice && display.translation && formula.translation && formula.translation !== formula.arabic;
     return (
       <article className="salah-formula" key={id}>
-        {ayahs && formula.source.kind === "quran" ? (
+        {/* The Arabic can be put away while learning, as in the app; practice always shows it. */}
+        {!practice && !display.arabic ? null : ayahs && formula.source.kind === "quran" ? (
           formulaFont ? (
             <Suspense fallback={<SalahQuranText ayahs={ayahs} />}>
               <SalahQuranScript surah={formula.source.surah} ayahs={ayahs} near={near} />
@@ -538,6 +540,14 @@ export function SalahStepPlayer({
         ) : null}
         {!practice ? (
           <div className="salah-text-toggles">
+            <label>
+              <input
+                type="checkbox"
+                checked={display.arabic}
+                onChange={(event) => updateDisplay({ arabic: event.target.checked })}
+              />
+              {t("salah.showArabic")}
+            </label>
             <label>
               <input
                 type="checkbox"

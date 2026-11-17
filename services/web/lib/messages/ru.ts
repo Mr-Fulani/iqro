@@ -129,6 +129,7 @@ const ru = {
   "salah.mode": "Режим",
   "salah.modeLearn": "Обучение",
   "salah.modePractice": "Практика",
+  "salah.showArabic": "Арабский текст",
   "salah.showTransliteration": "Транслитерация",
   "salah.showTranslation": "Перевод",
   "salah.rulingShart": "Условие (шарт)",

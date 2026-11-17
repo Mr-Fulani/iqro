@@ -126,6 +126,7 @@ const tr: Messages = {
   "salah.mode": "Mod",
   "salah.modeLearn": "Öğrenme",
   "salah.modePractice": "Uygulama",
+  "salah.showArabic": "Arapça metin",
   "salah.showTransliteration": "Okunuş",
   "salah.showTranslation": "Meal",
   "salah.rulingShart": "Şart",
