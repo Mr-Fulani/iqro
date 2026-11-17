@@ -607,3 +607,93 @@ body:has(.quran-reader-boot) .app-footer {
   background: var(--panel);
   font-size: 14px;
 }
+
+/* A phone's full-screen Mushaf has the app's chrome: a floating top bar (back,
+   the surah and the selected ayah, the bookmark and the reading settings) and
+   one row under the player (the text, the page with its juz, the translation). */
+.reader-top {
+  position: absolute;
+  z-index: 210;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  inset-inline: max(8px, var(--reader-inline-inset, 0px));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #073e34;
+}
+
+.reader-top > button,
+.reader-top-title,
+.reader-top-actions {
+  border: 1px solid var(--border);
+  background: #fffdf8f5;
+  box-shadow: 0 3px 20px #073e341a;
+}
+
+.reader-top button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  color: inherit;
+  cursor: pointer;
+}
+
+.reader-top-actions button {
+  border: 0;
+  background: transparent;
+}
+
+.reader-top button:disabled { opacity: .45; cursor: default; }
+.reader-top button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.reader-top .is-saved { color: #9a6d22; }
+.reader-top .is-saved svg { fill: currentColor; }
+[dir="rtl"] .reader-top > button svg { transform: scaleX(-1); }
+
+.reader-top-title {
+  display: grid;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 5px 16px;
+  border-radius: 22px;
+  line-height: 1.25;
+}
+
+.reader-top-title strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.reader-top-title small { color: #4b5b53; font-size: 12px; }
+.reader-top-actions { display: flex; border-radius: 22px; }
+
+.reader-actions.is-app .reader-action-buttons { flex-wrap: nowrap; gap: 8px; }
+
+.reader-actions button.reader-labelled {
+  grid-auto-flow: column;
+  flex: 0 0 auto;
+  gap: 6px;
+  width: auto;
+  padding: 0 12px;
+  border-radius: 22px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.reader-actions.is-app .reader-page-label {
+  display: grid;
+  flex: 1 1 0;
+  justify-items: center;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.reader-actions.is-app .reader-page-label strong { font-size: 13px; font-weight: 600; }
+.reader-actions.is-app .reader-page-label small { font-size: 11px; }

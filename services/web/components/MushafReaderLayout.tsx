@@ -28,7 +28,7 @@ function useMediaQuery(query: string): boolean {
   );
 }
 
-function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | "expand" | "menu" | "close" | "session" | "fold" | "text" }) {
+function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | "expand" | "menu" | "close" | "session" | "fold" | "text" | "back" | "bookmark" }) {
   const paths: Record<typeof name, ReactNode> = {
     exit: <><path d="M10 4H4v16h6M8 12h13m-4-4 4 4-4 4" /></>,
     settings: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="9" cy="18" r="2" /></>,
@@ -40,12 +40,14 @@ function ReaderIcon({ name }: { name: "exit" | "settings" | "audio" | "notes" | 
     fold: <path d="m5 9 7 7 7-7" />,
     session: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
     text: <path d="M5 6h14M5 10h14M5 14h14M10 18h9" />,
+    back: <path d="M19 12H5m6-6-6 6 6 6" />,
+    bookmark: <path d="M6 4h12v17l-6-4-6 4Z" />,
   };
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
 /** Viewport and overlays only. Reader data and all existing controls stay mounted. */
-export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, onOpenText, children }: {
+export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, hasSession, onImmersiveChange, onOpenText, title, subtitle, juz, bookmark, children }: {
   active: boolean;
   page: number;
   count: number;
@@ -55,6 +57,13 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   onImmersiveChange?: (immersive: boolean) => void;
   /** The text of the same place, as the Mushaf button of the app's text reader. */
   onOpenText?: () => void;
+  /** The phone's top bar, as in the app's Mushaf: the surah, then «Mushaf» or the selected ayah. */
+  title?: string;
+  subtitle?: string;
+  /** The juz of the open page, beside the page number on a phone. */
+  juz?: number | "";
+  /** The bookmark of the selected ayah, in the phone's top bar. */
+  bookmark?: { saved: boolean; disabled: boolean; label: string; onToggle: () => void };
   children: ReactNode;
 }) {
   const { t, formatNumber } = useI18n();
@@ -163,7 +172,7 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
   }, [immersive, landscape, pageRatio]);
 
   useEffect(() => {
-    const behindPanel = root.current?.querySelectorAll<HTMLElement>(".mushaf-page-container, .reader-actions");
+    const behindPanel = root.current?.querySelectorAll<HTMLElement>(".mushaf-page-container, .reader-actions, .reader-top");
     behindPanel?.forEach((element) => { element.inert = immersive && panel !== null; });
     if (!panel && panelTrigger.current) {
       if (panelTrigger.current.isConnected && panelTrigger.current.getClientRects().length) panelTrigger.current.focus({ preventScroll: true });
@@ -226,6 +235,76 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
         {immersive && (
           <>
             {panel && <div className="reader-panel-backdrop" onClick={() => setPanel(null)} aria-hidden="true" />}
+            {/* A phone has the app's Mushaf chrome: a bar on top, the player and one row below.
+                A computer's full screen keeps the single bar it had. */}
+            {compact ? (
+              <>
+                {controlsVisible && (
+                  <div className="reader-top" role="toolbar" aria-label={t("quran.readerControls")}>
+                    <button type="button" onClick={leaveReader} aria-label={t("quran.exitReader")} title={t("quran.exitReader")}><ReaderIcon name="back" /></button>
+                    <div className="reader-top-title">
+                      <strong>{title}</strong>
+                      <small>{subtitle}</small>
+                    </div>
+                    <div className="reader-top-actions">
+                      {bookmark && (
+                        <button
+                          type="button"
+                          className={bookmark.saved ? "is-saved" : undefined}
+                          onClick={bookmark.onToggle}
+                          disabled={bookmark.disabled}
+                          aria-pressed={bookmark.saved}
+                          aria-label={bookmark.label}
+                          title={bookmark.label}
+                          data-testid="reader-bookmark"
+                        >
+                          <ReaderIcon name="bookmark" />
+                        </button>
+                      )}
+                      <button type="button" onClick={() => showSettings("settings")} aria-label={t("quran.readerSettings")} title={t("quran.readerSettings")}><ReaderIcon name="settings" /></button>
+                      {canFullscreen && <button type="button" onClick={() => void toggleFullscreen()} aria-label={t(fullscreen ? "quran.exitFullscreen" : "quran.enterFullscreen")} title={t(fullscreen ? "quran.exitFullscreen" : "quran.enterFullscreen")}><ReaderIcon name="expand" /></button>}
+                    </div>
+                  </div>
+                )}
+                <div className={`reader-actions is-app${controlsVisible ? "" : " is-folded"}`} role="toolbar" aria-label={t("quran.readerControls")}>
+                  {controlsVisible ? (
+                    <>
+                      <div className="reader-audio-slot" ref={setAudioSlot} />
+                      <div className="reader-action-buttons">
+                      {onOpenText && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPanel(null);
+                            if (document.fullscreenElement === root.current) void document.exitFullscreen().catch(() => {});
+                            onOpenText();
+                          }}
+                          aria-label={t("quran.openText")}
+                          title={t("quran.openText")}
+                          data-testid="reader-open-text"
+                          className="reader-labelled"
+                        >
+                          <ReaderIcon name="text" /><span>{t("surahs.textMode")}</span>
+                        </button>
+                      )}
+                        <span className="reader-page-label" aria-label={t("quran.pageOf", { page, count })}>
+                          <strong>{t("common.page", { page: formatNumber(page) })}</strong>
+                          {juz ? <small>{t("quran.markJuz", { juz: formatNumber(juz) })}</small> : null}
+                        </span>
+                        {hasSession && <button type="button" onClick={(event) => openPanel("session", event.currentTarget)} aria-label={t("quran.readerSession")} title={t("quran.readerSession")}><ReaderIcon name="session" /></button>}
+                        {hasNotes && (
+                          <button type="button" className="reader-labelled" onClick={(event) => openPanel("notes", event.currentTarget)} aria-label={t("quran.readerNotes")} title={t("quran.readerNotes")}>
+                            <ReaderIcon name="notes" /><span>{t("quran.readerTranslation")}</span>
+                          </button>
+                        )}
+                        {/* A tap on the page hides the chrome too; this is the way without a pointer. */}
+                        <button type="button" onClick={() => setControlsVisible(false)} aria-label={t("quran.readerHideControls")} title={t("quran.readerHideControls")}><ReaderIcon name="fold" /></button>
+                      </div>
+                    </>
+                  ) : <button type="button" onClick={() => setControlsVisible(true)} aria-label={t("quran.readerControls")}><ReaderIcon name="menu" /></button>}
+                </div>
+              </>
+            ) : (
             <div className={`reader-actions${controlsVisible ? "" : " is-folded"}`} role="toolbar" aria-label={t("quran.readerControls")}>
               {controlsVisible ? (
                 <>
@@ -257,6 +336,7 @@ export function MushafReaderLayout({ active, page, count, pageRatio, hasNotes, h
                 </>
               ) : <button type="button" onClick={() => setControlsVisible(true)} aria-label={t("quran.readerControls")}><ReaderIcon name="menu" /></button>}
             </div>
+            )}
             {fullscreenError && <p className="reader-fullscreen-status" role="status">{t("quran.fullscreenUnavailable")}</p>}
           </>
         )}

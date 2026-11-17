@@ -329,6 +329,7 @@ const ru = {
   "quran.ayahCopy": "Копировать аят",
   "quran.ayahCopied": "Аят скопирован",
   "quran.ayahCopyFailed": "Не удалось скопировать аят",
+  "quran.readerTranslation": "Перевод",
   "home.surahCatalog": "Каталог сур",
   "home.surahTitle": "Суры Священного Корана",
   "home.allSurahs": "Все 114 сур →",

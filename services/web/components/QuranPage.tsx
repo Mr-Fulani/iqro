@@ -1356,6 +1356,16 @@ function QuranContent() {
   }, [pageError, selectedFoundationMushafId]);
 
   const currentSurahObj = surahs.find((s) => s.number === selectedSurah);
+  // The phone reader's top bar bookmarks the selected ayah, else the place the page shows.
+  const readerBookmarkKey = selectedMushafAyah ?? currentAyahKey;
+  const readerBookmark = readerBookmarkKey && Number(readerBookmarkKey.split(":")[0]) === selectedSurah
+    ? {
+        saved: Boolean(savedAyahBookmarks[readerBookmarkKey]),
+        disabled: !bookmarkStateReady || bookmarkBusyKeys.has(readerBookmarkKey),
+        label: savedAyahBookmarks[readerBookmarkKey] ? t("quran.bookmarkRemoveTitle") : t("quran.bookmarkTitle"),
+        onToggle: () => void handleToggleBookmark(Number(readerBookmarkKey.split(":")[1])),
+      }
+    : undefined;
   const editionName = (edition: QuranEdition) =>
     locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
   const surahName = (surah: Surah) =>
@@ -1983,6 +1993,12 @@ function QuranContent() {
       hasSession={prayerReadingConfig !== null}
       onImmersiveChange={setIsImmersiveReader}
       onOpenText={localPositionReady ? openText : undefined}
+      title={currentSurahObj
+        ? `${formatNumber(currentSurahObj.number)}. ${localizedSurahName(currentSurahObj, locale)}`
+        : t("common.surah", { surah: formatNumber(selectedSurah) })}
+      subtitle={selectedMushafAyah ? t("common.ayah", { ayah: selectedMushafAyah }) : t("surahs.mushafMode")}
+      juz={divisionAtAyah(juz, currentAyahKey)}
+      bookmark={readerBookmark}
     >
       <MushafReaderPanel name="session" label={t("quran.readerSession")}>
         {prayerReadingConfig === null ? (

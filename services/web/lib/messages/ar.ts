@@ -326,6 +326,7 @@ const ar: Messages = {
   "quran.ayahCopy": "نسخ الآية",
   "quran.ayahCopied": "تم نسخ الآية",
   "quran.ayahCopyFailed": "تعذّر نسخ الآية",
+  "quran.readerTranslation": "الترجمة",
   "home.surahCatalog": "دليل السور",
   "home.surahTitle": "سور القرآن الكريم",
   "home.allSurahs": "جميع السور الـ114 ←",
