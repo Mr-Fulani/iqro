@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
@@ -19,6 +20,8 @@ import 'quran_models.dart';
 import 'reader_anchored_list.dart';
 import 'reader_page_turn.dart';
 import 'reader_words.dart';
+import 'recitation_follow.dart';
+import 'recitation_match.dart';
 import 'rub_mark.dart';
 import 'word_range.dart';
 
@@ -162,6 +165,16 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   var _opened = false;
   Timer? _scriptTimer;
 
+  /// The trial of following a recitation ([recitationFollowEnabled]): the
+  /// listener while the microphone is on, the surah's words in order, the
+  /// word reached and its box in the stack.
+  RecitationListener? _listener;
+  RecitationMatcher? _matcher;
+  var _followWords = const <QuranWord>[];
+  QuranWord? _followWord;
+  Rect? _followRect;
+  var _followGlide = true;
+
   @override
   void initState() {
     super.initState();
@@ -196,6 +209,10 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   void dispose() {
     _markTimer?.cancel();
     _scriptTimer?.cancel();
+    if (_listener case final listener?) {
+      listener.dispose();
+      unawaited(WakelockPlus.disable());
+    }
     _rubMark
       ..removeListener(_onRubMark)
       ..dispose();
@@ -392,6 +409,88 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
 
   void _leave() => widget.onLeave(_ayah);
 
+  /// Turns the microphone on, to follow the reader from the ayah at the top
+  /// of the screen, or off.
+  Future<void> _toggleFollow(List<QuranAyah> items) async {
+    final listening = _listener;
+    if (listening != null) {
+      setState(() {
+        _listener = null;
+        _followWord = null;
+        _followRect = null;
+      });
+      unawaited(WakelockPlus.disable());
+      await listening.stop();
+      listening.dispose();
+      return;
+    }
+    final words = <QuranWord>[];
+    final texts = <String>[];
+    for (final ayah in items) {
+      for (final (index, text) in ayahWords(ayah).indexed) {
+        words.add(QuranWord(widget.surah, ayah.number, index + 1));
+        texts.add(text);
+      }
+    }
+    final start = words.indexWhere((word) => word.ayah >= _ayah);
+    _followWords = words;
+    _matcher = RecitationMatcher(texts)..moveTo(start < 0 ? 0 : start);
+    final listener = RecitationListener(onHeard: _onHeard);
+    setState(() => _listener = listener);
+    unawaited(WakelockPlus.enable());
+    if (await listener.start() || !mounted || !identical(_listener, listener)) {
+      return;
+    }
+    setState(() => _listener = null);
+    unawaited(WakelockPlus.disable());
+    listener.dispose();
+    // The trial's one message, not translated.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Распознавание речи недоступно или нет доступа к микрофону',
+        ),
+      ),
+    );
+  }
+
+  void _onHeard(String transcript) {
+    final index = _matcher?.hear(transcript);
+    if (index == null || !mounted || _listener == null) return;
+    setState(() {
+      _followWord = _followWords[index];
+      _followGlide = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _placeLens());
+  }
+
+  /// Puts the lens on its word and keeps that word in the upper part of the
+  /// screen, so the lines to come are in view.
+  void _placeLens() {
+    final word = _followWord;
+    final stack = _stackKey.currentContext?.findRenderObject();
+    if (!mounted || word == null || stack is! RenderBox) return;
+    final rect = _wordRegistry.wordRectIn(word, stack);
+    if (rect == null) return;
+    setState(() => _followRect = rect);
+    final height = stack.size.height;
+    if (!_scrollController.hasClients ||
+        (rect.top > 0 && rect.bottom < height * .6)) {
+      return;
+    }
+    final position = _scrollController.position;
+    unawaited(
+      _scrollController.animateTo(
+        (position.pixels + rect.top - height * .25).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
+
   void _openNext() {
     if (_words.range == null && widget.surah < lastSurah) widget.onNext();
   }
@@ -484,17 +583,32 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
           body: SafeArea(
             child: Column(
               children: <Widget>[
-                Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 6, top: 4),
-                    child: IconButton(
-                      key: const ValueKey('reader-flow-text-size'),
-                      tooltip: context.l10n.arabicTextSize,
-                      onPressed: () => _showTextSize(size),
-                      color: mushafInkColor,
-                      icon: const Icon(Icons.tune),
-                    ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 6, top: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      if (recitationFollowEnabled && items.isNotEmpty)
+                        IconButton(
+                          key: const ValueKey('reader-flow-follow'),
+                          onPressed: () => unawaited(_toggleFollow(items)),
+                          color: _listener == null
+                              ? mushafInkColor
+                              : const Color(0xFFB3261E),
+                          icon: Icon(
+                            _listener == null
+                                ? Icons.mic_none_rounded
+                                : Icons.mic_rounded,
+                          ),
+                        ),
+                      IconButton(
+                        key: const ValueKey('reader-flow-text-size'),
+                        tooltip: context.l10n.arabicTextSize,
+                        onPressed: () => _showTextSize(size),
+                        color: mushafInkColor,
+                        icon: const Icon(Icons.tune),
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(
@@ -513,7 +627,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                 SizedBox(
                   height: 40,
                   child: Center(
-                    child: page == null
+                    child: _listener != null
+                        ? _FollowEar(ear: _listener!.ear)
+                        : page == null
                         ? null
                         : Text(
                             context.l10n.readerPlainTextPlace(
@@ -599,6 +715,15 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                         unawaited(_markVisibleRub());
                       }
                       if (notification is ScrollUpdateNotification) {
+                        // The lens stays on its word as the text moves.
+                        if (_followRect case final rect?) {
+                          setState(() {
+                            _followGlide = false;
+                            _followRect = rect.shift(
+                              Offset(0, -(notification.scrollDelta ?? 0)),
+                            );
+                          });
+                        }
                         if (_words.range != null) _reportBounds();
                         // A jump to keep the place reports nothing new.
                         if (!_jumping) _schedulePlaceUpdate();
@@ -771,6 +896,8 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                     ),
                   ),
                 if (_loupe case final point?) WordRangeLoupe(point: point),
+                if (_followRect case final rect?)
+                  RecitationLens(word: rect, glide: _followGlide),
                 RubMarkToast(controller: _rubMark),
               ],
             ),
@@ -819,6 +946,43 @@ class _FlowHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+/// What the phone hears, under the text while the trial listens: whether
+/// its own model recognises the speech or the network does, and the last
+/// words heard, or the recogniser's error.
+class _FollowEar extends StatelessWidget {
+  const _FollowEar({required this.ear});
+
+  final ValueNotifier<RecitationEar> ear;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<RecitationEar>(
+    valueListenable: ear,
+    builder: (context, value, _) {
+      final heard = value.heard.split(' ');
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            value.onDevice ? Icons.phone_android_rounded : Icons.cloud_outlined,
+            size: 16,
+            color: mushafAccentColor,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value.error ??
+                heard.sublist(math.max(0, heard.length - 4)).join(' '),
+            key: const ValueKey('reader-flow-follow-heard'),
+            textDirection: TextDirection.rtl,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: mushafAccentColor),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 /// The one setting of the plain text: the size of its Arabic.
