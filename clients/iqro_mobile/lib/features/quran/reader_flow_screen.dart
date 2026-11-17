@@ -760,8 +760,13 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       builder: (context, constraints) {
         if (_width != null && _width != constraints.maxWidth) _keepPlace();
         _width = constraints.maxWidth;
-        // Lines no longer than a page of a book, on a tablet too.
-        final side = math.max(20.0, (constraints.maxWidth - 820) / 2);
+        // Lines no longer than a page of a book, on a tablet too. The
+        // margin grows with the text: the tail of a letter that ends a line
+        // is drawn past the word's own box.
+        final side = math.max(
+          math.max(20.0, size * .6),
+          (constraints.maxWidth - 820) / 2,
+        );
         return Listener(
           onPointerDown: (event) => _fingerDown(event, size),
           onPointerMove: _fingerMove,
