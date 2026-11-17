@@ -755,3 +755,17 @@ body:has(.quran-reader-boot) .app-footer {
   background: var(--primary);
   opacity: 1;
 }
+
+/* The phone reader's zoom (the ayah menu's slider): the sheet grows and the
+   stage pans both ways; page turning waits for 100%. */
+.is-reader-immersive[data-reader-zoomed] .mushaf-page-container {
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow-x: auto;
+  touch-action: pan-x pan-y;
+}
+
+.is-reader-immersive[data-reader-zoomed] .mushaf-page-transition {
+  width: calc(var(--reader-sheet-width, 100cqw) * var(--reader-zoom));
+  max-width: none;
+}
