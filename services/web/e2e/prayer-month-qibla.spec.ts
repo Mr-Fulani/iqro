@@ -85,7 +85,17 @@ test("prayer page shows the Qibla and a month calendar that matches the app", as
   // The first automatic calculation (Makkah by default) finishes restoring the form.
   await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText("Вы у Каабы — молитесь лицом к ней");
   await expect(page.getByTestId("prayer-qibla-arrow")).toHaveCount(0);
-  await page.getByLabel("Быстрый выбор города").selectOption({ label: "Москва (Россия)" });
+  // The quick list holds the app's eleven cities, besides «my own place».
+  const cities = page.getByLabel("Быстрый выбор города");
+  await expect(cities.locator("option")).toHaveCount(12);
+  for (const [city, timezone] of [
+    ["Каир (Египет)", "Africa/Cairo"], ["Дубай (ОАЭ)", "Asia/Dubai"],
+    ["Джакарта (Индонезия)", "Asia/Jakarta"], ["Нью-Йорк (США)", "America/New_York"],
+  ]) {
+    await cities.selectOption({ label: city });
+    await expect(page.getByLabel("Часовой пояс (IANA)")).toHaveValue(timezone);
+  }
+  await cities.selectOption({ label: "Москва (Россия)" });
   await page.getByLabel("Дата расчёта").fill("2026-06-15");
   await page.getByLabel("Мазхаб для времени Аср").selectOption("hanafi");
   await page.getByRole("button", { name: "Рассчитать расписание" }).click();
