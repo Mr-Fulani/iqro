@@ -1105,6 +1105,8 @@ const ru = {
   "prayer.title": "Расписание времени намаза",
   "prayer.description": "Расчёт обязательных молитв по каноническим мировым методикам (MWL, Умм аль-Кура, ISNA и др.).",
   "prayer.myLocation": "📍 Моё местоположение",
+  "prayer.citySearch": "Поиск города",
+  "prayer.cityNotFound": "Подходящий город не найден",
   "prayer.quickCity": "Быстрый выбор города",
   "prayer.customLocation": "Сохранённые или ручные координаты",
   "prayer.method": "Метод расчёта",
