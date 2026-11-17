@@ -175,12 +175,30 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   Rect? _followRect;
   var _followGlide = true;
 
+  /// The hint by the microphone is up: it comes a moment after the text
+  /// opens and now and then after, until the microphone is tried.
+  var _followHint = false;
+  Timer? _followHintTimer;
+
+  void _showFollowHint() {
+    if (!mounted || _listener != null) return;
+    setState(() => _followHint = true);
+    _followHintTimer = Timer(recitationHintTime, () {
+      if (!mounted) return;
+      setState(() => _followHint = false);
+      _followHintTimer = Timer(recitationHintPause, _showFollowHint);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _words = WordRangeController(ref)..addListener(_onWords);
     wordRangePulling.addListener(_onWords);
     _rubMark.addListener(_onRubMark);
+    if (recitationFollowEnabled) {
+      _followHintTimer = Timer(recitationHintDelay, _showFollowHint);
+    }
   }
 
   void _onRubMark() => setState(() {});
@@ -209,6 +227,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   void dispose() {
     _markTimer?.cancel();
     _scriptTimer?.cancel();
+    _followHintTimer?.cancel();
     if (_listener case final listener?) {
       listener.dispose();
       unawaited(WakelockPlus.disable());
@@ -479,6 +498,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   /// Turns the microphone on, to follow the reader from the ayah at the top
   /// of the screen, or off.
   Future<void> _toggleFollow(List<QuranAyah> items) async {
+    // The microphone is found: no more hints.
+    _followHintTimer?.cancel();
+    _followHint = false;
     final listening = _listener;
     if (listening != null) {
       setState(() {
@@ -663,6 +685,17 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: <Widget>[
+                      if (recitationFollowEnabled && items.isNotEmpty)
+                        Flexible(
+                          child: IgnorePointer(
+                            child: AnimatedOpacity(
+                              key: const ValueKey('reader-flow-follow-hint'),
+                              opacity: _followHint ? 1 : 0,
+                              duration: const Duration(milliseconds: 300),
+                              child: const RecitationHint(),
+                            ),
+                          ),
+                        ),
                       if (recitationFollowEnabled && items.isNotEmpty)
                         IconButton(
                           key: const ValueKey('reader-flow-follow'),

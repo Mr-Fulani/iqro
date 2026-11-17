@@ -194,3 +194,39 @@ class RecitationLens extends StatelessWidget {
     );
   }
 }
+
+/// When the hint by the microphone first comes, how long it stays and how
+/// long it is away before it comes again.
+const recitationHintDelay = Duration(seconds: 2);
+const recitationHintTime = Duration(seconds: 5);
+const recitationHintPause = Duration(seconds: 40);
+
+/// The hint by the microphone: what it is for. The trial's text, not
+/// translated.
+class RecitationHint extends StatelessWidget {
+  const RecitationHint({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(
+      color: const Color(0xFF392D20),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Flexible(
+          child: Text(
+            'Нажмите и читайте вслух',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Color(0xFFFFFCF7), fontSize: 13),
+          ),
+        ),
+        SizedBox(width: 6),
+        Icon(Icons.arrow_forward_rounded, size: 16, color: Color(0xFFFFFCF7)),
+      ],
+    ),
+  );
+}

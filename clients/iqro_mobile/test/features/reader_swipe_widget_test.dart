@@ -24,6 +24,7 @@ import 'package:iqro_mobile/features/quran/reader_page_turn.dart';
 import 'package:iqro_mobile/features/quran/mushaf_script.dart';
 import 'package:iqro_mobile/features/quran/reader_screen.dart';
 import 'package:iqro_mobile/features/quran/reader_words.dart';
+import 'package:iqro_mobile/features/quran/recitation_follow.dart';
 import 'package:iqro_mobile/features/quran/recitation_match.dart';
 import 'package:iqro_mobile/features/quran/rub_mark.dart';
 import 'package:iqro_mobile/features/quran/word_range.dart';
@@ -125,9 +126,27 @@ void main() {
       final lens = find.byKey(const ValueKey('recitation-lens'));
       expect(lens, findsNothing);
 
+      // A hint by the microphone comes a moment after the text opens, goes
+      // and comes again, until the microphone is pressed.
+      double hint() => tester
+          .widget<AnimatedOpacity>(
+            find.byKey(const ValueKey('reader-flow-follow-hint')),
+          )
+          .opacity;
+      await tester.pump(recitationHintDelay);
+      expect(hint(), 1);
+      expect(find.text('Нажмите и читайте вслух'), findsOneWidget);
+      await tester.pump(recitationHintTime);
+      expect(hint(), 0);
+      await tester.pump(recitationHintPause);
+      expect(hint(), 1);
+
       await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
       await tester.pumpAndSettle();
       expect(speech.listens, 1);
+      expect(hint(), 0);
+      await tester.pump(recitationHintPause + recitationHintTime);
+      expect(hint(), 0);
       // On the first word of the ayah at the top, before a word is said:
       // at the right end of an Arabic line. A circle.
       expect(lens, findsOneWidget);
