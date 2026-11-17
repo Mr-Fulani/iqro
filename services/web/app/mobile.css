@@ -9,6 +9,16 @@
   display: none;
 }
 
+/* Phone-only parts of the home page (the app's Home); see the block below. */
+.ayah-icon-button.ayah-copy-button,
+.brand-date,
+.header-back,
+.header-settings,
+.surface.home-reading,
+.home-section-tile.home-section-all {
+  display: none;
+}
+
 @media (max-width: 768px) {
   :root {
     --bg: #f7f4ec;
@@ -178,102 +188,18 @@
     border-radius: 999px;
   }
 
-  .mobile-tab[aria-current="page"],
-  .mobile-tab.is-active,
-  .mobile-more[open] > summary {
+  .mobile-tab[aria-current="page"] {
     color: var(--primary-text);
   }
 
-  .mobile-tab[aria-current="page"] .mobile-tab-icon,
-  .mobile-tab.is-active .mobile-tab-icon,
-  .mobile-more[open] .mobile-tab-icon {
+  .mobile-tab[aria-current="page"] .mobile-tab-icon {
     background: var(--primary-subtle);
   }
 
-  .mobile-tab:focus-visible,
-  .mobile-more-links a:focus-visible {
+  .mobile-tab:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: -3px;
     border-radius: 12px;
-  }
-
-  .mobile-more-panel {
-    position: absolute;
-    inset-inline: 0;
-    bottom: 100%;
-    max-height: calc(100dvh - var(--mobile-nav-space) - env(safe-area-inset-top, 0px) - 16px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
-    border: 1px solid var(--border);
-    border-bottom: 0;
-    border-radius: 28px 28px 0 0;
-    background: var(--panel);
-    box-shadow: 0 -16px 48px #073e3426;
-  }
-
-  .mobile-more:not([open]) .mobile-more-panel {
-    display: none;
-  }
-
-  .mobile-more-handle {
-    display: block;
-    width: 36px;
-    height: 4px;
-    margin: 0 auto 18px;
-    border-radius: 4px;
-    background: var(--border-strong);
-  }
-
-  .mobile-more-panel h2 {
-    margin-bottom: 16px;
-    color: var(--text-primary);
-    font-size: 24px;
-  }
-
-  .mobile-more-links {
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: 22px;
-  }
-
-  .mobile-more-links a {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-height: 64px;
-    padding: 10px 14px;
-    color: var(--text-primary);
-    font-size: 16px;
-    font-weight: 600;
-  }
-
-  .mobile-more-links a + a {
-    border-top: 1px solid var(--border);
-  }
-
-  .mobile-more-links a[aria-current="page"] {
-    background: var(--primary-subtle);
-  }
-
-  .mobile-more-icon {
-    display: grid;
-    place-items: center;
-    flex: 0 0 40px;
-    height: 40px;
-    border-radius: 13px;
-    color: var(--primary);
-    background: var(--bg-subtle);
-  }
-
-  .mobile-more-chevron {
-    margin-inline-start: auto;
-    font-size: 24px;
-    color: var(--text-muted);
-  }
-
-  [dir="rtl"] .mobile-more-chevron {
-    transform: scaleX(-1);
   }
 
   .language-switcher-menu {
@@ -281,7 +207,6 @@
     grid-template-columns: 40px minmax(0, 1fr) minmax(0, 105px);
     gap: 10px;
     min-height: 64px;
-    margin-top: 12px;
     padding: 10px 14px;
     border-radius: 22px;
     color: var(--text-primary);
@@ -401,9 +326,221 @@
     overflow-wrap: anywhere;
   }
 
-  /* Keep the original photographic hero, with accessible carousel controls. */
+  /* Home follows the app's Home (lib/features/home/home_screen.dart): the top
+     bar with today's date, the sky of prayers, the reading to continue with
+     the day's goal, then the sections. The desktop's other blocks stay off. */
   .home-page {
     gap: 12px;
+  }
+
+  .home-page .hero-card,
+  .home-page .today-reading-full,
+  .home-page .prayer-reading-plan,
+  .home-page .memorization-planner-card,
+  .home-page .home-planner-cta,
+  .home-page .kpi-grid,
+  .home-page .reciter-showcase,
+  .home-page .home-surah-catalog {
+    display: none;
+  }
+
+  .app-header.is-home {
+    flex-wrap: nowrap;
+  }
+
+  /* The account chip and sign-out live in the profile, as in the app. */
+  .app-header .header-actions {
+    display: none;
+  }
+
+  .header-back {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    margin-inline: -10px 2px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    color: var(--text-primary);
+    background: none;
+    cursor: pointer;
+  }
+
+  [dir="rtl"] .header-back svg {
+    transform: scaleX(-1);
+  }
+
+  .app-header.is-home .brand-block {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app-header.is-home .brand-link {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .app-header.is-home .brand-link > div {
+    min-width: 0;
+  }
+
+  .app-header.is-home .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-header.is-home .brand-link .eyebrow {
+    font-size: 22px;
+    line-height: 1.15;
+  }
+
+  .brand-date {
+    display: block;
+    /* Holds its line before the date is drawn in the browser. */
+    min-height: 17px;
+    margin: 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .header-settings {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    color: var(--text-primary);
+  }
+
+  .surface.home-reading {
+    display: block;
+    padding: 16px;
+    background: var(--panel);
+  }
+
+  .home-reading-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .home-reading-top > img {
+    flex: none;
+    width: 36px;
+    height: 36px;
+  }
+
+  .home-reading-copy {
+    flex: 1 1 0;
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .home-reading-copy strong {
+    color: var(--text-primary);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .home-reading-plan {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .home-reading-plan-main {
+    display: grid;
+    flex: 1 1 0;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .home-reading-plan-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .home-reading-plan-head strong {
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  .home-reading-plan-rail {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  /* The mark rides the middle of a 6px bar that ends at the palm. */
+  .home-reading-plan-rail .today-progress-walk {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-bottom: 12px;
+    padding-top: 18px;
+  }
+
+  .home-reading-plan-rail .today-progress-track {
+    display: block;
+    height: 6px;
+  }
+
+  .home-reading-plan-rail .plan-mark {
+    top: 9px;
+  }
+
+  .home-reading-palm {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    object-fit: cover;
+  }
+
+  .home-reading-chevron {
+    display: inline-block;
+    color: var(--primary);
+    font-size: 20px;
+  }
+
+  [dir="rtl"] .home-reading-chevron {
+    transform: scaleX(-1);
+  }
+
+  .home-sections {
+    margin-top: 6px;
+  }
+
+  .home-sections-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* The tiles are drawn in the browser: three rows hold their place so the
+       page below does not jump. */
+    min-height: 344px;
+  }
+
+  .home-section-tile.home-section-all {
+    display: grid;
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
   }
 
   .hero-card {
@@ -1893,5 +2030,400 @@ html.is-mobile-player-open {
   .listening-queue-panel.is-sheet .listening-queue-gap::before,
   .listening-queue-panel.is-sheet .listening-queue-gap::after {
     border-top-color: rgba(182, 232, 217, 0.3);
+  }
+}
+
+/* The More and Settings screens (components/MorePage.tsx, SettingsPage.tsx)
+   follow the app's: cards of rows and a grid of tinted tool cards. They are
+   reached from the phone's navigation; a wide window shows the same column. */
+.more-page {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.more-head h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.more-head p {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.more-section-title {
+  margin: 8px 0 -6px;
+  font-size: 18px;
+}
+
+.more-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--panel);
+}
+
+.more-card .language-switcher-menu {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+
+.more-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.more-row + .more-row {
+  border-top: 1px solid var(--border);
+}
+
+.more-row:focus-visible,
+.more-tool:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -3px;
+  border-radius: 16px;
+}
+
+.more-row-icon,
+.language-switcher-menu .mobile-more-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 13px;
+  color: var(--primary);
+  background: var(--bg-subtle);
+}
+
+.more-row-copy {
+  display: grid;
+  flex: 1 1 0;
+  gap: 2px;
+  min-width: 0;
+}
+
+.more-row-copy strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.more-row-copy small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.more-row-new {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.more-row-chevron {
+  display: inline-block;
+  color: var(--text-muted);
+  font-size: 24px;
+}
+
+[dir="rtl"] .more-row-chevron,
+[dir="rtl"] .more-tool-arrow {
+  transform: scaleX(-1);
+}
+
+.more-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.more-tool {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 22px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.more-tool-sand {
+  background: var(--accent-gold-subtle);
+}
+
+.more-tool-lavender {
+  background: var(--mobile-lavender, #ece8f6);
+}
+
+.more-tool-mint {
+  background: var(--primary-subtle);
+}
+
+.more-tool-soft {
+  background: var(--bg-subtle);
+}
+
+.more-tool-art {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 5px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+}
+
+.more-tool-art .dua-topic-icon {
+  width: 54px;
+  height: 54px;
+}
+
+.more-tool strong {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.more-tool-arrow {
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.more-soon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--accent-gold-subtle);
+}
+
+.more-soon > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.more-soon small {
+  color: var(--text-secondary);
+}
+
+.more-soon-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+@media (min-width: 720px) {
+  .more-tools {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 299px) {
+  .more-tools {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The phone's Quran tab (components/QuranTabPage.tsx), like the app's. */
+.surahs-view {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.surahs-view button {
+  min-height: 44px;
+  border: 0;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  cursor: pointer;
+}
+
+.surahs-view button + button {
+  border-inline-start: 1px solid var(--border-strong);
+}
+
+.surahs-view button[aria-pressed="true"] {
+  color: var(--primary-text);
+  background: var(--primary-subtle);
+}
+
+.surahs-continue {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  color: #fff;
+  text-decoration: none;
+  background: var(--mobile-ink, #073e34);
+}
+
+.surahs-continue-copy {
+  display: grid;
+  flex: 1 1 0;
+  gap: 3px;
+  min-width: 0;
+}
+
+.surahs-continue-copy small {
+  color: rgb(255 255 255 / 70%);
+  font-size: 12px;
+}
+
+.surahs-continue-copy strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.surahs-continue .more-row-chevron {
+  color: #fff;
+}
+
+.surahs-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.surahs-picker label,
+.surahs-jump label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.surahs-picker select,
+.surahs-jump select,
+.surahs-jump input {
+  width: 100%;
+  min-height: 48px;
+}
+
+.surahs-jump summary {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.surahs-jump-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.surahs-jump-body form {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.surahs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.surahs-row + .surahs-row {
+  border-top: 1px solid var(--border);
+}
+
+.surahs-row-copy {
+  display: grid;
+  flex: 1 1 0;
+  gap: 2px;
+  min-width: 0;
+}
+
+.surahs-row-copy strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.surahs-row-copy small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* The phone's ayah menu over the full-screen reader, in the app's order:
+   listen and the bookmark first, then the breakdown, learning, repeat, the
+   note, copy and sharing. The desktop row keeps its own buttons and order. */
+.is-reader-immersive .mushaf-ayah-actions.is-open {
+  justify-content: flex-start;
+  gap: 8px;
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open > span:first-child {
+  flex: 1 1 100%;
+  order: -3;
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open .ayah-menu-listen,
+.is-reader-immersive .mushaf-ayah-actions.is-open .ayah-menu-bookmark {
+  flex: 1 1 40%;
+  order: -2;
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open [data-testid="tajweed-breakdown-open"],
+.is-reader-immersive .mushaf-ayah-actions.is-open [data-testid="mushaf-memorize-ayah"] {
+  order: -1;
+}
+
+.is-reader-immersive .mushaf-ayah-actions.is-open .ayah-menu-copy {
+  order: 1;
+}
+
+/* Sharing and the close button come last. */
+.is-reader-immersive .mushaf-ayah-actions.is-open > button:nth-last-of-type(-n + 2) {
+  order: 2;
+}
+
+.mushaf-ayah-actions .ayah-menu-bookmark svg {
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+}
+
+@media (max-width: 768px) {
+  .ayah-icon-button.ayah-copy-button {
+    display: inline-flex;
   }
 }

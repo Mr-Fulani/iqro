@@ -1974,6 +1974,25 @@ test.describe("word selection on a phone", () => {
     await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
     await expect(actions).toBeVisible();
     await expect(actions).toContainText("Аят 6:2");
+    // One menu, in the app's order: listen and the bookmark, the breakdown and
+    // learning, repeat, the note, copy, sharing.
+    await expect(actions.getByRole("button")).toHaveCount(9);
+    const order = await actions.getByRole("button").evaluateAll((buttons) => buttons
+      .map((button) => ({ text: (button.textContent ?? "").replace(/\s+/g, " ").trim(), box: button.getBoundingClientRect() }))
+      .sort((a, b) => a.box.top - b.box.top || a.box.left - b.box.left)
+      .map((button) => button.text));
+    expect(order).toEqual([
+      "Слушать", "Избранное", "Разбор таджвида", "Выучить", "Повторять выбранный аят",
+      "✎ Заметка и выделение", "Копировать аят", "Поделиться", "✕",
+    ]);
+    const box = (await actions.boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    // Copy puts the ayah's Arabic text on the clipboard and says so.
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await actions.getByTestId("ayah-menu-copy").click();
+    await expect(actions.getByTestId("ayah-menu-copy")).toHaveText("Аят скопирован");
+    expect((await page.evaluate(() => navigator.clipboard.readText())).length).toBeGreaterThan(5);
     await actions.getByRole("button", { name: "Закрыть" }).click();
     await expect(actions).toBeHidden();
 
@@ -2187,7 +2206,8 @@ test("tajweed breakdown on a phone keeps the step of a long ayah in view", async
   await expect(view).toHaveAttribute("data-font-status", "ready");
   await trackPausedMedia(page);
   await view.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end').click();
-  // The phone reader hides the ayah menu; the breakdown opens over the chips.
+  // The ayah's menu opens over the chips: closed, the breakdown opens from them.
+  await page.locator(".mushaf-ayah-actions-close").click();
   await page.getByTestId("tajweed-breakdown-open-reader").click();
   const breakdown = page.getByRole("dialog", { name: /^Разбор таджвида/ });
   const counter = breakdown.getByTestId("tajweed-step-counter");
@@ -2471,6 +2491,8 @@ test.describe("tajweed breakdown on a narrow phone", () => {
     await openPhoneReader(page, "/ar/quran?surah=6");
     await page.locator('.qf-mushaf-ayah-fragment[data-ayah-key="6:2"] .qf-mushaf-word.is-ayah-end')
       .filter({ visible: true }).first().click();
+    // The ayah's menu opens over the chips: closed, the breakdown opens from them.
+    await page.locator(".mushaf-ayah-actions-close").click();
     await page.getByTestId("tajweed-breakdown-open-reader").click();
     const breakdown = page.getByTestId("tajweed-breakdown");
     await expect(breakdown).toBeVisible();
@@ -4457,7 +4479,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 412, height: 915 }
       await page.getByRole("button", { name: "Слушать отсюда", exact: true }).first().click();
       const bar = page.getByTestId("mobile-audio-player");
       await expect(bar.locator("audio")).toHaveAttribute("src", /\S/);
-      await page.locator(".mobile-navigation a[href='/ru/quran']").first().click();
+      // The Quran tab is the list of surahs; the saved place opens the reader.
+      await page.locator(".mobile-navigation a[href='/ru/surahs']").first().click();
+      await page.getByTestId("surahs-continue").click();
       await expect(page).toHaveURL(/\/ru\/quran/);
       // Hidden under the full-screen reader, back once the reader is left.
       const exit = page.getByRole("button", { name: "Выйти из читалки" });
