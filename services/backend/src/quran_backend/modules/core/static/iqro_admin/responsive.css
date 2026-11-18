@@ -1,0 +1,341 @@
+/*
+The IQRO admin on tablets and phones (docs/admin-responsive.md).
+
+Loaded after Django's responsive.css by templates/admin/base_site.html.
+Every rule sits inside a max-width query: wider than 1024px the admin
+looks exactly as before. Colours come from Django's variables, so the
+dark theme needs nothing of its own.
+*/
+
+@media (max-width: 1024px) {
+  /* The sidebar repeats the home page and takes a third of a tablet.
+     «Начало» in the breadcrumbs leads to the same sections. */
+  #nav-sidebar,
+  #toggle-nav-sidebar {
+    display: none;
+  }
+
+  .main > #nav-sidebar + .content,
+  .main.shifted > #nav-sidebar + .content {
+    max-width: 100%;
+  }
+
+  /* Home: the blocks take the whole width, the sections go in two columns. */
+  .dashboard.colMS,
+  .dashboard .colMS {
+    margin-right: 0;
+  }
+
+  .dashboard #content-main {
+    float: none;
+    columns: 2;
+    column-gap: 20px;
+  }
+
+  .dashboard #content-main .module {
+    break-inside: avoid;
+  }
+
+  .dashboard #content-main .iqro-attention,
+  .dashboard #content-main .iqro-tiles {
+    column-span: all;
+  }
+
+  .dashboard #content-main .module table {
+    width: 100%;
+  }
+
+  .dashboard #content-related {
+    float: none;
+    width: auto;
+    margin: 0;
+  }
+
+  #content-main .iqro-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* Things to press are at least 44px high. */
+  .dashboard #content-main .module th,
+  .dashboard #content-main .module td {
+    padding: 0 10px;
+  }
+
+  .dashboard #content-main .module th a,
+  .dashboard #content-main .module td a {
+    display: block;
+    padding-top: 13px;
+    padding-bottom: 13px;
+    background-position: 0 center;
+  }
+
+  .dashboard #content-main .iqro-attention th,
+  .dashboard #content-main .iqro-attention td {
+    padding: 13px 10px;
+  }
+
+  .dashboard #content-main .iqro-attention th a {
+    margin: -13px 0;
+  }
+
+  .dashboard #content-main .module tr.iqro-hint td,
+  .dashboard #content-main .module tr.iqro-group th {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    white-space: normal;
+  }
+
+  .module details.iqro-service > summary {
+    padding: 13px 8px;
+  }
+
+  .button,
+  a.button,
+  button,
+  input[type="submit"],
+  input[type="button"],
+  .submit-row a.deletelink,
+  .form-row input:not([type]),
+  .form-row input[type="text"],
+  .form-row input[type="password"],
+  .form-row input[type="email"],
+  .form-row input[type="url"],
+  .form-row input[type="tel"],
+  .form-row input[type="number"],
+  .form-row select,
+  .actions select,
+  #toolbar form #searchbar,
+  #toolbar form input[type="submit"] {
+    box-sizing: border-box;
+    min-height: 44px;
+    height: auto;
+  }
+
+  .submit-row a.deletelink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #toolbar form #searchbar,
+  .actions select {
+    font-size: 1rem;
+  }
+
+  .object-tools a:link,
+  .object-tools a:visited {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-radius: 22px;
+  }
+
+  div.breadcrumbs a,
+  .paginator a,
+  .paginator .this-page,
+  #changelist .toplinks a,
+  #changelist-filter li a,
+  #changelist-filter a.viewlink,
+  #changelist-filter #changelist-filter-clear a,
+  #changelist table tbody th a,
+  #changelist table tbody td a,
+  #changelist table thead th a,
+  .inline-group .add-row a,
+  .form-row a,
+  .history-link,
+  a.inline-deletelink {
+    display: inline-block;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* An underline instead of Django's bottom border: the border would sit under the padding. */
+  #user-tools a,
+  #logout-form button {
+    padding: 14px 0;
+    border-bottom: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  #changelist table thead th a {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .inline-group .add-row a {
+    background-position: 0 center;
+  }
+
+  #user-tools,
+  div.breadcrumbs {
+    line-height: 1.2;
+  }
+
+  div.breadcrumbs {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  #header button.theme-toggle {
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  #changelist-filter summary {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  #changelist-filter li {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .form-row input[type="checkbox"],
+  .form-row input[type="radio"],
+  #changelist table input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+
+  .form-row label.vCheckboxLabel,
+  .form-row ul label,
+  .form-row div[id] > div > label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+  }
+
+  .datetimeshortcuts a,
+  .related-widget-wrapper-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  /* Forms: the label above the field, text fields as wide as the page. */
+  .form-row input:not([type]),
+  .form-row input[type="text"]:not(.vDateField):not(.vTimeField),
+  .form-row input[type="password"],
+  .form-row input[type="email"],
+  .form-row input[type="url"],
+  .form-row input[type="tel"],
+  .form-row textarea,
+  .form-row select,
+  .form-row .vTextField {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .form-row .flex-container {
+    flex-wrap: wrap;
+  }
+
+  .inline-related .form-row > div {
+    max-width: 100%;
+  }
+
+  .aligned label,
+  .aligned .form-row label {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .aligned .form-row div.help,
+  .aligned .form-row div.readonly {
+    margin-left: 0;
+    padding-left: 0;
+  }
+
+  .related-widget-wrapper {
+    flex-wrap: nowrap;
+    max-width: 100%;
+  }
+
+  .related-widget-wrapper select {
+    min-width: 0;
+  }
+
+  /* Wide tables scroll inside their own block, the page does not. */
+  #changelist .results,
+  .inline-group .tabular,
+  .ca section,
+  #content-main > .module,
+  #content .results {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #content img,
+  #content video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .submit-row,
+  .announcement-publish__buttons,
+  .announcement-signoff {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Home on a phone: one column. */
+  .dashboard #content-main {
+    columns: 1;
+  }
+
+  #content-main .iqro-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* «Требует внимания»: a long answer goes under its line instead of squeezing it. */
+  #content-main .iqro-attention tr {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  #content-main .iqro-attention tr {
+    border-bottom: 1px solid var(--hairline-color);
+  }
+
+  #content-main .iqro-attention th,
+  #content-main .iqro-attention td {
+    border-bottom: 0;
+  }
+
+  #content-main .iqro-attention th {
+    flex: 1 1 60%;
+  }
+
+  #content-main .iqro-attention td {
+    flex: 0 1 auto;
+    white-space: normal;
+    word-break: normal;
+  }
+
+  #content-related {
+    margin-top: 20px;
+  }
+
+  /* Buttons one under another, each as wide as the page. */
+  .announcement-publish__buttons > *,
+  .announcement-signoff > * {
+    flex: 1 1 100%;
+    margin: 0;
+    text-align: center;
+  }
+
+  .announcement-tabs button {
+    flex: 1 1 auto;
+  }
+}

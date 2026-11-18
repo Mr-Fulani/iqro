@@ -1,0 +1,4 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% comment %}Django's admin/base_site.html plus the IQRO styles for tablets and phones (docs/admin-responsive.md).{% endcomment %}
+{% block responsive %}{{ block.super }}<link rel="stylesheet" href="{% static 'iqro_admin/responsive.css' %}">{% endblock %}
