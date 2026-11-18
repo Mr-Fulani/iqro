@@ -192,7 +192,7 @@ Metinler ve kayıtlar kaynakları ve lisanslarıyla yayınlanır: https://iqro.f
 
 ## «Что нового» для версии 1.0.0
 
-Текущая версия — 1.0.5: [notes-1.0.5.md](notes-1.0.5.md). Ниже — тексты первого выпуска.
+Тексты «Что нового» по выпускам — в файлах `notes-<версия>.md` рядом (есть по 1.0.10). Ниже — тексты первого выпуска.
 
 - ru: Первый выпуск IQRO для Android.
 - en: The first release of IQRO for Android.

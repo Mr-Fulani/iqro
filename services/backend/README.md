@@ -25,7 +25,7 @@ make up
 запускается изолированным Docker target:
 
 ```bash
-docker compose --profile test run --rm test
+docker compose -f services/backend/compose.yaml --profile test run --rm test
 ```
 
 API гостевой авторизации, безопасной ротации токенов, позиции чтения, закладок и
@@ -91,6 +91,8 @@ optimistic concurrency, минимизированные tombstones, retention �
 - `salah` — курс «Обучение намазу» ([спецификация](../../docs/salah/learning-spec.md),
   [порядок выпуска](../../docs/operations.md));
 - `tajweed` — курс таджвида и цветовая разметка таджвида в тексте ([docs/tajweed](../../docs/tajweed));
+- `names` — раздел «Имена Аллаха»: версии списка и карточки имён
+  ([docs/names-of-allah](../../docs/names-of-allah/README.md));
 - `courses`, `course_feedback` — тематические курсы с видео и озвучками, оценки и замечания
   по курсам ([docs/courses](../../docs/courses/README.md));
 - `announcements` — новости и объявления для сайта и приложения

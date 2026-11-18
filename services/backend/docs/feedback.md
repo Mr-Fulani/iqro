@@ -116,6 +116,6 @@ fallback and no attachment endpoint in OpenAPI. A later phase must add direct pr
 object-storage upload, quarantine, MIME/signature checks, size limits, malware scanning,
 retention, and explicit completion before an attachment can be linked to a ticket.
 
-Outbound email/push notifications and editorial change-request linking are also follow-up
-work. The current backend records `first_response_at` and the immutable source ticket so
+Email notifications to the operator and to the reporter are sent by Celery tasks. Push
+notifications and editorial change-request linking are follow-up work. The current backend records `first_response_at` and the immutable source ticket so
 those integrations can be added without changing the client contract.

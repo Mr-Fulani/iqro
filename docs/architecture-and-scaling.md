@@ -90,7 +90,7 @@ API не должен предполагать, что запрос пришёл
 | Фоновое аудио и lock screen | Гарантируемый native flow | В пределах браузера | Только пока жив WebView |
 | Крупные offline audio packages | Да | Ограниченно | Нет гарантии |
 | Локальный prayer scheduler | Да | Нет гарантии | Нет гарантии |
-| Web Push при закрытом клиенте | Цель: FCM/APNs adapter; сейчас только локальные уведомления | Да для reading/review | В пределах Telegram/WebView |
+| Web Push при закрытом клиенте | Цель: FCM/APNs adapter; сейчас только локальные уведомления | Да для prayer/review | В пределах Telegram/WebView |
 | Синхронизация аккаунта | Да | Да | Да после проверки Telegram identity |
 | Публичный контент через CDN | Да | Да | Да |
 

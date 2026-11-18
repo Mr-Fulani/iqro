@@ -28,6 +28,8 @@ renditions всегда имеют `offline_download_allowed=false`, `immutable=
 - `GET /api/v1/recitations/{uuid}/tracks?scope=surah`
 - `GET /api/v1/recitations/{uuid}/surahs/{surah}`
 - `GET /api/v1/recitations/{uuid}/ayahs/{surah}/{ayah}`
+- `GET /api/v1/recitations/{uuid}/offline-manifest`
+- `GET /api/v1/player-backgrounds`
 - `GET /api/v1/variants/{variant_id}/surahs/{surah}`
 - `GET /api/v1/variants/{variant_id}/surahs/{surah}/ayahs/{ayah}`
 - `GET /api/v1/quran-foundation/ayah-recitations`
@@ -168,7 +170,7 @@ Endpoint суры возвращает один трек и все его сег
 аята возвращает тот же asset и один диапазон `start_ms`/`end_ms`; отдельный файл аята не
 создаётся. Отсутствие проверенного тайминга даёт `404`, но не мешает воспроизвести всю суру.
 
-Поля AR/EN/RU возвращаются одновременно. Выбор локали выполняет клиент, поэтому
+Поля AR/EN/RU/TR возвращаются одновременно. Выбор локали выполняет клиент, поэтому
 `Accept-Language` не фрагментирует публичный cache и offline-каталог.
 
 ## Публикация
@@ -464,7 +466,8 @@ API-флаги `range_supported` и `immutable` описывают обязат�
 5. никогда не отмечает повреждённый или усечённый файл как установленный.
 
 Общий каталог `download-packages` с отзывом, зависимостями и пакетами full/juz будет
-следующим отдельным модулем. Текущий срез уже позволяет безопасно скачать конкретную суру.
+следующим отдельным модулем. Текущий срез уже позволяет безопасно скачать конкретную суру и отдаёт офлайн-манифест
+декламации (`/recitations/{uuid}/offline-manifest`).
 
 Web-клиент строит repeat/range queue по проверенным сегментам, поддерживает учебные паузы,
 скорость, sleep timer, сохраняет текущий курсор при browser pause/waiting и использует Media

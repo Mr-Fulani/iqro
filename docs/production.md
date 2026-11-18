@@ -205,7 +205,8 @@ make production-up PRODUCTION_COMPOSE_OVERLAY="-f compose.production.tls.yaml"
 - Nginx раздаёт только собранный Django `/static/`, проксирует `/api/` в backend и держит
   bounded 24 MiB cache только для allowlisted public catalog JSON; `/media/` локально
   отсутствует, чтобы потеря application-host не уничтожала канонические assets;
-- данные PostgreSQL/Redis и собранная статика находятся в именованных volumes; `web-cache`
+- данные PostgreSQL/Redis, собранная статика и временные файлы загрузок backend
+  (`backend-uploads`) находятся в именованных volumes; `web-cache`
   ничего не сохраняет на диск.
 
 Лимиты ресурсов задаются в `compose.production.yaml`. Перед размещением на маленьком
@@ -338,7 +339,8 @@ windows могут начаться заново. Перед сменой broker
 ### 3.4. Stateless API/workers и singleton Beat
 
 Backend и worker используют только PostgreSQL, Redis и object storage как разделяемое
-runtime-состояние; их read-only containers имеют лишь временный `/tmp`. Миграции остаются
+runtime-состояние; их read-only containers имеют лишь временный `/tmp`, а backend — ещё volume
+`backend-uploads` (`/var/tmp/iqro-uploads`) для временных файлов загрузок админки. Миграции остаются
 отдельной release-job. Поэтому API/worker replica не требует копирования media, sessions или
 schedule-файлов. Перед изменением числа реплик обновите `DATABASE_API_REPLICAS`,
 `DATABASE_WORKER_REPLICAS`, `GUNICORN_WORKERS`, `API_MAX_CONCURRENT_REQUESTS_PER_WORKER` и

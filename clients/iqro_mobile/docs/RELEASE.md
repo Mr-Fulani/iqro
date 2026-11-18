@@ -2,7 +2,8 @@
 
 ## Инварианты
 
-- Сборка всегда привязана к конкретному Git commit и версии `pubspec.yaml`.
+- Сборка всегда привязана к конкретному Git commit и версии, заданной ключами
+  `--build-name`/`--build-number` (строка `version` в `pubspec.yaml` при выпуске не меняется).
 - Local debug и production используют один код без flavors, но разные обязательные
   compile-time значения.
 - Keystore, пароли и `android/key.properties` не хранятся в Git и не копируются на
@@ -60,9 +61,11 @@ make mobile-android-production
 Перед загрузкой в Play Console:
 
 1. убедиться, что Git-дерево чистое и записать commit SHA;
-2. увеличить `version`/build number в `pubspec.yaml`;
+2. взять следующую версию и код сборки и передать их ключами `--build-name=<версия>
+   --build-number=<код>` (`make mobile-android-production` их не задаёт — команда с ключами
+   есть в `docs/release/google-play.md`, раздел 3);
 3. пройти сценарии первого запуска, чтения, аудио, offline, аккаунта и напоминаний на
-   staging-сборке;
+   тестовой сборке;
 4. выполнить production compile и сохранить mapping/symbol artifacts рядом с релизом;
 5. проверить подпись AAB в защищённом release-контуре;
 6. выпустить сначала во internal testing, затем staged rollout;
@@ -77,10 +80,11 @@ make mobile-android-production
 - Dart format и сгенерированные RU/EN/AR/TR локализации;
 - `flutter analyze` и все unit-тесты;
 - Gradle wrapper JAR и distribution SHA-256;
-- arm64 staging APK;
+- arm64 debug APK (`APP_ENV=local`);
 - production release AAB compile без доступа к release secrets.
 
-Подписанная публикация должна быть отдельным protected workflow с ручным approval.
+Подписанная iOS-публикация — отдельный ручной workflow `.github/workflows/ios-release.yml`;
+для Android такого workflow нет, AAB собирается и подписывается локально.
 
 ## iPhone и iPad compile-check
 
@@ -105,8 +109,9 @@ iOS/iPadOS-сборки только из Xcode 26+ с iOS/iPadOS 26 SDK. Лок
 1. зарегистрировать bundle ID `forum.iqro.app` в Apple Developer;
 2. создать App Store Connect app record и distribution signing assets;
 3. открыть `ios/Runner.xcworkspace`, назначить Apple Team и проверить capabilities;
-4. выполнить все staging-сценарии на реальных iPhone и iPad;
-5. собрать `flutter build ipa` с production defines из чистого commit;
+4. выполнить все проверочные сценарии на реальных iPhone и iPad;
+5. собрать выпуск ручным workflow `iOS release` из чистого commit (порядок — в
+   `docs/release/app-store.md`);
 6. сохранить `.xcarchive`, dSYM и export log рядом с release SHA;
 7. сначала выпустить TestFlight internal testing, затем staged production rollout.
 
