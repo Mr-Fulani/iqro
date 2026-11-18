@@ -24,10 +24,14 @@ import 'package:iqro_mobile/features/quran/reader_page_turn.dart';
 import 'package:iqro_mobile/features/quran/mushaf_script.dart';
 import 'package:iqro_mobile/features/quran/reader_screen.dart';
 import 'package:iqro_mobile/features/quran/reader_words.dart';
+import 'package:iqro_mobile/features/quran/recitation_follow.dart';
 import 'package:iqro_mobile/features/quran/rub_mark.dart';
+import 'package:iqro_mobile/features/quran/word_range.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_to_text_platform_interface/speech_to_text_platform_interface.dart';
+import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 
 void main() {
   // The real Arabic face: the test font's square glyphs would put each
@@ -61,6 +65,296 @@ void main() {
     expect(find.byKey(const ValueKey('reader-flow')), findsNothing);
     expect(find.byKey(const ValueKey('reader-open-mushaf')), findsOneWidget);
     expect(app.quran.saved.last, reached);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('two fingers pulled apart make the plain text larger, pulled '
+      'together smaller; a double tap brings back the size it starts with', (
+    tester,
+  ) async {
+    final app = await _pump(tester);
+    await _swipe(tester, await _card(tester, 3), 220);
+    final ayah = find.byKey(const ValueKey('reader-flow-ayah-3'));
+    final before = tester.getSize(ayah).height;
+
+    Future<void> pinch(double from, double to) async {
+      final one = await tester.startGesture(Offset(180 - from / 2, 400));
+      final two = await tester.startGesture(Offset(180 + from / 2, 400));
+      for (var step = 1; step <= 5; step++) {
+        final half = (from + (to - from) * step / 5) / 2;
+        await one.moveTo(Offset(180 - half, 400));
+        await two.moveTo(Offset(180 + half, 400));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await one.up();
+      await two.up();
+      await tester.pumpAndSettle();
+    }
+
+    await pinch(100, 150);
+    expect(app.preferences.readerFlowFontSize, defaultReaderFlowFontSize * 1.5);
+    expect(tester.getSize(ayah).height, greaterThan(before));
+    // Still the plain text, at its ayah: neither a swipe nor a scroll.
+    expect(find.byKey(const ValueKey('reader-flow')), findsOneWidget);
+    expect(_place(tester), 'Аят 3 · стр. 1');
+
+    await pinch(200, 50);
+    expect(app.preferences.readerFlowFontSize, minReaderFlowFontSize);
+    expect(tester.getSize(ayah).height, lessThan(before));
+
+    await tester.tapAt(const Offset(180, 400));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tapAt(const Offset(180, 400));
+    await tester.pumpAndSettle();
+    expect(app.preferences.readerFlowFontSize, defaultReaderFlowFontSize);
+    expect(tester.getSize(ayah).height, closeTo(before, .01));
+    expect(_place(tester), 'Аят 3 · стр. 1');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the microphone puts a lens on the word the reader says', (
+    tester,
+  ) async {
+    final speech = _Speech();
+    SpeechToTextPlatform.instance = speech;
+    WakelockPlusPlatformInterface.instance = _Wakelock();
+    var buzzes = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'HapticFeedback.vibrate') buzzes += 1;
+        return null;
+      },
+    );
+    // Animations off: the rings of a listening microphone never settle.
+    final app = await _pump(tester, reducedMotion: true);
+    await _swipe(tester, await _card(tester, 3), 220);
+    final lens = find.byKey(const ValueKey('recitation-lens'));
+    expect(lens, findsNothing);
+
+    // A hint by the microphone comes a moment after the text opens, goes
+    // and comes again, until the microphone is pressed.
+    double hint() => tester
+        .widget<AnimatedOpacity>(
+          find.byKey(const ValueKey('reader-flow-follow-hint')),
+        )
+        .opacity;
+    bool pulse() => tester
+        .widget<RecitationMicPulse>(
+          find.byKey(const ValueKey('reader-flow-follow-pulse')),
+        )
+        .active;
+    Color? mic() => tester
+        .widget<IconButton>(find.byKey(const ValueKey('reader-flow-follow')))
+        .color;
+    expect(pulse(), isFalse);
+    await tester.pump(recitationHintDelay);
+    expect(hint(), 1);
+    // The microphone answers with it: gold and beating.
+    expect(pulse(), isTrue);
+    expect(mic(), recitationGold);
+    expect(find.text('Нажмите и читайте вслух'), findsOneWidget);
+    await tester.pump(recitationHintTime);
+    expect(hint(), 0);
+    expect(pulse(), isFalse);
+    expect(mic(), isNot(recitationGold));
+    await tester.pump(recitationHintPause);
+    expect(hint(), 1);
+
+    // The first press tells what happens to the voice and what is checked,
+    // and listens only once the reader agrees.
+    final notice = find.byKey(const ValueKey('recitation-notice'));
+    await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+    await tester.pumpAndSettle();
+    expect(notice, findsOneWidget);
+    expect(find.textContaining('Google или Apple'), findsOneWidget);
+    expect(find.textContaining('не таджвид и огласовки'), findsOneWidget);
+    await tester.tap(find.text('Отмена'));
+    await tester.pumpAndSettle();
+    expect(speech.listens, 0);
+    expect(app.preferences.recitationNoticeSeen, isFalse);
+    await tester.pump(const Duration(milliseconds: 600));
+
+    await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recitation-notice-start')));
+    await tester.pumpAndSettle();
+    expect(notice, findsNothing);
+    expect(app.preferences.recitationNoticeSeen, isTrue);
+    expect(speech.listens, 1);
+    expect(hint(), 0);
+    String line() => tester
+        .widget<Text>(find.byKey(const ValueKey('reader-flow-follow-heard')))
+        .data!;
+    expect(line(), 'Слушаю…');
+    // A listening microphone sends out rings too, in its own colour.
+    expect(pulse(), isTrue);
+    expect(mic(), isNot(recitationGold));
+    await tester.pump(recitationHintPause + recitationHintTime);
+    expect(hint(), 0);
+    // No word for a while: the reader is told the phone does not hear.
+    expect(line(), 'Не слышу. Читайте вслух и проверьте интернет');
+    // On the first word of the ayah at the top, before a word is said:
+    // at the right end of an Arabic line. A circle.
+    expect(lens, findsOneWidget);
+    final first = tester.getRect(lens);
+    expect(first.right, greaterThan(250));
+    expect(first.width, closeTo(first.height, .01));
+
+    void hear(String words) => speech.onTextRecognition!(
+      jsonEncode(<String, Object>{
+        'alternates': [
+          <String, Object>{'recognizedWords': words, 'confidence': .9},
+        ],
+        'resultType': 0,
+      }),
+    );
+
+    // The first word heard: the lens is on it already.
+    hear('الذين');
+    await tester.pumpAndSettle();
+    expect(
+      (tester.getRect(lens).center - first.center).distance,
+      closeTo(0, .01),
+    );
+
+    // The next: the lens goes to it, to the left.
+    hear('الذين يؤمنون');
+    await tester.pumpAndSettle();
+    final second = tester.getRect(lens);
+    expect(second.center.dx, lessThan(first.center.dx));
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('reader-flow-follow-heard')))
+          .data,
+      'الذين يؤمنون',
+    );
+
+    hear('الذين يؤمنون بالغيب');
+    await tester.pumpAndSettle();
+    // On: further left, or on the line below.
+    final third = tester.getRect(lens);
+    expect(
+      third.center.dx < second.center.dx || third.top > second.top,
+      isTrue,
+    );
+
+    // A larger text: the lens is still on its word, which has moved.
+    const word = QuranWord(2, 3, 3);
+    Rect onWord() {
+      final registry = tester
+          .widget<ReaderAyahWords>(
+            find.byKey(const ValueKey('reader-flow-ayah-3')),
+          )
+          .registry;
+      return registry.wordRect(word)!;
+    }
+
+    expect(onWord().contains(tester.getCenter(lens)), isTrue);
+    final small = onWord();
+    final one = await tester.startGesture(const Offset(130, 600));
+    final two = await tester.startGesture(const Offset(230, 600));
+    await one.moveTo(const Offset(100, 600));
+    await two.moveTo(const Offset(260, 600));
+    await tester.pump(const Duration(milliseconds: 16));
+    await one.up();
+    await two.up();
+    await tester.pumpAndSettle();
+    expect(onWord().height, greaterThan(small.height));
+    expect(onWord().contains(tester.getCenter(lens)), isTrue);
+
+    // Two words that are not the next one: the lens waits on the word
+    // left out, in red, and the phone buzzes once.
+    const expected = QuranWord(2, 3, 4);
+    final wrong = find.byKey(const ValueKey('recitation-lens-wrong'));
+    Rect rectOf(QuranWord word) => tester
+        .widget<ReaderAyahWords>(
+          find.byKey(const ValueKey('reader-flow-ayah-3')),
+        )
+        .registry
+        .wordRect(word)!;
+    expect(wrong, findsNothing);
+    hear('الذين يؤمنون بالغيب كتاب');
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(wrong, findsNothing);
+    hear('الذين يؤمنون بالغيب كتاب نور');
+    await tester.pumpAndSettle();
+    expect(wrong, findsOneWidget);
+    expect(rectOf(expected).contains(tester.getCenter(lens)), isTrue);
+    expect(buzzes, 1);
+    hear('الذين يؤمنون بالغيب كتاب نور ظلام');
+    await tester.pumpAndSettle();
+    expect(buzzes, 1);
+    // Read rightly: gold again, and on.
+    hear('');
+    hear('ويقيمون');
+    await tester.pumpAndSettle();
+    expect(wrong, findsNothing);
+    expect(rectOf(expected).contains(tester.getCenter(lens)), isTrue);
+
+    // One word that is not the next one, and then nothing: a mistake
+    // after a moment.
+    hear('ويقيمون كتاب');
+    await tester.pump(recitationMissPause - const Duration(milliseconds: 100));
+    expect(wrong, findsNothing);
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+    expect(wrong, findsOneWidget);
+    expect(buzzes, 2);
+
+    // A tap on a word: the reading starts from it.
+    await tester.tapAt(rectOf(const QuranWord(2, 3, 7)).center);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(wrong, findsNothing);
+    expect(
+      rectOf(const QuranWord(2, 3, 7)).contains(tester.getCenter(lens)),
+      isTrue,
+    );
+    hear('');
+    hear('رزقناهم ينفقون');
+    await tester.pumpAndSettle();
+    expect(
+      rectOf(const QuranWord(2, 3, 8)).contains(tester.getCenter(lens)),
+      isTrue,
+    );
+
+    // The recogniser stops after a pause: the next listen starts.
+    speech.onStatus!('doneNoResult');
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(speech.listens, 2);
+    // Or fails at once and says nothing more, as on a phone without its
+    // own model for Arabic.
+    speech.onError!(
+      jsonEncode(<String, Object>{
+        'errorMsg': 'error_client',
+        'permanent': true,
+      }),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(speech.listens, 3);
+
+    // No way to the recognition service: said in words.
+    speech.onError!(
+      jsonEncode(<String, Object>{
+        'errorMsg': 'error_network',
+        'permanent': true,
+      }),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(line(), contains('Проверьте интернет'));
+
+    // Pressed, and again at once as a finger bounces: it is off, once.
+    await tester.pump(const Duration(milliseconds: 600));
+    final listens = speech.listens;
+    await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+    await tester.pumpAndSettle();
+    expect(lens, findsNothing);
+    expect(speech.listens, listens);
+    // The package waits a moment for a last result.
+    await tester.pump(const Duration(seconds: 3));
     expect(tester.takeException(), isNull);
   });
 
@@ -910,4 +1204,45 @@ class _Engine implements IqroAudioEngine {
   Future<void> dispose() async {}
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A phone's speech recognition that hears what the test tells it.
+class _Speech extends SpeechToTextPlatform {
+  var listens = 0;
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<bool> initialize({
+    debugLogging = false,
+    List<SpeechConfigOption>? options,
+  }) async => true;
+
+  @override
+  Future<List<dynamic>> locales() async => <String>['ar_SA:Arabic'];
+
+  @override
+  Future<bool> listen({
+    String? localeId,
+    partialResults = true,
+    onDevice = false,
+    int listenMode = 0,
+    sampleRate = 0,
+    SpeechListenOptions? options,
+  }) async {
+    listens += 1;
+    return true;
+  }
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> cancel() async {}
+}
+
+class _Wakelock extends WakelockPlusPlatformInterface {
+  @override
+  Future<void> toggle({required bool enable}) async {}
 }

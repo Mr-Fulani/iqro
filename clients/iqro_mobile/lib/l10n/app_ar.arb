@@ -1114,5 +1114,17 @@
   "shareCardFromAyah": "من الآية {reference}",
   "@shareCardFromAyah": {"placeholders": {"reference": {"type": "String"}}},
   "shareCardFromAyahs": "من الآيات {reference}",
-  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}}
+  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}},
+  "recitationCheck": "التحقق من التلاوة",
+  "recitationStop": "إيقاف الميكروفون",
+  "recitationHint": "اضغط واقرأ بصوت مسموع",
+  "recitationNoticeHow": "شغّل الميكروفون واقرأ بصوت مسموع: العدسة تتبع كلماتك. إذا تركت كلمة أو قلت غيرها توقفت عندها واحمرّت واهتز الهاتف.",
+  "recitationNoticeVoice": "يتعرّف على صوتك خدمة التعرّف على الكلام في هاتفك (Google أو Apple). في الهواتف القديمة يُرسل الصوت إليها عبر الإنترنت. IQRO لا يحفظ التسجيل ولا يرسله إلى خادمه.",
+  "recitationNoticeLimits": "يُتحقق من الكلمات فقط، لا من التجويد ولا من الحركات.",
+  "recitationNoticeStart": "تشغيل الميكروفون",
+  "recitationListening": "أستمع…",
+  "recitationNotHearing": "لا أسمعك. اقرأ بصوت مسموع وتحقق من الإنترنت",
+  "recitationUnavailable": "التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.",
+  "recitationNoArabic": "التعرّف على الكلام في هذا الهاتف لا يدعم العربية.",
+  "recitationNoNetwork": "لا يوجد اتصال بخدمة التعرّف على الكلام. تحقق من الإنترنت."
 }

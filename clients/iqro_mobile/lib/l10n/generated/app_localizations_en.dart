@@ -3712,4 +3712,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String shareCardFromAyahs(String reference) {
     return 'from ayahs $reference';
   }
+
+  @override
+  String get recitationCheck => 'Recitation check';
+
+  @override
+  String get recitationStop => 'Turn the microphone off';
+
+  @override
+  String get recitationHint => 'Tap and read aloud';
+
+  @override
+  String get recitationNoticeHow =>
+      'Turn the microphone on and read aloud: the lens follows your words. If you skip a word or say another one, it stops on that word and turns red, and the phone vibrates.';
+
+  @override
+  String get recitationNoticeVoice =>
+      'Your voice is recognised by your phone\'s speech recognition service (Google or Apple). On older phones the sound goes to it over the internet. IQRO does not keep the recording and does not send it to its own server.';
+
+  @override
+  String get recitationNoticeLimits =>
+      'The check covers the words, not tajweed or vowel marks.';
+
+  @override
+  String get recitationNoticeStart => 'Turn the microphone on';
+
+  @override
+  String get recitationListening => 'Listening…';
+
+  @override
+  String get recitationNotHearing =>
+      'I can\'t hear you. Read aloud and check the internet';
+
+  @override
+  String get recitationUnavailable =>
+      'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.';
+
+  @override
+  String get recitationNoArabic =>
+      'Speech recognition on this phone does not support Arabic.';
+
+  @override
+  String get recitationNoNetwork =>
+      'No connection to the speech recognition service. Check the internet.';
 }

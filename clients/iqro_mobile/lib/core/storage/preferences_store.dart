@@ -72,6 +72,7 @@ class AppPreferences {
     this.playerHintsShown = 0,
     this.playerHintShownAt,
     this.readerSwipeHintsShown = 0,
+    this.recitationNoticeSeen = false,
   });
 
   const AppPreferences.defaults()
@@ -104,7 +105,8 @@ class AppPreferences {
       reminderSoundChecked = false,
       playerHintsShown = 0,
       playerHintShownAt = null,
-      readerSwipeHintsShown = 0;
+      readerSwipeHintsShown = 0,
+      recitationNoticeSeen = false;
 
   final bool onboardingComplete;
   final String locale;
@@ -149,6 +151,10 @@ class AppPreferences {
   final DateTime? playerHintShownAt;
   final int readerSwipeHintsShown;
 
+  /// The reader has read what the recitation check does with the voice and
+  /// turned its microphone on.
+  final bool recitationNoticeSeen;
+
   AppPreferences copyWith({
     bool? onboardingComplete,
     String? locale,
@@ -180,6 +186,7 @@ class AppPreferences {
     int? playerHintsShown,
     DateTime? playerHintShownAt,
     int? readerSwipeHintsShown,
+    bool? recitationNoticeSeen,
   }) {
     final nextListening =
         listeningRecitationId ??
@@ -223,6 +230,7 @@ class AppPreferences {
       playerHintShownAt: playerHintShownAt ?? this.playerHintShownAt,
       readerSwipeHintsShown:
           readerSwipeHintsShown ?? this.readerSwipeHintsShown,
+      recitationNoticeSeen: recitationNoticeSeen ?? this.recitationNoticeSeen,
     );
   }
 }
@@ -361,6 +369,8 @@ class PreferencesStore {
       playerHintsShown: _preferences.getInt('player_hint_count') ?? 0,
       readerSwipeHintsShown:
           _preferences.getInt('reader_swipe_hint_count') ?? 0,
+      recitationNoticeSeen:
+          _preferences.getBool('recitation_notice_seen') ?? false,
       playerHintShownAt: DateTime.tryParse(
         _preferences.getString('player_hint_at') ?? '',
       ),
@@ -389,6 +399,10 @@ class PreferencesStore {
       _preferences.setBool('reader_focus_mode', value.readerFocusMode),
       _preferences.setDouble('reader_flow_font_size', value.readerFlowFontSize),
       _preferences.setBool('reader_haptics', value.readerHaptics),
+      _preferences.setBool(
+        'recitation_notice_seen',
+        value.recitationNoticeSeen,
+      ),
       _preferences.setBool(
         'dua_show_transliteration',
         value.duaShowTransliteration,

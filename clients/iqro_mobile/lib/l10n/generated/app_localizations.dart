@@ -6503,6 +6503,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'from ayahs {reference}'**
   String shareCardFromAyahs(String reference);
+
+  /// No description provided for @recitationCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Recitation check'**
+  String get recitationCheck;
+
+  /// No description provided for @recitationStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the microphone off'**
+  String get recitationStop;
+
+  /// No description provided for @recitationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap and read aloud'**
+  String get recitationHint;
+
+  /// No description provided for @recitationNoticeHow.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the microphone on and read aloud: the lens follows your words. If you skip a word or say another one, it stops on that word and turns red, and the phone vibrates.'**
+  String get recitationNoticeHow;
+
+  /// No description provided for @recitationNoticeVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your voice is recognised by your phone\'s speech recognition service (Google or Apple). On older phones the sound goes to it over the internet. IQRO does not keep the recording and does not send it to its own server.'**
+  String get recitationNoticeVoice;
+
+  /// No description provided for @recitationNoticeLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'The check covers the words, not tajweed or vowel marks.'**
+  String get recitationNoticeLimits;
+
+  /// No description provided for @recitationNoticeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the microphone on'**
+  String get recitationNoticeStart;
+
+  /// No description provided for @recitationListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening…'**
+  String get recitationListening;
+
+  /// No description provided for @recitationNotHearing.
+  ///
+  /// In en, this message translates to:
+  /// **'I can\'t hear you. Read aloud and check the internet'**
+  String get recitationNotHearing;
+
+  /// No description provided for @recitationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.'**
+  String get recitationUnavailable;
+
+  /// No description provided for @recitationNoArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech recognition on this phone does not support Arabic.'**
+  String get recitationNoArabic;
+
+  /// No description provided for @recitationNoNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection to the speech recognition service. Check the internet.'**
+  String get recitationNoNetwork;
 }
 
 class _AppLocalizationsDelegate

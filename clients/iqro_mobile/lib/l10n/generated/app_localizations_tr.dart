@@ -3665,4 +3665,47 @@ class AppLocalizationsTr extends AppLocalizations {
   String shareCardFromAyahs(String reference) {
     return '$reference. ayetlerden';
   }
+
+  @override
+  String get recitationCheck => 'Okuma kontrolü';
+
+  @override
+  String get recitationStop => 'Mikrofonu kapat';
+
+  @override
+  String get recitationHint => 'Dokunun ve sesli okuyun';
+
+  @override
+  String get recitationNoticeHow =>
+      'Mikrofonu açın ve sesli okuyun: mercek kelimelerinizi takip eder. Bir kelimeyi atlar veya başka bir kelime söylerseniz o kelimede durur ve kırmızıya döner, telefon titrer.';
+
+  @override
+  String get recitationNoticeVoice =>
+      'Sesinizi telefonunuzun konuşma tanıma hizmeti (Google veya Apple) tanır. Eski telefonlarda ses bu hizmete internet üzerinden gider. IQRO kaydı saklamaz ve kendi sunucusuna göndermez.';
+
+  @override
+  String get recitationNoticeLimits =>
+      'Kelimeler kontrol edilir; tecvid ve harekeler kontrol edilmez.';
+
+  @override
+  String get recitationNoticeStart => 'Mikrofonu aç';
+
+  @override
+  String get recitationListening => 'Dinliyorum…';
+
+  @override
+  String get recitationNotHearing =>
+      'Sizi duyamıyorum. Sesli okuyun ve interneti kontrol edin';
+
+  @override
+  String get recitationUnavailable =>
+      'Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.';
+
+  @override
+  String get recitationNoArabic =>
+      'Bu telefondaki konuşma tanıma Arapçayı desteklemiyor.';
+
+  @override
+  String get recitationNoNetwork =>
+      'Konuşma tanıma hizmetine bağlanılamıyor. İnterneti kontrol edin.';
 }

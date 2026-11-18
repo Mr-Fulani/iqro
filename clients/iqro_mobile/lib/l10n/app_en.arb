@@ -1276,5 +1276,17 @@
   "shareCardFromAyah": "from ayah {reference}",
   "@shareCardFromAyah": {"placeholders": {"reference": {"type": "String"}}},
   "shareCardFromAyahs": "from ayahs {reference}",
-  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}}
+  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}},
+  "recitationCheck": "Recitation check",
+  "recitationStop": "Turn the microphone off",
+  "recitationHint": "Tap and read aloud",
+  "recitationNoticeHow": "Turn the microphone on and read aloud: the lens follows your words. If you skip a word or say another one, it stops on that word and turns red, and the phone vibrates.",
+  "recitationNoticeVoice": "Your voice is recognised by your phone's speech recognition service (Google or Apple). On older phones the sound goes to it over the internet. IQRO does not keep the recording and does not send it to its own server.",
+  "recitationNoticeLimits": "The check covers the words, not tajweed or vowel marks.",
+  "recitationNoticeStart": "Turn the microphone on",
+  "recitationListening": "Listening…",
+  "recitationNotHearing": "I can't hear you. Read aloud and check the internet",
+  "recitationUnavailable": "Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.",
+  "recitationNoArabic": "Speech recognition on this phone does not support Arabic.",
+  "recitationNoNetwork": "No connection to the speech recognition service. Check the internet."
 }

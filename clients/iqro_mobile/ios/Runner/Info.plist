@@ -66,8 +66,12 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>IQRO uses your location only while open to calculate accurate local prayer times.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>IQRO listens to your recitation to show which word of the Quran you have read.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>IQRO saves a picture of an ayah or du'a to Photos only when you choose Save Image.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>IQRO recognises the words you recite to show your place in the text of the Quran.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
