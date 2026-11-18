@@ -295,3 +295,22 @@ def test_beat_row_reports_a_silent_beat(owner: User) -> None:
     with patch("quran_backend.modules.alerts.beat.beat_alive", return_value=None):
         items = {item.title: item for item in attention_items(_request(owner))}
     assert items["Фоновые задачи (Celery beat)"].detail == "нет связи с Redis"
+
+
+def test_tablet_and_phone_styles_are_loaded_and_leave_the_desktop_alone(owner: User) -> None:
+    from django.contrib.staticfiles import finders  # noqa: PLC0415
+
+    link = '<link rel="stylesheet" href="/static/iqro_admin/responsive.css">'
+    assert link in _client(owner).get("/admin/").content.decode()
+    assert link in Client().get("/admin/login/").content.decode()
+
+    path = finders.find("iqro_admin/responsive.css")
+    assert path is not None
+    css = re.sub(r"/\*.*?\*/", "", Path(path).read_text(encoding="utf-8"), flags=re.S)
+    # Every rule sits inside a max-width query, so wider than 1024px nothing changes.
+    depth = 0
+    for line in css.splitlines():
+        if depth == 0 and line.strip():
+            assert re.fullmatch(r"@media \(max-width: (1024|767)px\) \{", line), line
+        depth += line.count("{") - line.count("}")
+    assert depth == 0
