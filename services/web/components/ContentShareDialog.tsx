@@ -4,17 +4,32 @@ import { useEffect, useId, useRef, useState } from "react";
 import { trackEvent } from "../lib/analytics";
 import { contentShareText, type ContentShareText } from "../lib/content-share";
 import { useI18n } from "../lib/i18n-context";
-import { renderShareCard } from "../lib/share-card";
+import {
+  parseShareCardStyle,
+  renderShareCards,
+  SHARE_CARD_COLOURS,
+  SHARE_CARD_STYLE_KEY,
+  type ShareCardStyle,
+} from "../lib/share-card";
 
 type Picture = { file: File; url: string };
 
+function storedStyle(): ShareCardStyle {
+  try {
+    return parseShareCardStyle(window.localStorage.getItem(SHARE_CARD_STYLE_KEY));
+  } catch {
+    return parseShareCardStyle(null);
+  }
+}
+
 /**
- * The web counterpart of the app's shareContent: a picture with the Arabic,
- * the meaning and the link. Web Share sends the picture where the browser can
- * share files; the picture can always be downloaded and the link copied, and
- * the text too where the browser has no Web Share.
- * Sharing waits for a press here, once the picture is ready, because browsers
- * refuse Web Share after the time the picture takes to draw.
+ * The web counterpart of the app's share sheet: the picture of the text on
+ * silk, one card or a series, in the shape and colour the reader picks. Web
+ * Share sends the pictures where the browser can share files; they can always
+ * be downloaded and the link copied, and the text too where the browser has
+ * no Web Share. A text too long for a series goes as text.
+ * Sharing waits for a press here, once the pictures are ready, because
+ * browsers refuse Web Share after the time they take to draw.
  */
 export default function ContentShareDialog({
   heading,
@@ -30,6 +45,7 @@ export default function ContentShareDialog({
   /** «Аль-Ан‘ам · 6:1», or the du'a's chapter and number. */
   title: string;
   url: string;
+  /** Without an extension: «iqro-2-286»; a series adds «-1», «-2». */
   fileName: string;
   previewAlt: string;
   /** What is shared, for the visit statistics. */
@@ -41,11 +57,15 @@ export default function ContentShareDialog({
   const { t } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const [style, setStyle] = useState<ShareCardStyle>(storedStyle);
   const [text, setText] = useState<string | null>(null);
-  const [picture, setPicture] = useState<Picture | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Null while the cards are drawn; empty when there is no picture.
+  const [drawn, setDrawn] = useState<{ style: ShareCardStyle; pictures: Picture[]; tooLong: boolean; failed: boolean } | null>(null);
+  const [shown, setShown] = useState(0);
   const [notice, setNotice] = useState("");
   const readInIqro = t("contentShare.readInIqro");
+  const current = drawn?.style === style ? drawn : null;
+  const pictures = current?.pictures ?? [];
 
   useEffect(() => {
     const element = dialog.current;
@@ -58,41 +78,48 @@ export default function ContentShareDialog({
     void Promise.resolve().then(load).then(async (content) => {
       if (cancelled) return;
       setText(contentShareText(title, content, readInIqro, url));
-      const { arabic, arabicGlyphs, translation, reference } = content;
-      const root = getComputedStyle(document.documentElement);
-      // A late font brings a second picture, which replaces the first.
-      await renderShareCard(
-        { title, arabic, arabicGlyphs, translation, reference },
-        {
-          arabic: root.getPropertyValue("--font-arabic").trim() || "serif",
-          text: root.getPropertyValue("--font-sans").trim() || "sans-serif",
-        },
-        "/iqro-wax-seal-128.webp",
-        (png) => {
-          if (cancelled) return;
-          const pictureUrl = URL.createObjectURL(png);
+      const cards = await renderShareCards({ ...content, cardReference: content.cardReference ?? title }, style);
+      if (cancelled) return;
+      setShown(0);
+      setDrawn({
+        style,
+        tooLong: cards === null,
+        failed: false,
+        pictures: (cards ?? []).map((card, index, all) => {
+          const pictureUrl = URL.createObjectURL(card);
           objectUrls.push(pictureUrl);
-          setPicture({ file: new File([png], fileName, { type: "image/png" }), url: pictureUrl });
-        },
-      );
+          const name = all.length > 1 ? `${fileName}-${index + 1}.jpg` : `${fileName}.jpg`;
+          return { file: new File([card], name, { type: "image/jpeg" }), url: pictureUrl };
+        }),
+      });
     }).catch(() => {
       if (cancelled) return;
-      setFailed(true);
+      setDrawn({ style, pictures: [], tooLong: false, failed: true });
       // Without the text the title and the link can still be shared.
-      setText((current) => current ?? `${title}\n\n${readInIqro}: ${url}`);
+      setText((known) => known ?? `${title}\n\n${readInIqro}: ${url}`);
     });
     return () => {
       cancelled = true;
       objectUrls.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
     };
-  }, [fileName, load, readInIqro, title, url]);
+  }, [fileName, load, readInIqro, style, title, url]);
+
+  const restyle = (next: ShareCardStyle) => {
+    setStyle(next);
+    try {
+      window.localStorage.setItem(SHARE_CARD_STYLE_KEY, `${next.format}:${next.colour}`);
+    } catch {
+      // The style holds for this dialog only.
+    }
+  };
 
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   const share = async () => {
     if (!text) return;
     setNotice("");
-    const files = picture && navigator.canShare?.({ files: [picture.file] }) ? [picture.file] : undefined;
+    const all = pictures.map((picture) => picture.file);
+    const files = all.length > 0 && navigator.canShare?.({ files: all }) ? all : undefined;
     try {
       await navigator.share({ title, text, files });
       trackEvent("share", { content_type: contentType, method: "native" });
@@ -124,6 +151,15 @@ export default function ContentShareDialog({
     }
   };
 
+  const download = () => {
+    for (const picture of pictures) {
+      const link = document.createElement("a");
+      link.href = picture.url;
+      link.download = picture.file.name;
+      link.click();
+    }
+  };
+
   return (
     <dialog
       ref={dialog}
@@ -146,15 +182,67 @@ export default function ContentShareDialog({
         </button>
       </div>
 
-      <div className="content-share-preview" aria-busy={!picture && !failed}>
-        {picture ? (
+      <div
+        className="content-share-preview"
+        data-format={style.format}
+        aria-busy={!current}
+        onScroll={(event) => {
+          const { scrollLeft, clientWidth } = event.currentTarget;
+          setShown(Math.round(Math.abs(scrollLeft) / clientWidth));
+        }}
+      >
+        {pictures.length > 0 ? pictures.map((picture, index) => (
           // eslint-disable-next-line @next/next/no-img-element -- a local blob of the drawn card.
-          <img src={picture.url} alt={previewAlt} width={540} height={675} />
-        ) : (
-          <p className={failed ? "alert alert-error" : "field-help"} role={failed ? "alert" : "status"}>
-            {failed ? t("contentShare.imageError") : t("contentShare.preparing")}
+          <img
+            key={picture.url}
+            src={picture.url}
+            alt={pictures.length > 1
+              ? `${previewAlt} · ${t("contentShare.part", { number: index + 1, total: pictures.length })}`
+              : previewAlt}
+          />
+        )) : (
+          <p className={current?.failed ? "alert alert-error" : "field-help"} role={current?.failed ? "alert" : "status"}>
+            {!current
+              ? t("contentShare.preparing")
+              : current.failed ? t("contentShare.imageError") : t("contentShare.tooLong")}
           </p>
         )}
+      </div>
+
+      {pictures.length > 1 && (
+        <p className="field-help content-share-part" role="status">
+          {t("contentShare.part", { number: Math.min(shown, pictures.length - 1) + 1, total: pictures.length })}
+        </p>
+      )}
+
+      <div className="content-share-style">
+        <div className="content-share-formats" role="group" aria-label={t("contentShare.format")}>
+          {(["story", "post"] as const).map((format) => (
+            <button
+              key={format}
+              type="button"
+              className="btn btn-secondary btn-sm"
+              aria-pressed={style.format === format}
+              onClick={() => restyle({ ...style, format })}
+            >
+              {t(`contentShare.${format}`)}
+            </button>
+          ))}
+        </div>
+        <div className="content-share-colours" role="group" aria-label={t("contentShare.colour")}>
+          {Object.entries(SHARE_CARD_COLOURS).map(([colour, tint]) => (
+            <button
+              key={colour}
+              type="button"
+              className="content-share-colour"
+              style={{ background: tint }}
+              aria-pressed={style.colour === colour}
+              aria-label={t(`contentShare.colour.${colour}` as "contentShare.colour.emerald")}
+              title={t(`contentShare.colour.${colour}` as "contentShare.colour.emerald")}
+              onClick={() => restyle({ ...style, colour })}
+            />
+          ))}
+        </div>
       </div>
 
       {notice && <p className="field-help" role="status">{notice}</p>}
@@ -163,22 +251,22 @@ export default function ContentShareDialog({
         <button type="button" className="btn btn-secondary" onClick={() => void copyLink()}>
           {t("contentShare.copyLink")}
         </button>
-        {!canShare && (
+        {(!canShare || current?.tooLong) && (
           <button type="button" className="btn btn-secondary" onClick={() => void copyText()} disabled={!text}>
             {t("contentShare.copyText")}
           </button>
         )}
-        {picture && (
-          <a className="btn btn-secondary" href={picture.url} download={picture.file.name}>
-            {t("contentShare.download")}
-          </a>
+        {pictures.length > 0 && (
+          <button type="button" className="btn btn-secondary" onClick={download}>
+            {t(pictures.length > 1 ? "contentShare.downloadAll" : "contentShare.download")}
+          </button>
         )}
         {canShare && (
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => void share()}
-            disabled={!text || (!picture && !failed)}
+            disabled={!text || !current}
           >
             {t("contentShare.share")}
           </button>

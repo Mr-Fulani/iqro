@@ -802,6 +802,15 @@ export type PrayerCalculationRequest = {
   };
 };
 
+export type PrayerCity = {
+  id: number;
+  name: string;
+  country_code: string;
+  latitude: string;
+  longitude: string;
+  timezone: string;
+};
+
 export type PrayerCalculationResponse = {
   date: string;
   timezone: string;
@@ -2106,6 +2115,13 @@ export class ApiClient {
   // -------------------------------------------------------------------------
   public async getPrayerMethods(): Promise<PrayerMethodsResponse> {
     return this.request<PrayerMethodsResponse>("/api/v1/prayer/methods");
+  }
+
+  /** Cities whose name starts with the query, largest first (our GeoNames copy). */
+  public async searchPrayerCities(query: string, locale: string): Promise<PrayerCity[]> {
+    const params = new URLSearchParams({ q: query, locale });
+    const response = await this.request<{ results: PrayerCity[] }>(`/api/v1/prayer/cities?${params.toString()}`);
+    return response.results;
   }
 
   public async calculatePrayer(payload: PrayerCalculationRequest): Promise<PrayerCalculationResponse> {

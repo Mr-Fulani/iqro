@@ -24,7 +24,9 @@ import {
 import { useTajweed } from "./useTajweed";
 import { TajweedLegend } from "./TajweedLegend";
 import { MushafPageTurn } from "./MushafPageTurn";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { MushafGestureSurface } from "./MushafGestureSurface";
+import { ReaderBookmarksDialog } from "./ReaderBookmarksDialog";
 import { ayahGlyphs, QuranFoundationMushafPageView } from "./QuranFoundationMushafPage";
 import {
   PrayerReadingSessionBar,
@@ -34,6 +36,7 @@ import { ReadingActivityTracker } from "./ReadingActivityTracker";
 import { FavoriteBookmarkIcon } from "./FavoriteBookmarkIcon";
 import { ShareIcon } from "./ShareIcon";
 import type { AyahShareTarget } from "./AyahShareDialog";
+import { wordRangeShare } from "../lib/word-range-share";
 import { ShareDialogBoundary } from "./ShareDialogBoundary";
 import { MushafReaderLayout, MushafReaderPanel, MushafReaderSettings } from "./MushafReaderLayout";
 import type {
@@ -338,6 +341,8 @@ function QuranContent() {
     ? deepLinkPageCandidate
     : null;
   const hasExplicitDeepLink = Boolean(rawSurahParam || deepLinkAyah || deepLinkPageCandidate);
+  // The phone's Quran tab opens the reader in the mode chosen there.
+  const textLink = searchParams.get("view") === "text";
 
   // Server and first browser render must agree. Restore browser state after hydration.
   const [initialLocalPosition, setInitialLocalPosition] =
@@ -463,7 +468,7 @@ function QuranContent() {
   const [currentPage, setCurrentPage] = useState<number>(
     deepLinkPage || 1,
   );
-  const [viewMode, setViewMode] = useState<"text" | "mushaf">("mushaf");
+  const [viewMode, setViewMode] = useState<"text" | "mushaf">(textLink ? "text" : "mushaf");
   const [foundationMushafs, setFoundationMushafs] = useState<QuranFoundationMushaf[]>([]);
   const [selectedFoundationMushafId, setSelectedFoundationMushafId] = useState<number | null>(null);
   const [selectedMushafAyah, setSelectedMushafAyah] = useState<string | null>(null);
@@ -1169,7 +1174,7 @@ function QuranContent() {
     if (deepLinkKey === null || deepLinkAyah === null || handledDeepLink.current === deepLinkKey) {
       return;
     }
-    setViewMode("mushaf");
+    if (!textLink) setViewMode("mushaf");
     if (selectedSurah !== deepLinkSurah) {
       setSelectedSurah(deepLinkSurah);
       return;
@@ -1182,7 +1187,7 @@ function QuranContent() {
     pendingMushafAyah.current = deepLinkKey;
     setCurrentPage(sourcePageFor(deepLinkKey, linkedAyah.pages[0]));
     handledDeepLink.current = deepLinkKey;
-  }, [ayahs, deepLinkAyah, deepLinkKey, deepLinkSurah, selectedSurah, sourcePageFor]);
+  }, [ayahs, deepLinkAyah, deepLinkKey, deepLinkSurah, selectedSurah, sourcePageFor, textLink]);
 
   // Legacy bookmarks may point to a Mushaf page without an ayah reference.
   // Apply the page after the initial surah request, which otherwise resets the
@@ -1195,12 +1200,12 @@ function QuranContent() {
     ) {
       return;
     }
-    setViewMode("mushaf");
+    if (!textLink) setViewMode("mushaf");
     pendingMushafAyah.current = null;
     setSelectedMushafAyah(null);
     setCurrentPage(Math.min(deepLinkPage, mushafPageCount));
     handledPageDeepLink.current = deepLinkPage;
-  }, [deepLinkAyah, deepLinkPage, mushafPageCount]);
+  }, [deepLinkAyah, deepLinkPage, mushafPageCount, textLink]);
 
   useEffect(() => {
     if (
@@ -1354,6 +1359,16 @@ function QuranContent() {
   }, [pageError, selectedFoundationMushafId]);
 
   const currentSurahObj = surahs.find((s) => s.number === selectedSurah);
+  // The phone reader's top bar bookmarks the selected ayah, else the place the page shows.
+  const readerBookmarkKey = selectedMushafAyah ?? currentAyahKey;
+  const readerBookmark = readerBookmarkKey && Number(readerBookmarkKey.split(":")[0]) === selectedSurah
+    ? {
+        saved: Boolean(savedAyahBookmarks[readerBookmarkKey]),
+        disabled: !bookmarkStateReady || bookmarkBusyKeys.has(readerBookmarkKey),
+        label: savedAyahBookmarks[readerBookmarkKey] ? t("quran.bookmarkRemoveTitle") : t("quran.bookmarkTitle"),
+        onToggle: () => void handleToggleBookmark(Number(readerBookmarkKey.split(":")[1])),
+      }
+    : undefined;
   const editionName = (edition: QuranEdition) =>
     locale === "ar" ? edition.name_ar : locale === "ru" ? edition.name_ru : edition.name_en;
   const surahName = (surah: Surah) =>
@@ -1770,6 +1785,17 @@ function QuranContent() {
     queueReadingPlace({ pageNumber: nextPage });
   }, [currentPage, mushafPageCount, queueReadingPlace]);
 
+  // The phone reader's page scrubber opens a page by its number.
+  const jumpToMushafPage = useCallback((page: number) => {
+    const nextPage = Math.min(mushafPageCount, Math.max(1, page));
+    setPageTurnDirection(nextPage >= currentPage ? "next" : "previous");
+    pendingMushafAyah.current = null;
+    pendingNavigationPage.current = null;
+    setSelectedMushafAyah(null);
+    setCurrentPage(nextPage);
+    queueReadingPlace({ pageNumber: nextPage });
+  }, [currentPage, mushafPageCount, queueReadingPlace]);
+
   const annotationTarget = (ayahKey: string) => {
     const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
     const ayah = ayahs.find(
@@ -1847,6 +1873,35 @@ function QuranContent() {
     });
   };
 
+  // The selected words: a part of an ayah goes without a meaning, whole ayahs with theirs.
+  const openWordRangeShare = (range: QuranWordRange) => {
+    const surahNumber = range.start.surah;
+    const surah = surahs.find((item) => item.number === surahNumber);
+    const surahAyahs = ayahs.filter((item) => item.surah_number === surahNumber);
+    const content = wordRangeShare({
+      range,
+      surahName: surah ? localizedSurahName(surah, locale) : t("common.surah", { surah: surahNumber }),
+      ayahs: surahAyahs,
+      partOf: (reference, several) => t(several ? "contentShare.fromAyahs" : "contentShare.fromAyah", { reference }),
+      plainFont: "",
+      translations: new Map(translationLoading ? [] : surahAyahs
+        .map((item) => [item.number, translationsByVerse[`${surahNumber}:${item.number}`]?.text ?? ""] as const)),
+    });
+    setShareTarget({
+      ayahKey: `${surahNumber}:${range.start.ayah}`,
+      edition: selectedEdition,
+      title: content.title,
+      url: new URL(
+        localizedPath(locale, quranAyahPath(selectedEdition, surahNumber, range.start.ayah)),
+        window.location.origin,
+      ).href,
+      arabic: content.arabic,
+      translationId: null,
+      translation: content.translation,
+      part: { range, ayahs: surahAyahs },
+    });
+  };
+
   // Without the dialog's code the ayah still goes, as the text the reader has
   // and the link.
   const shareAyahWithoutPicture = async (target: AyahShareTarget) => {
@@ -1863,6 +1918,33 @@ function QuranContent() {
     }
     if (result === "copied") showAnnotationFeedback(t("contentShare.textCopied"));
     if (result === "failed") setFeedbackMessage({ text: t("contentShare.shareError"), type: "err" });
+  };
+
+  // The phone reader's own tools from the ayah menu, as in the app: the page
+  // zoom (back to 100% on another page), the bookmarks and the Mushaf choice.
+  const [readerZoom, setReaderZoom] = useState(1);
+  const [zoomedPage, setZoomedPage] = useState(currentPage);
+  if (zoomedPage !== currentPage) {
+    setZoomedPage(currentPage);
+    setReaderZoom(1);
+  }
+  const [readerBookmarksOpen, setReaderBookmarksOpen] = useState(false);
+  const [readerSettingsRequest, setReaderSettingsRequest] = useState(0);
+
+  // The phone's ayah menu copies the ayah's Arabic text, as the app's does.
+  const [copiedAyah, setCopiedAyah] = useState<{ key: string; ok: boolean } | null>(null);
+  const copyAyah = async (ayahKey: string) => {
+    const [surahNumber, ayahNumber] = ayahKey.split(":").map(Number);
+    let ok = true;
+    try {
+      const known = ayahs.find((item) => item.surah_number === surahNumber && item.number === ayahNumber);
+      const text = known?.text_uthmani ?? (await api.getAyah(selectedEdition, surahNumber, ayahNumber)).text_uthmani;
+      await navigator.clipboard.writeText(text);
+    } catch {
+      ok = false;
+    }
+    setCopiedAyah({ key: ayahKey, ok });
+    window.setTimeout(() => setCopiedAyah((current) => current?.key === ayahKey ? null : current), 1800);
   };
 
   const openMemorizeAyah = async (ayahKey: string) => {
@@ -1965,6 +2047,15 @@ function QuranContent() {
       hasSession={prayerReadingConfig !== null}
       onImmersiveChange={setIsImmersiveReader}
       onOpenText={localPositionReady ? openText : undefined}
+      title={currentSurahObj
+        ? `${formatNumber(currentSurahObj.number)}. ${localizedSurahName(currentSurahObj, locale)}`
+        : t("common.surah", { surah: formatNumber(selectedSurah) })}
+      subtitle={selectedMushafAyah ? t("common.ayah", { ayah: selectedMushafAyah }) : t("surahs.mushafMode")}
+      juz={divisionAtAyah(juz, currentAyahKey)}
+      bookmark={readerBookmark}
+      onJumpPage={jumpToMushafPage}
+      zoom={readerZoom}
+      settingsRequest={readerSettingsRequest}
     >
       <MushafReaderPanel name="session" label={t("quran.readerSession")}>
         {prayerReadingConfig === null ? (
@@ -2510,6 +2601,23 @@ function QuranContent() {
                           >
                             <span aria-hidden="true">✎</span>
                           </button>
+                          {/* Phones only, as in the app's ayah menu. */}
+                          <button
+                            className={`btn btn-sm ayah-icon-button ayah-copy-button${copiedAyah?.key === ayahKey ? " is-active" : ""}`}
+                            type="button"
+                            onClick={() => void copyAyah(ayahKey)}
+                            aria-label={copiedAyah?.key === ayahKey
+                              ? t(copiedAyah.ok ? "quran.ayahCopied" : "quran.ayahCopyFailed")
+                              : `${t("quran.ayahCopy")}: ${t("common.ayah", { ayah: ayahKey })}`}
+                            title={t("quran.ayahCopy")}
+                            data-testid="ayah-copy"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              {copiedAyah?.key === ayahKey && copiedAyah.ok
+                                ? <path d="m5 13 4 4L19 7" />
+                                : <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></>}
+                            </svg>
+                          </button>
                           <button
                             className="btn btn-sm ayah-icon-button"
                             type="button"
@@ -2754,6 +2862,56 @@ function QuranContent() {
               data-testid="mushaf-ayah-actions"
             >
               <span>{t("common.ayah", { ayah: selectedMushafAyah })}</span>
+              {/* Over the phone's full-screen reader the sheet is the app's ayah
+                  menu: listening, the bookmark, repeat and copy join the rest. */}
+              {ayahMenu === selectedMushafAyah && isImmersiveReader && (() => {
+                const ayahNumber = Number(selectedMushafAyah.split(":")[1]);
+                const active = playingMushafAyah === selectedMushafAyah;
+                const repeating = active && audioSettings.repeatMode === "ayah";
+                const saved = Boolean(savedAyahBookmarks[selectedMushafAyah]);
+                const copied = copiedAyah?.key === selectedMushafAyah ? copiedAyah : null;
+                return (
+                  <>
+                    <button
+                      className="btn btn-primary btn-sm ayah-menu-listen"
+                      type="button"
+                      onClick={() => handleToggleAyahPlayback(ayahNumber)}
+                      data-testid="ayah-menu-listen"
+                    >
+                      {active && isAudioPlaying ? t("quran.ayahPause") : t("quran.ayahListen")}
+                    </button>
+                    <button
+                      className={`btn btn-secondary btn-sm ayah-menu-bookmark${saved ? " is-active" : ""}`}
+                      type="button"
+                      onClick={() => void handleToggleBookmark(ayahNumber)}
+                      aria-pressed={saved}
+                      aria-label={saved ? t("quran.bookmarkRemoveTitle") : t("quran.bookmarkTitle")}
+                      disabled={!bookmarkStateReady || bookmarkBusyKeys.has(selectedMushafAyah)}
+                      data-testid="ayah-menu-bookmark"
+                    >
+                      <FavoriteBookmarkIcon active={saved} /> {t("profile.favoritesTitle")}
+                    </button>
+                    <button
+                      className={`btn btn-secondary btn-sm ayah-menu-repeat${repeating ? " is-active" : ""}`}
+                      type="button"
+                      onClick={() => handleToggleAyahRepeat(ayahNumber)}
+                      aria-pressed={repeating}
+                      data-testid="ayah-menu-repeat"
+                    >
+                      {t("quran.ayahRepeat")}
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm ayah-menu-copy"
+                      type="button"
+                      onClick={() => void copyAyah(selectedMushafAyah)}
+                      aria-live="polite"
+                      data-testid="ayah-menu-copy"
+                    >
+                      {copied ? t(copied.ok ? "quran.ayahCopied" : "quran.ayahCopyFailed") : t("quran.ayahCopy")}
+                    </button>
+                  </>
+                );
+              })()}
               {tajweedPage?.ayahs.some((ayah) => ayah.verse_key === selectedMushafAyah && ayah.words.length > 0) && (
                 <button
                   className="btn btn-secondary btn-sm"
@@ -2795,6 +2953,39 @@ function QuranContent() {
               >
                 <ShareIcon /> {t("contentShare.share")}
               </button>
+              {ayahMenu === selectedMushafAyah && isImmersiveReader && (
+                <div className="ayah-menu-reader" data-testid="ayah-menu-reader">
+                  <label className="ayah-menu-zoom">
+                    <span>{t("quran.readerZoom")}</span>
+                    <input
+                      type="range"
+                      min={100}
+                      max={300}
+                      step={10}
+                      value={Math.round(readerZoom * 100)}
+                      onChange={(event) => setReaderZoom(Number(event.target.value) / 100)}
+                      data-testid="reader-zoom"
+                    />
+                    <output>{formatNumber(Math.round(readerZoom * 100))}%</output>
+                  </label>
+                  <button className="btn btn-secondary btn-sm" type="button" onClick={() => setReaderBookmarksOpen(true)} aria-haspopup="dialog">
+                    {t("quran.readerBookmarks")}
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    type="button"
+                    onClick={() => {
+                      setAyahMenu(null);
+                      setReaderSettingsRequest((count) => count + 1);
+                    }}
+                  >
+                    {t("quran.readerChooseMushaf")}
+                  </button>
+                  <IntentPrefetchLink className="btn btn-secondary btn-sm" href={localizedPath(locale, "/notes")}>
+                    {t("notes.title")}
+                  </IntentPrefetchLink>
+                </div>
+              )}
               {ayahMenu === selectedMushafAyah && isImmersiveReader && (
                 <button
                   className="btn btn-secondary btn-sm mushaf-ayah-actions-close"
@@ -2940,6 +3131,19 @@ function QuranContent() {
           <AyahShareDialog target={shareTarget} onClose={() => setShareTarget(null)} />
         </ShareDialogBoundary>
       )}
+      {readerBookmarksOpen && (
+        <ReaderBookmarksDialog
+          onClose={() => setReaderBookmarksOpen(false)}
+          onOpen={(bookmark) => {
+            if (!bookmark.ayah) return;
+            setAyahMenu(null);
+            navigateToDivision({
+              start_ayah: { surah: bookmark.ayah.surah_number, number: bookmark.ayah.ayah_number },
+              start_page: bookmark.page_number ?? currentPage,
+            } as QuranDivision);
+          }}
+        />
+      )}
       {plainTextAyah !== null && viewMode === "text" && (
         <QuranPlainText
           key={selectedSurah}
@@ -2984,6 +3188,7 @@ function QuranContent() {
             leavePlainText(wordRange.range.start.ayah);
             window.requestAnimationFrame(() => openAyahMenu(ayahKey));
           }}
+          onShare={() => openWordRangeShare(wordRange.range)}
           onPlayingWord={setPlayingWord}
         />
       )}

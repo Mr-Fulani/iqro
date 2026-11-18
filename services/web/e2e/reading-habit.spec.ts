@@ -627,7 +627,7 @@ test("planner shows honest history and lets users correct manual entries", async
   await page.goto("/ru/planner");
 
   const planner = page.getByTestId("reading-planner-dashboard");
-  await expect(planner.getByRole("heading", { name: "Планировщик чтения" })).toBeVisible();
+  await expect(planner.getByRole("heading", { name: "План на день" })).toBeVisible();
   await expect(planner.getByText("Пропуск не становится долгом", { exact: false })).toBeVisible();
   await expect(planner.locator(".planner-day.is-partial")).toHaveCount(1);
 
@@ -660,4 +660,40 @@ test("planner shows honest history and lets users correct manual entries", async
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
+});
+
+test("a phone's home shows the place to continue and the day's goal, as in the app", async ({ page }) => {
+  await installReadingMocks(page);
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/today",
+    (route) =>
+      route.fulfill({
+        json: {
+          ...todaySnapshot(1, true),
+          continue_reading: {
+            edition_code: "madani-hafs",
+            page_number: 1,
+            ayah: { id: "019a1284-9800-7000-8000-000000000901", surah_number: 1, ayah_number: 5 },
+            progress_percent: "0.10",
+            revision: 1,
+            last_read_at: "2026-08-28T08:00:00Z",
+            client_updated_at: "2026-08-28T08:00:00Z",
+          },
+        },
+      }),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const reading = page.getByTestId("home-reading");
+  await expect(reading.getByText("Аль-Фатиха")).toBeVisible();
+  await expect(reading.getByText("Аят 5 · Страница 1")).toBeVisible();
+  await expect(reading.getByRole("link", { name: "Читать" })).toHaveAttribute("href", "/ru/quran?surah=1&ayah=5");
+  const plan = page.getByTestId("home-plan");
+  await expect(plan).toHaveAttribute("href", "/ru/planner");
+  await expect(plan.getByText("1 / 3 стр.")).toBeVisible();
+  await expect(plan.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
+  await expect(plan.getByTestId("plan-mark")).toBeVisible();
+  // The desktop's full Today card stays off the phone's home.
+  await expect(page.getByTestId("today-reading")).toBeHidden();
 });

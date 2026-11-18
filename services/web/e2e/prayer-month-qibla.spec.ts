@@ -85,7 +85,17 @@ test("prayer page shows the Qibla and a month calendar that matches the app", as
   // The first automatic calculation (Makkah by default) finishes restoring the form.
   await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText("Вы у Каабы — молитесь лицом к ней");
   await expect(page.getByTestId("prayer-qibla-arrow")).toHaveCount(0);
-  await page.getByLabel("Быстрый выбор города").selectOption({ label: "Москва (Россия)" });
+  // The quick list holds the app's eleven cities, besides «my own place».
+  const cities = page.getByLabel("Быстрый выбор города");
+  await expect(cities.locator("option")).toHaveCount(12);
+  for (const [city, timezone] of [
+    ["Каир (Египет)", "Africa/Cairo"], ["Дубай (ОАЭ)", "Asia/Dubai"],
+    ["Джакарта (Индонезия)", "Asia/Jakarta"], ["Нью-Йорк (США)", "America/New_York"],
+  ]) {
+    await cities.selectOption({ label: city });
+    await expect(page.getByLabel("Часовой пояс (IANA)")).toHaveValue(timezone);
+  }
+  await cities.selectOption({ label: "Москва (Россия)" });
   await page.getByLabel("Дата расчёта").fill("2026-06-15");
   await page.getByLabel("Мазхаб для времени Аср").selectOption("hanafi");
   await page.getByRole("button", { name: "Рассчитать расписание" }).click();
@@ -332,3 +342,53 @@ for (const locale of ["ru", "en", "ar", "tr"]) {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 }
+
+test("the city search finds a place on our server and fills the form with it", async ({ page }) => {
+  await mockPrayerApi(page);
+  const queries: string[] = [];
+  await page.route("**/api/v1/prayer/cities?*", (route) => {
+    const url = new URL(route.request().url());
+    const query = url.searchParams.get("q") ?? "";
+    queries.push(`${query}|${url.searchParams.get("locale")}`);
+    if (query === "ошибка") return route.fulfill({ status: 503, json: { detail: "unavailable" } });
+    return route.fulfill({
+      json: {
+        results: query.startsWith("Нам")
+          ? [
+              { id: 1513157, name: "Наманган", country_code: "UZ", latitude: "40.99830", longitude: "71.67257", timezone: "Asia/Tashkent" },
+              { id: 2, name: "Намангут", country_code: "RU", latitude: "50.00000", longitude: "40.00000", timezone: "Europe/Moscow" },
+            ]
+          : [],
+      },
+    });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/ru/prayer");
+  await expect(page.getByTestId("prayer-qibla-bearing")).toHaveText("Вы у Каабы — молитесь лицом к ней");
+
+  const search = page.getByTestId("prayer-city-search");
+  const field = search.getByLabel("Поиск города");
+  // One letter asks nothing; the typed start of a name asks once, in the page's language.
+  await field.fill("Н");
+  await field.fill("Наманг");
+  const found = search.getByRole("button");
+  await expect(found).toHaveCount(2);
+  await expect(found.first()).toHaveText("НаманганУзбекистан");
+  expect(queries).toEqual(["Наманг|ru"]);
+
+  await found.first().click();
+  await expect(found).toHaveCount(0);
+  await expect(field).toHaveValue("Наманган");
+  await expect(page.getByLabel("Широта (Latitude)")).toHaveValue("40.99830");
+  await expect(page.getByLabel("Долгота (Longitude)")).toHaveValue("71.67257");
+  await expect(page.getByLabel("Часовой пояс (IANA)")).toHaveValue("Asia/Tashkent");
+  await expect(page.getByLabel("Быстрый выбор города")).toHaveValue("custom");
+
+  // Nothing found says so; a failed search stays quiet and leaves the quick list to use.
+  await field.fill("яяя");
+  await expect(search.getByText("Подходящий город не найден")).toBeVisible();
+  await field.fill("ошибка");
+  await expect(search.getByText("Подходящий город не найден")).toHaveCount(0);
+  await expect(found).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});

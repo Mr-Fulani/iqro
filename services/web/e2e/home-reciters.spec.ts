@@ -94,23 +94,19 @@ test("home hero links Quran, audio, Dua and prayer with optimized landmark slide
     /hero-prophets-mosque\.webp/,
   );
 
-  await page.setViewportSize({ width: 320, height: 760 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-    await page.evaluate(() => document.documentElement.clientWidth),
-  );
-  const carouselBottom = await hero.locator(".hero-carousel").evaluate(
-    (element) => element.getBoundingClientRect().bottom,
-  );
-  const contentTop = await hero.locator(".eyebrow").evaluate(
-    (element) => element.getBoundingClientRect().top,
-  );
-  expect(carouselBottom).toBeLessThanOrEqual(contentTop);
   await expect(hero.getByRole("heading", { level: 1 })).toHaveText(
     "Единая исламская платформа: Коран, аудио, Ду’а и время намаза",
   );
   await expect(hero.locator(".hero-content > p:not(.eyebrow)")).toBeVisible();
   await expect(hero.getByTestId("hero-media")).toHaveCSS("opacity", "1");
-  expect((await hero.getByTestId("hero-slide-1").boundingBox())!.height).toBeGreaterThanOrEqual(44);
+
+  // A phone opens the app's Home instead: no hero, the reading to continue.
+  await page.setViewportSize({ width: 320, height: 760 });
+  await expect(hero).toBeHidden();
+  await expect(page.getByTestId("home-reading")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
 });
 
 test("home prayer preview reuses the saved prayer location and profile", async ({ page }) => {
@@ -275,15 +271,13 @@ test("home reciter avatars open the audio catalog with the selected reciter", as
   await expect(section.getByTestId("reciter-avatar").first()).toHaveCSS("width", "112px");
   await expect(section.getByTestId("reciter-avatar").first()).toHaveCSS("height", "112px");
 
+  // A phone's home has no reciters block, as in the app.
   await page.setViewportSize({ width: 320, height: 760 });
-  expect(
-    await section.locator(".reciter-grid").evaluate((grid) =>
-      getComputedStyle(grid).gridTemplateColumns.split(" ").length,
-    ),
-  ).toBe(2);
+  await expect(section).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     await page.evaluate(() => document.documentElement.clientWidth),
   );
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   await section.getByRole("link", { name: "Слушать чтение: Абдур-Рахман ас-Судайс" }).click();
 

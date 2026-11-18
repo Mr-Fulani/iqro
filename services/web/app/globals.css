@@ -3957,22 +3957,71 @@ input:focus, select:focus, textarea:focus {
   margin: 0;
 }
 
-/* The card is 4:5; the preview keeps that shape within the screen height. */
+/* The cards side by side, one in view; the preview keeps the card's shape within the screen height. */
 .content-share-preview {
-  display: grid;
-  place-items: center;
-  width: min(100%, calc(min(56dvh, 500px) * 0.8));
-  aspect-ratio: 4 / 5;
+  display: flex;
+  width: min(100%, calc(min(56dvh, 520px) * 0.5625));
+  aspect-ratio: 9 / 16;
   margin-inline: auto;
-  overflow: hidden;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
   border-radius: var(--radius-lg);
   background: var(--bg-subtle);
 }
 
+.content-share-preview[data-format="post"] {
+  width: min(100%, calc(min(56dvh, 520px) * 0.8));
+  aspect-ratio: 4 / 5;
+}
+
 .content-share-preview img {
   display: block;
+  flex: 0 0 100%;
   width: 100%;
   height: 100%;
+  scroll-snap-align: center;
+}
+
+.content-share-preview p {
+  margin: auto;
+}
+
+.content-share-part {
+  text-align: center;
+}
+
+.content-share-style {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.content-share-formats,
+.content-share-colours {
+  display: flex;
+  gap: 8px;
+}
+
+.content-share-formats [aria-pressed="true"] {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.content-share-colour {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.content-share-colour[aria-pressed="true"] {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .content-share-preview p {
@@ -9878,4 +9927,48 @@ html:has(.reader-swipe-surface) body {
   .home-section-tile {
     transition: none;
   }
+}
+
+/* The city search of the prayer times: found places as a list of buttons. */
+.prayer-city-search {
+  grid-column: 1 / -1;
+}
+
+.prayer-city-results {
+  display: grid;
+  max-height: 320px;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  list-style: none;
+}
+
+.prayer-city-results li + li {
+  border-top: 1px solid var(--border);
+}
+
+.prayer-city-results button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 0;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: start;
+  background: none;
+  cursor: pointer;
+}
+
+.prayer-city-results button:hover,
+.prayer-city-results button:focus-visible {
+  background: var(--primary-subtle);
+}
+
+.prayer-city-results small {
+  color: var(--text-secondary);
 }

@@ -3631,4 +3631,53 @@ class AppLocalizationsAr extends AppLocalizations {
   String wordRangeOtherVoice(String reciter, String style) {
     return 'الصوت: $reciter · $style. لا يوجد هنا توقيت للكلمات لدى القارئ المختار.';
   }
+
+  @override
+  String get shareCardSend => 'مشاركة';
+
+  @override
+  String get shareCardStory => 'قصة';
+
+  @override
+  String get shareCardPost => 'منشور';
+
+  @override
+  String get shareCardColourEmerald => 'زمردي';
+
+  @override
+  String get shareCardColourTurquoise => 'فيروزي';
+
+  @override
+  String get shareCardColourMidnight => 'أزرق داكن';
+
+  @override
+  String shareCardPart(int number, int total) {
+    return 'الصورة $number من $total';
+  }
+
+  @override
+  String get shareCardTooLong =>
+      'النص طويل جدًا للصورة. يمكنك إرساله نصًا مع الرابط.';
+
+  @override
+  String get shareCardSendText => 'إرسال كنص';
+
+  @override
+  String get shareCardPreparing => 'جارٍ تجهيز الصورة…';
+
+  @override
+  String get shareCardFailed => 'تعذّر إنشاء الصورة. يمكنك إرسال النص والرابط.';
+
+  @override
+  String get shareSelection => 'مشاركة المحدد';
+
+  @override
+  String shareCardFromAyah(String reference) {
+    return 'من الآية $reference';
+  }
+
+  @override
+  String shareCardFromAyahs(String reference) {
+    return 'من الآيات $reference';
+  }
 }

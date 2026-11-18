@@ -21,7 +21,6 @@ import 'ayah_action_sheet.dart';
 import 'quran_models.dart';
 import '../../core/audio/playback_speed.dart';
 import 'ayah_share.dart';
-import 'mushaf_edition.dart';
 import 'mushaf_paper.dart';
 import 'mushaf_script.dart';
 import 'next_surah.dart';
@@ -996,7 +995,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   Future<void> _share(QuranAyah ayah, String surahName, Rect? origin) async {
     final analytics = ref.read(analyticsProvider.notifier);
     final glyphs = await ayahShareGlyphs(
-      ref.read(mushafRepositoryProvider(MushafIdentity.defaultEdition)),
+      ref.read(selectedMushafRepositoryProvider),
       ayah.surahNumber,
       ayah.number,
     );

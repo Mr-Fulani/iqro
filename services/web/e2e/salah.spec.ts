@@ -67,16 +67,13 @@ test("header and mobile navigation mark the prayer course without the prayer tim
 
   await page.setViewportSize({ width: 390, height: 844 });
   const navigation = page.locator(".mobile-navigation");
-  await navigation.locator(".mobile-more > summary").click();
-  // «More» leads to the course through the catalog, as in the app.
-  const more = navigation.locator(".mobile-more-links");
-  await expect(more.getByRole("link", { name: "Курсы" })).toHaveAttribute("aria-current", "page");
-  await expect(more.getByRole("link", { name: "Обучение намазу" })).toHaveCount(0);
-  await expect(more.getByRole("link", { name: "Намаз", exact: true })).not.toHaveAttribute("aria-current", "page");
-  for (const [locale, label] of [["en", "Courses"], ["ar", "الدورات"], ["tr", "Kurslar"]]) {
-    await page.goto(`/${locale}/salah`);
-    await navigation.locator(".mobile-more > summary").click();
+  // «More» stays lit on the course and leads to it through the catalog, as in the app.
+  await expect(navigation.getByTestId("mobile-more-tab")).toHaveAttribute("aria-current", "page");
+  const more = page.getByTestId("more-tools");
+  for (const [locale, label] of [["ru", "Курсы"], ["en", "Courses"], ["ar", "الدورات"], ["tr", "Kurslar"]]) {
+    await page.goto(`/${locale}/more`);
     await expect(more.getByRole("link", { name: label })).toHaveAttribute("href", `/${locale}/courses`);
+    await expect(more.locator(`a[href="/${locale}/salah"]`)).toHaveCount(0);
   }
   // The footer leads to the catalog only; the prayer course is a card there.
   await expect(page.locator('footer a[href="/tr/salah"]')).toHaveCount(0);
@@ -241,6 +238,16 @@ test("formula cards play audio, count repetitions and switch text and modes", as
   await expect(step.locator(".salah-transliteration")).toHaveCount(0);
   await page.getByLabel("Перевод").uncheck();
   await expect(step.locator(".salah-translation")).toHaveCount(0);
+  // The Arabic can be put away while learning, as in the app; the choice is kept.
+  const arabic = step.locator('.salah-formula [lang="ar"]');
+  await expect(arabic.first()).toBeVisible();
+  await page.getByLabel("Арабский текст").uncheck();
+  await expect(arabic).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel("Арабский текст")).not.toBeChecked();
+  await expect(arabic).toHaveCount(0);
+  await page.getByLabel("Арабский текст").check();
+  await expect(arabic.first()).toBeVisible();
 
   await page.getByRole("button", { name: "Практика" }).click();
   await expect(page.getByRole("button", { name: "Практика" })).toHaveAttribute("aria-pressed", "true");

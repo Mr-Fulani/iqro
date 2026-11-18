@@ -44,6 +44,19 @@ export function HomeSections() {
             <span className="home-section-name">{t(section.label)}</span>
           </IntentPrefetchLink>
         ))}
+        {/* Phones only, as the app's ninth tile: opens the More screen. */}
+        {drawn && (
+          <IntentPrefetchLink
+            href={localizedPath(locale, "/more")}
+            className="home-section-tile home-section-all"
+            data-testid="home-section-all"
+          >
+            <span className="home-section-art">
+              <HomeSectionIcon section="all" />
+            </span>
+            <span className="home-section-name">{t("home.allSections")}</span>
+          </IntentPrefetchLink>
+        )}
       </div>
     </section>
   );

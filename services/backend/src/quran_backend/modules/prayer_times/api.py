@@ -15,17 +15,26 @@ from rest_framework.views import APIView
 
 from quran_backend.modules.core.privacy import PrivateNoStoreResponseMixin
 from quran_backend.modules.core.public_api import PublicReadOnlyViewMixin
-from quran_backend.modules.prayer_times.exceptions import PrayerCalculationRateLimitedError
+from quran_backend.modules.prayer_times.cities import search_prayer_cities
+from quran_backend.modules.prayer_times.exceptions import (
+    PrayerCalculationRateLimitedError,
+    PrayerCitySearchRateLimitedError,
+)
 from quran_backend.modules.prayer_times.serializers import (
     PrayerCalculationRequestSerializer,
     PrayerCalculationResponseSerializer,
+    PrayerCitySearchQuerySerializer,
+    PrayerCitySearchResponseSerializer,
     PrayerMethodsResponseSerializer,
 )
 from quran_backend.modules.prayer_times.services import (
     calculate_prayer_times,
     prayer_methods_manifest,
 )
-from quran_backend.modules.prayer_times.throttling import PrayerCalculationThrottle
+from quran_backend.modules.prayer_times.throttling import (
+    PrayerCalculationThrottle,
+    PrayerCitySearchThrottle,
+)
 
 
 @extend_schema(tags=["prayer"])
@@ -83,6 +92,39 @@ class PrayerCalculateView(PrivateNoStoreResponseMixin, APIView):
 
     def throttled(self, request: Request, wait: float | None) -> NoReturn:  # noqa: ARG002
         raise PrayerCalculationRateLimitedError(wait=wait)
+
+    def get_throttles(self) -> list[BaseThrottle]:
+        return [throttle() for throttle in self.throttle_classes]
+
+
+@extend_schema(tags=["prayer"])
+class PrayerCitySearchView(PublicReadOnlyViewMixin, APIView):
+    """Places by the start of their name, from our own copy of GeoNames.
+
+    The query never leaves the service, and neither it nor the caller's address is stored.
+    """
+
+    throttle_classes = (PrayerCitySearchThrottle,)
+
+    @extend_schema(
+        operation_id="prayer_cities",
+        parameters=[PrayerCitySearchQuerySerializer],
+        responses={
+            status.HTTP_200_OK: PrayerCitySearchResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Request validation failed."),
+            status.HTTP_429_TOO_MANY_REQUESTS: OpenApiResponse(
+                description="City search rate limit exceeded."
+            ),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        query = PrayerCitySearchQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        cities = search_prayer_cities(query.validated_data["q"], query.validated_data["locale"])
+        return Response(PrayerCitySearchResponseSerializer({"results": cities}).data)
+
+    def throttled(self, request: Request, wait: float | None) -> NoReturn:  # noqa: ARG002
+        raise PrayerCitySearchRateLimitedError(wait=wait)
 
     def get_throttles(self) -> list[BaseThrottle]:
         return [throttle() for throttle in self.throttle_classes]

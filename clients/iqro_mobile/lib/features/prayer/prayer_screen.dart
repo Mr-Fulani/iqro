@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -92,8 +94,8 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
         .where((method) => method.code == _selectedMethodCode)
         .firstOrNull;
     final locale = Localizations.localeOf(context).languageCode;
-    final city = prayerCityById(_location?.cityId);
-    final locationName = city?.nameFor(locale) ?? context.l10n.currentLocation;
+    final locationName =
+        _location?.placeName(locale) ?? context.l10n.currentLocation;
     if (widget.openQibla && !_qiblaOpened && _location != null) {
       _qiblaOpened = true;
       final location = _location!;
@@ -768,7 +770,11 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => PrayerCitySheet(locale: locale),
+      builder: (context) => PrayerCitySheet(
+        locale: locale,
+        search: (query) =>
+            ref.read(prayerRepositoryProvider).searchCities(query, locale),
+      ),
     );
     if (city == null || !mounted) return;
     final database = ref.read(localDatabaseProvider);
@@ -779,12 +785,7 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen>
       _error = null;
     });
     try {
-      final location = PrayerLocation(
-        latitude: city.latitude,
-        longitude: city.longitude,
-        timezone: city.timezone,
-        cityId: city.id,
-      );
+      final location = PrayerLocation.ofCity(city);
       final schedule = await ref
           .read(prayerRepositoryProvider)
           .calculateForLocation(
@@ -1217,22 +1218,72 @@ const _adjustmentCodes = <String>[
 ];
 
 class PrayerCitySheet extends StatefulWidget {
-  const PrayerCitySheet({super.key, required this.locale});
+  const PrayerCitySheet({super.key, required this.locale, this.search});
 
   final String locale;
+
+  /// The server's city search. Without it, or while it cannot be reached,
+  /// the sheet offers the curated cities.
+  final Future<List<PrayerCity>> Function(String query)? search;
 
   @override
   State<PrayerCitySheet> createState() => _PrayerCitySheetState();
 }
 
 class _PrayerCitySheetState extends State<PrayerCitySheet> {
+  static const _searchDelay = Duration(milliseconds: 300);
+
   var _query = '';
+  // What the server found for the current query; null until it answers.
+  List<PrayerCity>? _found;
+  Timer? _debounce;
+  var _request = 0;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    final request = ++_request;
+    setState(() {
+      _query = value;
+      _found = null;
+    });
+    final search = widget.search;
+    final query = value.trim();
+    if (search == null || query.length < 2) return;
+    _debounce = Timer(_searchDelay, () async {
+      List<PrayerCity>? found;
+      try {
+        found = await search(query);
+      } on Object {
+        // No connection or no search yet: the curated cities stay.
+      }
+      if (!mounted || request != _request) return;
+      setState(() => _found = found);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final cities = prayerCities
+    final curated = prayerCities
         .where((city) => city.matches(_query))
         .toList(growable: false);
+    // The curated matches lead; the server's places follow, without repeats
+    // of the same spot.
+    final cities = <PrayerCity>[
+      ...curated,
+      for (final city in _found ?? const <PrayerCity>[])
+        if (!curated.any(
+          (known) =>
+              (known.latitude - city.latitude).abs() < .2 &&
+              (known.longitude - city.longitude).abs() < .2,
+        ))
+          city,
+    ];
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: .72,
@@ -1271,7 +1322,7 @@ class _PrayerCitySheetState extends State<PrayerCitySheet> {
                 hintText: context.l10n.searchCity,
                 prefixIcon: const Icon(Icons.search),
               ),
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: _onChanged,
             ),
             const SizedBox(height: 10),
             Expanded(

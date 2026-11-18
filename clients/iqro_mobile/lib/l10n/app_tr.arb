@@ -1097,5 +1097,22 @@
   "wordRangeTeachingVoice": "Ses: {reciter}, öğretici okuma. Seçilen kârinin kelime kelime zamanlaması yok.",
   "@wordRangeTeachingVoice": {"placeholders": {"reciter": {"type": "String"}}},
   "wordRangeOtherVoice": "Ses: {reciter} · {style}. Seçilen kârinin burada kelime kelime zamanlaması yok.",
-  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}}
+  "@wordRangeOtherVoice": {"placeholders": {"reciter": {"type": "String"}, "style": {"type": "String"}}},
+  "shareCardSend": "Paylaş",
+  "shareCardStory": "Hikâye",
+  "shareCardPost": "Gönderi",
+  "shareCardColourEmerald": "Zümrüt",
+  "shareCardColourTurquoise": "Turkuaz",
+  "shareCardColourMidnight": "Gece mavisi",
+  "shareCardPart": "Görsel {number} / {total}",
+  "@shareCardPart": {"placeholders": {"number": {"type": "int"}, "total": {"type": "int"}}},
+  "shareCardTooLong": "Metin görsel için çok uzun. Bağlantıyla birlikte metin olarak gönderebilirsiniz.",
+  "shareCardSendText": "Metin olarak gönder",
+  "shareCardPreparing": "Görsel hazırlanıyor…",
+  "shareCardFailed": "Görsel oluşturulamadı. Metni ve bağlantıyı yine de gönderebilirsiniz.",
+  "shareSelection": "Seçimi paylaş",
+  "shareCardFromAyah": "{reference}. ayetten",
+  "@shareCardFromAyah": {"placeholders": {"reference": {"type": "String"}}},
+  "shareCardFromAyahs": "{reference}. ayetlerden",
+  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}}
 }

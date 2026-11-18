@@ -6,7 +6,6 @@ import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/theme/iqro_theme.dart';
-import 'prayer_places.dart';
 import 'prayer_repository.dart';
 
 class PrayerCalendarScreen extends ConsumerStatefulWidget {
@@ -34,8 +33,8 @@ class _PrayerCalendarScreenState extends ConsumerState<PrayerCalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context).languageCode;
-    final city = prayerCityById(_location?.cityId);
-    final locationName = city?.nameFor(locale) ?? context.l10n.currentLocation;
+    final locationName =
+        _location?.placeName(locale) ?? context.l10n.currentLocation;
     return Scaffold(
       appBar: IqroTopBar(
         title: context.l10n.prayerCalendar,

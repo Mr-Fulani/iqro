@@ -74,6 +74,7 @@ dependencies:
   firebase_analytics: 13.0.0
   google_sign_in: ^7.2.0
   speech_to_text: ^7.4.0
+  image: ^4.13.1
 
 dev_dependencies:
   flutter_test:
@@ -111,6 +112,11 @@ flutter:
     - assets/player_backgrounds/
     - assets/plan/
     - assets/fonts/AmiriQuran-OFL.txt
+    # PT Serif (SIL OFL 1.1, unmodified): the meaning on the share card.
+    - assets/fonts/PTSerif-OFL.txt
+    # The share card (docs/share-card): the owner's silk backgrounds in three
+    # colours and its layout, written by docs/share-card/tools/build_assets.py.
+    - assets/share_card/
     # Schematic 3D scene of the prayer course (docs/salah/salah-3d.md): the
     # owner's scene on three.js r149 (MIT, assets/salah3d/LICENSE-three.txt).
     - assets/salah3d/
@@ -128,6 +134,9 @@ flutter:
     - family: Amiri Quran
       fonts:
         - asset: assets/fonts/AmiriQuran-Regular.ttf
+    - family: PT Serif
+      fonts:
+        - asset: assets/fonts/PTSerif-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
