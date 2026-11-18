@@ -2,12 +2,35 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-/// What the trial shows under the text while it listens.
-typedef RecitationEar = ({String heard, String? error});
+/// Why the recitation check cannot hear the reader.
+enum RecitationTrouble {
+  /// No way to the recognition service: it works over the network here.
+  network,
+
+  /// The phone's recognition has no Arabic.
+  language,
+
+  /// No recognition service, or the microphone is not allowed.
+  unavailable,
+}
+
+/// What the line under the text shows while the microphone is on: the words
+/// heard last; that none have come for a while; what is wrong.
+typedef RecitationEar = ({String heard, bool deaf, RecitationTrouble? trouble});
+
+/// How long the microphone may be on with no word heard before the reader
+/// is told so.
+const recitationDeafAfter = Duration(seconds: 8);
+
+void _log(String message) {
+  // What the reader says is not written to the phone's log.
+  if (kDebugMode) debugPrint('IQRO recitation $message');
+}
 
 /// The phone's speech recognition, listening for Arabic until stopped: a
 /// recogniser ends a listen after a pause or an error, so each one is
@@ -21,7 +44,11 @@ class RecitationListener {
   /// Gets the words of the current listen so far, as they grow.
   final ValueChanged<String> onHeard;
 
-  final ear = ValueNotifier<RecitationEar>((heard: '', error: null));
+  final ear = ValueNotifier<RecitationEar>((
+    heard: '',
+    deaf: false,
+    trouble: null,
+  ));
 
   final _speech = SpeechToText();
   static RecitationListener? _current;
@@ -44,10 +71,16 @@ class RecitationListener {
     // The package keeps the callbacks of its first start only: they pass
     // what it reports on to the listener of the moment.
     _current = this;
-    final ready = await _speech.initialize(
-      onStatus: (status) => _current?._onStatus(status),
-      onError: (error) => _current?._onError(error),
-    );
+    final bool ready;
+    try {
+      ready = await _speech.initialize(
+        onStatus: (status) => _current?._onStatus(status),
+        onError: (error) => _current?._onError(error),
+      );
+    } on Object catch (error) {
+      _log('failed to start: $error');
+      return false;
+    }
     if (!ready || !identical(_current, this)) return false;
     final locales = await _speech.locales();
     final arabic = locales
@@ -61,11 +94,11 @@ class RecitationListener {
     if (!_onDeviceHeard) _onDevice = await _canAskOnDevice();
     if (!identical(_current, this)) return false;
     _active = true;
-    debugPrint(
-      'IQRO recitation on: $_locale of ${arabic.length} Arabic, '
+    _log(
+      'on: $_locale of ${arabic.length} Arabic, '
       '${_onDevice ? 'on the phone' : 'by the phone\'s choice'}',
     );
-    _watch = Timer.periodic(const Duration(seconds: 2), (_) => _check());
+    _watch = Timer.periodic(_beat, (_) => _check());
     await _listen();
     return true;
   }
@@ -77,7 +110,7 @@ class RecitationListener {
   }
 
   Future<void> stop() async {
-    debugPrint('IQRO recitation off');
+    _log('off');
     if (identical(_current, this)) _current = null;
     _active = false;
     _again?.cancel();
@@ -100,6 +133,11 @@ class RecitationListener {
   var _starting = false;
   var _lastSign = DateTime.now();
 
+  /// How long no word has been heard, since the last one or since the
+  /// microphone was turned on.
+  var _quiet = Duration.zero;
+  static const _beat = Duration(seconds: 2);
+
   Future<void> _listen() async {
     if (!_active || _starting) return;
     _starting = true;
@@ -114,9 +152,13 @@ class RecitationListener {
               if (!_active) return;
               if (_onDevice) _onDeviceHeard = true;
               _lastSign = DateTime.now();
-              debugPrint('IQRO recitation heard: ${result.recognizedWords}');
-              _show(heard: result.recognizedWords, error: null);
-              onHeard(result.recognizedWords);
+              final words = result.recognizedWords;
+              _log('heard: $words');
+              if (words.trim().isNotEmpty) {
+                _quiet = Duration.zero;
+                ear.value = (heard: words, deaf: false, trouble: null);
+              }
+              onHeard(words);
             },
             listenOptions: SpeechListenOptions(
               localeId: _locale,
@@ -129,23 +171,34 @@ class RecitationListener {
             ),
           )
           .timeout(patience);
-      debugPrint('IQRO recitation listen started');
+      _log('listen started');
       _listening = true;
       _lastSign = DateTime.now();
     } on Object catch (error) {
-      debugPrint('IQRO recitation listen failed: $error');
-      if (_active) _show(error: '$error');
+      _log('listen failed: $error');
+      if (_active) _trouble(RecitationTrouble.unavailable);
     } finally {
       _starting = false;
     }
   }
 
   /// Starts a listen when none runs, or when the one that should has been
-  /// silent longer than a pause may last.
+  /// silent longer than a pause may last; and tells the reader when no
+  /// word has been heard for a while.
   void _check() {
+    if (!_active) return;
+    final now = DateTime.now();
+    _quiet += _beat;
+    final deaf = _quiet >= recitationDeafAfter;
+    if (deaf != ear.value.deaf) {
+      ear.value = (
+        heard: ear.value.heard,
+        deaf: deaf,
+        trouble: ear.value.trouble,
+      );
+    }
     if (_again?.isActive ?? false) return;
-    if (_listening &&
-        DateTime.now().difference(_lastSign) < const Duration(seconds: 70)) {
+    if (_listening && now.difference(_lastSign) < const Duration(seconds: 70)) {
       return;
     }
     _listening = false;
@@ -154,7 +207,7 @@ class RecitationListener {
 
   void _onStatus(String status) {
     if (!_active) return;
-    debugPrint('IQRO recitation status: $status');
+    _log('status: $status');
     // What ending the listen before reports.
     if (_starting) return;
     _lastSign = DateTime.now();
@@ -168,28 +221,38 @@ class RecitationListener {
 
   void _onError(SpeechRecognitionError error) {
     if (!_active || _starting) return;
-    debugPrint('IQRO recitation error: ${error.errorMsg}');
+    final code = error.errorMsg;
+    _log('error: $code');
     // Silence is not a fault: the next listen starts.
-    final silence =
-        error.errorMsg == 'error_no_match' ||
-        error.errorMsg == 'error_speech_timeout';
-    if (!silence) {
-      _show(error: error.errorMsg);
+    final silence = code == 'error_no_match' || code == 'error_speech_timeout';
+    if (!silence && _onDevice && !_onDeviceHeard) {
       // No model for Arabic on the phone: through the network from here.
-      if (_onDevice && !_onDeviceHeard) _onDevice = false;
+      _onDevice = false;
+    } else if (code.contains('network') || code.contains('server')) {
+      _trouble(RecitationTrouble.network);
+    } else if (code.contains('language')) {
+      _trouble(RecitationTrouble.language);
+    } else if (code.contains('permission') ||
+        code.contains('audio') ||
+        code.contains('not_available')) {
+      _trouble(RecitationTrouble.unavailable);
     }
     _listening = false;
     _listenAgain();
+  }
+
+  void _trouble(RecitationTrouble trouble) {
+    ear.value = (
+      heard: ear.value.heard,
+      deaf: ear.value.deaf,
+      trouble: trouble,
+    );
   }
 
   void _listenAgain() {
     if (!_active) return;
     _again?.cancel();
     _again = Timer(const Duration(milliseconds: 150), _listen);
-  }
-
-  void _show({String? heard, required String? error}) {
-    ear.value = (heard: heard ?? ear.value.heard, error: error);
   }
 }
 
@@ -205,7 +268,7 @@ const recitationMissPause = Duration(milliseconds: 1500);
 /// The red of a word left out or said as another.
 const recitationWrong = Color(0xFFC62828);
 
-/// The trial's pointer: a round lens over the word the reader has said,
+/// The pointer of the recitation check: a round lens over the word the reader has said,
 /// gold; over the word he left out or said as another, red, where it waits
 /// until that word is read.
 class RecitationLens extends StatelessWidget {
@@ -269,10 +332,11 @@ const recitationHintDelay = Duration(seconds: 2);
 const recitationHintTime = Duration(seconds: 5);
 const recitationHintPause = Duration(seconds: 40);
 
-/// The hint by the microphone: what it is for. The trial's text, not
-/// translated.
+/// The hint by the microphone: what it is for.
 class RecitationHint extends StatelessWidget {
-  const RecitationHint({super.key});
+  const RecitationHint({required this.text, super.key});
+
+  final String text;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -281,19 +345,23 @@ class RecitationHint extends StatelessWidget {
       color: const Color(0xFF392D20),
       borderRadius: BorderRadius.circular(18),
     ),
-    child: const Row(
+    child: Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Flexible(
           child: Text(
-            'Нажмите и читайте вслух',
+            text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: Color(0xFFFFFCF7), fontSize: 13),
+            style: const TextStyle(color: Color(0xFFFFFCF7), fontSize: 13),
           ),
         ),
-        SizedBox(width: 6),
-        Icon(Icons.arrow_forward_rounded, size: 16, color: Color(0xFFFFFCF7)),
+        const SizedBox(width: 6),
+        const Icon(
+          Icons.arrow_forward_rounded,
+          size: 16,
+          color: Color(0xFFFFFCF7),
+        ),
       ],
     ),
   );

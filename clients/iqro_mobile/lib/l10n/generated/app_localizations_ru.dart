@@ -3737,4 +3737,47 @@ class AppLocalizationsRu extends AppLocalizations {
   String shareCardFromAyahs(String reference) {
     return 'из аятов $reference';
   }
+
+  @override
+  String get recitationCheck => 'Проверка чтения вслух';
+
+  @override
+  String get recitationStop => 'Выключить микрофон';
+
+  @override
+  String get recitationHint => 'Нажмите и читайте вслух';
+
+  @override
+  String get recitationNoticeHow =>
+      'Включите микрофон и читайте вслух: лупа идёт по вашим словам. Если пропустить слово или сказать другое, она остановится на нём и покраснеет, а телефон завибрирует.';
+
+  @override
+  String get recitationNoticeVoice =>
+      'Голос распознаёт служба распознавания речи вашего телефона (Google или Apple). На старых телефонах звук идёт к ней через интернет. IQRO запись не хранит и на свой сервер не отправляет.';
+
+  @override
+  String get recitationNoticeLimits =>
+      'Проверяются слова, а не таджвид и огласовки.';
+
+  @override
+  String get recitationNoticeStart => 'Включить микрофон';
+
+  @override
+  String get recitationListening => 'Слушаю…';
+
+  @override
+  String get recitationNotHearing =>
+      'Не слышу. Читайте вслух и проверьте интернет';
+
+  @override
+  String get recitationUnavailable =>
+      'Распознавание речи недоступно: на телефоне нет службы распознавания или микрофон не разрешён.';
+
+  @override
+  String get recitationNoArabic =>
+      'Распознавание речи на этом телефоне не поддерживает арабский язык.';
+
+  @override
+  String get recitationNoNetwork =>
+      'Нет связи со службой распознавания речи. Проверьте интернет.';
 }

@@ -1114,5 +1114,17 @@
   "shareCardFromAyah": "{reference}. ayetten",
   "@shareCardFromAyah": {"placeholders": {"reference": {"type": "String"}}},
   "shareCardFromAyahs": "{reference}. ayetlerden",
-  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}}
+  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}},
+  "recitationCheck": "Okuma kontrolü",
+  "recitationStop": "Mikrofonu kapat",
+  "recitationHint": "Dokunun ve sesli okuyun",
+  "recitationNoticeHow": "Mikrofonu açın ve sesli okuyun: mercek kelimelerinizi takip eder. Bir kelimeyi atlar veya başka bir kelime söylerseniz o kelimede durur ve kırmızıya döner, telefon titrer.",
+  "recitationNoticeVoice": "Sesinizi telefonunuzun konuşma tanıma hizmeti (Google veya Apple) tanır. Eski telefonlarda ses bu hizmete internet üzerinden gider. IQRO kaydı saklamaz ve kendi sunucusuna göndermez.",
+  "recitationNoticeLimits": "Kelimeler kontrol edilir; tecvid ve harekeler kontrol edilmez.",
+  "recitationNoticeStart": "Mikrofonu aç",
+  "recitationListening": "Dinliyorum…",
+  "recitationNotHearing": "Sizi duyamıyorum. Sesli okuyun ve interneti kontrol edin",
+  "recitationUnavailable": "Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.",
+  "recitationNoArabic": "Bu telefondaki konuşma tanıma Arapçayı desteklemiyor.",
+  "recitationNoNetwork": "Konuşma tanıma hizmetine bağlanılamıyor. İnterneti kontrol edin."
 }

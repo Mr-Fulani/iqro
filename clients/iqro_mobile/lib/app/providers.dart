@@ -358,6 +358,9 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> markReaderSwipeHintLearned() =>
       _set(state.copyWith(readerSwipeHintsShown: readerSwipeHintLimit));
 
+  Future<void> markRecitationNoticeSeen() =>
+      _set(state.copyWith(recitationNoticeSeen: true));
+
   Future<void> setDailyReadingGoal({
     required DailyUnit unit,
     required int target,

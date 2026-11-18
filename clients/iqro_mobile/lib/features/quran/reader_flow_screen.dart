@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -132,7 +133,7 @@ class _FlowPage extends ConsumerStatefulWidget {
   ConsumerState<_FlowPage> createState() => _FlowPageState();
 }
 
-/// The microphone of the recitation trial while it listens.
+/// The microphone of the recitation check while it listens.
 const _micOnColor = Color(0xFFB3261E);
 
 /// The ayah numbers on the paper: the app's gold, apart from the ink.
@@ -168,9 +169,8 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   var _opened = false;
   Timer? _scriptTimer;
 
-  /// The trial of following a recitation ([recitationFollowEnabled]): the
-  /// listener while the microphone is on, the surah's words in order, the
-  /// word reached and its box in the stack.
+  /// The recitation check: the listener while the microphone is on, the
+  /// surah's words in order, the word reached and its box in the stack.
   RecitationListener? _listener;
   RecitationMatcher? _matcher;
   var _followWords = const <QuranWord>[];
@@ -184,7 +184,8 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   Offset? _tapped;
 
   /// The hint by the microphone is up: it comes a moment after the text
-  /// opens and now and then after, until the microphone is tried.
+  /// opens and now and then after, to a reader who has not yet turned the
+  /// microphone on.
   var _followHint = false;
   Timer? _followHintTimer;
 
@@ -204,7 +205,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _words = WordRangeController(ref)..addListener(_onWords);
     wordRangePulling.addListener(_onWords);
     _rubMark.addListener(_onRubMark);
-    if (recitationFollowEnabled) {
+    if (!ref.read(appPreferencesProvider).recitationNoticeSeen) {
       _followHintTimer = Timer(recitationHintDelay, _showFollowHint);
     }
   }
@@ -383,8 +384,17 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     return (points[0] - points[1]).distance;
   }
 
+  /// A tap, to tell two of them in a row: where and when the one finger
+  /// went down, and the tap before it. Told from the touches themselves: a
+  /// double-tap recogniser over the text would hold back every tap in it.
+  ({Offset at, Duration time})? _tapDown;
+  ({Offset at, Duration time})? _lastTap;
+
   void _fingerDown(PointerDownEvent event, double size) {
     _fingers[event.pointer] = event.position;
+    _tapDown = _fingers.length == 1
+        ? (at: event.position, time: event.timeStamp)
+        : null;
     if (_fingers.length != 2 ||
         _words.range != null ||
         wordRangePulling.value ||
@@ -414,6 +424,24 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
 
   void _fingerUp(PointerEvent event) {
     _fingers.remove(event.pointer);
+    final down = _tapDown;
+    _tapDown = null;
+    if (down != null &&
+        event is PointerUpEvent &&
+        _pinch == null &&
+        (event.position - down.at).distance < kTouchSlop &&
+        event.timeStamp - down.time < kLongPressTimeout) {
+      final before = _lastTap;
+      if (before != null &&
+          down.time - before.time < kDoubleTapTimeout &&
+          (down.at - before.at).distance < kDoubleTapSlop &&
+          _words.range == null) {
+        _lastTap = null;
+        _resetSize();
+      } else {
+        _lastTap = (at: event.position, time: event.timeStamp);
+      }
+    }
     if (_pinch == null) return;
     _pinchHold?.cancel();
     _pinchHold = null;
@@ -539,6 +567,18 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       listening.dispose();
       return;
     }
+    // Before the first time: what happens to the voice, and what is and
+    // is not checked.
+    if (!ref.read(appPreferencesProvider).recitationNoticeSeen) {
+      final agreed = await showDialog<bool>(
+        context: context,
+        builder: (context) => const _RecitationNotice(),
+      );
+      if (agreed != true || !mounted) return;
+      unawaited(
+        ref.read(appPreferencesProvider.notifier).markRecitationNoticeSeen(),
+      );
+    }
     final words = <QuranWord>[];
     final texts = <String>[];
     for (final ayah in items) {
@@ -570,14 +610,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     });
     unawaited(WakelockPlus.disable());
     listener.dispose();
-    // The trial's one message, not translated.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Распознавание речи недоступно или нет доступа к микрофону',
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.recitationUnavailable)));
   }
 
   void _onHeard(String transcript) {
@@ -609,7 +644,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _followWord = _followWords[index];
     _followWrong = true;
     _followGlide = true;
-    unawaited(HapticFeedback.vibrate());
+    if (ref.read(appPreferencesProvider).readerHaptics) {
+      unawaited(HapticFeedback.vibrate());
+    }
     _placeLens();
   }
 
@@ -638,7 +675,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       setState(() {});
       return;
     }
-    debugPrint('IQRO recitation lens: ${word.ayahKey}:${word.position}');
     setState(() => _followRect = rect);
     final height = stack.size.height;
     if (!_scrollController.hasClients ||
@@ -753,18 +789,20 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: <Widget>[
-                      if (recitationFollowEnabled && items.isNotEmpty)
+                      if (items.isNotEmpty)
                         Flexible(
                           child: IgnorePointer(
                             child: AnimatedOpacity(
                               key: const ValueKey('reader-flow-follow-hint'),
                               opacity: _followHint ? 1 : 0,
                               duration: const Duration(milliseconds: 300),
-                              child: const RecitationHint(),
+                              child: RecitationHint(
+                                text: context.l10n.recitationHint,
+                              ),
                             ),
                           ),
                         ),
-                      if (recitationFollowEnabled && items.isNotEmpty)
+                      if (items.isNotEmpty)
                         RecitationMicPulse(
                           key: const ValueKey('reader-flow-follow-pulse'),
                           active: _followHint || _listener != null,
@@ -773,6 +811,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                               : recitationGold,
                           child: IconButton(
                             key: const ValueKey('reader-flow-follow'),
+                            tooltip: _listener == null
+                                ? context.l10n.recitationCheck
+                                : context.l10n.recitationStop,
                             onPressed: () => unawaited(_toggleFollow(items)),
                             color: _listener != null
                                 ? _micOnColor
@@ -908,7 +949,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                       if (at != null) _followFrom(at);
                     }
                   : null,
-              onDoubleTap: _words.range == null ? _resetSize : null,
               child: Stack(
                 key: _stackKey,
                 children: <Widget>[
@@ -1168,8 +1208,9 @@ class _FlowHeader extends StatelessWidget {
   }
 }
 
-/// What the phone hears, under the text while the trial listens: the last
-/// words heard, or the recogniser's error.
+/// The line under the text while the microphone is on: the last words
+/// heard; that it listens, before any; that none have come for a while;
+/// or what is wrong.
 class _FollowEar extends StatelessWidget {
   const _FollowEar({required this.ear});
 
@@ -1179,25 +1220,94 @@ class _FollowEar extends StatelessWidget {
   Widget build(BuildContext context) => ValueListenableBuilder<RecitationEar>(
     valueListenable: ear,
     builder: (context, value, _) {
-      final heard = value.heard.split(' ');
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const Icon(Icons.hearing_rounded, size: 16, color: mushafAccentColor),
-          const SizedBox(width: 8),
-          Text(
-            value.error ??
-                heard.sublist(math.max(0, heard.length - 4)).join(' '),
-            key: const ValueKey('reader-flow-follow-heard'),
-            textDirection: TextDirection.rtl,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: mushafAccentColor),
-          ),
-        ],
+      final l10n = context.l10n;
+      final heard = value.heard.trim().split(RegExp(r'\s+'));
+      final message = switch (value.trouble) {
+        RecitationTrouble.network => l10n.recitationNoNetwork,
+        RecitationTrouble.language => l10n.recitationNoArabic,
+        RecitationTrouble.unavailable => l10n.recitationUnavailable,
+        null when value.deaf => l10n.recitationNotHearing,
+        null when value.heard.trim().isEmpty => l10n.recitationListening,
+        null => null,
+      };
+      final quiet = value.trouble != null || value.deaf;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              quiet ? Icons.hearing_disabled_rounded : Icons.hearing_rounded,
+              size: 16,
+              color: quiet ? recitationWrong : mushafAccentColor,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                message ??
+                    heard.sublist(math.max(0, heard.length - 4)).join(' '),
+                key: const ValueKey('reader-flow-follow-heard'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textDirection: message == null ? TextDirection.rtl : null,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: quiet ? recitationWrong : mushafAccentColor,
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     },
   );
+}
+
+/// What the recitation check does with the voice and what it checks,
+/// before its microphone is turned on for the first time.
+class _RecitationNotice extends StatelessWidget {
+  const _RecitationNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    Widget line(IconData icon, String text) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
+        ],
+      ),
+    );
+    return AlertDialog(
+      key: const ValueKey('recitation-notice'),
+      title: Text(l10n.recitationCheck),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            line(Icons.mic_none_rounded, l10n.recitationNoticeHow),
+            line(Icons.privacy_tip_outlined, l10n.recitationNoticeVoice),
+            line(Icons.info_outline_rounded, l10n.recitationNoticeLimits),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          key: const ValueKey('recitation-notice-start'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(l10n.recitationNoticeStart),
+        ),
+      ],
+    );
+  }
 }
 
 /// The one setting of the plain text: the size of its Arabic.

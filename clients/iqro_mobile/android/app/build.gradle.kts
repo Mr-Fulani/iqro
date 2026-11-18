@@ -99,16 +99,6 @@ android {
 
 }
 
-// The microphone is asked for only by a build of the recitation trial
-// (--dart-define=RECITATION_FOLLOW=true, lib/features/quran/recitation_match.dart).
-if (dartDefines["RECITATION_FOLLOW"] == "true") {
-    androidComponents.onVariants { variant ->
-        variant.sources.manifests.addStaticManifestFile(
-            "src/recitationFollow/AndroidManifest.xml",
-        )
-    }
-}
-
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)

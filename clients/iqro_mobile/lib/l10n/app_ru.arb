@@ -1118,5 +1118,17 @@
   "shareCardFromAyah": "из аята {reference}",
   "@shareCardFromAyah": {"placeholders": {"reference": {"type": "String"}}},
   "shareCardFromAyahs": "из аятов {reference}",
-  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}}
+  "@shareCardFromAyahs": {"placeholders": {"reference": {"type": "String"}}},
+  "recitationCheck": "Проверка чтения вслух",
+  "recitationStop": "Выключить микрофон",
+  "recitationHint": "Нажмите и читайте вслух",
+  "recitationNoticeHow": "Включите микрофон и читайте вслух: лупа идёт по вашим словам. Если пропустить слово или сказать другое, она остановится на нём и покраснеет, а телефон завибрирует.",
+  "recitationNoticeVoice": "Голос распознаёт служба распознавания речи вашего телефона (Google или Apple). На старых телефонах звук идёт к ней через интернет. IQRO запись не хранит и на свой сервер не отправляет.",
+  "recitationNoticeLimits": "Проверяются слова, а не таджвид и огласовки.",
+  "recitationNoticeStart": "Включить микрофон",
+  "recitationListening": "Слушаю…",
+  "recitationNotHearing": "Не слышу. Читайте вслух и проверьте интернет",
+  "recitationUnavailable": "Распознавание речи недоступно: на телефоне нет службы распознавания или микрофон не разрешён.",
+  "recitationNoArabic": "Распознавание речи на этом телефоне не поддерживает арабский язык.",
+  "recitationNoNetwork": "Нет связи со службой распознавания речи. Проверьте интернет."
 }

@@ -3680,4 +3680,47 @@ class AppLocalizationsAr extends AppLocalizations {
   String shareCardFromAyahs(String reference) {
     return 'من الآيات $reference';
   }
+
+  @override
+  String get recitationCheck => 'التحقق من التلاوة';
+
+  @override
+  String get recitationStop => 'إيقاف الميكروفون';
+
+  @override
+  String get recitationHint => 'اضغط واقرأ بصوت مسموع';
+
+  @override
+  String get recitationNoticeHow =>
+      'شغّل الميكروفون واقرأ بصوت مسموع: العدسة تتبع كلماتك. إذا تركت كلمة أو قلت غيرها توقفت عندها واحمرّت واهتز الهاتف.';
+
+  @override
+  String get recitationNoticeVoice =>
+      'يتعرّف على صوتك خدمة التعرّف على الكلام في هاتفك (Google أو Apple). في الهواتف القديمة يُرسل الصوت إليها عبر الإنترنت. IQRO لا يحفظ التسجيل ولا يرسله إلى خادمه.';
+
+  @override
+  String get recitationNoticeLimits =>
+      'يُتحقق من الكلمات فقط، لا من التجويد ولا من الحركات.';
+
+  @override
+  String get recitationNoticeStart => 'تشغيل الميكروفون';
+
+  @override
+  String get recitationListening => 'أستمع…';
+
+  @override
+  String get recitationNotHearing =>
+      'لا أسمعك. اقرأ بصوت مسموع وتحقق من الإنترنت';
+
+  @override
+  String get recitationUnavailable =>
+      'التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.';
+
+  @override
+  String get recitationNoArabic =>
+      'التعرّف على الكلام في هذا الهاتف لا يدعم العربية.';
+
+  @override
+  String get recitationNoNetwork =>
+      'لا يوجد اتصال بخدمة التعرّف على الكلام. تحقق من الإنترنت.';
 }

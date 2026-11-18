@@ -1,8 +1,3 @@
-/// A trial, off unless the app is built with
-/// `--dart-define=RECITATION_FOLLOW=true`: the plain text follows the reader's
-/// voice, word by word, with the phone's own speech recognition.
-const recitationFollowEnabled = bool.fromEnvironment('RECITATION_FOLLOW');
-
 final _notLetters = RegExp('[^ء-ي]');
 
 /// [text] as bare letters, so the Mushaf's spelling and a recogniser's meet:

@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- The recitation check listens while its microphone is on: the phone's
+         speech recognition turns the reading into words. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Firebase Analytics adds these; statistics need no advertising ID or
          ad attribution. -->
     <uses-permission
@@ -245,6 +248,10 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
+        </intent>
+        <!-- The phone's speech recognition, for the recitation check. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 </manifest>
