@@ -23,6 +23,7 @@ import 'reader_page_turn.dart';
 import 'reader_words.dart';
 import 'recitation_follow.dart';
 import 'recitation_match.dart';
+import 'recitation_model/model_listener.dart';
 import 'rub_mark.dart';
 import 'word_range.dart';
 
@@ -174,12 +175,20 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   RecitationListener? _listener;
   RecitationMatcher? _matcher;
   var _followWords = const <QuranWord>[];
+  var _followTexts = const <String>[];
   QuranWord? _followWord;
   Rect? _followRect;
   var _followGlide = true;
 
   /// The lens waits on a word the reader left out or said as another.
   var _followWrong = false;
+
+  /// The trial build (`RECITATION_MODEL`): the model on the phone listens
+  /// instead of the phone's speech recognition; its tajweed remarks on the
+  /// ayah read last; the microphone's sound is kept for measuring.
+  var _followByModel = recitationModelBuild;
+  var _followDump = false;
+  final _modelRemarks = ValueNotifier<String>('');
   Timer? _missTimer;
   Offset? _tapped;
 
@@ -238,6 +247,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _scriptTimer?.cancel();
     _followHintTimer?.cancel();
     _missTimer?.cancel();
+    _modelRemarks.dispose();
     if (_listener case final listener?) {
       listener.dispose();
       unawaited(WakelockPlus.disable());
@@ -589,8 +599,22 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     }
     final start = words.indexWhere((word) => word.ayah >= _ayah);
     _followWords = words;
+    _followTexts = texts;
     _matcher = RecitationMatcher(texts)..moveTo(start < 0 ? 0 : start);
-    final listener = RecitationListener(onHeard: _onHeard);
+    _modelRemarks.value = '';
+    final listener = recitationModelBuild && _followByModel
+        ? ModelRecitationListener(
+            surah: widget.surah,
+            ayahs: <(int, int)>[
+              for (final ayah in items) (ayah.number, ayahWords(ayah).length),
+            ],
+            words: texts,
+            start_: start < 0 ? 0 : start,
+            onPlace: _onModelPlace,
+            onRemarks: _onModelRemarks,
+            dump: _followDump,
+          )
+        : RecitationListener(onHeard: _onHeard);
     setState(() {
       _listener = listener;
       // The lens shows where to read from.
@@ -636,6 +660,33 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     }
   }
 
+  /// The model's follower says where the lens goes, and whether the word
+  /// there was left out or said as another.
+  void _onModelPlace(int index, bool wrong) {
+    if (!mounted || _listener == null || index >= _followWords.length) return;
+    _followWord = _followWords[index];
+    _followWrong = wrong;
+    _followGlide = true;
+    if (wrong && ref.read(appPreferencesProvider).readerHaptics) {
+      unawaited(HapticFeedback.vibrate());
+    }
+    _placeLens();
+  }
+
+  void _onModelRemarks(List<ModelRemark> remarks) {
+    const rules = <String>[
+      'гунна короче',
+      'гунна при идгаме короче',
+      'мадд муттасыль короче',
+    ];
+    final texts = _followTexts;
+    _modelRemarks.value = <String>[
+      for (final remark in remarks)
+        if (remark.word < texts.length)
+          '${texts[remark.word]} — ${rules[remark.kind]}',
+    ].join(' · ');
+  }
+
   /// The reader left the expected word out or said another: the lens waits
   /// on that word, in red, and the phone gives a short buzz.
   void _markWrong() {
@@ -657,6 +708,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     if (index < 0) return;
     _missTimer?.cancel();
     _matcher?.moveTo(index);
+    if (_listener case final ModelRecitationListener model) model.moveTo(index);
     _followWord = word;
     _followWrong = false;
     _followGlide = true;
@@ -802,6 +854,16 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                             ),
                           ),
                         ),
+                      if (recitationModelBuild && items.isNotEmpty)
+                        _ModelSwitch(
+                          byModel: _followByModel,
+                          dump: _followDump,
+                          enabled: _listener == null,
+                          onChanged: (byModel) =>
+                              setState(() => _followByModel = byModel),
+                          onDump: () =>
+                              setState(() => _followDump = !_followDump),
+                        ),
                       if (items.isNotEmpty)
                         RecitationMicPulse(
                           key: const ValueKey('reader-flow-follow-pulse'),
@@ -854,7 +916,12 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                   height: 40,
                   child: Center(
                     child: _listener != null
-                        ? _FollowEar(ear: _listener!.ear)
+                        ? recitationModelBuild
+                              ? _ModelRemarks(
+                                  remarks: _modelRemarks,
+                                  child: _FollowEar(ear: _listener!.ear),
+                                )
+                              : _FollowEar(ear: _listener!.ear)
                         : page == null
                         ? null
                         : Text(
@@ -1206,6 +1273,79 @@ class _FlowHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The trial build's choice of who listens: the phone's speech recognition
+/// or the model on the phone. A long press keeps the microphone's sound of
+/// the next listen in a file, for measuring.
+class _ModelSwitch extends StatelessWidget {
+  const _ModelSwitch({
+    required this.byModel,
+    required this.dump,
+    required this.enabled,
+    required this.onChanged,
+    required this.onDump,
+  });
+
+  final bool byModel;
+  final bool dump;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+  final VoidCallback onDump;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onLongPress: enabled ? onDump : null,
+    child: SegmentedButton<bool>(
+      key: const ValueKey('reader-flow-follow-model'),
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        visualDensity: VisualDensity(horizontal: -3, vertical: -3),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      segments: <ButtonSegment<bool>>[
+        const ButtonSegment<bool>(value: false, label: Text('Google')),
+        ButtonSegment<bool>(
+          value: true,
+          label: Text(dump ? 'Модель ●' : 'Модель'),
+        ),
+      ],
+      selected: <bool>{byModel},
+      // Not greyed while the microphone is on: who listens stays in view.
+      onSelectionChanged: (chosen) {
+        if (enabled) onChanged(chosen.first);
+      },
+    ),
+  );
+}
+
+/// The trial's tajweed remarks on the ayah read last, small, under the
+/// line of what is heard.
+class _ModelRemarks extends StatelessWidget {
+  const _ModelRemarks({required this.remarks, required this.child});
+
+  final ValueNotifier<String> remarks;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<String>(
+    valueListenable: remarks,
+    builder: (context, value, _) => value.isEmpty
+        ? child
+        : Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              'проба: $value',
+              key: const ValueKey('reader-flow-follow-remarks'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: mushafAccentColor),
+            ),
+          ),
+  );
 }
 
 /// The line under the text while the microphone is on: the last words

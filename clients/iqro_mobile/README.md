@@ -545,6 +545,12 @@ Apple Developer и включён в provisioning profiles приложения 
 `test/features/recitation_match_test.dart` и «the microphone puts a lens…» в
 `test/features/reader_swipe_widget_test.dart`.
 
+### Проба: модель в телефоне
+
+Сборка с `--dart-define=RECITATION_MODEL=true` (и файлами от `tool/recitation_model/prepare.sh`) добавляет
+у микрофона переключатель «Google / Модель»: во втором режиме слушает модель на телефоне. Это проба, в
+выпусках её нет; описание и замеры — `docs/recitation-on-device-spike/README.md`.
+
 ### Что видит читатель
 
 - Перед первым включением — предупреждение (один раз, `recitation_notice_seen`): голос

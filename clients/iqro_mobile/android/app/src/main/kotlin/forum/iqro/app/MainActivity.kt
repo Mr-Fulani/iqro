@@ -82,6 +82,8 @@ class MainActivity : AudioServiceActivity() {
         qiblaCompass = compass
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/qibla_compass")
             .setStreamHandler(compass)
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/recitation_mic")
+            .setStreamHandler(RecitationMic(this))
         val updates = AppUpdateHandler(this)
         appUpdates = updates
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "forum.iqro.app/app_update")

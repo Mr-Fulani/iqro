@@ -1,0 +1,14 @@
+The trial follower's Dart code (clients/iqro_mobile/lib/features/quran/recitation_model) on a Mac, tool/recitation_model/harness.dart,
+on the recordings of make_cases.py: 36 clean recitations, 24 with an ayah cut out, 84 with a word cut out. 19.11.2026.
+
+clean-Ayman_Sowaid_64kbps-2.json: misses [(5, 13.8)], reached 6 of 36
+clean-Husary_128kbps-2.json: misses [(15, 35.5)], reached 36 of 36
+clean-Khaalid_Abdullaah_al-Qahtaanee_192kbps-113.json: misses [(18, 16.2)], reached 18 of 23
+clean-Minshawy_Murattal_128kbps-2.json: misses [(15, 26.8)], reached 36 of 36
+clean: {recitations: 36, words: 822, words reached: 787, false mistakes: 4, remarks: 3}
+clean: word begins → lens on it: median 0.22 s, 90 % 0.44 s, worst 1.83 s (787)
+ayah: {recitations: 24, noticed on the right word: 24, lens went on past the word left out: 3, more than one mistake: 1}
+ayah: next word begins → red lens: median 0.50 s, 90 % 0.58 s, worst 0.60 s (24)
+word-Khaalid_Abdullaah_al-Qahtaanee_192kbps-113-5.json: expected a miss at 19, got [(18, 16.2)]
+word: {recitations: 84, noticed on the right word: 83, lens went on past the word left out: 39, more than one mistake: 24, false mistake before it: 1}
+word: next word begins → red lens: median 0.59 s, 90 % 1.19 s, worst 10.25 s (83)

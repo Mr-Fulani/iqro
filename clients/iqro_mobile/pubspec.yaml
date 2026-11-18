@@ -127,6 +127,9 @@ flutter:
     - assets/names_audio/ru/
     - assets/names_audio/en/
     - assets/names_audio/tr/
+    # The trial recitation follower's model, in a trial build only
+    # (assets/recitation_model/README.md).
+    - assets/recitation_model/
 
   # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to
   # Arabic, ASCII digits and punctuation for Uthmani Quran and dua text.
