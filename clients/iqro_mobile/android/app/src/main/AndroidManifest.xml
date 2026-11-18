@@ -12,6 +12,11 @@
     <!-- The recitation check listens while its microphone is on: the phone's
          speech recognition turns the reading into words. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Not required: without a microphone the rest of the app works, and
+         Google Play keeps offering it to such devices. -->
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
     <!-- Firebase Analytics adds these; statistics need no advertising ID or
          ad attribution. -->
     <uses-permission
