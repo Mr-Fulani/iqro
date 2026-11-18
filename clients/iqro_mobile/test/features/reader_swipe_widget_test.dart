@@ -121,6 +121,14 @@ void main() {
       final speech = _Speech();
       SpeechToTextPlatform.instance = speech;
       WakelockPlusPlatformInterface.instance = _Wakelock();
+      var buzzes = 0;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'HapticFeedback.vibrate') buzzes += 1;
+          return null;
+        },
+      );
       // Animations off: the rings of a listening microphone never settle.
       await _pump(tester, reducedMotion: true);
       await _swipe(tester, await _card(tester, 3), 220);
@@ -235,6 +243,64 @@ void main() {
       await tester.pumpAndSettle();
       expect(onWord().height, greaterThan(small.height));
       expect(onWord().contains(tester.getCenter(lens)), isTrue);
+
+      // Two words that are not the next one: the lens waits on the word
+      // left out, in red, and the phone buzzes once.
+      const expected = QuranWord(2, 3, 4);
+      final wrong = find.byKey(const ValueKey('recitation-lens-wrong'));
+      Rect rectOf(QuranWord word) => tester
+          .widget<ReaderAyahWords>(
+            find.byKey(const ValueKey('reader-flow-ayah-3')),
+          )
+          .registry
+          .wordRect(word)!;
+      expect(wrong, findsNothing);
+      hear('الذين يؤمنون بالغيب كتاب');
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(wrong, findsNothing);
+      hear('الذين يؤمنون بالغيب كتاب نور');
+      await tester.pumpAndSettle();
+      expect(wrong, findsOneWidget);
+      expect(rectOf(expected).contains(tester.getCenter(lens)), isTrue);
+      expect(buzzes, 1);
+      hear('الذين يؤمنون بالغيب كتاب نور ظلام');
+      await tester.pumpAndSettle();
+      expect(buzzes, 1);
+      // Read rightly: gold again, and on.
+      hear('');
+      hear('ويقيمون');
+      await tester.pumpAndSettle();
+      expect(wrong, findsNothing);
+      expect(rectOf(expected).contains(tester.getCenter(lens)), isTrue);
+
+      // One word that is not the next one, and then nothing: a mistake
+      // after a moment.
+      hear('ويقيمون كتاب');
+      await tester.pump(
+        recitationMissPause - const Duration(milliseconds: 100),
+      );
+      expect(wrong, findsNothing);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(wrong, findsOneWidget);
+      expect(buzzes, 2);
+
+      // A tap on a word: the reading starts from it.
+      await tester.tapAt(rectOf(const QuranWord(2, 3, 7)).center);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(wrong, findsNothing);
+      expect(
+        rectOf(const QuranWord(2, 3, 7)).contains(tester.getCenter(lens)),
+        isTrue,
+      );
+      hear('');
+      hear('رزقناهم ينفقون');
+      await tester.pumpAndSettle();
+      expect(
+        rectOf(const QuranWord(2, 3, 8)).contains(tester.getCenter(lens)),
+        isTrue,
+      );
 
       // The recogniser stops after a pause: the next listen starts.
       speech.onStatus!('doneNoResult');

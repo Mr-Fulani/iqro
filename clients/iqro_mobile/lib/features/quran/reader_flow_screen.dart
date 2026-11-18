@@ -178,6 +178,11 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   Rect? _followRect;
   var _followGlide = true;
 
+  /// The lens waits on a word the reader left out or said as another.
+  var _followWrong = false;
+  Timer? _missTimer;
+  Offset? _tapped;
+
   /// The hint by the microphone is up: it comes a moment after the text
   /// opens and now and then after, until the microphone is tried.
   var _followHint = false;
@@ -231,6 +236,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _markTimer?.cancel();
     _scriptTimer?.cancel();
     _followHintTimer?.cancel();
+    _missTimer?.cancel();
     if (_listener case final listener?) {
       listener.dispose();
       unawaited(WakelockPlus.disable());
@@ -521,10 +527,12 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _followHint = false;
     final listening = _listener;
     if (listening != null) {
+      _missTimer?.cancel();
       setState(() {
         _listener = null;
         _followWord = null;
         _followRect = null;
+        _followWrong = false;
       });
       unawaited(WakelockPlus.disable());
       await listening.stop();
@@ -547,6 +555,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       _listener = listener;
       // The lens shows where to read from.
       _followWord = words.isEmpty ? null : words[start < 0 ? 0 : start];
+      _followWrong = false;
       _followGlide = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _placeLens());
@@ -572,13 +581,49 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   }
 
   void _onHeard(String transcript) {
-    final index = _matcher?.hear(transcript);
-    if (index == null || !mounted || _listener == null) return;
-    setState(() {
+    final matcher = _matcher;
+    if (matcher == null || !mounted || _listener == null) return;
+    final heard = matcher.hear(transcript);
+    _missTimer?.cancel();
+    if (heard.reached case final index?) {
+      // At once: the word's place is known before the next frame.
       _followWord = _followWords[index];
+      _followWrong = false;
       _followGlide = true;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _placeLens());
+      _placeLens();
+    } else if (heard.misses >= recitationMissesAtOnce) {
+      _markWrong();
+    } else if (heard.misses > 0) {
+      // One word that is not the one expected may be the recogniser's
+      // slip, which its next words put right: a mistake only if they do
+      // not come.
+      _missTimer = Timer(recitationMissPause, _markWrong);
+    }
+  }
+
+  /// The reader left the expected word out or said another: the lens waits
+  /// on that word, in red, and the phone gives a short buzz.
+  void _markWrong() {
+    final index = _matcher?.expected;
+    if (!mounted || _listener == null || index == null || _followWrong) return;
+    _followWord = _followWords[index];
+    _followWrong = true;
+    _followGlide = true;
+    unawaited(HapticFeedback.vibrate());
+    _placeLens();
+  }
+
+  /// A tap on a word while the microphone is on: reading starts from it.
+  void _followFrom(Offset global) {
+    final word = _wordRegistry.wordAt(global);
+    final index = word == null ? -1 : _followWords.indexOf(word);
+    if (index < 0) return;
+    _missTimer?.cancel();
+    _matcher?.moveTo(index);
+    _followWord = word;
+    _followWrong = false;
+    _followGlide = true;
+    _placeLens();
   }
 
   /// Puts the lens on its word and keeps that word in the upper part of the
@@ -588,7 +633,12 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     final stack = _stackKey.currentContext?.findRenderObject();
     if (!mounted || word == null || stack is! RenderBox) return;
     final rect = _wordRegistry.wordRectIn(word, stack);
-    if (rect == null) return;
+    if (rect == null) {
+      // Its ayah is not on screen: the colour of the lens still changes.
+      setState(() {});
+      return;
+    }
+    debugPrint('IQRO recitation lens: ${word.ayahKey}:${word.position}');
     setState(() => _followRect = rect);
     final height = stack.size.height;
     if (!_scrollController.hasClients ||
@@ -847,7 +897,17 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
             },
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: _words.range == null ? null : _words.clear,
+              // While the microphone listens a tap on a word starts the
+              // reading from it.
+              onTapUp: (details) => _tapped = details.globalPosition,
+              onTap: _words.range != null
+                  ? _words.clear
+                  : _listener != null
+                  ? () {
+                      final at = _tapped;
+                      if (at != null) _followFrom(at);
+                    }
+                  : null,
               onDoubleTap: _words.range == null ? _resetSize : null,
               child: Stack(
                 key: _stackKey,
@@ -1052,7 +1112,11 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                     ),
                   if (_loupe case final point?) WordRangeLoupe(point: point),
                   if (_followRect case final rect?)
-                    RecitationLens(word: rect, glide: _followGlide),
+                    RecitationLens(
+                      word: rect,
+                      glide: _followGlide,
+                      wrong: _followWrong,
+                    ),
                   RubMarkToast(controller: _rubMark),
                 ],
               ),

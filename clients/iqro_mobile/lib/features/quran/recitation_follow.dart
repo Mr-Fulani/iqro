@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -9,8 +11,10 @@ typedef RecitationEar = ({String heard, String? error});
 
 /// The phone's speech recognition, listening for Arabic until stopped: a
 /// recogniser ends a listen after a pause or an error, so each one is
-/// followed by the next. The phone chooses between its own model for Arabic,
-/// where it has one, and the network.
+/// followed by the next. Where the phone can recognise speech by itself
+/// (iOS, Android 12 and later) it is asked to, as that answers sooner than
+/// the network; if it has no model for Arabic the first listen fails and
+/// the rest go through the network.
 class RecitationListener {
   RecitationListener({required this.onHeard});
 
@@ -21,6 +25,11 @@ class RecitationListener {
 
   final _speech = SpeechToText();
   static RecitationListener? _current;
+
+  /// The phone's own recognition is asked for, until it fails before it
+  /// has heard a word; for as long as the app runs.
+  static var _onDevice = false;
+  static var _onDeviceHeard = false;
   var _active = false;
   String? _locale;
   Timer? _again;
@@ -49,11 +58,22 @@ class RecitationListener {
         arabic.where((id) => id.toUpperCase().endsWith('SA')).firstOrNull ??
         arabic.firstOrNull ??
         'ar-SA';
+    if (!_onDeviceHeard) _onDevice = await _canAskOnDevice();
+    if (!identical(_current, this)) return false;
     _active = true;
-    debugPrint('IQRO recitation on: $_locale of ${arabic.length} Arabic');
+    debugPrint(
+      'IQRO recitation on: $_locale of ${arabic.length} Arabic, '
+      '${_onDevice ? 'on the phone' : 'by the phone\'s choice'}',
+    );
     _watch = Timer.periodic(const Duration(seconds: 2), (_) => _check());
     await _listen();
     return true;
+  }
+
+  static Future<bool> _canAskOnDevice() async {
+    if (Platform.isIOS) return true;
+    if (!Platform.isAndroid) return false;
+    return (await DeviceInfoPlugin().androidInfo).version.sdkInt >= 31;
   }
 
   Future<void> stop() async {
@@ -92,6 +112,7 @@ class RecitationListener {
           .listen(
             onResult: (result) {
               if (!_active) return;
+              if (_onDevice) _onDeviceHeard = true;
               _lastSign = DateTime.now();
               debugPrint('IQRO recitation heard: ${result.recognizedWords}');
               _show(heard: result.recognizedWords, error: null);
@@ -99,6 +120,7 @@ class RecitationListener {
             },
             listenOptions: SpeechListenOptions(
               localeId: _locale,
+              onDevice: _onDevice,
               partialResults: true,
               listenMode: ListenMode.dictation,
               // A reader stops for breath: the listen goes on through it,
@@ -151,7 +173,11 @@ class RecitationListener {
     final silence =
         error.errorMsg == 'error_no_match' ||
         error.errorMsg == 'error_speech_timeout';
-    if (!silence) _show(error: error.errorMsg);
+    if (!silence) {
+      _show(error: error.errorMsg);
+      // No model for Arabic on the phone: through the network from here.
+      if (_onDevice && !_onDeviceHeard) _onDevice = false;
+    }
     _listening = false;
     _listenAgain();
   }
@@ -170,36 +196,67 @@ class RecitationListener {
 /// The gold of the lens and of the microphone when its hint is up.
 const recitationGold = Color(0xFFC49647);
 
+/// How many words in a row that are not the one expected are a mistake
+/// at once, and how long a single one waits for the recogniser's next
+/// words to put it right before it is one too.
+const recitationMissesAtOnce = 2;
+const recitationMissPause = Duration(milliseconds: 1500);
+
+/// The red of a word left out or said as another.
+const recitationWrong = Color(0xFFC62828);
+
 /// The trial's pointer: a round lens over the word the reader has said,
-/// which glides to the next one.
+/// gold; over the word he left out or said as another, red, where it waits
+/// until that word is read.
 class RecitationLens extends StatelessWidget {
-  const RecitationLens({required this.word, required this.glide, super.key});
+  const RecitationLens({
+    required this.word,
+    required this.glide,
+    this.wrong = false,
+    super.key,
+  });
 
   /// The word's box, in the stack the lens is put in.
   final Rect word;
 
   /// False while the text scrolls under the lens: it then keeps to its word.
   final bool glide;
+  final bool wrong;
 
   @override
   Widget build(BuildContext context) {
     // As wide as the word, within what a line and its neighbours leave.
     final size =
         word.width.clamp(word.height * .9, word.height * 1.5).toDouble() + 12;
+    final color = wrong ? recitationWrong : recitationGold;
     return AnimatedPositioned.fromRect(
       key: const ValueKey('recitation-lens'),
       rect: Rect.fromCircle(center: word.center, radius: size / 2),
-      duration: glide ? const Duration(milliseconds: 120) : Duration.zero,
+      // Short: the lens is late by what the recogniser takes already.
+      duration: glide ? const Duration(milliseconds: 60) : Duration.zero,
       curve: Curves.easeOut,
       child: IgnorePointer(
-        child: RawMagnifier(
-          size: Size.square(size),
-          magnificationScale: 1.2,
-          decoration: const MagnifierDecoration(
-            shape: CircleBorder(
-              side: BorderSide(color: recitationGold, width: 2.5),
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            RawMagnifier(
+              size: Size.square(size),
+              magnificationScale: 1.2,
+              decoration: MagnifierDecoration(
+                shape: CircleBorder(
+                  side: BorderSide(color: color, width: wrong ? 3.5 : 2.5),
+                ),
+              ),
             ),
-          ),
+            if (wrong)
+              DecoratedBox(
+                key: const ValueKey('recitation-lens-wrong'),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: recitationWrong.withValues(alpha: .16),
+                ),
+              ),
+          ],
         ),
       ),
     );
