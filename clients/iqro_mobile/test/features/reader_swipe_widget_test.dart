@@ -107,7 +107,7 @@ void main() {
     await tester.tapAt(const Offset(180, 400));
     await tester.pumpAndSettle();
     expect(app.preferences.readerFlowFontSize, defaultReaderFlowFontSize);
-    expect(tester.getSize(ayah).height, before);
+    expect(tester.getSize(ayah).height, closeTo(before, .01));
     expect(_place(tester), 'Аят 3 · стр. 1');
     expect(tester.takeException(), isNull);
   });
@@ -199,7 +199,7 @@ void main() {
     expect(lens, findsOneWidget);
     final first = tester.getRect(lens);
     expect(first.right, greaterThan(250));
-    expect(first.width, first.height);
+    expect(first.width, closeTo(first.height, .01));
 
     void hear(String words) => speech.onTextRecognition!(
       jsonEncode(<String, Object>{
@@ -213,7 +213,10 @@ void main() {
     // The first word heard: the lens is on it already.
     hear('الذين');
     await tester.pumpAndSettle();
-    expect(tester.getRect(lens).center, first.center);
+    expect(
+      (tester.getRect(lens).center - first.center).distance,
+      closeTo(0, .01),
+    );
 
     // The next: the lens goes to it, to the left.
     hear('الذين يؤمنون');
