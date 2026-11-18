@@ -23,7 +23,7 @@ also one database transaction: a fatal domain/validation error in any operation 
 earlier operations in that HTTP request, so the client never receives an opaque error after a
 hidden partial commit.
 
-The v1 sync entity union contains `reading_position`, `bookmark`, and `reminder`. Reminder rules
+The v1 sync entity union contains `reading_position`, `bookmark`, `ayah_annotation`, and `reminder`. Reminder rules
 use the same `POST /api/v1/sync/push` envelope and the same per-user monotonic cursor as reading
 state. The prayer profile remains a separate singleton resource at
 `GET/PUT /api/v1/me/prayer-profile`; it is not a sync entity.
@@ -137,8 +137,9 @@ gap. A cursor below this floor returns `410 application/problem+json` with:
 ## Full resync
 
 Start with `GET /api/v1/sync/pull?full_resync=true&limit=...`. The response contains current
-reading positions, bookmarks, and reminder rules, including tombstones, plus `snapshot_cursor`.
-The stable phase order is reading positions, bookmarks, then reminders; entities inside each
+reading positions, bookmarks, ayah annotations, and reminder rules, including tombstones, plus
+`snapshot_cursor`. The stable phase order is reading positions, bookmarks, ayah annotations, then
+reminders; entities inside each
 phase are ordered by ID. Continue with the signed `next_page_token` until `has_more=false`.
 Tokens bind the authenticated user, snapshot cursor, phase, and last ID, and expire by default
 after 24 hours.

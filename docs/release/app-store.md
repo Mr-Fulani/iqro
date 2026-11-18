@@ -12,7 +12,7 @@
 - аккаунта Apple Developer нет, приложения в App Store Connect нет;
 - bundle ID `forum.iqro.app`, виджеты — `forum.iqro.app.PrayerTimesHomeWidget`, App Group
   `group.forum.iqro.app`; iOS/iPadOS 15+, iPhone и iPad;
-- версия берётся из `pubspec.yaml` (`1.0.5+6` → «1.0.5», сборка 6), у виджета та же
+- версия берётся из `pubspec.yaml` (`1.0.10+11` → «1.0.10», сборка 11), у виджета та же
   (это проверяет нативный тест);
 - подпись готова в коде (PR #217): Release подписывается вручную сертификатом Apple Distribution
   и профилями «IQRO App Store» и «IQRO Widget App Store», Team ID подставляет workflow
@@ -48,13 +48,14 @@
 | Значки | полный набор `AppIcon`, значок 1024×1024 без прозрачности (печать IQRO) |
 | Заставка | `LaunchScreen.storyboard`: печать на бежевом фоне |
 | Местоположение | `NSLocationWhenInUseUsageDescription` на 4 языках (`*.lproj/InfoPlist.strings`); «Всегда» не запрашивается, `geolocator` собран с `BYPASS_PERMISSION_LOCATION_ALWAYS` |
+| Микрофон и распознавание речи | `NSMicrophoneUsageDescription` и `NSSpeechRecognitionUsageDescription` на 4 языках — проверка чтения вслух; на iPhone не запускалась |
 | Уведомления | разрешение запрашивается кодом, строка в Info.plist не нужна; учтён предел iOS в 64 запланированных уведомления (горизонт 8 дней) |
 | Фоновая работа | `UIBackgroundModes`: `audio` (чтение Корана с выключенным экраном), `fetch` + `BGTaskSchedulerPermittedIdentifiers` для обслуживания кэша |
 | Шифрование | `ITSAppUsesNonExemptEncryption = false`: только HTTPS и Keychain, вопросы об экспорте при каждой сборке не появятся |
 | Сеть | в релизе исключений ATS нет; `NSAllowsArbitraryLoads` только в `Info-Debug.plist` |
 | Privacy manifests | у приложения и у виджета (`PrivacyInfo.xcprivacy`); у пакетов из списка Apple свои манифесты есть. Без манифеста `audio_service`, `audio_session`, `just_audio`, `home_widget` и Flutter-обёртки Firebase: их нет в списке Apple, нативные Firebase-pods несут свои. Окончательно проверит App Store Connect при первой загрузке: недостающее придёт письмом ITMS-91053/91061 |
 | Виджеты | WidgetKit: время намаза и план чтения с ростом пальмы, оба `systemMedium`; App Group одинаковый в обоих entitlements и в Dart; Swift компилируется в CI, но на устройстве не запускался |
-| Deep links | схема `iqro://`, `FlutterDeepLinkingEnabled`, `applinks:iqro.forum` в entitlements; на сайте маршрут готов (пути `/dua/*` и `/salah`), не хватает только Team ID на проде |
+| Deep links | схема `iqro://`, `FlutterDeepLinkingEnabled`, `applinks:iqro.forum` в entitlements; на сайте маршрут готов (пути `/dua/*`, `/salah` и `/courses`), не хватает только Team ID на проде |
 | Firebase | параметры iOS берутся из `config/firebase.json` (`FIREBASE_IOS_APP_ID`, `FIREBASE_IOS_API_KEY`), `GoogleService-Info.plist` не нужен; сбор выключен до согласия; рекламного идентификатора нет (`$FirebaseAnalyticsWithoutAdIdSupport`), окно App Tracking Transparency не нужно |
 | Вход через Google | на iOS выключен кодом (`google_sign_in_gateway.dart` показывает кнопку только на Android); на iOS — вход по коду из письма. См. раздел 8 |
 | Sentry | пакет `sentry` (чистый Dart) без DSN — выключен; нативные сбои iOS не ловит |

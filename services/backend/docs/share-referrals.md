@@ -5,7 +5,8 @@
 доверенными URL без выпуска клиента, выдаёт непрозрачные referral-коды, принимает аналитику,
 фиксирует атрибуцию и только на сервере создаёт и подтверждает бонусы.
 
-Модуль: `quran_backend.modules.share_referrals`. Миграция: `share_referrals/0001_initial.py`.
+Модуль: `quran_backend.modules.share_referrals`. Миграции: `share_referrals/0001_initial.py`,
+`0002_alter_referralattribution_source_and_more.py`.
 
 ## Новые endpoints
 
@@ -138,7 +139,7 @@ endpoint не является open redirect. Отозванный, выключ
   уникален.
 - `ReferralAttribution`: связь code → подтверждённый invitee; invitee уникален внутри кампании,
   self-referral запрещён, есть idempotency key и source.
-- `ReferralQualification`: явное `pending → qualified|rejected`. Автоматического fake-signup hook
+- `ReferralQualification`: явное `pending → qualified|rejected`, затем `qualified → reversed`. Автоматического fake-signup hook
   нет.
 - `ReferralReward`: серверный ledger entry `pending → approved|reversed` и `approved → reversed`;
   сумма копируется из кампании в момент квалификации, поэтому последующая смена кампании не

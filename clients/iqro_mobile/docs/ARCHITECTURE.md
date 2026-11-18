@@ -38,9 +38,9 @@ Screen → Riverpod controller/provider → Feature repository
 - `LocalDatabase` владеет версией SQLite schema, кэшем, позициями чтения и outbox.
 - `SyncService` отправляет идемпотентные операции, затем применяет server cursor pull;
   конфликт не показывается пользователю техническим кодом.
-- `BackgroundMaintenanceService` одним системным заданием отправляет outbox, сверяет
-  позицию аудио и автономно продлевает локальные напоминания; сеть для запуска задания
-  не обязательна.
+- `BackgroundMaintenanceService` отправляет outbox, сверяет позицию аудио и продлевает
+  локальные напоминания при запуске и возврате приложения на экран; периодическое системное
+  задание сейчас не планируется (`core/background/background_work.dart`).
 - `AudioPlaybackSyncService` использует server revision и timestamp клиента, поэтому
   изменения на двух устройствах разрешаются детерминированно, а снятый с публикации
   трек никогда не восстанавливается в плеер.
@@ -72,7 +72,7 @@ Screen → Riverpod controller/provider → Feature repository
 | Чтецы и аудиометаданные | cache fallback + проверенный audio package | позиция и настройки плеера | versioned account position API |
 | Позиция чтения и закладки | SQLite | SQLite + outbox | push/pull с revision |
 | Ду’а | локализованный cache fallback | избранное + outbox | идемпотентный PUT/retry |
-| План чтения | SQLite | SQLite | backend parity для goals/sessions/history ещё не подключён |
+| План чтения | последний dashboard, только просмотр | неотправленная сессия, повтор с тем же idempotency ID | серверные goal/sessions/history (`/me/reading-planner`, `/me/reading-sessions`) |
 | Заучивание | cache fallback | API-команды с локальным fallback | versioned account API |
 | Share/referral events | встроенный fallback | outbox | идемпотентный event API |
 
@@ -89,8 +89,8 @@ Screen → Riverpod controller/provider → Feature repository
 
 `AudioOfflineRepository` применяет тот же принцип к 114 аудиодорожкам: Range-resume,
 проверка формата, размера и SHA-256, затем атомарная активация. `NotificationGateway`
-строит горизонт намазов локальным портом закреплённого движка Adhan, поэтому WorkManager
-может продлевать расписание без сети.
+строит горизонт намазов локальным портом закреплённого движка Adhan, поэтому расписание
+продлевается без сети.
 
 `OfflineStorageRepository` строит единый инвентарь Mushaf/audio-пакетов из SQLite и считает
 фактический размер только внутри выделенного `ApplicationSupport/offline_packages`. Перед
@@ -105,8 +105,8 @@ Screen → Riverpod controller/provider → Feature repository
 iOS/iPadOS 15. UIScene является единственным lifecycle. `AppDelegate` до завершения
 launch регистрирует BGTaskScheduler handlers и plugin registrant для отдельного
 background Flutter engine. Идентификатор `forum.iqro.app.periodic-maintenance-v1`
-одинаков в Dart, `Info.plist` и native registration, поэтому outbox, playback sync и
-горизонт напоминаний могут обслуживаться системным BGAppRefreshTask.
+одинаков в Dart, `Info.plist` и native registration; сама задача сейчас не планируется
+(см. `core/background/background_work.dart`).
 
 `UIBackgroundModes` ограничены `audio` и `fetch`. Location background mode и Always
 permission отсутствуют: координаты запрашиваются только при открытом приложении для
@@ -125,7 +125,7 @@ Quran-текст всегда получает RTL и отдельную тип�
 
 ```text
 API_BASE_URL      корень backend без /api/v1
-APP_ENV           staging или production
+APP_ENV           local или production
 APP_DOWNLOAD_URL  fallback URL для системного share sheet
 ```
 
@@ -136,13 +136,10 @@ release-режиме пустая конфигурация запрещена, �
 
 ## Следующие безопасные расширения
 
-1. Завершить связку Мусхаф ↔ аудио: дополнительные проверенные native-варианты Мусхафа и
-   выбор разрешённого качества аудиодорожки.
-2. Подключить мобильный План к backend goals/sessions/history и автоматическому зачёту
-   реально прочитанных страниц.
-3. Добавить расширенные настройки расчёта намаза и управление устройствами/приватностью.
-4. Добавить profile/release performance evidence, Android device integration smoke-tests,
+1. Завершить связку Мусхаф ↔ аудио: дополнительные проверенные native-варианты Мусхафа.
+2. Добавить управление устройствами/приватностью.
+3. Добавить profile/release performance evidence, Android device integration smoke-tests,
    подписанный Play Console pipeline и iPhone/iPad real-device matrix.
-5. Вынести обезличенную crash/QoE telemetry за отдельный consent и privacy review.
-6. Выделить `core/network`, `core/storage` и дизайн-систему в workspace packages только
+4. Вынести обезличенную crash/QoE telemetry за отдельный consent и privacy review.
+5. Выделить `core/network`, `core/storage` и дизайн-систему в workspace packages только
    после появления независимых команд или второго Flutter-приложения.

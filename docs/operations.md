@@ -334,8 +334,9 @@ data tags, route cache и versioned sitemap. Временные сетевые/5
 Один и тот же случайный `WEB_CONTENT_REVALIDATION_SECRET` длиной от 32 символов передаётся
 backend/worker и web через secret store; в логах и URL его быть не должно. Internal URL по
 умолчанию в Compose — `http://web:3000/api/internal/content-revalidation`. Endpoint не принимает
-произвольные cache tags/paths: только allowlisted Quran/audio события с валидными edition,
-content version и UUID. Без корректного секрета он отвечает 404.
+произвольные cache tags/paths: только allowlisted события опубликованного контента (Коран, аудио,
+ду‘а, имена, курсы намаза, таджвида и тематические, квизы, объявления, социальные профили) с
+валидными идентификаторами. Без корректного секрета он отвечает 404.
 
 Gateway отдельно кэширует только публичные `GET`/`HEAD` JSON-маршруты Quran, каталог
 чтецов/декламаций, список методов расчёта молитв и зарезервированный префикс `library`.
@@ -523,7 +524,8 @@ HSTS начинает защищать пользователя только п�
 
 Web CI запускает официальный Lighthouse на том же standalone entrypoint, который используется
 в production-образе. Runner сам собирает bundle с детерминированным mock publication API и
-проверяет шесть маршрутов: landing RU/EN/AR/TR и опубликованную суру RU/AR. До измерения он
+проверяет 14 маршрутов: landing RU/EN/AR/TR, `/ru/quran`, `/ru/audio`, опубликованную суру RU/AR и
+уроки намаза, таджвида и тематического курса RU/AR. До измерения он
 отдельно подтверждает ожидаемые `lang` и `dir`, поэтому арабский RTL входит в blocking gate, а
 не остаётся визуальной договорённостью.
 
@@ -636,8 +638,8 @@ URL/размер/MIME и присутствие всех `MEDIA_CDN_REQUIRED_ORI
 ## Dependency и container security gate
 
 Backend CI экспортирует только production-зависимости из frozen `uv.lock` вместе с хешами и
-проверяет их через закреплённый `pip-audit`. Web CI отдельно запускает полный
-`npm audit --audit-level=high`, включая build/test tooling. Production Compose CI после сборки
+проверяет их через закреплённый `pip-audit`. Web CI отдельно запускает
+`npm audit --omit=dev --audit-level=high` (только production-зависимости, без build/test tooling). Production Compose CI после сборки
 проверяет Trivy все deployable образы: backend, web, gateway, PostgreSQL и Redis. Любая известная
 `HIGH`/`CRITICAL` уязвимость блокирует gate, в том числе пока не имеющая исправления.
 Backend и web runtime не содержат package managers; PostgreSQL wrapper flatten'ит финальный

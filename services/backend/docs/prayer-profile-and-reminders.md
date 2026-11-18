@@ -13,17 +13,18 @@ Backend:
 - синхронизирует намерение пользователя: молитва/чтение/повторение, дни недели,
   локальное время либо смещение от молитвы и короткий тип сигнала;
 - обеспечивает optimistic concurrency, идемпотентность, tombstones, квоты и retention;
-- никогда не хранит координаты, вычисленные occurrence times, push token или историю
-  срабатываний в этом модуле.
+- не хранит координаты, вычисленные occurrence times, push token или историю срабатываний в
+  профиле и правилах; исключение — округлённые координаты и ключи в device Web Push
+  subscription после явного согласия (см. ниже).
 
-Правила напоминаний являются сущностями общего sync v1 вместе с reading position и
-закладками. Профиль намаза намеренно остаётся отдельным singleton endpoint: его нельзя
+Правила напоминаний являются сущностями общего sync v1 вместе с reading position,
+закладками и ayah annotation. Профиль намаза намеренно остаётся отдельным singleton endpoint: его нельзя
 посылать как `entity_type` в `/api/v1/sync/push`.
 
 Flutter рассчитывает ближайшие occurrence times и регистрирует локальные системные
-уведомления. Web и Mini App в текущем срезе синхронизируют настройки и показывают
-in-app напоминания только пока клиент активен. Server push, bot delivery, delivery log и
-полный азан не входят в этот этап.
+уведомления. Web синхронизирует настройки и получает напоминания через Web Push
+(`/api/v1/me/web-push`). Bot delivery, delivery log и полный азан на сайте не входят в этот
+этап.
 
 Все endpoint ниже требуют авторизацию. Все ответы, включая ошибки, получают
 `Cache-Control: private, no-store, max-age=0`, `Pragma: no-cache`, `Expires: 0` и
@@ -295,7 +296,7 @@ uv run python manage.py prune_reminder_tombstones --dry-run
 ```
 
 Общий full resync (`GET /api/v1/sync/pull?full_resync=true`) проходит фазы reading
-position, bookmark, затем reminder и включает активные правила и tombstones. Signed
+position, bookmark, ayah annotation, затем reminder и включает активные правила и tombstones. Signed
 `next_page_token` фиксирует snapshot cursor и текущую фазу. Отсутствие записи становится
 авторитетным только после получения последней страницы; до этого клиент не удаляет
 локальные правила и не отменяет уведомления из-за промежуточного неполного списка.
@@ -373,8 +374,8 @@ Prayer event приходит из расчётного движка как од
 
 ## Web и Telegram Mini App
 
-Обычный web push требует Service Worker, push subscription и явного разрешения; этот
-backend-срез ещё не хранит subscriptions и не обещает доставку после закрытия страницы.
+Обычный web push требует Service Worker, push subscription и явного разрешения; подписки
+хранит и исполняет модуль `reminders` (`GET/PUT/DELETE /api/v1/me/web-push`).
 Архитектурная основа браузерного механизма описана в
 [MDN Push API](https://developer.mozilla.org/en-US/docs/Web/API/Push_API).
 

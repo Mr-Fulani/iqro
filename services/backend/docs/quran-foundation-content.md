@@ -31,11 +31,10 @@ Bootstrap `mushafs:*` сохраняет:
 группируются по странице, поэтому публичный запрос читает одну строку страницы, а не сотни
 отдельных строк. MP3 и Mushaf image blobs этот sync не копирует.
 
-Для ID 11 snapshot содержит относительные image keys вида `w/rq-color/...`, но официальный
-публичный base URL не документирован, а проверенный CDN font endpoint для такого пути отвечает
-404. Поэтому API возвращает `rendering.available=false`: каталог и разметка сохранены, но клиент
-не должен собирать URL самостоятельно. Это снимается после появления подтверждённого origin от
-Quran.Foundation. Для ID 1, 5 и 19 API возвращает только проверенные официальные font URL.
+API отдаёт `rendering` для 13 макетов (ID 1, 2, 4, 5, 6, 7, 10, 11, 12, 14, 15, 16, 19); у ID 10,
+11 и 12 страницы собираются из картинок слов. Клиент использует URL только из `rendering` и не
+собирает их сам. Список макетов — в
+[docs/quran-foundation-mushafs.md](../../../docs/quran-foundation-mushafs.md).
 
 Нативные iOS/Android клиенты не должны самостоятельно собирать страницы из WOFF2/COLRv1.
 Отдельный versioned pipeline заранее создаёт lossless WebP в managed object storage и включает
@@ -72,7 +71,9 @@ Celery Beat выполняет incremental sync ежедневно. Это ук�
 ## Публичный API Iqro
 
 - `GET /api/v1/quran/foundation/mushafs`
+- `GET /api/v1/quran/foundation/mushafs/{mushaf_id}/page-index`
 - `GET /api/v1/quran/foundation/mushafs/{mushaf_id}/pages/{page_number}`
+- `GET /api/v1/quran/foundation/mushafs/{mushaf_id}/offline-manifest`
 
 Ответ страницы содержит font mode, `rendering`, verse mapping и упорядоченные слова. Клиент
 использует URL только из `rendering`, а слова группирует по `line_number`. В Quran DOM обязательно
@@ -82,12 +83,9 @@ Celery Beat выполняет incremental sync ежедневно. Это ук�
 страниц не опубликован или source checksum изменился, status равен `not_ready`, а список assets
 пуст. HTTP request никогда не запускает renderer.
 
-Web reader показывает только доступные варианты из источника:
-QCF V2 (`1`), KFGQPC Hafs (`5`) и цветной QCF V4 Tajweed (`19`). По умолчанию выбирается
-KFGQPC, если он загружен. При пустом каталоге отображается сообщение об отсутствии данных.
-Это варианты одного риваята:
-все доступные production resources сейчас относятся к Hafs и отличаются способом рендеринга.
-ID `11` не попадает в пользовательский список, пока `rendering.available=false`. Слова остаются
+Web reader показывает доступные варианты из источника — сейчас 13 макетов, список в
+[docs/quran-foundation-mushafs.md](../../../docs/quran-foundation-mushafs.md). При пустом
+каталоге отображается сообщение об отсутствии данных. Слова остаются
 интерактивными: выбор или воспроизведение аята подсвечивает все его фрагменты на странице.
 
 ## Таджвид: правило по нажатию на слово

@@ -65,7 +65,7 @@ TELEGRAM_ALERT_CHAT_ID=-1001234567890
 Проверка:
 
 ```bash
-docker compose -f compose.production.yaml -f compose.production.tls.yaml exec backend python manage.py send_test_alert
+docker compose --env-file services/backend/.env.production -f compose.production.yaml -f compose.production.tls.yaml exec backend python manage.py send_test_alert
 ```
 
 В группе появится «✅ Проверка уведомлений IQRO». Если нет — команда напишет причину:

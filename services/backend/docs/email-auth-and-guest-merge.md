@@ -63,5 +63,6 @@ Celery Beat scheduler.
 
 Device inventory, selective revoke and grace-period account deletion/cancellation are documented
 in [auth-and-sync.md](auth-and-sync.md) and exposed in the web cabinet. Remaining identity work is
-safe unlink/change plus optional Google/Apple/Telegram providers. The cabinet also keeps global
+safe unlink/change plus optional Apple/Telegram providers (Google sign-in is implemented, see
+`docs/google-sign-in.md`). The cabinet also keeps global
 `logout-all` behind an explicit confirmation step.

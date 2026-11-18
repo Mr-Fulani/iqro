@@ -148,7 +148,7 @@ a deterministic conflict instead of overwriting newer state. Bearer-authenticate
 are always bound to the device encoded in the access token.
 
 `POST /api/v1/sync/push` accepts up to 100 operations. The v1 entity union contains reading
-positions, bookmarks, and reminder rules; the prayer profile remains a separate singleton API.
+positions, bookmarks, ayah annotations, and reminder rules; the prayer profile remains a separate singleton API.
 Each operation has a UUID `operation_id`; replaying the same normalized request returns the
 stored result, while reusing the ID for different data returns `sync_operation_reuse`. Pull
 responses are bounded and contain accepted snapshots, including bookmark and reminder
@@ -159,8 +159,8 @@ Celery Beat runs bounded auth and sync retention tasks hourly; production must r
 one Beat scheduler. Sync changes are retained for 180 days by default. When an older cursor
 has been pruned, `/sync/pull` returns `410 sync_cursor_expired` instead of silently
 skipping data. The client starts `full_resync=true`; subsequent pages use short-lived,
-user-bound signed continuation tokens. Full resync visits reading positions, bookmarks, then
-reminders, and includes active reminder rules and tombstones. It must complete that full-resync
+user-bound signed continuation tokens. Full resync visits reading positions, bookmarks, ayah
+annotations, then reminders, and includes active reminder rules and tombstones. It must complete that full-resync
 protocol before treating absence as authoritative or resuming incremental pull from the returned
 snapshot cursor.
 

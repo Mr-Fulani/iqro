@@ -10,8 +10,8 @@ Production работает на https://iqro.forum: база копируетс
 - PostgreSQL: прежние `backup.sh`, `verify.sh`, `restore-check.sh` и `offsite.py`.
 - Все загрузки и скачивания: общий S3-клиент, SHA-256, проверка размера/metadata и
   публикация скачанного файла только после проверки в `ops/postgres/offsite.py`.
-- Уведомления: существующий `ops/monitoring/heartbeat.py` и внешний Healthchecks.
-  Второго провайдера уведомлений или отдельного канала ошибок нет.
+- Уведомления: `ops/monitoring/heartbeat.py` шлёт в Telegram (`ops/monitoring/alerts.py`,
+  [alerts.md](alerts.md)); внешний Healthchecks необязателен.
 - Зависимости S3: существующий `boto3` из backend lock-файла.
 - Git: стандартный [bundle](https://git-scm.com/docs/git-bundle).
   Конфигурация шифруется стандартным [age](https://github.com/FiloSottile/age), без
