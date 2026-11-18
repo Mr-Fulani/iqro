@@ -1,0 +1,79 @@
+  131  clips used
+  299  A cuts
+  294  A remark on the cut word
+  262  A … and it says the word is missing
+  295  A remark on the cut word or a neighbour
+    4  A no remark at all
+    8  A words far from the cut that got a remark
+  892  A words far from the cut
+  131  B wrong-ayah trials
+  581  B words expected
+  445  B words with a remark
+  119  B trials with at least half of the words remarked
+    1  B trials with no remark
+   75  C madd cuts
+    6  C remark "madd too short / dropped" on that word
+    4  C another remark on that word only
+   65  C no remark on that word
+   67  clips left out: the uncut clip is not heard exactly
+
+C by kind of madd (caught / not):
+  AaredMaddRule missed: 59
+  LeenMaddRule missed: 1
+  MonfaselMaddRule missed: 7
+  MottaselMaddRule missed: 2
+  MottaselMaddRule caught: 6
+
+examples A:
+   Abdullah_Basfar_192kbps 1:1 cut «ٱللَّهِ» → ٱللَّهِ: this word was not heard
+   Abdullah_Basfar_192kbps 1:1 cut «ٱلرَّحْمَـٰنِ» → ٱلرَّحْمَـٰنِ: natural madd dropped: the vowel must be lengthened; ٱلرَّحْمَـٰنِ: a sound was dropped: مَاانِررَح
+   Abdullah_Basfar_192kbps 1:2 cut «لِلَّهِ» → لِلَّهِ: this word was not heard
+   Abdullah_Basfar_192kbps 1:2 cut «رَبِّ» → رَبِّ: this word was not heard
+   Abdullah_Basfar_192kbps 1:4 cut «يَوْمِ» → يَوْمِ: this word was not heard
+   Abdullah_Basfar_192kbps 1:5 cut «نَعْبُدُ» → نَعْبُدُ: this word was not heard
+   Abdullah_Basfar_192kbps 1:5 cut «وَإِيَّاكَ» → وَإِيَّاكَ: this word was not heard
+   Abdullah_Basfar_192kbps 1:6 cut «ٱلصِّرَٰطَ» → ٱلصِّرَٰطَ: this word was not heard
+   Abdullah_Basfar_192kbps 103:2 cut «ٱلْإِنسَـٰنَ» → ٱلْإِنسَـٰنَ: this word was not heard
+   Abdullah_Basfar_192kbps 103:2 cut «لَفِى» → لَفِى: natural madd dropped: the vowel must be lengthened; لَفِى: a sound was dropped: ِۦۦخُ
+   Abdullah_Basfar_192kbps 103:3 cut «ٱلَّذِينَ» → ٱلَّذِينَ: this word was not heard
+   Abdullah_Basfar_192kbps 103:3 cut «ءَامَنُوا۟» → ءَامَنُوا۟: this word was not heard
+   Abdullah_Basfar_192kbps 103:3 cut «وَعَمِلُوا۟» → وَعَمِلُوا۟: this word was not heard
+   Abdullah_Basfar_192kbps 103:3 cut «ٱلصَّـٰلِحَـٰتِ» → ٱلصَّـٰلِحَـٰتِ: this word was not heard
+   Abdullah_Basfar_192kbps 103:3 cut «وَتَوَاصَوْا۟» → وَتَوَاصَوْا۟: this word was not heard
+   Abdullah_Basfar_192kbps 103:3 cut «بِٱلْحَقِّ» → بِٱلْحَقِّ: this word was not heard
+   Abdullah_Basfar_192kbps 103:3 cut «وَتَوَاصَوْا۟» → وَتَوَاصَوْا۟: this word was not heard
+   Abdullah_Basfar_192kbps 108:1 cut «أَعْطَيْنَـٰكَ» → أَعْطَيْنَـٰكَ: this word was not heard
+   Abdullah_Basfar_192kbps 108:2 cut «لِرَبِّكَ» → لِرَبِّكَ: this word was not heard
+   Abdullah_Basfar_192kbps 108:3 cut «شَانِئَكَ» → شَانِئَكَ: this word was not heard
+   Abdullah_Basfar_192kbps 108:3 cut «هُوَ» → هُوَ: this word was not heard
+   Abdullah_Basfar_192kbps 112:1 cut «هُوَ» → هُوَ: this word was not heard
+   Abdullah_Basfar_192kbps 112:1 cut «ٱللَّهُ» → ٱللَّهُ: this word was not heard
+   Abdullah_Basfar_192kbps 112:3 cut «يَلِدْ» → يَلِدْ: this word was not heard
+   Abdullah_Basfar_192kbps 112:3 cut «وَلَمْ» → وَلَمْ: this word was not heard
+
+examples C:
+   Abdullah_Basfar_192kbps 1:1 «ٱلرَّحِيمِ» AaredMaddRule 1.22 s → 0.43 s: no remark
+   Abdullah_Basfar_192kbps 1:2 «ٱلْعَـٰلَمِينَ» AaredMaddRule 1.00 s → 0.35 s: no remark
+   Abdullah_Basfar_192kbps 1:3 «ٱلرَّحِيمِ» AaredMaddRule 1.28 s → 0.45 s: no remark
+   Abdullah_Basfar_192kbps 1:4 «ٱلدِّينِ» AaredMaddRule 1.42 s → 0.50 s: no remark
+   Abdullah_Basfar_192kbps 1:5 «نَسْتَعِينُ» AaredMaddRule 1.12 s → 0.39 s: no remark
+   Abdullah_Basfar_192kbps 1:6 «ٱلْمُسْتَقِيمَ» AaredMaddRule 1.38 s → 0.48 s: no remark
+   Abdullah_Basfar_192kbps 108:1 «إِنَّآ» MonfaselMaddRule 1.26 s → 0.44 s: no remark
+   Abdullah_Basfar_192kbps 114:6 «وَٱلنَّاسِ» AaredMaddRule 1.04 s → 0.36 s: no remark
+   Abdullah_Basfar_192kbps 2:3 «يُنفِقُونَ» AaredMaddRule 1.22 s → 0.43 s: no remark
+   Abdullah_Basfar_192kbps 2:5 «أُو۟لَـٰٓئِكَ» MottaselMaddRule 1.28 s → 0.45 s: joined madd (muttasil) too short: 2 counts instead of 4 counts; joined madd (muttasil): keep the same length every time (2 / 4)
+   Abdullah_Basfar_192kbps 2:5 «وَأُو۟لَـٰٓئِكَ» MottaselMaddRule 1.20 s → 0.42 s: joined madd (muttasil) too short: 2 counts instead of 4 counts
+   Abdullah_Basfar_192kbps 2:5 «ٱلْمُفْلِحُونَ» AaredMaddRule 1.28 s → 0.45 s: no remark
+   Alafasy_128kbps 1:2 «ٱلْعَـٰلَمِينَ» AaredMaddRule 1.66 s → 0.58 s: no remark
+   Alafasy_128kbps 1:3 «ٱلرَّحِيمِ» AaredMaddRule 2.22 s → 0.78 s: no remark
+   Alafasy_128kbps 1:5 «نَسْتَعِينُ» AaredMaddRule 2.56 s → 0.90 s: no remark
+   Alafasy_128kbps 1:6 «ٱلْمُسْتَقِيمَ» AaredMaddRule 2.46 s → 0.86 s: no remark
+   Alafasy_128kbps 114:1 «ٱلنَّاسِ» AaredMaddRule 2.20 s → 0.77 s: no remark
+   Alafasy_128kbps 114:2 «ٱلنَّاسِ» AaredMaddRule 2.72 s → 0.95 s: no remark
+   Alafasy_128kbps 114:3 «ٱلنَّاسِ» AaredMaddRule 2.70 s → 0.94 s: no remark
+   Alafasy_128kbps 114:4 «ٱلْخَنَّاسِ» AaredMaddRule 2.22 s → 0.78 s: no remark
+   Alafasy_128kbps 114:5 «ٱلنَّاسِ» AaredMaddRule 2.80 s → 0.98 s: no remark
+   Alafasy_128kbps 114:6 «وَٱلنَّاسِ» AaredMaddRule 2.64 s → 0.92 s: no remark
+   Alafasy_128kbps 2:2 «فِيهِ» AaredMaddRule 1.58 s → 0.55 s: no remark
+   Alafasy_128kbps 2:2 «لِّلْمُتَّقِينَ» AaredMaddRule 1.94 s → 0.68 s: no remark
+   Alafasy_128kbps 2:3 «يُنفِقُونَ» AaredMaddRule 1.58 s → 0.55 s: no remark

@@ -1,0 +1,15 @@
+threads=1  model loaded in 295 ms
+  threads=1 window=2 s: median 272 ms, slowest 274 ms  (136 ms per second of audio)
+  threads=1 window=4 s: median 570 ms, slowest 571 ms  (142 ms per second of audio)
+  threads=1 window=6 s: median 895 ms, slowest 897 ms  (149 ms per second of audio)
+  threads=1 window=8 s: median 1230 ms, slowest 1236 ms  (154 ms per second of audio)
+threads=2  model loaded in 281 ms
+  threads=2 window=2 s: median 142 ms, slowest 143 ms  (71 ms per second of audio)
+  threads=2 window=4 s: median 295 ms, slowest 297 ms  (74 ms per second of audio)
+  threads=2 window=6 s: median 461 ms, slowest 462 ms  (77 ms per second of audio)
+  threads=2 window=8 s: median 631 ms, slowest 633 ms  (79 ms per second of audio)
+threads=4  model loaded in 283 ms
+  threads=4 window=2 s: median 91 ms, slowest 101 ms  (46 ms per second of audio)
+  threads=4 window=4 s: median 185 ms, slowest 195 ms  (46 ms per second of audio)
+  threads=4 window=6 s: median 291 ms, slowest 297 ms  (49 ms per second of audio)
+  threads=4 window=8 s: median 400 ms, slowest 407 ms  (50 ms per second of audio)

@@ -1,0 +1,110 @@
+LazemMaddRule
+     7  cuts
+     7  caught: a remark of that kind on the word
+     0  another remark on the word
+     0  no remark
+     0  other words that got a new remark
+    41  left out: remarked before the cut
+       Abdullah_Basfar_192kbps 1:7 «ٱلضَّآلِّينَ» 2.42 s → 0.85 s: necessary madd (lazim) too short: 3 counts instead of 6 counts
+       Alafasy_128kbps 1:7 «ٱلضَّآلِّينَ» 2.56 s → 0.90 s: necessary madd (lazim) too short: 4 counts instead of 6 counts
+       Husary_128kbps 1:7 «ٱلضَّآلِّينَ» 2.88 s → 1.01 s: necessary madd (lazim) too short: 2 counts instead of 6 counts
+       Khaalid_Abdullaah_al-Qahtaanee_192kbps 1:7 «ٱلضَّآلِّينَ» 3.08 s → 1.08 s: necessary madd (lazim) too short: 4 counts instead of 6 counts
+       Minshawy_Murattal_128kbps 1:7 «ٱلضَّآلِّينَ» 2.78 s → 0.97 s: necessary madd (lazim) too short: 4 counts instead of 6 counts
+       Abdullah_Basfar_192kbps 69:2 «ٱلْحَآقَّةُ» 1.78 s → 0.62 s: necessary madd (lazim) too short: 2 counts instead of 6 counts
+       Minshawy_Murattal_128kbps 69:2 «ٱلْحَآقَّةُ» 2.46 s → 0.86 s: necessary madd (lazim) too short: 3 counts instead of 6 counts
+ghunnah
+    17  left out: remarked before the cut
+    99  cuts
+    96  caught: a remark of that kind on the word
+     0  another remark on the word
+     3  no remark
+     4  other words that got a new remark
+       Abdullah_Basfar_192kbps 2:3 «وَمِمَّا» 0.88 s → 0.31 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 103:2 «إِنَّ» 1.10 s → 0.39 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 108:1 «إِنَّآ» 1.18 s → 0.41 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 108:3 «إِنَّ» 1.06 s → 0.37 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 113:4 «ٱلنَّفَّـٰثَـٰتِ» 1.10 s → 0.39 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 114:1 «ٱلنَّاسِ» 1.32 s → 0.46 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 114:2 «ٱلنَّاسِ» 1.56 s → 0.55 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 114:3 «ٱلنَّاسِ» 1.76 s → 0.62 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 114:4 «ٱلْخَنَّاسِ» 1.42 s → 0.50 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 114:5 «ٱلنَّاسِ» 1.46 s → 0.51 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 114:6 «ٱلْجِنَّةِ» 1.14 s → 0.40 s: ghunnah too short: hold the nasal sound for 2 counts
+       Abdullah_Basfar_192kbps 114:6 «وَٱلنَّاسِ» 1.30 s → 0.45 s: no remark
+ikhfa
+    87  cuts
+    13  caught: a remark of that kind on the word
+     7  another remark on the word
+    67  no remark
+     0  other words that got a new remark
+     1  left out: remarked before the cut
+       Abdullah_Basfar_192kbps 2:3 «يُنفِقُونَ» 1.08 s → 0.38 s: ikhfaʾ: the ghunnah is too short
+       Abdullah_Basfar_192kbps 2:4 «أُنزِلَ» 0.96 s → 0.34 s: no remark
+       Abdullah_Basfar_192kbps 2:4 «أُنزِلَ» 0.90 s → 0.32 s: no remark
+       Abdullah_Basfar_192kbps 2:4 «مِن» 0.86 s → 0.30 s: no remark
+       Abdullah_Basfar_192kbps 103:2 «ٱلْإِنسَـٰنَ» 1.16 s → 0.41 s: ikhfaʾ: the ghunnah is too short
+       Abdullah_Basfar_192kbps 113:2 «مِن» 1.12 s → 0.39 s: no remark
+       Abdullah_Basfar_192kbps 113:3 «وَمِن» 1.12 s → 0.39 s: no remark
+       Abdullah_Basfar_192kbps 113:4 «وَمِن» 1.04 s → 0.36 s: no remark
+       Abdullah_Basfar_192kbps 113:5 «وَمِن» 0.96 s → 0.34 s: no remark
+       Abdullah_Basfar_192kbps 114:4 «مِن» 1.22 s → 0.43 s: no remark
+       Alafasy_128kbps 2:3 «يُنفِقُونَ» 0.88 s → 0.31 s: ikhfaʾ: the ghunnah is too short
+       Alafasy_128kbps 2:4 «أُنزِلَ» 0.82 s → 0.29 s: ikhfaʾ: the ghunnah is too short
+MottaselMaddRule
+    52  cuts
+    40  caught: a remark of that kind on the word
+     1  another remark on the word
+    11  no remark
+     7  other words that got a new remark
+     2  left out: remarked before the cut
+       Abdullah_Basfar_192kbps 2:5 «أُو۟لَـٰٓئِكَ» 1.28 s → 0.45 s: joined madd (muttasil) too short: 2 counts instead of 4 counts; joined madd (muttasil): keep the same length every time (2 / 4)
+       Abdullah_Basfar_192kbps 2:5 «وَأُو۟لَـٰٓئِكَ» 1.20 s → 0.42 s: joined madd (muttasil) too short: 2 counts instead of 4 counts
+       Alafasy_128kbps 2:5 «أُو۟لَـٰٓئِكَ» 1.82 s → 0.64 s: no remark
+       Alafasy_128kbps 2:5 «وَأُو۟لَـٰٓئِكَ» 1.64 s → 0.57 s: joined madd (muttasil) too short: 2 counts instead of 4 counts
+       Ayman_Sowaid_64kbps 2:5 «أُو۟لَـٰٓئِكَ» 1.20 s → 0.42 s: joined madd (muttasil) too short: 2 counts instead of 4 counts; joined madd (muttasil): keep the same length every time (2 / 4)
+       Ayman_Sowaid_64kbps 2:5 «وَأُو۟لَـٰٓئِكَ» 1.28 s → 0.45 s: joined madd (muttasil) too short: 2 counts instead of 4 counts
+       Husary_128kbps 2:5 «أُو۟لَـٰٓئِكَ» 2.00 s → 0.70 s: no remark
+       Husary_128kbps 2:5 «وَأُو۟لَـٰٓئِكَ» 1.98 s → 0.69 s: joined madd (muttasil) too short: 2 counts instead of 4 counts
+       Khaalid_Abdullaah_al-Qahtaanee_192kbps 2:5 «أُو۟لَـٰٓئِكَ» 1.52 s → 0.53 s: no remark
+       Khaalid_Abdullaah_al-Qahtaanee_192kbps 2:5 «وَأُو۟لَـٰٓئِكَ» 1.30 s → 0.45 s: joined madd (muttasil) too short: 1 counts instead of 4 counts
+       Minshawy_Murattal_128kbps 2:5 «أُو۟لَـٰٓئِكَ» 2.00 s → 0.70 s: no remark
+       Minshawy_Murattal_128kbps 2:5 «وَأُو۟لَـٰٓئِكَ» 1.92 s → 0.67 s: no remark
+idgham_ghunnah
+    12  cuts
+    12  caught: a remark of that kind on the word
+     0  another remark on the word
+     0  no remark
+     1  other words that got a new remark
+     3  left out: remarked before the cut
+       Abdullah_Basfar_192kbps 2:5 «هُدًۭى» 0.80 s → 0.28 s: idgham with ghunnah: the ghunnah is missing
+       Alafasy_128kbps 2:5 «هُدًۭى» 0.72 s → 0.25 s: idgham with ghunnah: the ghunnah is missing
+       Ayman_Sowaid_64kbps 2:5 «هُدًۭى» 0.92 s → 0.32 s: idgham with ghunnah: the ghunnah is missing
+       Husary_128kbps 2:5 «هُدًۭى» 0.74 s → 0.26 s: idgham with ghunnah: the ghunnah is missing
+       Minshawy_Murattal_128kbps 2:5 «هُدًۭى» 0.68 s → 0.24 s: idgham with ghunnah: the ghunnah is missing
+       Alafasy_128kbps 2:19 «كَصَيِّبٍۢ» 0.90 s → 0.31 s: idgham with ghunnah: the ghunnah is missing
+       Alafasy_128kbps 2:19 «ظُلُمَـٰتٌۭ» 0.60 s → 0.21 s: idgham with ghunnah: the ghunnah is missing
+       Alafasy_128kbps 2:19 «وَرَعْدٌۭ» 0.86 s → 0.30 s: idgham with ghunnah: the ghunnah is missing
+       Khaalid_Abdullaah_al-Qahtaanee_192kbps 2:22 «فِرَٰشًۭا» 0.50 s → 0.17 s: idgham with ghunnah: the ghunnah is missing
+       Khaalid_Abdullaah_al-Qahtaanee_192kbps 2:22 «أَندَادًۭا» 0.38 s → 0.13 s: idgham with ghunnah: the ghunnah is missing
+       Minshawy_Murattal_128kbps 2:19 «كَصَيِّبٍۢ» 0.74 s → 0.26 s: idgham with ghunnah: the ghunnah is missing
+       Minshawy_Murattal_128kbps 2:19 «ظُلُمَـٰتٌۭ» 0.68 s → 0.24 s: idgham with ghunnah: the ghunnah is missing
+MottaselMaddPauseRule
+     6  cuts
+     6  caught: a remark of that kind on the word
+     0  another remark on the word
+     0  no remark
+     0  other words that got a new remark
+       Abdullah_Basfar_192kbps 3:5 «ٱلسَّمَآءِ» 1.34 s → 0.47 s: joined madd at a stop too short: 2 counts instead of 4 counts; a sound was dropped: ااء
+       Alafasy_128kbps 3:5 «ٱلسَّمَآءِ» 2.04 s → 0.71 s: joined madd at a stop too short: 2 counts instead of 4 counts
+       Ayman_Sowaid_64kbps 3:5 «ٱلسَّمَآءِ» 1.66 s → 0.58 s: joined madd at a stop too short: 2 counts instead of 4 counts; a sound was dropped: ااء
+       Husary_128kbps 3:5 «ٱلسَّمَآءِ» 1.56 s → 0.55 s: joined madd at a stop too short: 2 counts instead of 4 counts; a sound was dropped: ااء
+       Khaalid_Abdullaah_al-Qahtaanee_192kbps 3:5 «ٱلسَّمَآءِ» 1.82 s → 0.64 s: joined madd at a stop too short: 2 counts instead of 4 counts; a sound was dropped: ااء
+       Minshawy_Murattal_128kbps 3:5 «ٱلسَّمَآءِ» 1.24 s → 0.43 s: joined madd at a stop too short: 2 counts instead of 4 counts; a sound was dropped: ااء
+iqlab
+     2  cuts
+     1  caught: a remark of that kind on the word
+     0  another remark on the word
+     1  no remark
+     0  other words that got a new remark
+       Alafasy_128kbps 2:19 «مُحِيطٌۢ» 0.96 s → 0.34 s: no remark
+       Minshawy_Murattal_128kbps 2:19 «مُحِيطٌۢ» 0.84 s → 0.29 s: iqlab: the nun becomes a hidden mim with ghunnah before ب

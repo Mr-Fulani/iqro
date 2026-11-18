@@ -1,0 +1,86 @@
+reciter | clips | audio s | sound error rate | clips heard exactly | words | words with a remark | of them "clear mistake"
+Abdullah_Basfar_192kbps | 33 | 220 | 1.3 % | 23 | 147 | 2 (1.4 %) | 1 (0.7 %)
+Alafasy_128kbps | 33 | 215 | 0.8 % | 27 | 147 | 3 (2.0 %) | 1 (0.7 %)
+Ayman_Sowaid_64kbps | 33 | 258 | 1.3 % | 24 | 147 | 9 (6.1 %) | 7 (4.8 %)
+Husary_128kbps | 33 | 287 | 0.6 % | 31 | 147 | 1 (0.7 %) | 0 (0.0 %)
+Khaalid_Abdullaah_al-Qahtaanee_192kbps | 33 | 173 | 3.3 % | 12 | 147 | 10 (6.8 %) | 7 (4.8 %)
+Minshawy_Murattal_128kbps | 33 | 207 | 3.9 % | 14 | 147 | 4 (2.7 %) | 3 (2.0 %)
+ALL | 198 | 1359 | 1.9 % | 131 | 882 | 29 (3.3 %) | 19 (2.2 %)
+
+remarks on these (correct) recitations by kind:
+   11  khafi LazemMaddRule
+    9  jali  letter
+    4  jali  added
+    4  jali  dropped
+    2  jali  shadda
+    2  khafi ghunnah
+    1  khafi qalqalah
+    1  jali  vowel
+    1  jali  NormalMaddRule
+    1  khafi idgham_ghunnah
+    1  jali  AaredMaddRule
+
+all remarks:
+   | Abdullah_Basfar_192kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Abdullah_Basfar_192kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Abdullah_Basfar_192kbps | 2 | 4 | قَبْلِكَ | jali | letter | pronounced د instead of ب
+   | Alafasy_128kbps | 103 | 3 | بِٱلصَّبْرِ | khafi | qalqalah | qalqalah missing on ب: let it bounce
+   | Alafasy_128kbps | 108 | 1 | أَعْطَيْنَـٰكَ | jali | letter | pronounced ق instead of ط
+   | Alafasy_128kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Alafasy_128kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Ayman_Sowaid_64kbps | 1 | 7 | ٱلضَّآلِّينَ | khafi | LazemMaddRule | necessary madd (lazim) too short: 3 counts instead of 6 counts
+   | Ayman_Sowaid_64kbps | 103 | 1 | وَٱلْعَصْرِ | jali | added | an extra sound: ص
+   | Ayman_Sowaid_64kbps | 108 | 1 | أَعْطَيْنَـٰكَ | jali | added | an extra sound: ع
+   | Ayman_Sowaid_64kbps | 113 | 3 | شَرِّ | jali | shadda | the shadda on ر was not pronounced
+   | Ayman_Sowaid_64kbps | 113 | 3 | شَرِّ | jali | letter | pronounced ذ instead of ر
+   | Ayman_Sowaid_64kbps | 113 | 4 | شَرِّ | jali | letter | pronounced ذذ instead of رر
+   | Ayman_Sowaid_64kbps | 113 | 4 | ٱلنَّفَّـٰثَـٰتِ | jali | letter | pronounced ف instead of ث
+   | Ayman_Sowaid_64kbps | 114 | 3 | ٱلنَّاسِ | jali | letter | pronounced ف instead of س
+   | Ayman_Sowaid_64kbps | 114 | 4 | شَرِّ | jali | shadda | the shadda on ر was not pronounced
+   | Ayman_Sowaid_64kbps | 114 | 4 | شَرِّ | jali | letter | pronounced ذ instead of ر
+   | Ayman_Sowaid_64kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Husary_128kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 3 counts instead of 6 counts
+   | Husary_128kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 1 | 2 | ٱلْحَمْدُ | jali | dropped | a sound was dropped: م
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 1 | 2 | لِلَّهِ | jali | letter | pronounced ي instead of ه
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 1 | 4 | يَوْمِ | jali | added | an extra sound: ع
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 103 | 2 | خُسْرٍ | jali | vowel | wrong vowel: a (fatha) instead of u (damma)
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 103 | 2 | خُسْرٍ | jali | dropped | a sound was dropped: ر
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 103 | 3 | بِٱلصَّبْرِ | jali | dropped | a sound was dropped: ر
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 113 | 1 | ٱلْفَلَقِ | jali | letter | pronounced ن instead of ل
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 113 | 4 | ٱلنَّفَّـٰثَـٰتِ | khafi | ghunnah | ghunnah too short: hold the nasal sound for 2 counts
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 114 | 1 | أَعُوذُ | jali | NormalMaddRule | natural madd dropped: the vowel must be lengthened
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 2 | 1 | الٓمٓ | khafi | ghunnah | ghunnah too short: hold the nasal sound for 2 counts
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Khaalid_Abdullaah_al-Qahtaanee_192kbps | 2 | 5 | هُدًۭى | khafi | idgham_ghunnah | idgham with ghunnah: the ghunnah is missing
+   | Minshawy_Murattal_128kbps | 1 | 7 | ٱلْمَغْضُوبِ | jali | added | an extra sound: ر
+   | Minshawy_Murattal_128kbps | 103 | 2 | خُسْرٍ | jali | dropped | a sound was dropped: ر
+   | Minshawy_Murattal_128kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Minshawy_Murattal_128kbps | 2 | 1 | الٓمٓ | khafi | LazemMaddRule | necessary madd (lazim) too short: 4 counts instead of 6 counts
+   | Minshawy_Murattal_128kbps | 2 | 2 | لِّلْمُتَّقِينَ | jali | AaredMaddRule | madd before a stop (ʿarid) dropped: the vowel must be lengthened
+
+speed on this computer (median of 5 runs, the model alone and with the log-mel):
+  int8 threads=1 audio= 2 s →   33.8 ms  (16.9 ms per second of audio)
+  int8 threads=1 audio= 4 s →   72.7 ms  (18.2 ms per second of audio)
+  int8 threads=1 audio= 8 s →  172.5 ms  (21.6 ms per second of audio)
+  int8 threads=1 audio=15 s →  364.1 ms  (24.3 ms per second of audio)
+  int8 threads=2 audio= 2 s →   17.5 ms  (8.7 ms per second of audio)
+  int8 threads=2 audio= 4 s →   35.9 ms  (9.0 ms per second of audio)
+  int8 threads=2 audio= 8 s →   79.1 ms  (9.9 ms per second of audio)
+  int8 threads=2 audio=15 s →  180.7 ms  (12.0 ms per second of audio)
+  int8 threads=4 audio= 2 s →   10.8 ms  (5.4 ms per second of audio)
+  int8 threads=4 audio= 4 s →   22.7 ms  (5.7 ms per second of audio)
+  int8 threads=4 audio= 8 s →   48.2 ms  (6.0 ms per second of audio)
+  int8 threads=4 audio=15 s →  178.4 ms  (11.9 ms per second of audio)
+  fp32 threads=1 audio= 2 s →   81.9 ms  (40.9 ms per second of audio)
+  fp32 threads=1 audio= 4 s →  188.9 ms  (47.2 ms per second of audio)
+  fp32 threads=1 audio= 8 s →  356.9 ms  (44.6 ms per second of audio)
+  fp32 threads=1 audio=15 s →  769.5 ms  (51.3 ms per second of audio)
+  fp32 threads=2 audio= 2 s →   48.8 ms  (24.4 ms per second of audio)
+  fp32 threads=2 audio= 4 s →  202.2 ms  (50.5 ms per second of audio)
+  fp32 threads=2 audio= 8 s →  209.5 ms  (26.2 ms per second of audio)
+  fp32 threads=2 audio=15 s →  442.1 ms  (29.5 ms per second of audio)
+  fp32 threads=4 audio= 2 s →   27.5 ms  (13.7 ms per second of audio)
+  fp32 threads=4 audio= 4 s →   67.1 ms  (16.8 ms per second of audio)
+  fp32 threads=4 audio= 8 s →  141.8 ms  (17.7 ms per second of audio)
+  fp32 threads=4 audio=15 s →  331.1 ms  (22.1 ms per second of audio)

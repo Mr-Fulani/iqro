@@ -1,0 +1,12 @@
+9 recitations (3 reciters × 3 surahs), 201 words, 265 s of audio
+
+step s | window s | guard s | silence added s | word begins → place on it: median / 90 % / worst, s | word ends → word heard in full: median / 90 % | place moved before the word began | place went back | words never reached | false "left out" | computing per step on this Mac (4 threads), ms
+0.1 | 6 | 0.0 | 0.0 | 0.20 / 0.47 / 0.76 | 0.13 / 0.33 | 0 | 18 | 0 | 0 | 285
+0.2 | 6 | 0.0 | 0.0 | 0.28 / 0.53 / 0.86 | 0.21 / 0.40 | 0 | 2 | 0 | 1 | 108
+0.3 | 6 | 0.0 | 0.0 | 0.31 / 0.58 / 0.79 | 0.26 / 0.48 | 0 | 1 | 0 | 1 | 135
+0.5 | 6 | 0.0 | 0.0 | 0.46 / 0.72 / 1.16 | 0.34 / 0.60 | 0 | 1 | 0 | 1 | 131
+0.2 | 3 | 0.0 | 0.0 | 0.30 / 0.50 / 0.86 | 0.21 / 0.39 | 0 | 8 | 0 | 0 | 64
+0.2 | 10 | 0.0 | 0.0 | 0.27 / 0.48 / 1.05 | 0.20 / 0.37 | 0 | 3 | 0 | 1 | 217
+0.2 | 6 | 0.1 | 0.0 | 0.30 / 0.54 / 0.86 | 0.24 / 0.41 | 0 | 2 | 0 | 1 | 65
+0.2 | 6 | 0.2 | 0.0 | 0.36 / 0.55 / 0.86 | 0.31 / 0.42 | 0 | 1 | 0 | 1 | 63
+0.2 | 6 | 0.0 | 0.4 | 0.18 / 0.38 / 0.66 | 0.12 / 0.28 | 0 | 2 | 0 | 1 | 65
