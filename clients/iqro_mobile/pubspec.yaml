@@ -74,6 +74,8 @@ dependencies:
   firebase_analytics: 13.0.0
   google_sign_in: ^7.2.0
   speech_to_text: ^7.4.0
+  # The recitation check's model is run by ONNX Runtime through its C API.
+  ffi: ^2.1.3
   image: ^4.13.1
 
 dev_dependencies:
@@ -127,8 +129,9 @@ flutter:
     - assets/names_audio/ru/
     - assets/names_audio/en/
     - assets/names_audio/tr/
-    # The trial recitation follower's model, in a trial build only
-    # (assets/recitation_model/README.md).
+    # The recitation check on the phone: the model Hisnlabs/tajweed-v2
+    # (Apache-2.0), the sounds every ayah is expected to have, the mel
+    # filters (assets/recitation_model/README.md).
     - assets/recitation_model/
 
   # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to

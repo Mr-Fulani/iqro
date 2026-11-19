@@ -63,6 +63,11 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        // The ABIs Flutter builds for: ONNX Runtime also ships x86, and a
+        // phone must not be offered an app that has only that library.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
         mapOf(
             "google_app_id" to "FIREBASE_ANDROID_APP_ID",
             "google_api_key" to "FIREBASE_ANDROID_API_KEY",
@@ -82,6 +87,11 @@ android {
                 storePassword = releaseSigningProperties.getProperty("storePassword")
             }
         }
+    }
+
+    packaging {
+        // ONNX Runtime is called from Dart: its Java bridge is not used.
+        jniLibs.excludes += "**/libonnxruntime4j_jni.so"
     }
 
     buildTypes {
@@ -108,6 +118,9 @@ kotlin {
 dependencies {
     implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("com.google.android.play:app-update:2.1.0")
+    // The recitation check listens with a model on the phone, run by ONNX
+    // Runtime (MIT); the app calls its native library from Dart.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.32.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     testImplementation("junit:junit:4.13.2")
 }

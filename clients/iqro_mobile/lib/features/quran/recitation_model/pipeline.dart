@@ -5,18 +5,15 @@ import 'follow_core.dart';
 import 'mel.dart';
 import 'model_session.dart';
 
-/// What the model follower tells the screen.
-sealed class RecitationModelEvent {}
-
-/// The lens goes to [word] of the passage; red when it was left out or
-/// said as another.
-class ModelPlace extends RecitationModelEvent {
+/// What the model follower tells the screen: the lens goes to [word] of
+/// the passage; red when it was left out or read wrongly.
+class ModelPlace {
   ModelPlace(this.word, {required this.wrong});
   final int word;
   final bool wrong;
 }
 
-/// One step, for the trial's measurements: the sound heard when it began
+/// One step, for the harness's measurements: the sound heard when it began
 /// (seconds since the microphone was on), what the model and the rest took.
 typedef ModelStepTiming = ({double heard, int modelMs, int restMs});
 
@@ -61,8 +58,8 @@ class RecitationPipeline {
 
   void moveTo(int word) => core.moveTo(word);
 
-  List<RecitationModelEvent> step() {
-    final events = <RecitationModelEvent>[];
+  List<ModelPlace> step() {
+    final events = <ModelPlace>[];
     final watch = Stopwatch()..start();
     _stepped = _mel.samples;
     final to = _mel.samples ~/ 160 ~/ 2 * 2;

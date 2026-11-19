@@ -354,11 +354,16 @@ class RecitationFollowCore {
           trace?.call('rejected word=$word other=$other bad=$bad');
           _sound = start;
           _bad = 0;
-          // Even as the first word read: all of it was said.
-          // Even as the first word read, when it is a long word most
-          // of whose sounds are there: it is this word that was said.
+          // Even as the first word read, when it is this word that was
+          // said: a long word that began as written and has at least
+          // half of its sounds ("alif lam ra" for "alif lam mim"). What
+          // is said before the first word begins otherwise.
           if (asAnother) {
-            _miss(events, first: end - start >= 6 && bad * 3 <= end - start);
+            var began = end - start >= 6 && bad * 2 <= end - start;
+            for (var i = start; began && i < start + 3; i++) {
+              began = !_unfit(path, i);
+            }
+            _miss(events, first: began);
           }
           _dropTo(first + from + lastFrame + 1);
         }

@@ -6540,6 +6540,18 @@ abstract class AppLocalizations {
   /// **'The check covers the words, not tajweed or vowel marks.'**
   String get recitationNoticeLimits;
 
+  /// No description provided for @recitationNoticeVoiceOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your voice is heard by a program on the phone itself: the sound is sent nowhere and no internet is needed. IQRO does not keep the recording. If it cannot start on this phone, Google\'s speech recognition service listens instead, and the sound then goes to it.'**
+  String get recitationNoticeVoiceOnDevice;
+
+  /// No description provided for @recitationNoticeLimitsOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'The check covers the words, letters and short vowels; of tajweed, only a ghunnah all but left out and a madd muttasil cut to half. The program can be wrong and does not replace a teacher.'**
+  String get recitationNoticeLimitsOnDevice;
+
   /// No description provided for @recitationNoticeStart.
   ///
   /// In en, this message translates to:
@@ -6557,6 +6569,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I can\'t hear you. Read aloud and check the internet'**
   String get recitationNotHearing;
+
+  /// No description provided for @recitationNotHearingOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'I can\'t hear you. Read aloud, closer to the phone'**
+  String get recitationNotHearingOnDevice;
 
   /// No description provided for @recitationUnavailable.
   ///

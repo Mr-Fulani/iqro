@@ -45,8 +45,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
-# The trial recitation follower: put in place by tool/recitation_model/prepare.sh.
-/assets/recitation_model/*
-!/assets/recitation_model/README.md
-/android/app/src/main/jniLibs/

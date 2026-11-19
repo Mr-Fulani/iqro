@@ -3735,6 +3735,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'The check covers the words, not tajweed or vowel marks.';
 
   @override
+  String get recitationNoticeVoiceOnDevice =>
+      'Your voice is heard by a program on the phone itself: the sound is sent nowhere and no internet is needed. IQRO does not keep the recording. If it cannot start on this phone, Google\'s speech recognition service listens instead, and the sound then goes to it.';
+
+  @override
+  String get recitationNoticeLimitsOnDevice =>
+      'The check covers the words, letters and short vowels; of tajweed, only a ghunnah all but left out and a madd muttasil cut to half. The program can be wrong and does not replace a teacher.';
+
+  @override
   String get recitationNoticeStart => 'Turn the microphone on';
 
   @override
@@ -3743,6 +3751,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recitationNotHearing =>
       'I can\'t hear you. Read aloud and check the internet';
+
+  @override
+  String get recitationNotHearingOnDevice =>
+      'I can\'t hear you. Read aloud, closer to the phone';
 
   @override
   String get recitationUnavailable =>

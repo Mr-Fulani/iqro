@@ -1283,9 +1283,12 @@
   "recitationNoticeHow": "Turn the microphone on and read aloud: the lens follows your words. If you skip a word or say another one, it stops on that word and turns red, and the phone vibrates.",
   "recitationNoticeVoice": "Your voice is recognised by your phone's speech recognition service (Google or Apple). On older phones the sound goes to it over the internet. IQRO does not keep the recording and does not send it to its own server.",
   "recitationNoticeLimits": "The check covers the words, not tajweed or vowel marks.",
+  "recitationNoticeVoiceOnDevice": "Your voice is heard by a program on the phone itself: the sound is sent nowhere and no internet is needed. IQRO does not keep the recording. If it cannot start on this phone, Google's speech recognition service listens instead, and the sound then goes to it.",
+  "recitationNoticeLimitsOnDevice": "The check covers the words, letters and short vowels; of tajweed, only a ghunnah all but left out and a madd muttasil cut to half. The program can be wrong and does not replace a teacher.",
   "recitationNoticeStart": "Turn the microphone on",
   "recitationListening": "Listening…",
   "recitationNotHearing": "I can't hear you. Read aloud and check the internet",
+  "recitationNotHearingOnDevice": "I can't hear you. Read aloud, closer to the phone",
   "recitationUnavailable": "Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.",
   "recitationNoArabic": "Speech recognition on this phone does not support Arabic.",
   "recitationNoNetwork": "No connection to the speech recognition service. Check the internet."

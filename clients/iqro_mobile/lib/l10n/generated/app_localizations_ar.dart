@@ -3703,6 +3703,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'يُتحقق من الكلمات فقط، لا من التجويد ولا من الحركات.';
 
   @override
+  String get recitationNoticeVoiceOnDevice =>
+      'يستمع إلى صوتك برنامج في الهاتف نفسه: لا يُرسل الصوت إلى أي مكان ولا حاجة إلى الإنترنت. IQRO لا يحفظ التسجيل. وإن تعذّر تشغيله في هذا الهاتف استمعت خدمة التعرّف على الكلام من Google، وحينها يُرسل الصوت إليها.';
+
+  @override
+  String get recitationNoticeLimitsOnDevice =>
+      'يُتحقق من الكلمات والحروف والحركات؛ ومن التجويد: الغنة المتروكة تقريبًا والمد المتصل المقصور إلى نصفه فقط. قد يخطئ البرنامج، وهو لا يغني عن المعلّم.';
+
+  @override
   String get recitationNoticeStart => 'تشغيل الميكروفون';
 
   @override
@@ -3711,6 +3719,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get recitationNotHearing =>
       'لا أسمعك. اقرأ بصوت مسموع وتحقق من الإنترنت';
+
+  @override
+  String get recitationNotHearingOnDevice =>
+      'لا أسمعك. اقرأ بصوت مسموع وقرّب الهاتف';
 
   @override
   String get recitationUnavailable =>

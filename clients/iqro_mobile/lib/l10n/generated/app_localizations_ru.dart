@@ -3760,6 +3760,14 @@ class AppLocalizationsRu extends AppLocalizations {
       'Проверяются слова, а не таджвид и огласовки.';
 
   @override
+  String get recitationNoticeVoiceOnDevice =>
+      'Голос слушает программа в самом телефоне: звук никуда не передаётся, интернет не нужен. IQRO запись не хранит. Если на телефоне она не запустится, слушать будет служба распознавания речи Google — тогда звук идёт к ней.';
+
+  @override
+  String get recitationNoticeLimitsOnDevice =>
+      'Проверяются слова, буквы и огласовки; из таджвида — только почти пропущенная гунна и вдвое укороченный мадд муттасыль. Программа может ошибаться и не заменяет учителя.';
+
+  @override
   String get recitationNoticeStart => 'Включить микрофон';
 
   @override
@@ -3768,6 +3776,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get recitationNotHearing =>
       'Не слышу. Читайте вслух и проверьте интернет';
+
+  @override
+  String get recitationNotHearingOnDevice =>
+      'Не слышу. Читайте вслух, ближе к телефону';
 
   @override
   String get recitationUnavailable =>

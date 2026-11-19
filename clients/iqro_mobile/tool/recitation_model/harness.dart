@@ -2,7 +2,7 @@
 // Runs the trial follower on recorded recitations (make_cases.py) on a computer, with the same Dart code the app
 // runs, and reports how late the lens is and what it calls a mistake.
 //
-//   dart run tool/recitation_model/harness.dart <libiqro_recite.dylib> <model-int8.onnx> assets/recitation_model <cases folder> [name filter] [-v]
+//   dart run tool/recitation_model/harness.dart <libonnxruntime.dylib> <model-int8.onnx> assets/recitation_model <cases folder> [name filter] [-v]
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';

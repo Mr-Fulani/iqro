@@ -23,6 +23,22 @@ void main() {
     yield LicenseEntryWithLineBreaks(const <String>[
       'three.js',
     ], await rootBundle.loadString('assets/salah3d/LICENSE-three.txt'));
+    // The recitation check's model and what runs it.
+    yield LicenseEntryWithLineBreaks(
+      const <String>['HisnLabs Tajweed v2'],
+      'HisnLabs Tajweed v2 (huggingface.co/Hisnlabs/tajweed-v2), '
+      'Copyright HisnLabs (HISNLABS CYBER AI - FZCO). Built on '
+      'tarteel-ai/whisper-base-ar-quran (Apache-2.0) and the labels of '
+      'obadx/muaalem-model-v3_2 (MIT); the expected sounds are written '
+      'with quran-transcript (MIT).\n\n'
+      '${await rootBundle.loadString('assets/recitation_model/LICENSE-Apache-2.0.txt')}',
+    );
+    yield LicenseEntryWithLineBreaks(
+      const <String>['ONNX Runtime'],
+      await rootBundle.loadString(
+        'assets/recitation_model/LICENSE-onnxruntime.txt',
+      ),
+    );
   });
   StartupTrace.mark('runApp');
   runApp(const _IqroBootstrap());
