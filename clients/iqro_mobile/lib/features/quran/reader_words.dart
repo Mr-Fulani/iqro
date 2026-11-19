@@ -91,7 +91,8 @@ class ReaderAyahWords extends StatefulWidget {
        markerStyle = null,
        kashida = false,
        marked = null,
-       plates = const <ReaderWordPlate>[];
+       plates = const <ReaderWordPlate>[],
+       fill = false;
 
   /// Several ayahs running on in one paragraph, as on a Mushaf page.
   ReaderAyahWords.flow({
@@ -106,6 +107,7 @@ class ReaderAyahWords extends StatefulWidget {
     this.range,
     this.marked,
     this.plates = const <ReaderWordPlate>[],
+    this.fill = false,
     this.playingWord,
     this.onDrag,
     super.key,
@@ -147,6 +149,12 @@ class ReaderAyahWords extends StatefulWidget {
 
   /// Plates under words: the one a reader is on, or is to read again.
   final List<ReaderWordPlate> plates;
+
+  /// Every line but the last as wide as the paragraph: the room a line's
+  /// words leave is shared out between them, so a large text fills the
+  /// screen from edge to edge whatever its size. The last line keeps
+  /// [textAlign].
+  final bool fill;
   final TextStyle? style;
   final ReaderWordRegistry registry;
   final QuranWordRange? range;
@@ -257,7 +265,12 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     if (range != null && range != widget.range) widget.onRange(range);
   }
 
-  TextSpan _span(double width) {
+  /// With [lines], the text is broken where an earlier layout broke it
+  /// and the gap before each word is wider by what [lines] gives it.
+  TextSpan _span(
+    double width, {
+    ({Set<int> ends, Map<int, double> gaps})? lines,
+  }) {
     final range = widget.range;
     final marked = widget.marked;
     final children = <InlineSpan>[];
@@ -294,10 +307,17 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
           children.add(
             TextSpan(
               // A drawn-out line ends where the layout ended it.
-              text: layout?.breaks.contains(index - 1) ?? false ? '\n' : ' ',
-              style: joined
-                  ? const TextStyle(backgroundColor: wordRangeSelectionColor)
-                  : null,
+              text:
+                  (layout?.breaks.contains(index - 1) ?? false) ||
+                      (lines?.ends.contains(words.length - 1) ?? false)
+                  ? '\n'
+                  : ' ',
+              style: TextStyle(
+                backgroundColor: joined ? wordRangeSelectionColor : null,
+                // (Letter spacing: the gap is a span of its own, and
+                // word spacing does nothing to such a one.)
+                letterSpacing: lines?.gaps[words.length],
+              ),
             ),
           );
           length += 1;
@@ -337,6 +357,48 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     _words = words;
     _offsets = offsets;
     return TextSpan(style: widget.style, children: children);
+  }
+
+  /// Where [painter] broke the text into lines, and by how much the gap
+  /// before each word is to grow for its line to be as wide as the
+  /// paragraph; null when the text is one line.
+  ({Set<int> ends, Map<int, double> gaps})? _filled(
+    TextPainter painter,
+    double width,
+  ) {
+    final metrics = painter.computeLineMetrics();
+    if (metrics.length < 2 || _words.isEmpty) return null;
+    // The words of each line: a new line begins where a word's box is
+    // lower than the one before it.
+    final firsts = <int>[0];
+    double? top;
+    for (var index = 0; index < _words.length; index++) {
+      final box = _wordBox(index);
+      if (box == null) return null;
+      if (top != null && (box.top - top).abs() > 1) firsts.add(index);
+      top = box.top;
+    }
+    if (firsts.length != metrics.length) return null;
+    // No gap grows beyond a letter's height or so: two short words do
+    // not go to the two edges of the screen.
+    final most = (widget.style?.fontSize ?? 20) * .9;
+    final ends = <int>{};
+    final gaps = <int, double>{};
+    for (var line = 0; line < firsts.length - 1; line++) {
+      final first = firsts[line];
+      final next = firsts[line + 1];
+      ends.add(next - 1);
+      final between = next - first - 1;
+      if (between < 1) continue;
+      final gap = ((width - metrics[line].width - 1) / between).clamp(
+        0.0,
+        most,
+      );
+      for (var index = first + 1; index < next; index++) {
+        gaps[index] = gap;
+      }
+    }
+    return (ends: ends, gaps: gaps);
   }
 
   Rect? _globalRect(QuranWord word) {
@@ -416,13 +478,22 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       _painter?.dispose();
-      final painter = TextPainter(
-        text: _span(constraints.maxWidth),
+      TextPainter laid(TextSpan text) => TextPainter(
+        text: text,
         textAlign: widget.textAlign,
         textDirection: TextDirection.rtl,
         textScaler: MediaQuery.textScalerOf(context),
       )..layout(minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth);
+      var painter = laid(_span(constraints.maxWidth));
       _painter = painter;
+      if (widget.fill) {
+        final lines = _filled(painter, constraints.maxWidth);
+        if (lines != null) {
+          painter.dispose();
+          painter = laid(_span(constraints.maxWidth, lines: lines));
+          _painter = painter;
+        }
+      }
       // Where the plates are.
       final plates = <({RRect box, Color fill, Color edge})>[];
       for (final plate in widget.plates) {

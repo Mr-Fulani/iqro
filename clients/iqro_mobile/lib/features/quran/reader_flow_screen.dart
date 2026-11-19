@@ -947,7 +947,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       fontFamily: IqroTheme.arabicFontFamily,
       fontWeight: FontWeight.normal,
       fontSize: size,
-      height: 2,
+      // Room for the marks over and under a line, and no more: a large
+      // text is not to leave the screen half empty.
+      height: 1.8,
     );
     int? pageOf(QuranAyah ayah) =>
         mushafPageOfAyah(versePages, widget.surah, ayah.number, ayah.pages);
@@ -1128,10 +1130,12 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                           ),
                                   ),
                                 ],
-                                // Every line in the middle of the screen,
-                                // as wide as its words: at a large size
-                                // two or three words fill a line.
+                                // Lines from edge to edge of the screen at
+                                // any size, the room their words leave
+                                // shared out between them; an ayah's last
+                                // line in the middle.
                                 textAlign: TextAlign.center,
+                                fill: true,
                                 markerStyle: const TextStyle(
                                   color: _markerColor,
                                 ),

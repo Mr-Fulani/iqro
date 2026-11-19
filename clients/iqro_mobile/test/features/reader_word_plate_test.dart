@@ -91,4 +91,56 @@ void main() {
       expect(at(Offset(second.left - 6, second.center.dy)), paper);
     },
   );
+
+  testWidgets('a filled text has every line but the last from edge to edge, '
+      'at any size', (tester) async {
+    final registry = ReaderWordRegistry();
+    Future<void> pump(double size) => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: SizedBox(
+            width: 250,
+            child: ReaderAyahWords.flow(
+              surah: 1,
+              ayahs: const <ReaderAyahText>[
+                ReaderAyahText(
+                  ayah: 1,
+                  words: <String>['aaa', 'bbb', 'ccc', 'ddd', 'eee'],
+                ),
+              ],
+              style: TextStyle(fontSize: size, height: 1),
+              registry: registry,
+              onRange: (_) {},
+              textAlign: TextAlign.center,
+              fill: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    Rect word(int index) => registry.wordRect(QuranWord(1, 1, index))!;
+    final left = (800 - 250) / 2;
+
+    // Three words of three squares and two gaps are 220 wide: the 30 left
+    // over go into the gaps, and the line is as wide as the paragraph.
+    // (Latin letters go from the left, whatever the paragraph.)
+    await pump(20);
+    expect(word(1).left, closeTo(left, 1.5));
+    expect(word(3).right, closeTo(left + 250, 1.5));
+    expect(word(2).top, word(1).top);
+    // The last line stays in the middle, its words as near as they were.
+    expect(word(4).top, greaterThan(word(1).top));
+    expect(word(5).left - word(4).right, closeTo(20, .5));
+    expect((word(4).left + word(5).right) / 2, closeTo(left + 125, 1));
+
+    // Larger, the lines are broken anew and filled again: two words to a
+    // line, the gap between them no wider than a letter or so.
+    await pump(32);
+    expect(word(2).top, word(1).top);
+    expect(word(3).top, greaterThan(word(1).top));
+    expect(word(1).left, closeTo(left, 1.5));
+    expect(word(2).right, closeTo(left + 250, 1.5));
+    expect(word(5).center.dx, closeTo(left + 125, 1));
+  });
 }
