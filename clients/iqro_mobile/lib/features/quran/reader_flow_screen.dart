@@ -1128,11 +1128,13 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                           ),
                                   ),
                                 ],
-                                textAlign: TextAlign.start,
+                                // Every line in the middle of the screen,
+                                // as wide as its words: at a large size
+                                // two or three words fill a line.
+                                textAlign: TextAlign.center,
                                 markerStyle: const TextStyle(
                                   color: _markerColor,
                                 ),
-                                kashida: true,
                                 style: style,
                                 registry: _wordRegistry,
                                 range: _words.range,
@@ -1163,14 +1165,15 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                               );
                             },
                           );
-                          // Each ayah a paragraph of its own, a blank line
-                          // between them.
+                          // Each ayah begins a line of its own; the lines
+                          // of the whole text are one step apart, between
+                          // ayahs as within them.
                           return Padding(
                             key: _ayahKeys.putIfAbsent(
                               ayah.number,
                               GlobalKey.new,
                             ),
-                            padding: EdgeInsets.only(bottom: size * .9),
+                            padding: EdgeInsets.zero,
                             child: pageEnded
                                 ? Column(
                                     crossAxisAlignment:
