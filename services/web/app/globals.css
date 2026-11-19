@@ -9972,3 +9972,62 @@ html:has(.reader-swipe-surface) body {
 .prayer-city-results small {
   color: var(--text-secondary);
 }
+
+/* Page change in progress (components/NavigationProgress.tsx). Fixed over the
+   page: it takes no room and moves nothing. Hidden for the first 100 ms so a
+   page that is already loaded opens without a flash. */
+.navigation-progress {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  inset-inline: 0;
+  z-index: 1100;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), #34d399);
+  pointer-events: none;
+  transform-origin: left;
+  animation: navigation-progress 15s cubic-bezier(0.05, 0.8, 0.2, 1) 0.1s both;
+}
+
+[dir="rtl"] .navigation-progress {
+  background: linear-gradient(270deg, var(--primary), #34d399);
+  transform-origin: right;
+}
+
+/* Fades at the end, so a navigation that never changes the address leaves no bar. */
+@keyframes navigation-progress {
+  0% {
+    transform: scaleX(0);
+  }
+
+  95% {
+    transform: scaleX(0.95);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleX(0.95);
+    opacity: 0;
+  }
+}
+
+@keyframes navigation-progress-still {
+  0% {
+    opacity: 0;
+  }
+
+  1%,
+  95% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-progress {
+    animation-name: navigation-progress-still;
+    animation-timing-function: linear;
+  }
+}
