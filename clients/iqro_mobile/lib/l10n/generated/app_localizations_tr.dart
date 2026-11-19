@@ -3688,6 +3688,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'Kelimeler kontrol edilir; tecvid ve harekeler kontrol edilmez.';
 
   @override
+  String get recitationNoticeVoiceOnDevice =>
+      'Sesinizi telefonun kendisindeki bir program dinler: ses hiçbir yere gönderilmez, internet gerekmez. IQRO kaydı saklamaz. Program bu telefonda çalışmazsa Google\'ın konuşma tanıma hizmeti dinler; o zaman ses bu hizmete gider.';
+
+  @override
+  String get recitationNoticeLimitsOnDevice =>
+      'Kelimeler, harfler ve harekeler kontrol edilir; tecvidden yalnızca neredeyse hiç yapılmayan gunne ve yarıya kısaltılan medd-i muttasıl. Program yanılabilir ve bir hocanın yerini tutmaz.';
+
+  @override
   String get recitationNoticeStart => 'Mikrofonu aç';
 
   @override
@@ -3696,6 +3704,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get recitationNotHearing =>
       'Sizi duyamıyorum. Sesli okuyun ve interneti kontrol edin';
+
+  @override
+  String get recitationNotHearingOnDevice =>
+      'Sizi duyamıyorum. Sesli okuyun, telefona yaklaşın';
 
   @override
   String get recitationUnavailable =>

@@ -1121,9 +1121,12 @@
   "recitationNoticeHow": "Mikrofonu açın ve sesli okuyun: mercek kelimelerinizi takip eder. Bir kelimeyi atlar veya başka bir kelime söylerseniz o kelimede durur ve kırmızıya döner, telefon titrer.",
   "recitationNoticeVoice": "Sesinizi telefonunuzun konuşma tanıma hizmeti (Google veya Apple) tanır. Eski telefonlarda ses bu hizmete internet üzerinden gider. IQRO kaydı saklamaz ve kendi sunucusuna göndermez.",
   "recitationNoticeLimits": "Kelimeler kontrol edilir; tecvid ve harekeler kontrol edilmez.",
+  "recitationNoticeVoiceOnDevice": "Sesinizi telefonun kendisindeki bir program dinler: ses hiçbir yere gönderilmez, internet gerekmez. IQRO kaydı saklamaz. Program bu telefonda çalışmazsa Google'ın konuşma tanıma hizmeti dinler; o zaman ses bu hizmete gider.",
+  "recitationNoticeLimitsOnDevice": "Kelimeler, harfler ve harekeler kontrol edilir; tecvidden yalnızca neredeyse hiç yapılmayan gunne ve yarıya kısaltılan medd-i muttasıl. Program yanılabilir ve bir hocanın yerini tutmaz.",
   "recitationNoticeStart": "Mikrofonu aç",
   "recitationListening": "Dinliyorum…",
   "recitationNotHearing": "Sizi duyamıyorum. Sesli okuyun ve interneti kontrol edin",
+  "recitationNotHearingOnDevice": "Sizi duyamıyorum. Sesli okuyun, telefona yaklaşın",
   "recitationUnavailable": "Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.",
   "recitationNoArabic": "Bu telefondaki konuşma tanıma Arapçayı desteklemiyor.",
   "recitationNoNetwork": "Konuşma tanıma hizmetine bağlanılamıyor. İnterneti kontrol edin."

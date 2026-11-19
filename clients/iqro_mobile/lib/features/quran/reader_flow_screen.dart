@@ -23,6 +23,7 @@ import 'reader_page_turn.dart';
 import 'reader_words.dart';
 import 'recitation_follow.dart';
 import 'recitation_match.dart';
+import 'recitation_model/model_listener.dart';
 import 'rub_mark.dart';
 import 'word_range.dart';
 
@@ -180,6 +181,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
 
   /// The lens waits on a word the reader left out or said as another.
   var _followWrong = false;
+
   Timer? _missTimer;
   Offset? _tapped;
 
@@ -572,7 +574,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     if (!ref.read(appPreferencesProvider).recitationNoticeSeen) {
       final agreed = await showDialog<bool>(
         context: context,
-        builder: (context) => const _RecitationNotice(),
+        builder: (context) => _RecitationNotice(onDevice: recitationByModel),
       );
       if (agreed != true || !mounted) return;
       unawaited(
@@ -590,7 +592,21 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     final start = words.indexWhere((word) => word.ayah >= _ayah);
     _followWords = words;
     _matcher = RecitationMatcher(texts)..moveTo(start < 0 ? 0 : start);
-    final listener = RecitationListener(onHeard: _onHeard);
+    // On Android a model on the phone listens: the sound stays there and
+    // no network is needed. Elsewhere, and where the model cannot (it did
+    // not load, or its table has not this surah's words as the screen
+    // has), the phone's speech recognition does.
+    var listener = recitationByModel
+        ? ModelRecitationListener(
+            surah: widget.surah,
+            ayahs: <(int, int)>[
+              for (final ayah in items) (ayah.number, ayahWords(ayah).length),
+            ],
+            words: texts,
+            from: start < 0 ? 0 : start,
+            onPlace: _onModelPlace,
+          )
+        : RecitationListener(onHeard: _onHeard);
     setState(() {
       _listener = listener;
       // The lens shows where to read from.
@@ -600,9 +616,19 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _placeLens());
     unawaited(WakelockPlus.enable());
-    if (await listener.start() || !mounted || !identical(_listener, listener)) {
-      return;
+    var on = await listener.start();
+    if (!on &&
+        listener is ModelRecitationListener &&
+        mounted &&
+        identical(_listener, listener)) {
+      // The model cannot listen here: the phone's speech recognition does.
+      listener.dispose();
+      final spare = RecitationListener(onHeard: _onHeard);
+      listener = spare;
+      setState(() => _listener = spare);
+      on = await spare.start();
     }
+    if (on || !mounted || !identical(_listener, listener)) return;
     setState(() {
       _listener = null;
       _followWord = null;
@@ -636,6 +662,19 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     }
   }
 
+  /// The model's follower says where the lens goes, and whether the word
+  /// there was left out or said as another.
+  void _onModelPlace(int index, bool wrong) {
+    if (!mounted || _listener == null || index >= _followWords.length) return;
+    _followWord = _followWords[index];
+    _followWrong = wrong;
+    _followGlide = true;
+    if (wrong && ref.read(appPreferencesProvider).readerHaptics) {
+      unawaited(HapticFeedback.vibrate());
+    }
+    _placeLens();
+  }
+
   /// The reader left the expected word out or said another: the lens waits
   /// on that word, in red, and the phone gives a short buzz.
   void _markWrong() {
@@ -657,6 +696,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     if (index < 0) return;
     _missTimer?.cancel();
     _matcher?.moveTo(index);
+    if (_listener case final ModelRecitationListener model) model.moveTo(index);
     _followWord = word;
     _followWrong = false;
     _followGlide = true;
@@ -854,7 +894,10 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                   height: 40,
                   child: Center(
                     child: _listener != null
-                        ? _FollowEar(ear: _listener!.ear)
+                        ? _FollowEar(
+                            ear: _listener!.ear,
+                            onDevice: _listener is ModelRecitationListener,
+                          )
                         : page == null
                         ? null
                         : Text(
@@ -1212,9 +1255,12 @@ class _FlowHeader extends StatelessWidget {
 /// heard; that it listens, before any; that none have come for a while;
 /// or what is wrong.
 class _FollowEar extends StatelessWidget {
-  const _FollowEar({required this.ear});
+  const _FollowEar({required this.ear, required this.onDevice});
 
   final ValueNotifier<RecitationEar> ear;
+
+  /// The model on the phone listens: no network is to be checked.
+  final bool onDevice;
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<RecitationEar>(
@@ -1226,7 +1272,10 @@ class _FollowEar extends StatelessWidget {
         RecitationTrouble.network => l10n.recitationNoNetwork,
         RecitationTrouble.language => l10n.recitationNoArabic,
         RecitationTrouble.unavailable => l10n.recitationUnavailable,
-        null when value.deaf => l10n.recitationNotHearing,
+        null when value.deaf =>
+          onDevice
+              ? l10n.recitationNotHearingOnDevice
+              : l10n.recitationNotHearing,
         null when value.heard.trim().isEmpty => l10n.recitationListening,
         null => null,
       };
@@ -1265,7 +1314,10 @@ class _FollowEar extends StatelessWidget {
 /// What the recitation check does with the voice and what it checks,
 /// before its microphone is turned on for the first time.
 class _RecitationNotice extends StatelessWidget {
-  const _RecitationNotice();
+  const _RecitationNotice({required this.onDevice});
+
+  /// The model on the phone listens, not the phone's speech recognition.
+  final bool onDevice;
 
   @override
   Widget build(BuildContext context) {
@@ -1290,8 +1342,18 @@ class _RecitationNotice extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             line(Icons.mic_none_rounded, l10n.recitationNoticeHow),
-            line(Icons.privacy_tip_outlined, l10n.recitationNoticeVoice),
-            line(Icons.info_outline_rounded, l10n.recitationNoticeLimits),
+            line(
+              Icons.privacy_tip_outlined,
+              onDevice
+                  ? l10n.recitationNoticeVoiceOnDevice
+                  : l10n.recitationNoticeVoice,
+            ),
+            line(
+              Icons.info_outline_rounded,
+              onDevice
+                  ? l10n.recitationNoticeLimitsOnDevice
+                  : l10n.recitationNoticeLimits,
+            ),
           ],
         ),
       ),

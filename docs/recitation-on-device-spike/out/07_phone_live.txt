@@ -1,0 +1,22 @@
+Redmi Note 7, the trial build in forum.iqro.app.test, al-Fatiha played from the Mac's speakers at the Mac's volume of 19 %
+(phone/live.sh, phone/latency.py). 19.11.2026.
+
+Husary_128kbps: playback began 5.00 s into the recording; signal 16 dB over the room; words 29/29; false stops 0; word begins → lens: median 0.56 s, 90 % 0.75 s, worst 1.12 s; of it after the sound came: median 228 ms; model step median 186 ms, a step every 0.20 s
+Alafasy_128kbps: playback began 3.87 s into the recording; signal 14 dB over the room; words 29/29; false stops 0; word begins → lens: median 0.60 s, 90 % 0.85 s, worst 0.96 s; of it after the sound came: median 253 ms; model step median 197 ms, a step every 0.20 s
+Minshawy_Murattal_128kbps: playback began 3.77 s into the recording; signal 16 dB over the room; words 29/29; false stops 0; word begins → lens: median 0.71 s, 90 % 1.01 s, worst 1.86 s; of it after the sound came: median 260 ms; model step median 204 ms, a step every 0.25 s
+ALL: 87 words; word begins → lens: median 0.62 s, 90 % 0.88 s, worst 1.86 s; lens before the word began (< -0.1 s): 0; after the sound came: median 241 ms, 90 % 298 ms
+
+Ten minutes with the microphone on in the model's mode, in silence, on the charger (phone/load.sh):
+
+before 01:09:42 : battery 38.0 C; cpu 0.0% cpu time 12:21.28; hottest sensors (mC) 38000 38000 44127 
+minute 1 01:10:47: battery 39.0 C; cpu 285% cpu time 16:28.53; hottest sensors (mC) 39000 39000 50879 
+minute 2 01:11:55: battery 40.0 C; cpu 481% cpu time 20:12.56; hottest sensors (mC) 40000 40000 50364 
+minute 3 01:12:59: battery 40.0 C; cpu 300% cpu time 24:35.23; hottest sensors (mC) 40000 40000 50192 
+minute 4 01:14:04: battery 40.0 C; cpu 350% cpu time 29:03.42; hottest sensors (mC) 41000 41000 51165 
+minute 5 01:15:12: battery 41.0 C; cpu 761% cpu time 33:38.61; hottest sensors (mC) 41000 41000 50421 
+minute 6 01:16:16: battery 41.0 C; cpu 712% cpu time 37:55.11; hottest sensors (mC) 41000 41000 50478 
+minute 7 01:17:19: battery 41.0 C; cpu 500% cpu time 42:12.06; hottest sensors (mC) 41000 41000 50421 
+minute 8 01:18:23: battery 41.0 C; cpu 382% cpu time 46:34.07; hottest sensors (mC) 41000 41000 50364 
+minute 9 01:19:31: battery 41.0 C; cpu 349% cpu time 51:02.93; hottest sensors (mC) 41000 41000 50879 
+minute 10 01:20:36: battery 41.0 C; cpu 440% cpu time 55:23.69; hottest sensors (mC) 41000 41000 50593 
+one minute after: battery 41.0 C; cpu 0.0% cpu time 56:15.71; hottest sensors (mC) 40000 40000 44871 
