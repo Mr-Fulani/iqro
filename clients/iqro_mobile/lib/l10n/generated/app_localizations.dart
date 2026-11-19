@@ -1506,6 +1506,18 @@ abstract class AppLocalizations {
   /// **'Next surah'**
   String get nextSurah;
 
+  /// No description provided for @previousAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous ayah'**
+  String get previousAyah;
+
+  /// No description provided for @nextAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Next ayah'**
+  String get nextAyah;
+
   /// No description provided for @nextSurahHint.
   ///
   /// In en, this message translates to:

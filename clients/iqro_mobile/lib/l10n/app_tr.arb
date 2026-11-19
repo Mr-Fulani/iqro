@@ -239,6 +239,8 @@
   "pause": "Duraklat",
   "previousSurah": "Önceki sure",
   "nextSurah": "Sonraki sure",
+  "previousAyah": "Önceki ayet",
+  "nextAyah": "Sonraki ayet",
   "nextSurahHint": "Yukarı çekin veya dokunun",
   "nextSurahRelease": "{number}. sureyi açmak için bırakın",
   "quranEnd": "Kur’an’ın sonu",

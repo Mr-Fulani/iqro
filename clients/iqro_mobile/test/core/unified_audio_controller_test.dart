@@ -1634,6 +1634,141 @@ void main() {
       expect(controller.state.channel, AudioPlaybackChannel.mushaf);
     });
 
+    test('the lock screen shows the Mushaf while it reads, steps by ayah, '
+        'and goes back to the Audio tab when the Mushaf is left', () async {
+      final media = ListeningMediaService();
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine, mediaService: media);
+      addTearDown(controller.dispose);
+      List<MediaAction> controls() => media.playbackState.value.controls
+          .map((control) => control.action)
+          .toList();
+
+      await controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _reciter,
+        surahName: 'Al-Baqarah',
+        autoplay: false,
+      );
+      expect(media.mediaItem.value?.id, 'track-2');
+
+      await controller.loadPlayback(
+        playback: _rangedPlayback,
+        reciter: _reciter,
+        channel: AudioPlaybackChannel.mushaf,
+        surahName: 'Al-Fatiha',
+        startAyah: 1,
+        endAyah: 3,
+      );
+      // Until it sounds the card still shows the Audio tab's surah.
+      expect(media.mediaItem.value?.id, 'track-2');
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+      expect(media.mediaItem.value?.id, 'track-1:1-3');
+      expect(media.mediaItem.value?.title, 'Al-Fatiha · 1–3');
+      expect(media.mediaItem.value?.duration, const Duration(seconds: 30));
+      expect(media.playbackState.value.playing, isTrue);
+      expect(controls(), <MediaAction>[
+        MediaAction.skipToPrevious,
+        MediaAction.pause,
+        MediaAction.skipToNext,
+      ]);
+
+      await media.pause();
+      expect(engine.pauseCalls, greaterThan(0));
+      engine.emitPlayerState(PlayerState(false, ProcessingState.ready));
+      // Paused from the lock screen, the Mushaf keeps the card.
+      expect(media.mediaItem.value?.id, 'track-1:1-3');
+      expect(media.playbackState.value.playing, isFalse);
+      expect(controls()[1], MediaAction.play);
+      final plays = engine.playCalls;
+      await media.play();
+      expect(engine.playCalls, plays + 1);
+      expect(controller.state.channel, AudioPlaybackChannel.mushaf);
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+
+      engine.seekCalls.clear();
+      await media.skipToNext();
+      expect(engine.seekCalls, <Duration>[const Duration(seconds: 10)]);
+      engine.emitPosition(const Duration(seconds: 21));
+      expect(controller.state.displayedAyah, 3);
+      await media.skipToNext();
+      expect(engine.seekCalls, hasLength(1));
+      await media.skipToPrevious();
+      expect(engine.seekCalls.last, const Duration(seconds: 10));
+      await media.seek(const Duration(seconds: 5));
+      expect(engine.seekCalls.last, const Duration(seconds: 5));
+      // The speed button of the card is the Audio tab's.
+      await media.setSpeed(2);
+      expect(controller.state.speed, 1);
+
+      await controller.pauseForQuranExit();
+      expect(media.mediaItem.value?.id, 'track-2');
+      expect(media.playbackState.value.playing, isFalse);
+      expect(controls(), <MediaAction>[MediaAction.play]);
+    });
+
+    test('the lock screen pauses and resumes a dua and memorization, '
+        'and never shows a short clip', () async {
+      final media = ListeningMediaService();
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(engine: engine, mediaService: media);
+      addTearDown(controller.dispose);
+      List<MediaAction> controls() => media.playbackState.value.controls
+          .map((control) => control.action)
+          .toList();
+      final owner = Object();
+
+      await controller.loadStandalone(
+        id: 'tajweed:1',
+        url: 'https://media.example.test/tajweed/1.mp3',
+        title: 'Example',
+        contentType: 'tajweed',
+        owner: owner,
+      );
+      expect(controller.state.standalone?.playing, isTrue);
+      expect(media.mediaItem.value, isNull);
+
+      await controller.loadStandalone(
+        id: 'dua:1',
+        url: 'https://media.example.test/dua/1.mp3',
+        title: 'Morning remembrance',
+        contentType: 'dua',
+        owner: owner,
+      );
+      expect(media.mediaItem.value?.id, 'dua:1');
+      expect(media.mediaItem.value?.title, 'Morning remembrance');
+      expect(media.playbackState.value.playing, isTrue);
+      expect(controls(), <MediaAction>[MediaAction.pause]);
+      await media.pause();
+      expect(controller.state.standalone?.playing, isFalse);
+      expect(media.mediaItem.value?.id, 'dua:1');
+      expect(controls(), <MediaAction>[MediaAction.play]);
+      await media.play();
+      expect(controller.state.standalone?.playing, isTrue);
+      await media.skipToNext();
+      expect(controller.state.standalone?.mediaItem.id, 'dua:1');
+      await controller.pauseForDuaExit();
+      expect(media.mediaItem.value, isNull);
+
+      await controller.loadPlayback(
+        playback: _rangedPlayback,
+        reciter: _reciter,
+        source: AudioPlaybackSource.memorization,
+        surahName: 'Al-Fatiha',
+        startAyah: 2,
+        endAyah: 2,
+      );
+      engine.emitPlayerState(PlayerState(true, ProcessingState.ready));
+      expect(media.mediaItem.value?.id, 'track-1:2-2');
+      expect(controls(), <MediaAction>[MediaAction.pause]);
+      await media.pause();
+      engine.emitPlayerState(PlayerState(false, ProcessingState.ready));
+      expect(controller.state.playing, isFalse);
+      expect(controls(), <MediaAction>[MediaAction.play]);
+      await controller.pauseForMemorizationExit();
+      expect(media.mediaItem.value, isNull);
+    });
+
     test('the app opens before the media service has started, and the '
         'system media card gets the recitation once it has', () async {
       final starting = Completer<ListeningMediaService?>();

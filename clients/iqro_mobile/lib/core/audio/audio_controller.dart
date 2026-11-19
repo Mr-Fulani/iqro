@@ -645,15 +645,83 @@ class AudioController extends StateNotifier<IqroAudioState> {
   void _bindMediaService() => _mediaService?.bind(
     this,
     play: () async {
+      if (_contextMediaHeld) return _setContextMediaPlaying(true);
       await activateListening();
     },
-    pause: pauseListening,
-    seek: seekListening,
-    skipToNext: () => skipListeningSurah(1),
-    skipToPrevious: () => skipListeningSurah(-1),
-    setSpeed: setListeningSpeed,
+    pause: () =>
+        _contextMediaHeld ? _setContextMediaPlaying(false) : pauseListening(),
+    seek: (position) => _contextMediaHeld
+        ? _seekContextMedia(position)
+        : seekListening(position),
+    skipToNext: () =>
+        _contextMediaHeld ? _skipContextAyah(1) : skipListeningSurah(1),
+    skipToPrevious: () =>
+        _contextMediaHeld ? _skipContextAyah(-1) : skipListeningSurah(-1),
+    // The card's speed belongs to the Audio tab.
+    setSpeed: (speed) =>
+        _contextMediaHeld ? Future<void>.value() : setListeningSpeed(speed),
     labels: _mediaLabels,
   );
+
+  /// Whether the sound of the Mushaf, of memorization or of a dua owns the
+  /// decoder. Short clips (a word, a tajweed example, a name) never do.
+  static bool _isContextMedia(IqroAudioState state) {
+    final standalone = state.standalone;
+    if (standalone != null) {
+      return standalone.mediaItem.extras?['content_type'] == 'dua';
+    }
+    return state.track != null &&
+        state.reciter != null &&
+        state.channel != AudioPlaybackChannel.listening;
+  }
+
+  /// Whether the Mushaf reads several ayahs, so the card can step by ayah.
+  bool get _contextAyahSkip =>
+      state.standalone == null &&
+      state.channel == AudioPlaybackChannel.mushaf &&
+      state.rangeStartAyah != null &&
+      state.rangeEndAyah != null &&
+      state.rangeStartAyah != state.rangeEndAyah;
+
+  Future<void> _setContextMediaPlaying(bool playing) {
+    final standalone = state.standalone;
+    if (standalone != null) {
+      if (standalone.playing == playing) return Future<void>.value();
+      return toggleStandaloneFromGlobalPlayer(standalone.mediaItem.id);
+    }
+    if (state.playing == playing) return Future<void>.value();
+    return toggle();
+  }
+
+  /// [position] counts from the start of what the card shows: the dua, or
+  /// the ayahs being read.
+  Future<void> _seekContextMedia(Duration position) {
+    final standalone = state.standalone;
+    if (standalone != null) {
+      return seekStandalone(
+        standalone.mediaItem.id,
+        position,
+        owner: _standaloneRequest?.owner,
+      );
+    }
+    return seek(state.rangeStartPosition + position);
+  }
+
+  /// The next or the previous ayah of the ayahs the Mushaf is reading; before
+  /// the first one, that ayah again.
+  Future<void> _skipContextAyah(int delta) {
+    final ayah = state.displayedAyah;
+    final first = state.rangeStartAyah;
+    final last = state.rangeEndAyah;
+    if (!_contextAyahSkip || ayah == null || first == null || last == null) {
+      return Future<void>.value();
+    }
+    final target = ayah + delta;
+    if (target > last) return Future<void>.value();
+    final segment = state.segmentForAyah(target < first ? first : target);
+    if (segment == null) return Future<void>.value();
+    return seek(segment.start);
+  }
 
   /// The ayah being recited at [position]; in a pause between two ayahs the
   /// one just recited, so the ayah number does not blink to a dash (some
@@ -696,6 +764,12 @@ class AudioController extends StateNotifier<IqroAudioState> {
   ListeningMediaService? _mediaService;
   final ListeningQueueSource? _queueSource;
   final ListeningMediaLabels Function()? _mediaLabels;
+
+  /// The system media card shows the sound of the Mushaf, of memorization or
+  /// of a dua from the moment it sounds until its screen is left or another
+  /// sound takes the decoder; a pause from the lock screen keeps it there, so
+  /// the same button resumes it.
+  var _contextMediaHeld = false;
   _QueuePrefetch? _queuePrefetch;
   final void Function(IqroAudioState state)? _onPlaybackStarted;
   int? _reportedGeneration;
@@ -776,6 +850,15 @@ class AudioController extends StateNotifier<IqroAudioState> {
   void _publishListeningMedia() {
     final service = _mediaService;
     if (service == null) return;
+    if (!_isContextMedia(state)) {
+      _contextMediaHeld = false;
+    } else if (state.standalone?.playing ?? state.playing) {
+      _contextMediaHeld = true;
+    }
+    if (_contextMediaHeld) {
+      _publishContextMedia(service);
+      return;
+    }
     final listening =
         state.channel == AudioPlaybackChannel.listening &&
         state.standalone == null &&
@@ -801,6 +884,41 @@ class AudioController extends StateNotifier<IqroAudioState> {
       position: listening ? state.position : snapshot!.position,
       speed: listening ? state.speed : snapshot!.speed,
       canSkip: listening && _queueSource != null,
+    );
+  }
+
+  void _publishContextMedia(ListeningMediaService service) {
+    final standalone = state.standalone;
+    if (standalone != null) {
+      final item = standalone.mediaItem;
+      service.publish(
+        item: item.duration == null && standalone.duration > Duration.zero
+            ? item.copyWith(duration: standalone.duration)
+            : item,
+        playing: standalone.playing,
+        buffering: standalone.loading,
+        position: standalone.position,
+        speed: standalone.speed,
+      );
+      return;
+    }
+    final start = state.segmentForAyah(state.rangeStartAyah);
+    final end = state.segmentForAyah(state.rangeEndAyah);
+    service.publish(
+      item: _mediaItemFor(
+        track: state.track!,
+        reciter: state.reciter!,
+        surahName: state.surahName,
+        startAyah: state.rangeStartAyah,
+        endAyah: state.rangeEndAyah,
+        clipStart: start?.start,
+        clipEnd: end?.end,
+      ),
+      playing: state.playing,
+      buffering: state.buffering,
+      position: state.relativePosition,
+      speed: state.speed,
+      ayahSkip: _contextAyahSkip,
     );
   }
 
@@ -1428,6 +1546,8 @@ class AudioController extends StateNotifier<IqroAudioState> {
     final intent = _sourceIntent;
     final generation = _sourceGeneration;
     final standalone = state.standalone;
+    // Its screen is left: the media card goes back to the Audio tab.
+    _contextMediaHeld = false;
     state = standalone == null
         ? state.copyWith(playing: false, buffering: false)
         : state.copyWith(
@@ -1494,6 +1614,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
         }
         await _player.pause();
         if (!_ownsStandalone(generation, mediaId)) return;
+        _contextMediaHeld = false;
         state = state.copyWith(
           standalone: state.standalone!.copyWith(
             playing: false,
@@ -1508,6 +1629,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
       if (!_player.playing && !state.playing && !state.buffering) return;
       await _player.pause();
       if (!_ownsQuran(generation, trackId)) return;
+      _contextMediaHeld = false;
       state = state.copyWith(playing: false, buffering: false);
       _schedulePersistence(immediate: true);
     });

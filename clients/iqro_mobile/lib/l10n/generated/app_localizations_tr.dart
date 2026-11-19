@@ -796,6 +796,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get nextSurah => 'Sonraki sure';
 
   @override
+  String get previousAyah => 'Önceki ayet';
+
+  @override
+  String get nextAyah => 'Sonraki ayet';
+
+  @override
   String get nextSurahHint => 'Yukarı çekin veya dokunun';
 
   @override

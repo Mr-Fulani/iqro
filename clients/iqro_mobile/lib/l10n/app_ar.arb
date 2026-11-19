@@ -239,6 +239,8 @@
   "pause": "إيقاف مؤقت",
   "previousSurah": "السورة السابقة",
   "nextSurah": "السورة التالية",
+  "previousAyah": "الآية السابقة",
+  "nextAyah": "الآية التالية",
   "nextSurahHint": "اسحب للأعلى أو اضغط",
   "nextSurahRelease": "اترك لفتح السورة {number}",
   "quranEnd": "خاتمة القرآن",

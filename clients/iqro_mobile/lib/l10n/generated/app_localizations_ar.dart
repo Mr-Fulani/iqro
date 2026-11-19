@@ -791,6 +791,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get nextSurah => 'السورة التالية';
 
   @override
+  String get previousAyah => 'الآية السابقة';
+
+  @override
+  String get nextAyah => 'الآية التالية';
+
+  @override
   String get nextSurahHint => 'اسحب للأعلى أو اضغط';
 
   @override

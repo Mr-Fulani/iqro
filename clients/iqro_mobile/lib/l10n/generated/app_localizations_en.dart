@@ -802,6 +802,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextSurah => 'Next surah';
 
   @override
+  String get previousAyah => 'Previous ayah';
+
+  @override
+  String get nextAyah => 'Next ayah';
+
+  @override
   String get nextSurahHint => 'Pull up or tap';
 
   @override
