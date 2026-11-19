@@ -56,15 +56,32 @@ class RecitationPassage {
   RecitationPassage(List<ExpectedAyah> ayahs) {
     final sounds = <int>[];
     for (final (number, ayah) in ayahs.indexed) {
+      final firstWord = wordStart.length;
+      // Where each sound of the ayah as written is in [sounds].
+      final at = List<int>.filled(ayah.sounds.length, 0);
       for (final (start, end) in ayah.spans) {
         wordStart.add(sounds.length);
         for (var i = start; i < end; i++) {
-          if (i > start && ayah.sounds[i] == ayah.sounds[i - 1]) continue;
-          sounds.add(ayah.sounds[i]);
-          wordOf.add(wordStart.length - 1);
+          if (i == start || ayah.sounds[i] != ayah.sounds[i - 1]) {
+            sounds.add(ayah.sounds[i]);
+            wordOf.add(wordStart.length - 1);
+          }
+          at[i] = sounds.length - 1;
         }
         wordEnd.add(sounds.length);
         ayahOf.add(number);
+      }
+      for (final (kind, start, end, word, golden) in ayah.units) {
+        if (end <= start || end > at.length) continue;
+        final unit = (
+          kind: kind,
+          first: at[start],
+          last: at[end - 1],
+          sound: ayah.sounds[start],
+          golden: golden,
+          word: firstWord + word,
+        );
+        (unitsOf[wordOf[unit.last]] ??= <TajweedPlace>[]).add(unit);
       }
     }
     this.sounds = Uint8List.fromList(sounds);
@@ -76,9 +93,26 @@ class RecitationPassage {
   final wordOf = <int>[];
   final ayahOf = <int>[];
 
+  /// The places whose tajweed is looked at, by the word their last sound
+  /// is in.
+  final unitsOf = <int, List<TajweedPlace>>{};
+
   int get words => wordStart.length;
   bool silent(int word) => wordEnd[word] == wordStart[word];
 }
+
+/// A place of one of the three rules the trial remarks on: its kind (as
+/// in [ExpectedAyah.units]), the sounds of the passage it runs over, the
+/// sound held, how many counts a right reading has, and the word it is
+/// shown on.
+typedef TajweedPlace = ({
+  int kind,
+  int first,
+  int last,
+  int sound,
+  int golden,
+  int word,
+});
 
 /// What a step of the follower found.
 sealed class FollowEvent {}
@@ -95,13 +129,22 @@ class FollowMiss extends FollowEvent {
   final int word;
 }
 
-/// An ayah was read through with no mistake of words, between these
-/// frames: its tajweed may be looked at.
-class FollowAyahRead extends FollowEvent {
-  FollowAyahRead(this.ayah, this.fromFrame, this.toFrame);
-  final int ayah;
+/// A word taken as read has a place whose tajweed may be looked at: its
+/// held sound lies between these frames.
+class FollowHeld extends FollowEvent {
+  FollowHeld(this.place, this.fromFrame, this.toFrame);
+  final TajweedPlace place;
   final int fromFrame;
   final int toFrame;
+}
+
+/// A word taken as read had one sound that was not the text's: the model
+/// heard the letter or short vowel [heard] where [expected] is written.
+class FollowOtherwise extends FollowEvent {
+  FollowOtherwise(this.word, this.expected, this.heard);
+  final int word;
+  final int expected;
+  final int heard;
 }
 
 const _floor = -10.0; // the most a sound that does not fit costs
@@ -166,9 +209,6 @@ class RecitationFollowCore {
   var fresh = true;
   var wrong = false;
   int? _shown;
-  int? _ayahFrom;
-  int? _wordFrom;
-  var _ayahClean = false;
 
   /// For the harness: where the follower stands.
   String get debugState =>
@@ -191,12 +231,9 @@ class RecitationFollowCore {
         : passage.sounds.length;
     _frame = _now;
     _bad = 0;
-    _wordFrom = null;
     fresh = true;
     wrong = false;
     _shown = null;
-    _ayahFrom = null;
-    _ayahClean = false;
     _passSilent();
   }
 
@@ -303,7 +340,6 @@ class RecitationFollowCore {
         if (word == next && lastFrame <= last - _settle) {
           _sound = start;
           _bad = 0;
-          _wordFrom = null;
           _miss(events);
           _dropTo(first + from + lastFrame + 1);
         }
@@ -316,27 +352,22 @@ class RecitationFollowCore {
         continue;
       }
       // Final: the place moves past it.
-      final ayah = passage.ayahOf[word];
-      final wordFrom = _wordFrom ?? first + from + path.frame[begin - path.lo];
-      if (begin == start || _wordFrom != null) {
-        if (word == 0 || passage.ayahOf[word - 1] != ayah) {
-          _ayahFrom = wordFrom;
-          _ayahClean = true;
-        }
-      }
+      _judge(
+        word,
+        begin,
+        path,
+        lp,
+        first + from,
+        from,
+        last,
+        lastFrame,
+        events,
+      );
       next = word + 1;
       _sound = end;
       _frame = first + from + lastFrame + 1;
       _bad = 0;
-      _wordFrom = null;
       fresh = false;
-      if (next >= passage.words || passage.ayahOf[next] != ayah) {
-        if (_ayahClean && _ayahFrom != null) {
-          events.add(FollowAyahRead(ayah, _ayahFrom!, _frame));
-        }
-        _ayahFrom = null;
-        _ayahClean = false;
-      }
       _passSilent();
       word = next;
     }
@@ -365,7 +396,6 @@ class RecitationFollowCore {
       // The word was begun and something else followed.
       _sound = passage.wordStart[next];
       _bad = 0;
-      _wordFrom = null;
       _miss(events);
       _dropTo(_now - 4);
     }
@@ -384,6 +414,57 @@ class RecitationFollowCore {
         passage.sounds[i + 1] != after ||
         i + 1 - path.lo >= path.best.length ||
         path.best[i + 1 - path.lo] < _goodSound;
+  }
+
+  /// What may be said of how a word just taken as read was read: where
+  /// its ghunnah or madd was held, a sound that was not the text's.
+  void _judge(
+    int word,
+    int begin,
+    _Path path,
+    Float32List lp,
+    int first,
+    int from,
+    int last,
+    int lastFrame,
+    List<FollowEvent> events,
+  ) {
+    final end = passage.wordEnd[word];
+    for (final unit in passage.unitsOf[word] ?? const <TajweedPlace>[]) {
+      // From where its sound begins (the frames before this step's path
+      // are those of the word before) to the next sound.
+      var start = 0;
+      if (unit.first >= path.lo && path.frame[unit.first - path.lo] >= 0) {
+        start = path.frame[unit.first - path.lo];
+      }
+      final stop = unit.last + 1 < end
+          ? path.frame[unit.last + 1 - path.lo]
+          : math.min(last, lastFrame + _settle);
+      if (stop > start) {
+        events.add(FollowHeld(unit, first + start, first + stop));
+      }
+    }
+    for (var i = begin; i < end; i++) {
+      final expected = passage.sounds[i];
+      // Letters and short vowels only: lengths and nasals are the rules'.
+      if (!_unfit(path, i) ||
+          (expected > 28 && expected < 32) ||
+          expected > 34) {
+        continue;
+      }
+      final row = (from + path.frame[i - path.lo]) * recitationClasses;
+      var top = 1;
+      for (var c = 2; c < recitationClasses; c++) {
+        if (lp[row + c] > lp[row + top]) top = c;
+      }
+      // Said of a letter or a short vowel the model is sure it heard in
+      // its place; a long vowel or a nasal there is a matter of length.
+      final named = top <= 28 || (top >= 32 && top <= 34);
+      if (named && top != expected && lp[row + top] > -.7) {
+        events.add(FollowOtherwise(word, expected, top));
+      }
+      break;
+    }
   }
 
   int _lastFrame(_Path path) {
@@ -409,7 +490,6 @@ class RecitationFollowCore {
   }
 
   void _miss(List<FollowEvent> events) {
-    _ayahClean = false;
     if (wrong || fresh) return;
     wrong = true;
     _shown = null;
@@ -500,9 +580,6 @@ class RecitationFollowCore {
       next = lastRead + 1;
       _sound = passage.wordEnd[lastRead];
       _bad = 0;
-      _wordFrom = null;
-      _ayahFrom = null;
-      _ayahClean = false;
       _shown = null;
       _passSilent();
       _frame = drop;
@@ -690,109 +767,4 @@ class RecitationFollowCore {
     }
     return _Path(lo, frame, best, other, skips.reversed.toList(), endOther);
   }
-}
-
-/// A tajweed remark of the trial build: kind as in [ExpectedAyah.units],
-/// the word in its ayah, counts heard.
-typedef TajweedRemark = ({int kind, int word, int heard, int expected});
-
-/// Reads an ayah's tajweed from the model's frames of the whole ayah,
-/// the way the rule engine shipped with the model does (imam.py), for the
-/// three rules the trial remarks on. Nothing when the ayah as heard is
-/// far from its text.
-List<TajweedRemark> tajweedRemarks(
-  Float32List lp,
-  int frames,
-  ExpectedAyah ayah,
-) {
-  final heard = <int>[];
-  final sure = <double>[];
-  var previous = 0;
-  for (var t = 0; t < frames; t++) {
-    final row = t * recitationClasses;
-    var top = 0;
-    for (var c = 1; c < recitationClasses; c++) {
-      if (lp[row + c] > lp[row + top]) top = c;
-    }
-    if (top != 0 && top != previous) {
-      heard.add(top);
-      sure.add(math.exp(lp[row + top]));
-    }
-    previous = top;
-  }
-  final text = ayah.sounds;
-  final n = text.length;
-  final m = heard.length;
-  if (m == 0) return const <TajweedRemark>[];
-  // Edit distance, then where each sound of the text falls in the heard.
-  final cost = List<Int32List>.generate(n + 1, (_) => Int32List(m + 1));
-  for (var i = 0; i <= n; i++) {
-    cost[i][0] = i;
-  }
-  for (var j = 0; j <= m; j++) {
-    cost[0][j] = j;
-  }
-  for (var i = 1; i <= n; i++) {
-    for (var j = 1; j <= m; j++) {
-      cost[i][j] = math.min(
-        cost[i - 1][j - 1] + (text[i - 1] == heard[j - 1] ? 0 : 1),
-        math.min(cost[i - 1][j] + 1, cost[i][j - 1] + 1),
-      );
-    }
-  }
-  if (cost[n][m] > n * .15) return const <TajweedRemark>[];
-  final at = Int32List(n + 1);
-  var i = n;
-  var j = m;
-  at[n] = m;
-  while (i > 0) {
-    if (j > 0 &&
-        cost[i][j] ==
-            cost[i - 1][j - 1] + (text[i - 1] == heard[j - 1] ? 0 : 1)) {
-      i -= 1;
-      j -= 1;
-    } else if (j > 0 && cost[i][j] == cost[i][j - 1] + 1) {
-      j -= 1;
-      continue;
-    } else {
-      i -= 1;
-    }
-    at[i] = j;
-  }
-  int run(int from, int to, int sound) {
-    var k = -1;
-    for (var x = from; x < to; x++) {
-      if (heard[x] == sound) {
-        k = x;
-        break;
-      }
-    }
-    if (k < 0) return 0;
-    var s = k;
-    var e = k;
-    while (s > 0 && heard[s - 1] == sound) {
-      s -= 1;
-    }
-    while (e < m && heard[e] == sound) {
-      e += 1;
-    }
-    return e - s;
-  }
-
-  final remarks = <TajweedRemark>[];
-  for (final (kind, start, end, word, golden) in ayah.units) {
-    final from = math.max(0, at[start] - 1);
-    final to = math.min(m, at[end] + 1);
-    var unsure = false;
-    for (var x = from; x < to; x++) {
-      if (sure[x] < .3) unsure = true;
-    }
-    if (unsure) continue;
-    final count = run(from, to, text[start]);
-    final short = kind == 2 ? count <= 2 : count < golden;
-    if (short) {
-      remarks.add((kind: kind, word: word, heard: count, expected: golden));
-    }
-  }
-  return remarks;
 }

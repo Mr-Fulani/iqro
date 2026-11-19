@@ -19,6 +19,10 @@ double pct(List<double> v, double q) {
 
 void main(List<String> args) {
   final verbose = args.contains('-v');
+  final mutate = args
+      .where((a) => a.startsWith('--mutate='))
+      .map((a) => a.substring(9))
+      .firstOrNull;
   final session = RecitationModelSession.open(
     File(args[1]).readAsBytesSync(),
     threads: 4,
@@ -33,6 +37,7 @@ void main(List<String> args) {
   final filter = args.length > 4 && args[4] != '-v' ? args[4] : '';
   final stats = <String, Map<String, num>>{};
   final delays = <String, List<double>>{};
+  final heldCounts = <String, int>{};
   final names =
       Directory(args[3])
           .listSync()
@@ -44,12 +49,46 @@ void main(List<String> args) {
     final meta = jsonDecode(File(name).readAsStringSync()) as Map;
     final kind = meta['kind'] as String;
     final wav = File(name.replaceAll('.json', '.wav')).readAsBytesSync();
-    final pcm = wav.buffer.asInt16List(44, (wav.length - 44) ~/ 2);
+    // A second of silence after the recording, as a microphone left on
+    // gives: the last word is final only once nothing follows it.
+    final recorded = wav.buffer.asInt16List(44, (wav.length - 44) ~/ 2);
+    final pcm = Int16List(recorded.length + 16000)..setAll(0, recorded);
     final surah = (table['surahs'] as Map)['${meta['surah']}'] as List;
     final ayahs = <ExpectedAyah>[
       for (final a in (meta['ayahs'] as List).cast<int>())
         ExpectedAyah.fromJson(surah[a - 1], symbols)!,
     ];
+    // --mutate=haraka|letter: one sound of the text is changed to another,
+    // so a right recitation differs from it by that sound, as a reader's
+    // slip would.
+    int? changedWord;
+    int? changedFrom;
+    if (mutate != null && ayahs.length == 1 && ayahs.first.spans.length >= 2) {
+      final ayah = ayahs.first;
+      final sounds = Uint8List.fromList(ayah.sounds);
+      const long = <int, int>{32: 29, 34: 30, 33: 31};
+      search:
+      for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
+        final (start, end) = ayah.spans[w];
+        for (var i = start + 1; i < end; i++) {
+          final c = sounds[i];
+          final fits = mutate == 'haraka'
+              ? c >= 32 && c <= 34 && (i + 1 >= end || sounds[i + 1] != long[c])
+              : c >= 1 && c <= 28;
+          if (!fits) continue;
+          final to = mutate == 'haraka'
+              ? const <int, int>{32: 34, 34: 33, 33: 32}[c]!
+              : (c + 9) % 28 + 1;
+          for (var k = i; k < end && ayah.sounds[k] == c; k++) {
+            sounds[k] = to;
+          }
+          changedWord = w;
+          changedFrom = c;
+          break search;
+        }
+      }
+      ayahs[0] = ExpectedAyah(sounds, ayah.spans, ayah.units);
+    }
     final pipeline = RecitationPipeline(
       session: session,
       melFilters: filters,
@@ -62,6 +101,7 @@ void main(List<String> args) {
     final reached = <int, double>{};
     final misses = <(int, double)>[];
     final remarks = <(int, int)>[];
+    final otherwise = <(int, int, int)>[];
     for (var at = 0; at < pcm.length; at += 800) {
       pipeline.add(
         Int16List.sublistView(
@@ -73,7 +113,15 @@ void main(List<String> args) {
       if (!pipeline.due) continue;
       final now = (at + 800) / 16000;
       final before = pipeline.core.debugState;
-      for (final event in pipeline.step()) {
+      final events = pipeline.step();
+      if (pipeline.lastHeld case final held?) {
+        heldCounts['${held.place.kind}: ${held.counts} of ${held.place.golden}'] =
+            (heldCounts['${held.place.kind}: ${held.counts} of ${held.place.golden}'] ??
+                0) +
+            1;
+        pipeline.lastHeld = null;
+      }
+      for (final event in events) {
         switch (event) {
           case ModelPlace(:final word, wrong: false):
             reached.putIfAbsent(word, () => now);
@@ -81,9 +129,18 @@ void main(List<String> args) {
           case ModelPlace(:final word, wrong: true):
             misses.add((word, now));
             if (verbose) print('  ${now.toStringAsFixed(2)} MISS $word');
-          case ModelRemarks(remarks: final found):
-            remarks.addAll(found);
-            if (verbose) print('  ${now.toStringAsFixed(2)} tajweed $found');
+          case ModelRemark(:final word, :final kind):
+            remarks.add((kind, word));
+            if (verbose) {
+              print('  ${now.toStringAsFixed(2)} tajweed $kind on $word');
+            }
+          case ModelOtherwise(:final word, :final expected, :final heard):
+            otherwise.add((word, expected, heard));
+            if (verbose) {
+              print(
+                '  ${now.toStringAsFixed(2)} otherwise on $word: ${symbols[expected - 1]} heard as ${heard == 0 ? '-' : symbols[heard - 1]}',
+              );
+            }
         }
       }
       if (verbose && pipeline.core.debugState != before) {
@@ -95,11 +152,51 @@ void main(List<String> args) {
     count('recitations');
     final miss = meta['miss'] as int?;
     final words = pipeline.core.passage.words;
-    if (miss == null) {
+    if (changedWord != null) {
+      final shown = otherwise.where((o) => o.$1 == changedWord).toList();
+      count('sound changed');
+      if (shown.isNotEmpty) {
+        count('shown as read otherwise');
+        if (shown.first.$3 == changedFrom) count('… naming the sound read');
+      } else if (misses.any((m) => m.$1 == changedWord)) {
+        count('red stop on the word');
+      } else if (!reached.containsKey(changedWord)) {
+        count('word not reached');
+      } else {
+        count('not noticed');
+      }
+      count('marks on other words', otherwise.length - shown.length);
+      count(
+        'red stops on other words',
+        misses.where((m) => m.$1 != changedWord).length,
+      );
+    } else if (kind == 'cut' || kind == 'whole') {
+      // Tajweed: a place cut short should be remarked on, a whole ayah not.
+      count('words', words);
+      count('false stops', misses.length);
+      count('words reached', reached.length);
+      count('"read otherwise"', otherwise.length);
+      if (kind == 'cut') {
+        final rule = meta['rule'] as int;
+        final word = meta['word'] as int;
+        final caught = remarks.any(
+          (r) => (r.$1 == rule || r.$1 + rule == 1) && (r.$2 - word).abs() <= 1,
+        );
+        count('rule $rule: cut');
+        if (caught) count('rule $rule: caught');
+        count('other remarks', remarks.length - (caught ? 1 : 0));
+        if (!caught && verbose) print('$name: not caught, got $remarks');
+      } else {
+        count('remarks', remarks.length);
+        count('places of the three rules', (meta['places'] as List).length);
+        if (remarks.isNotEmpty && verbose) print('$name: $remarks');
+      }
+    } else if (miss == null) {
       count('words', words);
       count('words reached', reached.length);
       count('false mistakes', misses.length);
       count('remarks', remarks.length);
+      count('"read otherwise"', otherwise.length);
       for (final entry in reached.entries) {
         final d = entry.value - starts[entry.key];
         (delays['$kind: word begins → lens on it'] ??= []).add(d);
@@ -141,5 +238,6 @@ void main(List<String> args) {
       '90 % ${pct(v, .9).toStringAsFixed(2)} s, worst ${pct(v, 1).toStringAsFixed(2)} s (${v.length})',
     );
   }
+  print('counts heard, by rule: $heldCounts');
   session.close();
 }

@@ -1,0 +1,21 @@
+The trial's marks on words, on a Mac with the app's Dart code (tool/recitation_model/harness.dart) and the recordings of
+make_tajweed_cases.py: 221 single ayat as recited ("whole") and 108 of them with one ghunnah (rule 0), idgham with
+ghunnah (rule 1) or madd muttasil (rule 2) cut to 35 % ("cut"). 19.11.2026.
+
+# cut places
+cut: {recitations: 108, words: 517, false stops: 4, words reached: 470, "read otherwise": 3, rule 0: cut: 77, rule 0: caught: 64, other remarks: 2, rule 2: cut: 29, rule 2: caught: 15, rule 1: cut: 2, rule 1: caught: 2}
+counts heard, by rule: {0: 2 of 4: 32, 2: 2 of 4: 16, 0: 1 of 4: 27, 0: 3 of 4: 3, 0: 4 of 4: 24, 1: 4 of 4: 4, 2: 4 of 4: 17, 1: 2 of 4: 2, 2: 3 of 4: 4, 0: 0 of 4: 6}
+
+# whole ayat: remarks and "read otherwise" here are false
+whole: {recitations: 221, words: 852, false stops: 3, words reached: 823, "read otherwise": 12, remarks: 3, places of the three rules: 123}
+counts heard, by rule: {0: 4 of 4: 74, 2: 4 of 4: 27, 1: 4 of 4: 2, 0: 5 of 4: 5, 0: 3 of 4: 4, 0: 2 of 4: 3}
+
+# whole ayat, one short vowel of the text changed to another (--mutate=haraka)
+whole: {recitations: 221, sound changed: 191, shown as read otherwise: 182, marks on other words: 9, red stops on other words: 3, … naming the sound read: 180, words: 42, false stops: 0, words reached: 40, "read otherwise": 1, remarks: 1, places of the three rules: 18, red stop on the word: 2, not noticed: 2, word not reached: 5}
+
+# whole ayat, one letter of the text changed to another (--mutate=letter)
+whole: {recitations: 221, sound changed: 203, shown as read otherwise: 188, marks on other words: 9, red stops on other words: 3, red stop on the word: 6, … naming the sound read: 164, words: 18, false stops: 0, words reached: 18, "read otherwise": 1, remarks: 1, places of the three rules: 6, word not reached: 6, not noticed: 3}
+
+# Redmi Note 7, surah 114 with four ghunnas cut, from the Mac's speakers at 19 % volume: notes in the phone's log
+al-Husary: cut words 3 5 7 16 all marked; also marked, wrongly, 11 and 18
+al-Afasy: cut words 3 5 7 16 all marked; one "read otherwise" on word 4; 20 of 20 words followed

@@ -16,10 +16,21 @@ class ModelPlace extends RecitationModelEvent {
   final bool wrong;
 }
 
-/// Tajweed remarks on an ayah read through: (kind, word of the passage).
-class ModelRemarks extends RecitationModelEvent {
-  ModelRemarks(this.remarks);
-  final List<(int, int)> remarks;
+/// A word read rightly had a ghunnah or a madd held too short: [kind] is
+/// 0 ghunnah, 1 idgham with ghunnah, 2 madd muttasil.
+class ModelRemark extends RecitationModelEvent {
+  ModelRemark(this.word, this.kind);
+  final int word;
+  final int kind;
+}
+
+/// A word taken as read had a sound that was not the text's: the model
+/// heard the class [heard] (0: nothing) where [expected] is written.
+class ModelOtherwise extends RecitationModelEvent {
+  ModelOtherwise(this.word, this.expected, this.heard);
+  final int word;
+  final int expected;
+  final int heard;
 }
 
 /// One step, for the trial's measurements: the sound heard when it began
@@ -44,9 +55,6 @@ class RecitationPipeline {
 
   /// The least new sound worth a step.
   static const minStepSamples = 1600;
-
-  /// The longest ayah whose tajweed is looked at, in model frames.
-  static const longestAyah = 12 * recitationFrameRate;
 
   final RecitationModelSession session;
   final List<ExpectedAyah> ayahs;
@@ -122,9 +130,12 @@ class RecitationPipeline {
           events.add(ModelPlace(word, wrong: false));
         case FollowMiss(:final word):
           events.add(ModelPlace(word, wrong: true));
-        case FollowAyahRead(:final ayah, :final fromFrame, :final toFrame):
-          final remarks = _tajweed(ayah, fromFrame, toFrame);
-          events.add(ModelRemarks(remarks));
+        case FollowHeld(:final place, :final fromFrame, :final toFrame):
+          if (_heldShort(place, fromFrame, toFrame)) {
+            events.add(ModelRemark(place.word, place.kind));
+          }
+        case FollowOtherwise(:final word, :final expected, :final heard):
+          events.add(ModelOtherwise(word, expected, heard));
       }
     }
     lastTiming = (
@@ -135,23 +146,44 @@ class RecitationPipeline {
     return events;
   }
 
-  List<(int, int)> _tajweed(int ayah, int fromFrame, int toFrame) {
-    final from = math.max(0, fromFrame - 10) * 2;
-    final to = math.min(_mel.samples ~/ 160 ~/ 2 * 2, (toFrame + 15) * 2);
-    if (to - from > longestAyah * 2 || to - from < 20) return const [];
+  /// Whether the sound of [place] was held too short: the model hears
+  /// that stretch again, with what is around it, and its counts of the
+  /// sound are read as the rule engine shipped with the model reads them
+  /// (two counts or more short of what a right reading has).
+  /// False when the model is unsure of a count it hears.
+  bool _heldShort(TajweedPlace place, int fromFrame, int toFrame) {
+    const before = 50;
+    const after = 25;
+    final from = math.max(0, fromFrame - before) * 2;
+    final to = math.min(_mel.samples ~/ 160 ~/ 2 * 2, (toFrame + after) * 2);
+    if (to - from < 20) return false;
     final lp = session.run(
       _mel.window(from, to, lead: tailFrames, tail: tailFrames),
       to - from + 2 * tailFrames,
     );
-    if (lp == null) return const [];
-    final firstWord = core.passage.ayahOf.indexOf(ayah);
-    return <(int, int)>[
-      for (final remark in tajweedRemarks(
-        lp,
-        (to - from) ~/ 2 + tailFrames,
-        ayahs[ayah],
-      ))
-        (remark.kind, firstWord + remark.word),
-    ];
+    if (lp == null) return false;
+    final shift = tailFrames ~/ 2 - from ~/ 2;
+    var counts = 0;
+    var previous = 0;
+    for (var t = fromFrame - 3 + shift; t < toFrame + 1 + shift; t++) {
+      if (t < 0) continue;
+      final row = t * recitationClasses;
+      if (row + recitationClasses > lp.length) break;
+      var top = 0;
+      for (var c = 1; c < recitationClasses; c++) {
+        if (lp[row + c] > lp[row + top]) top = c;
+      }
+      if (top == place.sound && previous != top) {
+        counts += 1;
+        if (lp[row + top] < -1.2) return false; // less than .3 sure
+      }
+      previous = top;
+    }
+    lastHeld = (place: place, counts: counts);
+    // One count less is within what the model mishears of a right reading.
+    return counts <= place.golden - 2;
   }
+
+  /// For the harness: the last place looked at and the counts heard.
+  ({TajweedPlace place, int counts})? lastHeld;
 }

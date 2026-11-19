@@ -45,7 +45,10 @@ List<String> _follow(RecitationFollowCore core, List<int> sounds) {
       seen.add(switch (event) {
         FollowPlace(:final word) => 'on $word',
         FollowMiss(:final word) => 'miss $word',
-        FollowAyahRead(:final ayah) => 'ayah $ayah',
+        FollowHeld(:final place, :final fromFrame, :final toFrame) =>
+          'held ${place.kind} on ${place.word} for ${toFrame - fromFrame}',
+        FollowOtherwise(:final word, :final expected, :final heard) =>
+          'otherwise $word: $expected as $heard',
       });
     }
   }
@@ -63,7 +66,6 @@ void main() {
       'on 0', 'on 1', 'on 2', 'on 3', 'on 4', 'on 5', //
     ]);
     expect(seen.where((e) => e.startsWith('miss')), isEmpty);
-    expect(seen, containsAll(<String>['ayah 0', 'ayah 1']));
     expect(core.next, 6);
   });
 
@@ -134,40 +136,30 @@ void main() {
     expect(core.next, 2);
   });
 
-  test('a ghunnah held too short is remarked on, a full one is not', () {
+  test('a word read has its held sound pointed out, with how long', () {
+    // The second word has a nun held for four counts.
     final ayah = ExpectedAyah(
-      Uint8List.fromList(<int>[
-        1,
-        2,
-        24,
-        24,
-        24,
-        24,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        12,
-        13,
-        14,
-        15,
-        16, //
-      ]),
-      <(int, int)>[(0, 20)],
-      <(int, int, int, int, int)>[(0, 2, 6, 0, 4)],
+      Uint8List.fromList(<int>[1, 2, 3, 4, 24, 24, 24, 24, 5, 6, 7, 8]),
+      <(int, int)>[(0, 3), (3, 9), (9, 12)],
+      <(int, int, int, int, int)>[(0, 4, 8, 1, 4)],
     );
-    final rest = <int>[for (var s = 5; s <= 16; s++) s];
-    final short = <int>[1, 2, 24, 24, 3, 4, ...rest];
-    expect(
-      tajweedRemarks(_frames(short), short.length * 5, ayah),
-      <TajweedRemark>[(kind: 0, word: 0, heard: 2, expected: 4)],
-    );
-    final full = <int>[1, 2, 24, 24, 24, 24, 3, 4, ...rest];
-    expect(tajweedRemarks(_frames(full), full.length * 5, ayah), isEmpty);
+    final full = RecitationFollowCore(RecitationPassage(<ExpectedAyah>[ayah]));
+    final seen = _follow(full, <int>[
+      1, 2, 3, 4, 24, 24, 24, 24, 5, 6, 7, 8, 0, 0, 0, //
+    ]);
+    // From the nun's first frame to the sound after it: four counts.
+    expect(seen, contains('held 0 on 1 for 20'));
+    final short = RecitationFollowCore(RecitationPassage(<ExpectedAyah>[ayah]));
+    final less = _follow(short, <int>[1, 2, 3, 4, 24, 5, 6, 7, 8, 0, 0, 0]);
+    expect(less, contains('held 0 on 1 for 5'));
+  });
+
+  test('a word with one sound that is not the text\'s is read otherwise', () {
+    final core = RecitationFollowCore(RecitationPassage(_ayahs()));
+    // The second word's 5 is said as 33.
+    final seen = _follow(core, <int>[1, 2, 3, 4, 33, 6, 7, 8, 9, 0, 0, 0]);
+    expect(seen, contains('otherwise 1: 5 as 33'));
+    expect(seen.where((e) => e.startsWith('miss')), isEmpty);
+    expect(core.next, 3);
   });
 }
