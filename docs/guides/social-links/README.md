@@ -17,6 +17,14 @@
 | TikTok `@iqro.forum` | `https://iqro.forum/?utm_source=tiktok&utm_medium=social&utm_campaign=profile` |
 | Threads `@iqro.forum` | `https://iqro.forum/?utm_source=threads&utm_medium=social&utm_campaign=profile` |
 
+Вставлять нужно **в самой соцсети**: приложение Instagram, TikTok или Threads → свой профиль →
+«Редактировать профиль» → поле со ссылкой на сайт. Старую ссылку `https://iqro.forum` сотрите и
+поставьте новую вместо неё.
+
+**Не в админке сайта.** В админке, в разделе «Социальные сети», поле «Ссылка на профиль» — это
+адрес самой соцсети (например `https://www.instagram.com/iqro.forum/`), его сайт показывает в
+подвале. Там ничего менять не нужно; ссылку с метками админка и не примет.
+
 Ссылку в профиле достаточно поставить один раз и больше не менять.
 
 ## 2. Шаблон для постов, сторис и роликов
