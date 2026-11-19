@@ -175,7 +175,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   RecitationListener? _listener;
   RecitationMatcher? _matcher;
   var _followWords = const <QuranWord>[];
-  var _followTexts = const <String>[];
   QuranWord? _followWord;
   Rect? _followRect;
   var _followGlide = true;
@@ -184,16 +183,11 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   var _followWrong = false;
 
   /// The trial build (`RECITATION_MODEL`): the model on the phone listens
-  /// instead of the phone's speech recognition; its tajweed remarks on the
-  /// ayah read last; the microphone's sound is kept for measuring.
+  /// instead of the phone's speech recognition; the microphone's sound is
+  /// kept for measuring.
   var _followByModel = recitationModelBuild;
   var _followDump = false;
-  final _modelRemarks = ValueNotifier<String>('');
 
-  /// The words the trial has something to say of (0–2 a tajweed rule, 3 a
-  /// sound read otherwise), and where they are in the stack.
-  final _followMarks = <QuranWord, int>{};
-  var _followMarkRects = <QuranWord, Rect>{};
   Timer? _missTimer;
   Offset? _tapped;
 
@@ -252,7 +246,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _scriptTimer?.cancel();
     _followHintTimer?.cancel();
     _missTimer?.cancel();
-    _modelRemarks.dispose();
     if (_listener case final listener?) {
       listener.dispose();
       unawaited(WakelockPlus.disable());
@@ -604,11 +597,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     }
     final start = words.indexWhere((word) => word.ayah >= _ayah);
     _followWords = words;
-    _followTexts = texts;
     _matcher = RecitationMatcher(texts)..moveTo(start < 0 ? 0 : start);
-    _modelRemarks.value = '';
-    _followMarks.clear();
-    _followMarkRects = <QuranWord, Rect>{};
     final listener = recitationModelBuild && _followByModel
         ? ModelRecitationListener(
             surah: widget.surah,
@@ -618,7 +607,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
             words: texts,
             start_: start < 0 ? 0 : start,
             onPlace: _onModelPlace,
-            onNote: _onModelNote,
             dump: _followDump,
           )
         : RecitationListener(onHeard: _onHeard);
@@ -680,54 +668,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _placeLens();
   }
 
-  /// The trial has something to say of a word just read: the word is
-  /// marked and the line under the text says what.
-  void _onModelNote(ModelNote note) {
-    if (!mounted || _listener == null || note.word >= _followWords.length) {
-      return;
-    }
-    const rules = <String>[
-      'гунна короче',
-      'гунна при идгаме короче',
-      'мадд муттасыль короче',
-    ];
-    const letters = 'ءبتثجحخدذرزسشصضطظعغفقكلمنهوي';
-    String sound(int kind) => switch (kind) {
-      32 => 'а (фатха)',
-      33 => 'у (дамма)',
-      34 => 'и (кясра)',
-      >= 1 && <= 28 => letters[kind - 1],
-      _ => '',
-    };
-    final String what;
-    if (note.kind < 3) {
-      what = rules[note.kind];
-    } else {
-      final expected = sound(note.expected);
-      final heard = sound(note.heard);
-      what = note.heard == 0
-          ? 'не слышно «$expected»'
-          : heard.isEmpty
-          ? '«$expected» прочитано иначе'
-          : 'слышно «$heard» вместо «$expected»';
-    }
-    _followMarks[_followWords[note.word]] = note.kind;
-    _modelRemarks.value = '${_followTexts[note.word]} — $what';
-    _placeMarks();
-  }
-
-  /// Puts the marks on their words, those that are on screen.
-  void _placeMarks() {
-    final stack = _stackKey.currentContext?.findRenderObject();
-    if (!mounted || stack is! RenderBox || _followMarks.isEmpty) return;
-    setState(() {
-      _followMarkRects = <QuranWord, Rect>{
-        for (final word in _followMarks.keys)
-          word: ?_wordRegistry.wordRectIn(word, stack),
-      };
-    });
-  }
-
   /// The reader left the expected word out or said another: the lens waits
   /// on that word, in red, and the phone gives a short buzz.
   void _markWrong() {
@@ -759,7 +699,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   /// Puts the lens on its word and keeps that word in the upper part of the
   /// screen, so the lines to come are in view.
   void _placeLens() {
-    _placeMarks();
     final word = _followWord;
     final stack = _stackKey.currentContext?.findRenderObject();
     if (!mounted || word == null || stack is! RenderBox) return;
@@ -958,12 +897,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                   height: 40,
                   child: Center(
                     child: _listener != null
-                        ? recitationModelBuild
-                              ? _ModelRemarks(
-                                  remarks: _modelRemarks,
-                                  child: _FollowEar(ear: _listener!.ear),
-                                )
-                              : _FollowEar(ear: _listener!.ear)
+                        ? _FollowEar(ear: _listener!.ear)
                         : page == null
                         ? null
                         : Text(
@@ -1081,11 +1015,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                 Offset(0, -(notification.scrollDelta ?? 0)),
                               );
                             });
-                          }
-                          if (_followMarkRects.isNotEmpty) {
-                            WidgetsBinding.instance.addPostFrameCallback(
-                              (_) => _placeMarks(),
-                            );
                           }
                           if (_words.range != null) _reportBounds();
                           // A jump to keep the place reports nothing new.
@@ -1265,10 +1194,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                       ),
                     ),
                   if (_loupe case final point?) WordRangeLoupe(point: point),
-                  if (_listener != null)
-                    for (final MapEntry(key: word, value: rect)
-                        in _followMarkRects.entries)
-                      _FollowMark(rect: rect, kind: _followMarks[word] ?? 0),
                   if (_followRect case final rect?)
                     RecitationLens(
                       word: rect,
@@ -1367,68 +1292,6 @@ class _ModelSwitch extends StatelessWidget {
         if (enabled) onChanged(chosen.first);
       },
     ),
-  );
-}
-
-/// The colours of the trial's marks: a tajweed rule, a sound read
-/// otherwise.
-const _markTajweed = Color(0xFFD97A00);
-const _markOtherwise = Color(0xFF6A3FB5);
-
-/// The trial's mark on a word it has something to say of: a tint and a
-/// thick line under it.
-class _FollowMark extends StatelessWidget {
-  const _FollowMark({required this.rect, required this.kind});
-
-  final Rect rect;
-  final int kind;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = kind < 3 ? _markTajweed : _markOtherwise;
-    return Positioned.fromRect(
-      rect: rect.inflate(2),
-      child: IgnorePointer(
-        child: DecoratedBox(
-          key: const ValueKey('reader-flow-follow-mark'),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: .14),
-            borderRadius: BorderRadius.circular(6),
-            border: Border(bottom: BorderSide(color: color, width: 4)),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// What the trial says of the word marked last, under the text, in place
-/// of the line of what is heard.
-class _ModelRemarks extends StatelessWidget {
-  const _ModelRemarks({required this.remarks, required this.child});
-
-  final ValueNotifier<String> remarks;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<String>(
-    valueListenable: remarks,
-    builder: (context, value, _) => value.isEmpty
-        ? child
-        : Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              'проба · $value',
-              key: const ValueKey('reader-flow-follow-remarks'),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: value.contains('короче') ? _markTajweed : _markOtherwise,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
   );
 }
 

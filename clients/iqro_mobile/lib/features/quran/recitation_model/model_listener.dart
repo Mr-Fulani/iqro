@@ -27,11 +27,6 @@ void _log(String message) {
   print('IQRO model $message');
 }
 
-/// What the trial says of a word read: [kind] 0 ghunnah, 1 idgham with
-/// ghunnah, 2 madd muttasil held too short; 3 a sound that was not the
-/// text's, the model's class [heard] (0: nothing) for [expected].
-typedef ModelNote = ({int word, int kind, int expected, int heard});
-
 /// Listens with the model instead of the phone's speech recognition: the
 /// same switch and line under the text as [RecitationListener], but it
 /// says where the lens goes itself.
@@ -42,7 +37,6 @@ class ModelRecitationListener implements RecitationListener {
     required this.words,
     required this.start_,
     required this.onPlace,
-    required this.onNote,
     this.dump = false,
   });
 
@@ -57,7 +51,6 @@ class ModelRecitationListener implements RecitationListener {
 
   /// The lens goes to this word of [words]; red when it was left out.
   final void Function(int word, bool wrong) onPlace;
-  final ValueChanged<ModelNote> onNote;
 
   /// Keeps the microphone's sound in a file of the app, for measuring.
   final bool dump;
@@ -111,9 +104,6 @@ class ModelRecitationListener implements RecitationListener {
           );
           ear.value = (heard: words[word], deaf: false, trouble: null);
           onPlace(word, wrong);
-        case (int word, int kind, int expected, int heard):
-          _log('note word=$word kind=$kind expected=$expected heard=$heard');
-          onNote((word: word, kind: kind, expected: expected, heard: heard));
         case (double heard, int modelMs, int restMs):
           _log(
             'step heard=${heard.toStringAsFixed(2)} model=${modelMs}ms '
@@ -281,10 +271,6 @@ void _work(
       switch (event) {
         case ModelPlace(:final word, :final wrong):
           out.send((word, wrong, timing.heard));
-        case ModelRemark(:final word, :final kind):
-          out.send((word, kind, 0, 0));
-        case ModelOtherwise(:final word, :final expected, :final heard):
-          out.send((word, 3, expected, heard));
       }
     }
     out.send((timing.heard, timing.modelMs, timing.restMs));

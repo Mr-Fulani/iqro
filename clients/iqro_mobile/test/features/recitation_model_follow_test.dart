@@ -47,8 +47,6 @@ List<String> _follow(RecitationFollowCore core, List<int> sounds) {
         FollowMiss(:final word) => 'miss $word',
         FollowHeld(:final place, :final fromFrame, :final toFrame) =>
           'held ${place.kind} on ${place.word} for ${toFrame - fromFrame}',
-        FollowOtherwise(:final word, :final expected, :final heard) =>
-          'otherwise $word: $expected as $heard',
       });
     }
   }
@@ -154,12 +152,42 @@ void main() {
     expect(less, contains('held 0 on 1 for 5'));
   });
 
-  test('a word with one sound that is not the text\'s is read otherwise', () {
+  test('another letter in a word stops the place on it', () {
     final core = RecitationFollowCore(RecitationPassage(_ayahs()));
-    // The second word's 5 is said as 33.
-    final seen = _follow(core, <int>[1, 2, 3, 4, 33, 6, 7, 8, 9, 0, 0, 0]);
-    expect(seen, contains('otherwise 1: 5 as 33'));
-    expect(seen.where((e) => e.startsWith('miss')), isEmpty);
-    expect(core.next, 3);
+    // The second word's 5 is said as 20, a letter that is not near it.
+    final seen = _follow(core, <int>[1, 2, 3, 4, 20, 6, 7, 8, 9, 0, 0, 0]);
+    expect(seen, contains('miss 1'));
+    expect(core.next, 1);
+    // Read rightly after that, the place goes on.
+    final again = RecitationFollowCore(RecitationPassage(_ayahs()));
+    _follow(again, <int>[
+      1, 2, 3, 4, 20, 6, 0, 0, 0, 0, 4, 5, 6, 7, 8, 9, 0, 0, 0, //
+    ]);
+    expect(again.wrong, isFalse);
+    expect(again.next, 3);
+  });
+
+  test('a long first word said with another letter is a mistake too', () {
+    // As "alif lam ra" for "alif lam mim": one long word, most of it right.
+    final passage = RecitationPassage(<ExpectedAyah>[
+      ExpectedAyah(
+        Uint8List.fromList(<int>[1, 2, 3, 4, 5, 6, 7, 8, 9]),
+        <(int, int)>[(0, 6), (6, 9)],
+        <(int, int, int, int, int)>[],
+      ),
+    ]);
+    final core = RecitationFollowCore(passage);
+    final seen = _follow(core, <int>[1, 2, 3, 20, 5, 6, 7, 8, 9, 0, 0, 0]);
+    expect(seen, contains('miss 0'));
+    expect(core.next, 0);
+  });
+
+  test('a word to be read again is waited on', () {
+    final core = RecitationFollowCore(RecitationPassage(_ayahs()));
+    _follow(core, <int>[1, 2, 3, 4, 5, 6, 0, 0, 0]);
+    expect(core.next, 2);
+    core.sayAgain(1);
+    expect(core.next, 1);
+    expect(core.wrong, isTrue);
   });
 }

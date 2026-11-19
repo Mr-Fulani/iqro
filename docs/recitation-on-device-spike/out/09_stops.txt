@@ -1,0 +1,38 @@
+The trial's red stops on gross mistakes, on a Mac with the app's Dart code (tool/recitation_model/harness.dart). 19.11.2026.
+
+# "alif lam ra" (the first word of 10:1 … 15:1, 6 reciters) read where 2:1 is written: alr; 2:1, 3:1, 29:1 as recited: alm
+alm: {recitations: 18, words: 144, words reached: 18, false mistakes: 0}
+alr: {recitations: 30, noticed on the right word: 30, lens went on past the word left out: 30}
+counts heard, by rule: {0: 4 of 4: 15, 0: 2 of 4: 1}
+
+# 221 single ayat as recited: false stops
+whole: {recitations: 221, words: 852, false stops: 5, words reached: 819, places of the three rules: 123}
+counts heard, by rule: {0: 4 of 4: 76, 2: 4 of 4: 27, 1: 4 of 4: 2, 0: 5 of 4: 5, 0: 3 of 4: 4, 0: 2 of 4: 2}
+
+# the same with one short vowel of the text changed to another (--mutate=haraka)
+whole: {recitations: 221, sound changed: 191, red stop on the word: 182, red stops on other words: 3, words: 42, false stops: 1, words reached: 40, places of the three rules: 18, not noticed: 4, word not reached: 5}
+
+# … with one letter of the text changed to another (--mutate=letter)
+whole: {recitations: 221, sound changed: 203, not noticed: 36, red stops on other words: 4, red stop on the word: 161, words: 18, false stops: 0, words reached: 18, places of the three rules: 6, word not reached: 6}
+
+# 108 ayat with a ghunnah (rule 0), idgham with ghunnah (1) or madd muttasil (2) cut to 35 %
+cut: {recitations: 108, words: 517, false stops: 54, words reached: 374, rule 0: cut: 77, red stops elsewhere: 3, rule 2: cut: 29, rule 2: red stop: 17, rule 0: red stop: 34, rule 1: cut: 2}
+counts heard, by rule: {0: 2 of 4: 32, 2: 2 of 4: 16, 0: 1 of 4: 28, 0: 3 of 4: 2, 0: 4 of 4: 21, 2: 4 of 4: 13, 1: 2 of 4: 2, 1: 4 of 4: 2, 2: 3 of 4: 4, 0: 0 of 4: 6}
+
+# 36 recitations of whole surahs, 24 with an ayah cut out, 84 with a word cut out
+clean-Ayman_Sowaid_64kbps-2.json: misses [(5, 13.8)], reached 6 of 36
+clean-Husary_128kbps-2.json: misses [(15, 35.5)], reached 16 of 36
+clean-Khaalid_Abdullaah_al-Qahtaanee_192kbps-1.json: misses [(5, 5.0)], reached 6 of 29
+clean-Khaalid_Abdullaah_al-Qahtaanee_192kbps-103.json: misses [(0, 2.1)], reached 1 of 14
+clean-Khaalid_Abdullaah_al-Qahtaanee_192kbps-113.json: misses [(18, 16.2)], reached 18 of 23
+clean-Khaalid_Abdullaah_al-Qahtaanee_192kbps-2.json: misses [(13, 22.1)], reached 14 of 36
+clean-Minshawy_Murattal_128kbps-2.json: misses [(7, 15.4)], reached 8 of 36
+clean: {recitations: 36, words: 822, words reached: 681, false mistakes: 7}
+clean: word begins → lens on it: median 0.22 s, 90 % 0.44 s, worst 1.83 s (681)
+word: {recitations: 84, noticed on the right word: 79, lens went on past the word left out: 37, more than one mistake: 22, false mistake before it: 5}
+word: next word begins → red lens: median 0.62 s, 90 % 1.19 s, worst 10.25 s (79)
+ayah: {recitations: 24, noticed on the right word: 23, lens went on past the word left out: 2, false mistake before it: 1}
+ayah: next word begins → red lens: median 0.50 s, 90 % 0.58 s, worst 0.60 s (23)
+
+# Redmi Note 7, surah 2 open, from the Mac's speakers: "alif lam ra" (al-Husary, 10:1) → red lens on the first word;
+# then 2:1 as recited → the lens gold again

@@ -47,6 +47,7 @@ void main(List<String> args) {
         ..sort();
   for (final name in names) {
     final meta = jsonDecode(File(name).readAsStringSync()) as Map;
+    if (verbose) print('# $name');
     final kind = meta['kind'] as String;
     final wav = File(name.replaceAll('.json', '.wav')).readAsBytesSync();
     // A second of silence after the recording, as a microphone left on
@@ -62,7 +63,6 @@ void main(List<String> args) {
     // so a right recitation differs from it by that sound, as a reader's
     // slip would.
     int? changedWord;
-    int? changedFrom;
     if (mutate != null && ayahs.length == 1 && ayahs.first.spans.length >= 2) {
       final ayah = ayahs.first;
       final sounds = Uint8List.fromList(ayah.sounds);
@@ -83,7 +83,6 @@ void main(List<String> args) {
             sounds[k] = to;
           }
           changedWord = w;
-          changedFrom = c;
           break search;
         }
       }
@@ -100,8 +99,6 @@ void main(List<String> args) {
     }
     final reached = <int, double>{};
     final misses = <(int, double)>[];
-    final remarks = <(int, int)>[];
-    final otherwise = <(int, int, int)>[];
     for (var at = 0; at < pcm.length; at += 800) {
       pipeline.add(
         Int16List.sublistView(
@@ -115,10 +112,9 @@ void main(List<String> args) {
       final before = pipeline.core.debugState;
       final events = pipeline.step();
       if (pipeline.lastHeld case final held?) {
-        heldCounts['${held.place.kind}: ${held.counts} of ${held.place.golden}'] =
-            (heldCounts['${held.place.kind}: ${held.counts} of ${held.place.golden}'] ??
-                0) +
-            1;
+        final key =
+            '${held.place.kind}: ${held.counts} of ${held.place.golden}';
+        heldCounts[key] = (heldCounts[key] ?? 0) + 1;
         pipeline.lastHeld = null;
       }
       for (final event in events) {
@@ -129,18 +125,6 @@ void main(List<String> args) {
           case ModelPlace(:final word, wrong: true):
             misses.add((word, now));
             if (verbose) print('  ${now.toStringAsFixed(2)} MISS $word');
-          case ModelRemark(:final word, :final kind):
-            remarks.add((kind, word));
-            if (verbose) {
-              print('  ${now.toStringAsFixed(2)} tajweed $kind on $word');
-            }
-          case ModelOtherwise(:final word, :final expected, :final heard):
-            otherwise.add((word, expected, heard));
-            if (verbose) {
-              print(
-                '  ${now.toStringAsFixed(2)} otherwise on $word: ${symbols[expected - 1]} heard as ${heard == 0 ? '-' : symbols[heard - 1]}',
-              );
-            }
         }
       }
       if (verbose && pipeline.core.debugState != before) {
@@ -153,19 +137,16 @@ void main(List<String> args) {
     final miss = meta['miss'] as int?;
     final words = pipeline.core.passage.words;
     if (changedWord != null) {
-      final shown = otherwise.where((o) => o.$1 == changedWord).toList();
       count('sound changed');
-      if (shown.isNotEmpty) {
-        count('shown as read otherwise');
-        if (shown.first.$3 == changedFrom) count('… naming the sound read');
-      } else if (misses.any((m) => m.$1 == changedWord)) {
+      final stopped = misses.where((m) => m.$1 == changedWord).isNotEmpty;
+      if (stopped) {
         count('red stop on the word');
       } else if (!reached.containsKey(changedWord)) {
         count('word not reached');
       } else {
         count('not noticed');
+        if (verbose) print('$name: change at $changedWord not noticed');
       }
-      count('marks on other words', otherwise.length - shown.length);
       count(
         'red stops on other words',
         misses.where((m) => m.$1 != changedWord).length,
@@ -175,28 +156,22 @@ void main(List<String> args) {
       count('words', words);
       count('false stops', misses.length);
       count('words reached', reached.length);
-      count('"read otherwise"', otherwise.length);
       if (kind == 'cut') {
         final rule = meta['rule'] as int;
         final word = meta['word'] as int;
-        final caught = remarks.any(
-          (r) => (r.$1 == rule || r.$1 + rule == 1) && (r.$2 - word).abs() <= 1,
-        );
+        final stopped = misses.any((m) => (m.$1 - word).abs() <= 1);
         count('rule $rule: cut');
-        if (caught) count('rule $rule: caught');
-        count('other remarks', remarks.length - (caught ? 1 : 0));
-        if (!caught && verbose) print('$name: not caught, got $remarks');
+        if (stopped) count('rule $rule: red stop');
+        count('red stops elsewhere', misses.length - (stopped ? 1 : 0));
+        if (!stopped && verbose) print('$name: not stopped, got $misses');
       } else {
-        count('remarks', remarks.length);
         count('places of the three rules', (meta['places'] as List).length);
-        if (remarks.isNotEmpty && verbose) print('$name: $remarks');
+        if (misses.isNotEmpty && verbose) print('$name: $misses');
       }
     } else if (miss == null) {
       count('words', words);
       count('words reached', reached.length);
       count('false mistakes', misses.length);
-      count('remarks', remarks.length);
-      count('"read otherwise"', otherwise.length);
       for (final entry in reached.entries) {
         final d = entry.value - starts[entry.key];
         (delays['$kind: word begins → lens on it'] ??= []).add(d);

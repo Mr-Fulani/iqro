@@ -138,15 +138,6 @@ class FollowHeld extends FollowEvent {
   final int toFrame;
 }
 
-/// A word taken as read had one sound that was not the text's: the model
-/// heard the letter or short vowel [heard] where [expected] is written.
-class FollowOtherwise extends FollowEvent {
-  FollowOtherwise(this.word, this.expected, this.heard);
-  final int word;
-  final int expected;
-  final int heard;
-}
-
 const _floor = -10.0; // the most a sound that does not fit costs
 const _otherSound = -6.0; // a frame of speech that is not the text
 const _skipPrice = -10.0; // going on with a later word
@@ -156,6 +147,8 @@ const _settle = 10; // frames a word has been over before it is final
 const _stallSounds = 10; // sounds of other speech that are a mistake
 const _backSounds = 6; // … that may be two words read again
 const _goodSound = -4.0;
+const _absentSound = -12.0; // a sound the model does not hear at all
+const _sureSound = -.36; // log .7: the model is sure of what it hears
 const _never = -1e30;
 
 class _Path {
@@ -237,7 +230,21 @@ class RecitationFollowCore {
     _passSilent();
   }
 
-  static int _allowedBad(int sounds) => math.max(1, (sounds * .34).floor());
+  /// Sounds of a word that may not fit while it still counts as read:
+  /// one, which is what the model mishears of a right reading.
+  /// [word], taken as read, is to be read again (a ghunnah or a madd of
+  /// it was held far too short): the place goes back to wait on it.
+  void sayAgain(int word) {
+    next = word;
+    _sound = passage.wordStart[word];
+    _frame = _now;
+    _bad = 0;
+    fresh = false;
+    wrong = true;
+    _shown = null;
+  }
+
+  static int _allowedBad(int sounds) => sounds >= 3 ? 1 : 0;
 
   /// [lp]: log-probabilities of [frames] frames, the first being frame
   /// [first] since the microphone was turned on.
@@ -335,12 +342,24 @@ class RecitationFollowCore {
         }
         break;
       }
-      if (bad > allowed) {
-        // All its sounds are past, and too few fit: said as another.
+      // Another letter or short vowel heard for sure in a sound's place,
+      // or more than one sound that does not fit: said as another.
+      var other = false;
+      for (var i = begin; i < end && !other; i++) {
+        other = _saidAsAnother(path, i, lp, from);
+      }
+      final asAnother = other || bad > _allowedBad(end - start);
+      if (asAnother || bad > allowed) {
         if (word == next && lastFrame <= last - _settle) {
+          trace?.call('rejected word=$word other=$other bad=$bad');
           _sound = start;
           _bad = 0;
-          _miss(events);
+          // Even as the first word read: all of it was said.
+          // Even as the first word read, when it is a long word most
+          // of whose sounds are there: it is this word that was said.
+          if (asAnother) {
+            _miss(events, first: end - start >= 6 && bad * 3 <= end - start);
+          }
           _dropTo(first + from + lastFrame + 1);
         }
         break;
@@ -407,6 +426,13 @@ class RecitationFollowCore {
   /// there: the model often writes the two as the long vowel alone.
   bool _unfit(_Path path, int i) {
     if (path.best[i - path.lo] >= _goodSound) return false;
+    final sound = passage.sounds[i];
+    // A word's last short vowel is not said when the reader stops on it.
+    if (sound >= 32 &&
+        sound <= 34 &&
+        i + 1 == passage.wordEnd[passage.wordOf[i]]) {
+      return false;
+    }
     const long = <int, int>{32: 29, 34: 30, 33: 31}; // َ ا, ِ ۦ, ُ ۥ
     final after = long[passage.sounds[i]];
     return after == null ||
@@ -444,27 +470,44 @@ class RecitationFollowCore {
         events.add(FollowHeld(unit, first + start, first + stop));
       }
     }
-    for (var i = begin; i < end; i++) {
-      final expected = passage.sounds[i];
-      // Letters and short vowels only: lengths and nasals are the rules'.
-      if (!_unfit(path, i) ||
-          (expected > 28 && expected < 32) ||
-          expected > 34) {
-        continue;
-      }
-      final row = (from + path.frame[i - path.lo]) * recitationClasses;
-      var top = 1;
-      for (var c = 2; c < recitationClasses; c++) {
-        if (lp[row + c] > lp[row + top]) top = c;
-      }
-      // Said of a letter or a short vowel the model is sure it heard in
-      // its place; a long vowel or a nasal there is a matter of length.
-      final named = top <= 28 || (top >= 32 && top <= 34);
-      if (named && top != expected && lp[row + top] > -.7) {
-        events.add(FollowOtherwise(word, expected, top));
-      }
-      break;
+  }
+
+  /// The sound at [i] was said as another: where the path has it the
+  /// model is sure of a different letter or short vowel, one that is not
+  /// a neighbour of it in the word (a neighbour there means only that
+  /// the sound was not heard).
+  bool _saidAsAnother(_Path path, int i, Float32List lp, int from) {
+    final expected = passage.sounds[i];
+    final letter = expected >= 1 && expected <= 28;
+    final vowel = expected >= 32 && expected <= 34;
+    // A letter must not be heard at all where it is written (the model
+    // half-hears a right one often enough); a short vowel is either
+    // there or not.
+    if (!(letter || vowel) ||
+        path.best[i - path.lo] >= (letter ? _absentSound : _goodSound)) {
+      return false;
     }
+    final at = path.frame[i - path.lo];
+    final row = (from + at) * recitationClasses;
+    var top = 1;
+    for (var c = 2; c < recitationClasses; c++) {
+      if (lp[row + c] > lp[row + top]) top = c;
+    }
+    // A letter for a letter, a short vowel for a short vowel.
+    final same = letter ? top <= 28 : top >= 32 && top <= 34;
+    if (!same || top == expected || lp[row + top] < _sureSound) return false;
+    // A nun read as a mim or a mim as a nun is the rules' doing.
+    if ((expected == 24 && top == 23) || (expected == 23 && top == 24)) {
+      return false;
+    }
+    for (var k = i - 2; k <= i + 2; k++) {
+      if (k == i || k < path.lo || k - path.lo >= path.frame.length) continue;
+      final frame = path.frame[k - path.lo];
+      if (passage.sounds[k] == top && frame >= 0 && (frame - at).abs() <= 2) {
+        return false;
+      }
+    }
+    return true;
   }
 
   int _lastFrame(_Path path) {
@@ -489,8 +532,8 @@ class RecitationFollowCore {
     events.add(FollowPlace(word));
   }
 
-  void _miss(List<FollowEvent> events) {
-    if (wrong || fresh) return;
+  void _miss(List<FollowEvent> events, {bool first = false}) {
+    if (wrong || (fresh && !first)) return;
     wrong = true;
     _shown = null;
     events.add(FollowMiss(next));

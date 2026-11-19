@@ -16,23 +16,6 @@ class ModelPlace extends RecitationModelEvent {
   final bool wrong;
 }
 
-/// A word read rightly had a ghunnah or a madd held too short: [kind] is
-/// 0 ghunnah, 1 idgham with ghunnah, 2 madd muttasil.
-class ModelRemark extends RecitationModelEvent {
-  ModelRemark(this.word, this.kind);
-  final int word;
-  final int kind;
-}
-
-/// A word taken as read had a sound that was not the text's: the model
-/// heard the class [heard] (0: nothing) where [expected] is written.
-class ModelOtherwise extends RecitationModelEvent {
-  ModelOtherwise(this.word, this.expected, this.heard);
-  final int word;
-  final int expected;
-  final int heard;
-}
-
 /// One step, for the trial's measurements: the sound heard when it began
 /// (seconds since the microphone was on), what the model and the rest took.
 typedef ModelStepTiming = ({double heard, int modelMs, int restMs});
@@ -132,10 +115,17 @@ class RecitationPipeline {
           events.add(ModelPlace(word, wrong: true));
         case FollowHeld(:final place, :final fromFrame, :final toFrame):
           if (_heldShort(place, fromFrame, toFrame)) {
-            events.add(ModelRemark(place.word, place.kind));
+            // Held far too short: the word is to be read again, and what
+            // this step heard after it does not count.
+            core.sayAgain(place.word);
+            events.add(ModelPlace(place.word, wrong: true));
+            lastTiming = (
+              heard: _stepped / 16000,
+              modelMs: modelMs,
+              restMs: watch.elapsedMilliseconds - modelMs,
+            );
+            return events;
           }
-        case FollowOtherwise(:final word, :final expected, :final heard):
-          events.add(ModelOtherwise(word, expected, heard));
       }
     }
     lastTiming = (
@@ -149,7 +139,7 @@ class RecitationPipeline {
   /// Whether the sound of [place] was held too short: the model hears
   /// that stretch again, with what is around it, and its counts of the
   /// sound are read as the rule engine shipped with the model reads them
-  /// (two counts or more short of what a right reading has).
+  /// (a madd of half its counts or less, a ghunnah of one count or none).
   /// False when the model is unsure of a count it hears.
   bool _heldShort(TajweedPlace place, int fromFrame, int toFrame) {
     const before = 50;
@@ -180,8 +170,9 @@ class RecitationPipeline {
       previous = top;
     }
     lastHeld = (place: place, counts: counts);
-    // One count less is within what the model mishears of a right reading.
-    return counts <= place.golden - 2;
+    // A madd muttasil of half its counts; a ghunnah all but left out (of a
+    // right one the model now and then hears two counts of four).
+    return counts <= place.golden - (place.kind == 2 ? 2 : 3);
   }
 
   /// For the harness: the last place looked at and the counts heard.
