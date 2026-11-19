@@ -50,6 +50,26 @@ test("public Quran page exposes page-specific canonical and social metadata", as
   );
 });
 
+test("social links with UTM tags open the page and stay out of canonical", async ({ page }) => {
+  const tags = "utm_source=instagram&utm_medium=social&utm_campaign=profile";
+
+  // A profile link without a locale: the redirect must carry the tags to the page.
+  await page.goto(`/quran?${tags}`);
+  await expect(page).toHaveURL(`${siteUrl}/ru/quran?${tags}`);
+  await expect(page).toHaveTitle("Читать Коран — Мединский Мусхаф Хафс | IQRO");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${siteUrl}/ru/quran`,
+  );
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    "content",
+    `${siteUrl}/ru/quran`,
+  );
+  for (const link of await page.locator(".footer-social .social-link").all()) {
+    await expect(link).not.toHaveAttribute("href", /utm_/);
+  }
+});
+
 test("account routes are explicitly excluded from indexing", async ({ page }) => {
   await page.goto("/ru/login");
 

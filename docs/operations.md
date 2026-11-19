@@ -639,7 +639,7 @@ URL/размер/MIME и присутствие всех `MEDIA_CDN_REQUIRED_ORI
 
 Backend CI экспортирует только production-зависимости из frozen `uv.lock` вместе с хешами и
 проверяет их через закреплённый `pip-audit`. Web CI отдельно запускает
-`npm audit --omit=dev --audit-level=high` (только production-зависимости, без build/test tooling). Production Compose CI после сборки
+`npm audit --audit-level=high` (все зависимости, включая build/test tooling; с 19.11.2026). Production Compose CI после сборки
 проверяет Trivy все deployable образы: backend, web, gateway, PostgreSQL и Redis. Любая известная
 `HIGH`/`CRITICAL` уязвимость блокирует gate, в том числе пока не имеющая исправления.
 Backend и web runtime не содержат package managers; PostgreSQL wrapper flatten'ит финальный
@@ -653,8 +653,8 @@ filesystem после замены `gosu` на `su-exec`, поэтому Trivy �
 `zlib>=1.3.2-r1` (CVE-2026-85091, 06.11.2026, во всех пяти образах и в TLS-прокси
 `ops/staging/caddy`, который Trivy в CI не проверяет), `musl`/`musl-utils` (CVE-2026-107891,
 07.11.2026: `>=1.2.6-r3` в образах на Alpine 3.24 — backend, web, postgres; `>=1.2.5-r24` в
-gateway и TLS-прокси на Alpine 3.23). Redis собран на Alpine 3.21, там исправления musl пока нет,
-и Trivy его не отмечает; при переходе redis на новую Alpine закрепить musl так же. `krb5-libs>=1.22.3-r0`
+gateway и TLS-прокси на Alpine 3.23; `>=1.2.5-r13` в Redis, который 19.11.2026 переведён с
+Alpine 3.21 на `redis:7.4.12-alpine3.22`). `krb5-libs>=1.22.3-r0`
 и `libxslt>=1.1.43-r4` (11.11.2026, 18 `HIGH` в krb5 и libxslt, в их числе CVE-2026-118380 и
 CVE-2026-87636) закреплены только в образе PostgreSQL: в остальных проверяемых образах этих
 пакетов нет. Базовый тег `postgres:17.11-alpine3.24` при этом не менялся — более свежего тега
