@@ -35,6 +35,11 @@ class ReaderWordRegistry {
   }
 }
 
+/// Words of a [ReaderAyahWords.flow] paragraph written in [color]: the
+/// letters and their marks themselves, whatever colours the Mushaf's
+/// script gives them; nothing is laid over the text.
+typedef ReaderWordInk = ({QuranWordRange words, Color color});
+
 /// One ayah's words in a [ReaderAyahWords.flow] paragraph.
 class ReaderAyahText {
   const ReaderAyahText({
@@ -84,7 +89,8 @@ class ReaderAyahWords extends StatefulWidget {
        textAlign = TextAlign.center,
        markerStyle = null,
        kashida = false,
-       marked = null;
+       marked = null,
+       inked = const <ReaderWordInk>[];
 
   /// Several ayahs running on in one paragraph, as on a Mushaf page.
   ReaderAyahWords.flow({
@@ -98,6 +104,7 @@ class ReaderAyahWords extends StatefulWidget {
     this.kashida = false,
     this.range,
     this.marked,
+    this.inked = const <ReaderWordInk>[],
     this.playingWord,
     this.onDrag,
     super.key,
@@ -136,6 +143,10 @@ class ReaderAyahWords extends StatefulWidget {
 
   /// Words shown for a moment in a soft tint: the place a reader came to.
   final QuranWordRange? marked;
+
+  /// Words written in another ink than the text's: those a reader has
+  /// read aloud, the one he is to read again.
+  final List<ReaderWordInk> inked;
   final TextStyle? style;
   final ReaderWordRegistry registry;
   final QuranWordRange? range;
@@ -412,6 +423,25 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
         textScaler: MediaQuery.textScalerOf(context),
       )..layout(minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth);
       _painter = painter;
+      // Where the words in another ink are: a box for each line of them.
+      final inks = <({Rect box, Color color})>[];
+      for (final ink in widget.inked) {
+        final first = _words.indexWhere(
+          (item) => ink.words.contains(item.word),
+        );
+        if (first < 0) continue;
+        final last = _words.lastIndexWhere(
+          (item) => ink.words.contains(item.word),
+        );
+        for (final box in painter.getBoxesForSelection(
+          TextSelection(
+            baseOffset: _offsets[first],
+            extentOffset: _offsets[last] + _words[last].text.length,
+          ),
+        )) {
+          inks.add((box: box.toRect(), color: ink.color));
+        }
+      }
       final handles = _handles();
       return Semantics(
         label: _texts(widget).expand((ayah) => ayah.words).join(' '),
@@ -453,7 +483,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
                   constraints.maxWidth,
                   painter.height + (handles.isEmpty ? 0 : _knobRoom),
                 ),
-                painter: _WordsPainter(painter),
+                painter: _WordsPainter(painter, inks),
               ),
               ...handles,
             ],
@@ -471,12 +501,50 @@ const _markedColor = Color(0x38C49647);
 const _knobRoom = WordRangeHandle.knob + 6;
 
 class _WordsPainter extends CustomPainter {
-  const _WordsPainter(this.painter);
+  const _WordsPainter(this.painter, this.inks);
 
   final TextPainter painter;
 
+  /// Parts of the text drawn in another colour than its own.
+  final List<({Rect box, Color color})> inks;
+
   @override
-  void paint(Canvas canvas, Size size) => painter.paint(canvas, Offset.zero);
+  void paint(Canvas canvas, Size size) {
+    if (inks.isEmpty) {
+      painter.paint(canvas, Offset.zero);
+      return;
+    }
+    // The text outside the boxes, as it is.
+    var rest = Path()..addRect(Offset.zero & Size(size.width, painter.height));
+    for (final ink in inks) {
+      rest = Path.combine(
+        PathOperation.difference,
+        rest,
+        Path()..addRect(ink.box),
+      );
+    }
+    canvas
+      ..save()
+      ..clipPath(rest, doAntiAlias: false);
+    painter.paint(canvas, Offset.zero);
+    canvas.restore();
+    // Inside a box the same glyphs, their every pixel in the box's colour:
+    // the shape of a letter or a mark is what the script drew.
+    for (final ink in inks) {
+      canvas
+        ..saveLayer(ink.box, Paint())
+        ..clipRect(ink.box, doAntiAlias: false);
+      painter.paint(canvas, Offset.zero);
+      canvas
+        ..drawRect(
+          ink.box,
+          Paint()
+            ..color = ink.color
+            ..blendMode = BlendMode.srcIn,
+        )
+        ..restore();
+    }
+  }
 
   @override
   bool shouldRepaint(_WordsPainter oldDelegate) =>

@@ -32,7 +32,7 @@ void _log(String message) {
 /// Listens with a model on the phone instead of the phone's speech
 /// recognition (Android): the sound stays on the phone and no network is
 /// needed. The same line under the text as [RecitationListener], but it
-/// says where the lens goes itself. The model and its memory live only
+/// says where the place is itself. The model and its memory live only
 /// between [start] and [stop].
 class ModelRecitationListener implements RecitationListener {
   ModelRecitationListener({
@@ -54,7 +54,7 @@ class ModelRecitationListener implements RecitationListener {
   /// The word reading starts from.
   final int from;
 
-  /// The lens goes to this word of [words]; red when it was left out or
+  /// The place is this word of [words]; red when it was left out or
   /// read wrongly.
   final void Function(int word, bool wrong) onPlace;
 

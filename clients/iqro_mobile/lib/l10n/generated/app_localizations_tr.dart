@@ -3677,7 +3677,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get recitationNoticeHow =>
-      'Mikrofonu açın ve sesli okuyun: mercek kelimelerinizi takip eder. Bir kelimeyi atlar veya başka bir kelime söylerseniz o kelimede durur ve kırmızıya döner, telefon titrer.';
+      'Mikrofonu açın ve sesli okuyun: okuduğunuz kelimelerin rengi değişir. Bir kelimeyi atlar veya başka bir kelime söylerseniz o kelime kırmızı olur ve telefon titrer; doğru okuyun, okuma devam eder.';
 
   @override
   String get recitationNoticeVoice =>

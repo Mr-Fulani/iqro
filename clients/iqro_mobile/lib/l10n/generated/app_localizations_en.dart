@@ -3724,7 +3724,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recitationNoticeHow =>
-      'Turn the microphone on and read aloud: the lens follows your words. If you skip a word or say another one, it stops on that word and turns red, and the phone vibrates.';
+      'Turn the microphone on and read aloud: the words you have read change colour. If you skip a word or say another one, it turns red and the phone vibrates; read it rightly and the reading goes on.';
 
   @override
   String get recitationNoticeVoice =>

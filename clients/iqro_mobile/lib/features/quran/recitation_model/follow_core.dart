@@ -117,13 +117,13 @@ typedef TajweedPlace = ({
 /// What a step of the follower found.
 sealed class FollowEvent {}
 
-/// The reader is on [word], or has read it: the lens goes there.
+/// The reader is on [word], or has read it: it is written as read.
 class FollowPlace extends FollowEvent {
   FollowPlace(this.word);
   final int word;
 }
 
-/// [word] was left out or said as another: the lens waits on it.
+/// [word] was left out or said as another: it is written in red and waited on.
 class FollowMiss extends FollowEvent {
   FollowMiss(this.word);
   final int word;
@@ -527,7 +527,7 @@ class RecitationFollowCore {
     if (frame > _frame) _frame = frame;
   }
 
-  /// The lens goes to [word]. One waited for in red is read only when
+  /// [word] is the place. One waited for in red is read only when
   /// all of it has been heard ([whole]): its first sounds may be those of
   /// another word.
   void _place(int word, List<FollowEvent> events, {required bool whole}) {

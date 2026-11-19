@@ -5,7 +5,7 @@ import 'follow_core.dart';
 import 'mel.dart';
 import 'model_session.dart';
 
-/// What the model follower tells the screen: the lens goes to [word] of
+/// What the model follower tells the screen: the place is [word] of
 /// the passage; red when it was left out or read wrongly.
 class ModelPlace {
   ModelPlace(this.word, {required this.wrong});
@@ -17,7 +17,7 @@ class ModelPlace {
 /// (seconds since the microphone was on), what the model and the rest took.
 typedef ModelStepTiming = ({double heard, int modelMs, int restMs});
 
-/// Microphone sound in, lens places out: each step puts the last
+/// Microphone sound in, places out: each step puts the last
 /// [windowFrames] of sound through the model and the follower.
 class RecitationPipeline {
   RecitationPipeline({

@@ -176,10 +176,14 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   RecitationMatcher? _matcher;
   var _followWords = const <QuranWord>[];
   QuranWord? _followWord;
-  Rect? _followRect;
-  var _followGlide = true;
 
-  /// The lens waits on a word the reader left out or said as another.
+  /// The words read so far, written in [recitationRead]: from the word
+  /// reading began at to the last one read, by their places in
+  /// [_followWords]. No word is read yet while [_followRead] is null.
+  var _followBegan = 0;
+  int? _followRead;
+
+  /// The place waits, in red, on a word the reader left out or said as another.
   var _followWrong = false;
 
   Timer? _missTimer;
@@ -367,10 +371,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       _alignTo(ayah);
       _reportBounds();
       if (_followWord == null) return;
-      // The lens goes with its word, once the text has moved.
-      _followGlide = false;
+      // The place stays in view, once the text has moved.
       WidgetsBinding.instance
-        ..addPostFrameCallback((_) => _placeLens())
+        ..addPostFrameCallback((_) => _showPlace())
         ..scheduleFrame();
     });
   }
@@ -561,7 +564,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       setState(() {
         _listener = null;
         _followWord = null;
-        _followRect = null;
+        _followRead = null;
         _followWrong = false;
       });
       unawaited(WakelockPlus.disable());
@@ -609,12 +612,13 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         : RecitationListener(onHeard: _onHeard);
     setState(() {
       _listener = listener;
-      // The lens shows where to read from.
+      // Reading begins here; nothing is read yet.
       _followWord = words.isEmpty ? null : words[start < 0 ? 0 : start];
+      _followBegan = start < 0 ? 0 : start;
+      _followRead = null;
       _followWrong = false;
-      _followGlide = false;
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _placeLens());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showPlace());
     unawaited(WakelockPlus.enable());
     var on = await listener.start();
     if (!on &&
@@ -632,7 +636,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     setState(() {
       _listener = null;
       _followWord = null;
-      _followRect = null;
+      _followRead = null;
     });
     unawaited(WakelockPlus.disable());
     listener.dispose();
@@ -648,10 +652,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _missTimer?.cancel();
     if (heard.reached case final index?) {
       // At once: the word's place is known before the next frame.
-      _followWord = _followWords[index];
-      _followWrong = false;
-      _followGlide = true;
-      _placeLens();
+      _read(index);
     } else if (heard.misses >= recitationMissesAtOnce) {
       _markWrong();
     } else if (heard.misses > 0) {
@@ -662,31 +663,29 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     }
   }
 
-  /// The model's follower says where the lens goes, and whether the word
+  /// The model's follower says where the place is, and whether the word
   /// there was left out or said as another.
   void _onModelPlace(int index, bool wrong) {
     if (!mounted || _listener == null || index >= _followWords.length) return;
-    _followWord = _followWords[index];
-    _followWrong = wrong;
-    _followGlide = true;
-    if (wrong && ref.read(appPreferencesProvider).readerHaptics) {
+    if (!wrong) {
+      _read(index);
+      return;
+    }
+    _wait(index);
+    if (ref.read(appPreferencesProvider).readerHaptics) {
       unawaited(HapticFeedback.vibrate());
     }
-    _placeLens();
   }
 
-  /// The reader left the expected word out or said another: the lens waits
+  /// The reader left the expected word out or said another: the place waits
   /// on that word, in red, and the phone gives a short buzz.
   void _markWrong() {
     final index = _matcher?.expected;
     if (!mounted || _listener == null || index == null || _followWrong) return;
-    _followWord = _followWords[index];
-    _followWrong = true;
-    _followGlide = true;
+    _wait(index);
     if (ref.read(appPreferencesProvider).readerHaptics) {
       unawaited(HapticFeedback.vibrate());
     }
-    _placeLens();
   }
 
   /// A tap on a word while the microphone is on: reading starts from it.
@@ -698,24 +697,61 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _matcher?.moveTo(index);
     if (_listener case final ModelRecitationListener model) model.moveTo(index);
     _followWord = word;
+    _followBegan = index;
+    _followRead = null;
     _followWrong = false;
-    _followGlide = true;
-    _placeLens();
+    _showPlace();
   }
 
-  /// Puts the lens on its word and keeps that word in the upper part of the
-  /// screen, so the lines to come are in view.
-  void _placeLens() {
+  /// The word at [index] is read: it and the words before it, from where
+  /// reading began, are written in the colour of what is read. Read from
+  /// before that place (the reader went back), reading begins there.
+  void _read(int index) {
+    _followWord = _followWords[index];
+    if (index < _followBegan) _followBegan = index;
+    _followRead = index;
+    _followWrong = false;
+    _showPlace();
+  }
+
+  /// The word at [index] was left out or read wrongly: it is written in
+  /// red and waited on; what is read ends before it.
+  void _wait(int index) {
+    _followWord = _followWords[index];
+    _followRead = index > _followBegan ? index - 1 : null;
+    _followWrong = true;
+    _showPlace();
+  }
+
+  /// The words in another ink than the text's: those read, and the one to
+  /// be read again.
+  List<ReaderWordInk> _followInks() {
+    if (_listener == null) return const <ReaderWordInk>[];
+    final read = _followRead;
+    final range = read == null || read < _followBegan
+        ? null
+        : QuranWordRange.between(
+            _followWords[_followBegan],
+            _followWords[read],
+          );
+    return <ReaderWordInk>[
+      if (range != null) (words: range, color: recitationRead),
+      if (_followWord case final word? when _followWrong)
+        (words: QuranWordRange.single(word), color: recitationWrong),
+    ];
+  }
+
+  /// Shows the words read in their colour and keeps the place in the
+  /// upper part of the screen, so the lines to come are in view.
+  void _showPlace() {
     final word = _followWord;
     final stack = _stackKey.currentContext?.findRenderObject();
-    if (!mounted || word == null || stack is! RenderBox) return;
+    if (!mounted) return;
+    setState(() {});
+    if (word == null || stack is! RenderBox) return;
     final rect = _wordRegistry.wordRectIn(word, stack);
-    if (rect == null) {
-      // Its ayah is not on screen: the colour of the lens still changes.
-      setState(() {});
-      return;
-    }
-    setState(() => _followRect = rect);
+    // Its ayah is not on screen.
+    if (rect == null) return;
     final height = stack.size.height;
     if (!_scrollController.hasClients ||
         (rect.top > 0 && rect.bottom < height * .6)) {
@@ -1007,15 +1043,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                           unawaited(_markVisibleRub());
                         }
                         if (notification is ScrollUpdateNotification) {
-                          // The lens stays on its word as the text moves.
-                          if (_followRect case final rect?) {
-                            setState(() {
-                              _followGlide = false;
-                              _followRect = rect.shift(
-                                Offset(0, -(notification.scrollDelta ?? 0)),
-                              );
-                            });
-                          }
                           if (_words.range != null) _reportBounds();
                           // A jump to keep the place reports nothing new.
                           if (!_jumping && _pinch == null) {
@@ -1075,6 +1102,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                           }
                           final ayah = items[index - 1];
                           final words = ayahWords(ayah);
+                          final inks = _followInks();
                           final page = pageOf(ayah);
                           final pageEnded =
                               index > 1 &&
@@ -1128,6 +1156,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                 style: style,
                                 registry: _wordRegistry,
                                 range: _words.range,
+                                inked: inks,
                                 // The ayah a quarter of a hizb starts at, while
                                 // it is announced.
                                 marked:
@@ -1194,12 +1223,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                       ),
                     ),
                   if (_loupe case final point?) WordRangeLoupe(point: point),
-                  if (_followRect case final rect?)
-                    RecitationLens(
-                      word: rect,
-                      glide: _followGlide,
-                      wrong: _followWrong,
-                    ),
                   RubMarkToast(controller: _rubMark),
                 ],
               ),
