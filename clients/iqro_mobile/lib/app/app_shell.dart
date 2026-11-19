@@ -78,6 +78,8 @@ class _AppShellState extends ConsumerState<AppShell>
     }
   }
 
+  final _bodyKey = GlobalKey();
+
   void _schedulePlayerHint() {
     _stopPlayerHint();
     _playerHintTimer = Timer(miniPlayerHintDelay, _showPlayerHint);
@@ -152,95 +154,150 @@ class _AppShellState extends ConsumerState<AppShell>
           ),
         ) >
         0;
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: <Widget>[
-          widget.child ??
-              IqroLazyIndexedStack(
-                index: _index,
-                builders: <WidgetBuilder>[
-                  (_) => const HomeScreen(),
-                  (_) => const QuranScreen(),
-                  (_) => const PlanScreen(),
-                  (_) => const AudioScreen(),
-                  (_) => const MoreScreen(),
-                ],
-              ),
-          // The tab bar is 72 dp plus the system inset under it (48 dp for
-          // three-button navigation edge-to-edge). The Scaffold measures it
-          // and hands the body that height as its bottom padding.
-          Builder(
-            builder: (context) => PositionedDirectional(
-              start: 0,
-              end: 0,
-              bottom: MediaQuery.paddingOf(context).bottom,
-              child: const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  AppUpdateCard(),
-                  AnalyticsConsentCard(),
-                  IqroMiniPlayer(),
-                ],
-              ),
+    // A phone on its side is ~360 dp tall: the bottom bar took 80 dp of it.
+    // There the tabs stand in a rail at the start edge instead.
+    final screen = MediaQuery.sizeOf(context);
+    final rail =
+        screen.width > screen.height &&
+        screen.shortestSide < iqroTabletShortestSide;
+    void select(int value) {
+      // Leaving a screen of the tab (After prayer under Plan) counts too.
+      if (value != _index || widget.child != null) {
+        _switchedTab(value);
+      }
+      context.go('/app?tab=$value');
+    }
+
+    final moreIcon = Badge(
+      isLabelVisible: unreadNews,
+      child: const Icon(Icons.grid_view_outlined),
+    );
+    final moreSelectedIcon = Badge(
+      isLabelVisible: unreadNews,
+      child: const Icon(Icons.grid_view),
+    );
+    final tabs = <({Widget icon, Widget selectedIcon, String label})>[
+      (
+        icon: const Icon(Icons.home_outlined),
+        selectedIcon: const Icon(Icons.home),
+        label: context.l10n.navHome,
+      ),
+      (
+        icon: const IqroIcon(Icons.menu_book_outlined),
+        selectedIcon: const IqroIcon(Icons.menu_book),
+        label: context.l10n.navQuran,
+      ),
+      (
+        icon: const Icon(Icons.track_changes_outlined),
+        selectedIcon: const Icon(Icons.track_changes),
+        label: context.l10n.navPlan,
+      ),
+      (
+        icon: const Icon(Icons.headphones_outlined),
+        selectedIcon: const Icon(Icons.headphones),
+        label: context.l10n.navAudio,
+      ),
+      (
+        icon: moreIcon,
+        selectedIcon: moreSelectedIcon,
+        label: context.l10n.navMore,
+      ),
+    ];
+    // One key in both layouts: turning the phone keeps the tabs' state.
+    final body = Stack(
+      key: _bodyKey,
+      children: <Widget>[
+        widget.child ??
+            IqroLazyIndexedStack(
+              index: _index,
+              builders: <WidgetBuilder>[
+                (_) => const HomeScreen(),
+                (_) => const QuranScreen(),
+                (_) => const PlanScreen(),
+                (_) => const AudioScreen(),
+                (_) => const MoreScreen(),
+              ],
+            ),
+        // The tab bar is 72 dp plus the system inset under it (48 dp for
+        // three-button navigation edge-to-edge). The Scaffold measures it
+        // and hands the body that height as its bottom padding.
+        Builder(
+          builder: (context) => PositionedDirectional(
+            start: 0,
+            end: 0,
+            bottom: MediaQuery.paddingOf(context).bottom,
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                AppUpdateCard(),
+                AnalyticsConsentCard(),
+                IqroMiniPlayer(),
+              ],
             ),
           ),
-        ],
-      ),
-      bottomNavigationBar: Material(
-        color: Colors.transparent,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            NavigationBar(
-              backgroundColor: Theme.of(
-                context,
-              ).colorScheme.surface.withValues(alpha: .96),
-              selectedIndex: _index,
-              onDestinationSelected: (value) {
-                // Leaving a screen of the tab (After prayer under Plan) counts too.
-                if (value != _index || widget.child != null) {
-                  _switchedTab(value);
-                }
-                context.go('/app?tab=$value');
-              },
-              destinations: <NavigationDestination>[
-                NavigationDestination(
-                  icon: const Icon(Icons.home_outlined),
-                  selectedIcon: const Icon(Icons.home),
-                  label: context.l10n.navHome,
+        ),
+      ],
+    );
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return Scaffold(
+      extendBody: true,
+      body: !rail
+          ? body
+          : Row(
+              children: <Widget>[
+                // Icons only, with the names as tooltips: five named tabs do
+                // not fit the height; a very short window scrolls them.
+                NavigationRail(
+                  key: const ValueKey('app-shell-rail'),
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  minWidth: 64,
+                  scrollable: true,
+                  labelType: NavigationRailLabelType.none,
+                  selectedIndex: _index,
+                  onDestinationSelected: select,
+                  destinations: <NavigationRailDestination>[
+                    for (final tab in tabs)
+                      NavigationRailDestination(
+                        icon: Tooltip(message: tab.label, child: tab.icon),
+                        selectedIcon: Tooltip(
+                          message: tab.label,
+                          child: tab.selectedIcon,
+                        ),
+                        label: Text(tab.label),
+                      ),
+                  ],
                 ),
-                NavigationDestination(
-                  icon: const IqroIcon(Icons.menu_book_outlined),
-                  selectedIcon: const IqroIcon(Icons.menu_book),
-                  label: context.l10n.navQuran,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.track_changes_outlined),
-                  selectedIcon: const Icon(Icons.track_changes),
-                  label: context.l10n.navPlan,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.headphones_outlined),
-                  selectedIcon: const Icon(Icons.headphones),
-                  label: context.l10n.navAudio,
-                ),
-                NavigationDestination(
-                  icon: Badge(
-                    isLabelVisible: unreadNews,
-                    child: const Icon(Icons.grid_view_outlined),
+                // The rail has taken the cutout's inset at its edge.
+                Expanded(
+                  child: MediaQuery.removePadding(
+                    context: context,
+                    removeLeft: !rtl,
+                    removeRight: rtl,
+                    child: body,
                   ),
-                  selectedIcon: Badge(
-                    isLabelVisible: unreadNews,
-                    child: const Icon(Icons.grid_view),
-                  ),
-                  label: context.l10n.navMore,
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+      bottomNavigationBar: rail
+          ? null
+          : Material(
+              color: Colors.transparent,
+              child: NavigationBar(
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: .96),
+                selectedIndex: _index,
+                onDestinationSelected: select,
+                destinations: <NavigationDestination>[
+                  for (final tab in tabs)
+                    NavigationDestination(
+                      icon: tab.icon,
+                      selectedIcon: tab.selectedIcon,
+                      label: tab.label,
+                    ),
+                ],
+              ),
+            ),
     );
   }
 }
