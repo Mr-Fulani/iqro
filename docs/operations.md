@@ -639,7 +639,7 @@ URL/размер/MIME и присутствие всех `MEDIA_CDN_REQUIRED_ORI
 
 Backend CI экспортирует только production-зависимости из frozen `uv.lock` вместе с хешами и
 проверяет их через закреплённый `pip-audit`. Web CI отдельно запускает
-`npm audit --omit=dev --audit-level=high` (только production-зависимости, без build/test tooling). Production Compose CI после сборки
+`npm audit --audit-level=high` (все зависимости, включая build/test tooling; с 19.11.2026). Production Compose CI после сборки
 проверяет Trivy все deployable образы: backend, web, gateway, PostgreSQL и Redis. Любая известная
 `HIGH`/`CRITICAL` уязвимость блокирует gate, в том числе пока не имеющая исправления.
 Backend и web runtime не содержат package managers; PostgreSQL wrapper flatten'ит финальный
