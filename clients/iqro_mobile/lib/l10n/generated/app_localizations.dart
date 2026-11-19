@@ -1032,6 +1032,18 @@ abstract class AppLocalizations {
   /// **'Mushaf'**
   String get mushafMode;
 
+  /// No description provided for @mushafNightOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Night mode'**
+  String get mushafNightOn;
+
+  /// No description provided for @mushafNightOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Light page'**
+  String get mushafNightOff;
+
   /// No description provided for @readerPlainText.
   ///
   /// In en, this message translates to:

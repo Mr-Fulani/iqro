@@ -341,6 +341,9 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> markReminderSoundChecked() =>
       _set(state.copyWith(reminderSoundChecked: true));
 
+  Future<void> setMushafNight(bool value) =>
+      _set(state.copyWith(mushafNight: value));
+
   Future<void> notePlayerHint(DateTime at) => _set(
     state.copyWith(
       playerHintsShown: state.playerHintsShown + 1,

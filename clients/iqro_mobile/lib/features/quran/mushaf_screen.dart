@@ -400,6 +400,44 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
     // The round button pauses the page that sounds and plays any other.
     final playingSelected =
         player.active && player.playing && _playbackPage == _currentPage;
+    final night = ref.watch(
+      appPreferencesProvider.select((value) => value.mushafNight),
+    );
+    // A phone on its side is short: the play button joins the bottom row
+    // instead of standing over it, so the bars cover less of the page.
+    final viewport = MediaQuery.sizeOf(context);
+    final compactBars =
+        viewport.width > viewport.height &&
+        viewport.shortestSide < iqroTabletShortestSide;
+    final playButton = SizedBox.square(
+      dimension: 52,
+      child: FloatingActionButton(
+        heroTag: 'mushaf-play-selected',
+        tooltip: playingSelected
+            ? context.l10n.pause
+            : '${context.l10n.listen} ${_selectedAyah?.key ?? ''}'.trim(),
+        backgroundColor: mushafAccentColor,
+        foregroundColor: Colors.white,
+        elevation: 1,
+        shape: const CircleBorder(),
+        onPressed: _audioLoading ? null : _playSelected,
+        child: _audioLoading || (playingSelected && player.buffering)
+            ? const SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Icon(
+                playingSelected
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+                size: 30,
+              ),
+      ),
+    );
+    final showPlayButton = !_playerExpanded || !player.active;
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
@@ -409,57 +447,64 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: mushafPaperColor,
+        backgroundColor: night
+            ? mushafNightColor(mushafPaperColor)
+            : mushafPaperColor,
         body: Stack(
           children: <Widget>[
             SurahOpenReporter(surah: reference?.surah),
             SafeArea(
-              child: PageView.builder(
-                controller: _pageController,
-                // Builds the neighbouring pages so a swipe reveals a laid-out,
-                // decoded page instead of a spinner.
-                allowImplicitScrolling: true,
-                reverse: true,
-                physics: _zoom > 1.01
-                    ? const NeverScrollableScrollPhysics()
-                    : const PageScrollPhysics(parent: ClampingScrollPhysics()),
-                itemCount: ref.watch(selectedMushafPageCountProvider),
-                onPageChanged: _onPageChanged,
-                itemBuilder: (context, index) {
-                  final page = index + 1;
-                  return NativeMushafPage(
-                    key: ValueKey(
-                      '${ref.watch(selectedMushafIdentityProvider).code}:$page',
-                    ),
-                    page: page,
-                    controller: _zoomControllers.putIfAbsent(
-                      page,
-                      NativeMushafPageController.new,
-                    ),
-                    selectedAyah: _selectedAyah,
-                    playingAyah: playingAyah,
-                    highlightColors: highlightColors,
-                    surahs: catalog?.surahs ?? const <Surah>[],
-                    divisions: divisions,
-                    showPageLabels: !_controlsVisible,
-                    onSelectAyah: _selectAyah,
-                    onTajweedWord: (reference) =>
-                        _selectAyah(reference, toggleControls: false),
-                    tajweedRecitation: _tajweedRecitationId,
-                    onOpenAyah: _openAyah,
-                    wordRange: _words.range,
-                    playingWord: _words.playingWord,
-                    onWordRange: _selectWords,
-                    onBackgroundTap: () => _words.range != null
-                        ? _words.clear()
-                        : _setControls(!_controlsVisible),
-                    onScale: (value) {
-                      if (page == _currentPage && mounted) {
-                        setState(() => _zoom = value);
-                      }
-                    },
-                  );
-                },
+              child: MushafNight(
+                night: night,
+                child: PageView.builder(
+                  controller: _pageController,
+                  // Builds the neighbouring pages so a swipe reveals a laid-out,
+                  // decoded page instead of a spinner.
+                  allowImplicitScrolling: true,
+                  reverse: true,
+                  physics: _zoom > 1.01
+                      ? const NeverScrollableScrollPhysics()
+                      : const PageScrollPhysics(
+                          parent: ClampingScrollPhysics(),
+                        ),
+                  itemCount: ref.watch(selectedMushafPageCountProvider),
+                  onPageChanged: _onPageChanged,
+                  itemBuilder: (context, index) {
+                    final page = index + 1;
+                    return NativeMushafPage(
+                      key: ValueKey(
+                        '${ref.watch(selectedMushafIdentityProvider).code}:$page',
+                      ),
+                      page: page,
+                      controller: _zoomControllers.putIfAbsent(
+                        page,
+                        NativeMushafPageController.new,
+                      ),
+                      selectedAyah: _selectedAyah,
+                      playingAyah: playingAyah,
+                      highlightColors: highlightColors,
+                      surahs: catalog?.surahs ?? const <Surah>[],
+                      divisions: divisions,
+                      showPageLabels: !_controlsVisible,
+                      onSelectAyah: _selectAyah,
+                      onTajweedWord: (reference) =>
+                          _selectAyah(reference, toggleControls: false),
+                      tajweedRecitation: _tajweedRecitationId,
+                      onOpenAyah: _openAyah,
+                      wordRange: _words.range,
+                      playingWord: _words.playingWord,
+                      onWordRange: _selectWords,
+                      onBackgroundTap: () => _words.range != null
+                          ? _words.clear()
+                          : _setControls(!_controlsVisible),
+                      onScale: (value) {
+                        if (page == _currentPage && mounted) {
+                          setState(() => _zoom = value);
+                        }
+                      },
+                    );
+                  },
+                ),
               ),
             ),
             RubMarkToast(controller: _rubMark),
@@ -472,94 +517,115 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                 child: AnimatedOpacity(
                   opacity: _controlsVisible ? 1 : 0,
                   duration: const Duration(milliseconds: 180),
-                  child: Row(
-                    children: <Widget>[
-                      MushafCircleButton(
-                        icon: Icons.arrow_back_rounded,
-                        tooltip: context.l10n.back,
-                        onPressed: () => context.pop(),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: MushafControlSurface(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(40),
-                            onTap: () =>
-                                _showQuickJump(mode: QuranQuickJumpMode.ayah),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 7,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Flexible(
-                                        child: Text(
-                                          surahLabel,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: mushafInkColor,
-                                            fontWeight: FontWeight.w700,
+                  child: MushafNight(
+                    night: night,
+                    child: Row(
+                      children: <Widget>[
+                        MushafCircleButton(
+                          icon: Icons.arrow_back_rounded,
+                          tooltip: context.l10n.back,
+                          onPressed: () => context.pop(),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: MushafControlSurface(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(40),
+                              onTap: () =>
+                                  _showQuickJump(mode: QuranQuickJumpMode.ayah),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Flexible(
+                                          child: Text(
+                                            surahLabel,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: mushafInkColor,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      const Icon(
-                                        Icons.expand_more_rounded,
-                                        size: 18,
-                                        color: mushafInkColor,
-                                      ),
-                                    ],
-                                  ),
-                                  Text(
-                                    reference == null
-                                        ? context.l10n.mushafMode
-                                        : '${context.l10n.ayah} ${reference.key}',
-                                    style: const TextStyle(
-                                      color: mushafAccentColor,
-                                      fontSize: 12,
+                                        const Icon(
+                                          Icons.expand_more_rounded,
+                                          size: 18,
+                                          color: mushafInkColor,
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      reference == null
+                                          ? context.l10n.mushafMode
+                                          : '${context.l10n.ayah} ${reference.key}',
+                                      style: const TextStyle(
+                                        color: mushafAccentColor,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      MushafControlSurface(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            IconButton(
-                              key: const ValueKey('mushaf-bookmark'),
-                              tooltip: context.l10n.favorites,
-                              onPressed:
-                                  reference == null ||
-                                      activeAccount == null ||
-                                      _bookmarkLoading
-                                  ? null
-                                  : _bookmarkSelected,
-                              color: mushafAccentColor,
-                              isSelected: bookmarkState?.valueOrNull ?? false,
-                              selectedIcon: const Icon(Icons.bookmark_rounded),
-                              icon: const Icon(Icons.bookmark_border_rounded),
-                            ),
-                            IconButton(
-                              tooltip: context.l10n.quickJump,
-                              onPressed: () =>
-                                  _showQuickJump(mode: QuranQuickJumpMode.ayah),
-                              color: mushafAccentColor,
-                              icon: const Icon(Icons.search_rounded),
-                            ),
-                          ],
+                        const SizedBox(width: 8),
+                        MushafControlSurface(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              IconButton(
+                                key: const ValueKey('mushaf-bookmark'),
+                                tooltip: context.l10n.favorites,
+                                onPressed:
+                                    reference == null ||
+                                        activeAccount == null ||
+                                        _bookmarkLoading
+                                    ? null
+                                    : _bookmarkSelected,
+                                color: mushafAccentColor,
+                                isSelected: bookmarkState?.valueOrNull ?? false,
+                                selectedIcon: const Icon(
+                                  Icons.bookmark_rounded,
+                                ),
+                                icon: const Icon(Icons.bookmark_border_rounded),
+                              ),
+                              IconButton(
+                                tooltip: context.l10n.quickJump,
+                                onPressed: () => _showQuickJump(
+                                  mode: QuranQuickJumpMode.ayah,
+                                ),
+                                color: mushafAccentColor,
+                                icon: const Icon(Icons.search_rounded),
+                              ),
+                              IconButton(
+                                key: const ValueKey('mushaf-night'),
+                                tooltip: night
+                                    ? context.l10n.mushafNightOff
+                                    : context.l10n.mushafNightOn,
+                                onPressed: () => ref
+                                    .read(appPreferencesProvider.notifier)
+                                    .setMushafNight(!night),
+                                color: mushafAccentColor,
+                                isSelected: night,
+                                selectedIcon: const Icon(
+                                  Icons.light_mode_outlined,
+                                ),
+                                icon: const Icon(Icons.dark_mode_outlined),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -610,72 +676,49 @@ class _MushafScreenState extends ConsumerState<MushafScreen>
                                 setState(() => _playerExpanded = false),
                           ),
                         ),
-                      if (!_playerExpanded || !player.active)
+                      if (showPlayButton && !compactBars)
                         Align(
                           alignment: AlignmentDirectional.centerEnd,
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: SizedBox.square(
-                              dimension: 52,
-                              child: FloatingActionButton(
-                                heroTag: 'mushaf-play-selected',
-                                tooltip: playingSelected
-                                    ? context.l10n.pause
-                                    : '${context.l10n.listen} ${_selectedAyah?.key ?? ''}'
-                                          .trim(),
-                                backgroundColor: mushafAccentColor,
-                                foregroundColor: Colors.white,
-                                elevation: 1,
-                                shape: const CircleBorder(),
-                                onPressed: _audioLoading ? null : _playSelected,
-                                child:
-                                    _audioLoading ||
-                                        (playingSelected && player.buffering)
-                                    ? const SizedBox.square(
-                                        dimension: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Icon(
-                                        playingSelected
-                                            ? Icons.pause_rounded
-                                            : Icons.play_arrow_rounded,
-                                        size: 30,
-                                      ),
-                              ),
-                            ),
+                            child: MushafNight(night: night, child: playButton),
                           ),
                         ),
-                      Row(
-                        children: <Widget>[
-                          // The text of the same place, as the Mushaf button
-                          // in the text reader's bar.
-                          MushafCircleButton(
-                            key: const ValueKey('mushaf-open-text'),
-                            icon: Icons.subject_rounded,
-                            tooltip: context.l10n.textMode,
-                            onPressed: _switchToText,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: MushafPageScrubber(
-                              pagesCount: _pageCount,
-                              page: _currentPage,
-                              juz: currentJuz,
-                              onJump: _scrubToPage,
+                      MushafNight(
+                        night: night,
+                        child: Row(
+                          children: <Widget>[
+                            // The text of the same place, as the Mushaf button
+                            // in the text reader's bar.
+                            MushafCircleButton(
+                              key: const ValueKey('mushaf-open-text'),
+                              icon: Icons.subject_rounded,
+                              tooltip: context.l10n.textMode,
+                              onPressed: _switchToText,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          MushafCircleButton(
-                            icon: Icons.article_outlined,
-                            tooltip: context.l10n.translation,
-                            onPressed: reference == null
-                                ? null
-                                : () => _openAyah(reference),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: MushafPageScrubber(
+                                pagesCount: _pageCount,
+                                page: _currentPage,
+                                juz: currentJuz,
+                                onJump: _scrubToPage,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            MushafCircleButton(
+                              icon: Icons.article_outlined,
+                              tooltip: context.l10n.translation,
+                              onPressed: reference == null
+                                  ? null
+                                  : () => _openAyah(reference),
+                            ),
+                            if (showPlayButton && compactBars) ...<Widget>[
+                              const SizedBox(width: 8),
+                              playButton,
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                   ),

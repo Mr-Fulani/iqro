@@ -22,6 +22,7 @@ import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/mushaf_edition.dart';
+import 'package:iqro_mobile/features/quran/mushaf_paper.dart';
 import 'package:iqro_mobile/features/quran/mushaf_raster_layout.dart';
 import 'package:iqro_mobile/features/quran/mushaf_reciter_sheet.dart';
 import 'package:iqro_mobile/features/quran/mushaf_screen.dart';
@@ -76,6 +77,89 @@ void main() {
     }
     // «Сейчас играет» led to the Audio tab's player, not the Mushaf's.
     expect(find.byKey(const ValueKey('mushaf-now-playing')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the moon turns the page dark, the choice is remembered', (
+    tester,
+  ) async {
+    await _pump(tester);
+    Color? paper() =>
+        tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor;
+    Finder filtered() => find.ancestor(
+      of: find.byType(NativeMushafPage),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is ColorFiltered && widget.colorFilter == mushafNightFilter,
+      ),
+    );
+    expect(paper(), mushafPaperColor);
+    expect(filtered(), findsNothing);
+    await _tapAyah(tester, .35);
+    expect(find.byTooltip('Ночной режим'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('mushaf-night')));
+    await tester.pump();
+    // Dark paper, light ink.
+    expect(paper()!.computeLuminance(), lessThan(.02));
+    expect(
+      mushafNightColor(mushafInkColor).computeLuminance(),
+      greaterThan(.5),
+    );
+    expect(filtered(), findsWidgets);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getBool('mushaf_night'), isTrue);
+    expect(find.byTooltip('Светлая страница'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('mushaf-night')));
+    await tester.pump();
+    expect(paper(), mushafPaperColor);
+    expect(filtered(), findsNothing);
+    expect(preferences.getBool('mushaf_night'), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a Mushaf opened after the night choice is dark at once', (
+    tester,
+  ) async {
+    await _pump(tester, stored: const <String, Object>{'mushaf_night': true});
+    expect(
+      tester
+          .widget<Scaffold>(find.byType(Scaffold).first)
+          .backgroundColor!
+          .computeLuminance(),
+      lessThan(.02),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  // Phones on their side, iPhone and Android: the play button joins the
+  // bottom row, so the bars cover one row of the page, not two.
+  for (final size in const <Size>[Size(852, 393), Size(800, 360)]) {
+    testWidgets('on its side ($size) the play button sits in the bottom row', (
+      tester,
+    ) async {
+      await _pump(tester, size: size);
+      await tester.tapAt(size.center(Offset.zero));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      final play = tester.getRect(find.byType(FloatingActionButton));
+      final text = tester.getRect(
+        find.byKey(const ValueKey('mushaf-open-text')),
+      );
+      expect(play.center.dy, moreOrLessEquals(text.center.dy, epsilon: 3));
+      expect(play.left, greaterThan(text.right));
+      expect(size.height - play.top, lessThan(80));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('upright the play button stays above the bottom row', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await _tapAyah(tester, .35);
+    final play = tester.getRect(find.byType(FloatingActionButton));
+    final text = tester.getRect(find.byKey(const ValueKey('mushaf-open-text')));
+    expect(play.bottom, lessThanOrEqualTo(text.top));
     expect(tester.takeException(), isNull);
   });
 
@@ -761,12 +845,14 @@ Future<({_Audio controller, _AudioRepository audio, _Quran quran})> _pump(
   bool tajweed = false,
   bool pageNames = false,
   List<QuranDivision> rubs = const <QuranDivision>[],
+  Map<String, Object> stored = const <String, Object>{},
+  Size size = const Size(360, 800),
 }) async {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(360, 800);
+  tester.view.physicalSize = size;
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
-  SharedPreferences.setMockInitialValues(<String, Object>{});
+  SharedPreferences.setMockInitialValues(stored);
   final store = PreferencesStore(await SharedPreferences.getInstance());
   final database = _Database();
   final plan = _Plan();

@@ -69,6 +69,7 @@ class AppPreferences {
     this.playerBackgroundId = defaultPlayerBackgroundId,
     this.reminderAdhan = defaultReminderAdhan,
     this.reminderSoundChecked = false,
+    this.mushafNight = false,
     this.playerHintsShown = 0,
     this.playerHintShownAt,
     this.readerSwipeHintsShown = 0,
@@ -103,6 +104,7 @@ class AppPreferences {
       playerBackgroundId = defaultPlayerBackgroundId,
       reminderAdhan = defaultReminderAdhan,
       reminderSoundChecked = false,
+      mushafNight = false,
       playerHintsShown = 0,
       playerHintShownAt = null,
       readerSwipeHintsShown = 0,
@@ -145,6 +147,9 @@ class AppPreferences {
   /// The reminder sound check has run on this device.
   final bool reminderSoundChecked;
 
+  /// The Mushaf's pages on dark paper, for reading at night.
+  final bool mushafNight;
+
   /// How often the mini player has shown that it folds; the limit once someone
   /// has folded it by hand.
   final int playerHintsShown;
@@ -183,6 +188,7 @@ class AppPreferences {
     String? playerBackgroundId,
     ReminderAdhan? reminderAdhan,
     bool? reminderSoundChecked,
+    bool? mushafNight,
     int? playerHintsShown,
     DateTime? playerHintShownAt,
     int? readerSwipeHintsShown,
@@ -226,6 +232,7 @@ class AppPreferences {
       playerBackgroundId: playerBackgroundId ?? this.playerBackgroundId,
       reminderAdhan: reminderAdhan ?? this.reminderAdhan,
       reminderSoundChecked: reminderSoundChecked ?? this.reminderSoundChecked,
+      mushafNight: mushafNight ?? this.mushafNight,
       playerHintsShown: playerHintsShown ?? this.playerHintsShown,
       playerHintShownAt: playerHintShownAt ?? this.playerHintShownAt,
       readerSwipeHintsShown:
@@ -366,6 +373,7 @@ class PreferencesStore {
           defaultReminderAdhan,
       reminderSoundChecked:
           _preferences.getBool('reminder_sound_checked') ?? false,
+      mushafNight: _preferences.getBool('mushaf_night') ?? false,
       playerHintsShown: _preferences.getInt('player_hint_count') ?? 0,
       readerSwipeHintsShown:
           _preferences.getInt('reader_swipe_hint_count') ?? 0,
@@ -450,6 +458,7 @@ class PreferencesStore {
         'reminder_sound_checked',
         value.reminderSoundChecked,
       ),
+      _preferences.setBool('mushaf_night', value.mushafNight),
       _preferences.setInt('player_hint_count', value.playerHintsShown),
       _preferences.setInt(
         'reader_swipe_hint_count',

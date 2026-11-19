@@ -167,6 +167,8 @@
   "alFatiha": "Al-Fatiha",
   "textMode": "Text",
   "mushafMode": "Mushaf",
+  "mushafNightOn": "Night mode",
+  "mushafNightOff": "Light page",
   "readerPlainText": "Arabic text",
   "readerSwipeHint": "Swipe right for the Arabic text, left for the Mushaf",
   "readerPlainTextPlace": "Ayah {ayah} · p. {page}",

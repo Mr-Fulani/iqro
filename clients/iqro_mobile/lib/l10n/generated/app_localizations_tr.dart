@@ -537,6 +537,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get mushafMode => 'Mushaf';
 
   @override
+  String get mushafNightOn => 'Gece modu';
+
+  @override
+  String get mushafNightOff => 'Açık sayfa';
+
+  @override
   String get readerPlainText => 'Arapça metin';
 
   @override

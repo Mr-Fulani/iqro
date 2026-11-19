@@ -535,6 +535,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mushafMode => 'المصحف';
 
   @override
+  String get mushafNightOn => 'الوضع الليلي';
+
+  @override
+  String get mushafNightOff => 'الصفحة الفاتحة';
+
+  @override
   String get readerPlainText => 'النص العربي';
 
   @override
