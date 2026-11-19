@@ -166,24 +166,33 @@ class _StepFrame extends StatelessWidget {
     final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsetsDirectional.fromSTEB(20, 18, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (top != null) ...<Widget>[top!, const SizedBox(height: 18)],
-          Semantics(
-            header: true,
-            child: Text(title, style: theme.textTheme.headlineMedium),
+      // On a tablet the step keeps the width of a page (see IqroPage).
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: iqroLandscapeContentWidth - 40,
           ),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (top != null) ...<Widget>[top!, const SizedBox(height: 18)],
+              Semantics(
+                header: true,
+                child: Text(title, style: theme.textTheme.headlineMedium),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                body,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 20),
+              child,
+            ],
           ),
-          const SizedBox(height: 20),
-          child,
-        ],
+        ),
       ),
     );
   }
