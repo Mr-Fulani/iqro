@@ -16,6 +16,20 @@
 | Instagram `iqro.forum` | `https://iqro.forum/?utm_source=instagram&utm_medium=social&utm_campaign=profile` |
 | TikTok `@iqro.forum` | `https://iqro.forum/?utm_source=tiktok&utm_medium=social&utm_campaign=profile` |
 | Threads `@iqro.forum` | `https://iqro.forum/?utm_source=threads&utm_medium=social&utm_campaign=profile` |
+| Facebook, страница IQRO | `https://iqro.forum/?utm_source=facebook&utm_medium=social&utm_campaign=profile` |
+| YouTube, канал IQRO | `https://iqro.forum/?utm_source=youtube&utm_medium=social&utm_campaign=profile` |
+| Reddit `iqroforum` | `https://iqro.forum/?utm_source=reddit&utm_medium=social&utm_campaign=profile` |
+
+Состояние на 19.11.2026: в Instagram, Threads, Facebook («Информация» → «Ссылки») и YouTube
+(«Настройка канала» → «Профиль» → «Ссылки») ссылки с метками стоят. Остальные:
+
+- **TikTok** — у обычного аккаунта поля для сайта нет; оно появляется у бизнес-аккаунта.
+- **Pinterest** — сайт подтверждён как домен `iqro.forum`, поле заблокировано; менять не нужно.
+  Метки ставятся в ссылках самих пинов (`utm_source=pinterest`).
+- **Telegram** — в описании канала ссылки на сайт нет. Метки ставятся в ссылках в постах
+  (`utm_source=telegram`).
+- **Reddit** — ссылку в профиле («Настройки» → «Профиль» → «Ссылки на соцсети») владелец
+  ставит сам.
 
 Вставлять нужно **в самой соцсети**: приложение Instagram, TikTok или Threads → свой профиль →
 «Редактировать профиль» → поле со ссылкой на сайт. Старую ссылку `https://iqro.forum` сотрите и
@@ -37,10 +51,11 @@ https://iqro.forum/<раздел>?utm_source=<соцсеть>&utm_medium=social&
 
 - `<раздел>` — куда ведём человека (список ниже). Если ведём на главную, раздел не пишем:
   `https://iqro.forum/?utm_source=...`.
-- `<соцсеть>` — `instagram`, `tiktok` или `threads`. Всегда так, маленькими латинскими буквами.
+- `<соцсеть>` — `instagram`, `tiktok`, `threads`, `facebook`, `youtube`, `telegram`, `pinterest`
+  или `reddit`. Всегда так, маленькими латинскими буквами.
 - `<название-поста>` — короткое имя поста, которое вы придумываете сами: латинские буквы, цифры
   и дефис, без пробелов и русских букв. Например `names-of-allah`, `azan-reminders`,
-  `ramadan-2027`. Одно и то же имя во всех трёх соцсетях — тогда их легко сравнить.
+  `ramadan-2027`. Одно и то же имя во всех соцсетях — тогда их легко сравнить.
 
 `utm_medium=social` не трогаем никогда.
 
