@@ -1280,7 +1280,7 @@
   "recitationCheck": "Recitation check",
   "recitationStop": "Turn the microphone off",
   "recitationHint": "Tap and read aloud",
-  "recitationNoticeHow": "Turn the microphone on and read aloud: the words you have read change colour. If you skip a word or say another one, it turns red and the phone vibrates; read it rightly and the reading goes on.",
+  "recitationNoticeHow": "Turn the microphone on and read aloud: the word you are reading is highlighted. If you skip a word or say another one, the highlight turns red and the phone vibrates; read the word rightly and the reading goes on.",
   "recitationNoticeVoice": "Your voice is recognised by your phone's speech recognition service (Google or Apple). On older phones the sound goes to it over the internet. IQRO does not keep the recording and does not send it to its own server.",
   "recitationNoticeLimits": "The check covers the words, not tajweed or vowel marks.",
   "recitationNoticeVoiceOnDevice": "Your voice is heard by a program on the phone itself: the sound is sent nowhere and no internet is needed. IQRO does not keep the recording. If it cannot start on this phone, Google's speech recognition service listens instead, and the sound then goes to it.",

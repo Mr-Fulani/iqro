@@ -35,10 +35,11 @@ class ReaderWordRegistry {
   }
 }
 
-/// Words of a [ReaderAyahWords.flow] paragraph written in [color]: the
-/// letters and their marks themselves, whatever colours the Mushaf's
-/// script gives them; nothing is laid over the text.
-typedef ReaderWordInk = ({QuranWordRange words, Color color});
+/// A soft plate with rounded corners under one word of a
+/// [ReaderAyahWords.flow] paragraph, the size of the word with its marks:
+/// the word a reader is on. It is painted under the text, so no letter or
+/// mark is covered and the script's own colours stay as they are.
+typedef ReaderWordPlate = ({QuranWord word, Color fill, Color edge});
 
 /// One ayah's words in a [ReaderAyahWords.flow] paragraph.
 class ReaderAyahText {
@@ -90,7 +91,7 @@ class ReaderAyahWords extends StatefulWidget {
        markerStyle = null,
        kashida = false,
        marked = null,
-       inked = const <ReaderWordInk>[];
+       plates = const <ReaderWordPlate>[];
 
   /// Several ayahs running on in one paragraph, as on a Mushaf page.
   ReaderAyahWords.flow({
@@ -104,7 +105,7 @@ class ReaderAyahWords extends StatefulWidget {
     this.kashida = false,
     this.range,
     this.marked,
-    this.inked = const <ReaderWordInk>[],
+    this.plates = const <ReaderWordPlate>[],
     this.playingWord,
     this.onDrag,
     super.key,
@@ -144,9 +145,8 @@ class ReaderAyahWords extends StatefulWidget {
   /// Words shown for a moment in a soft tint: the place a reader came to.
   final QuranWordRange? marked;
 
-  /// Words written in another ink than the text's: those a reader has
-  /// read aloud, the one he is to read again.
-  final List<ReaderWordInk> inked;
+  /// Plates under words: the one a reader is on, or is to read again.
+  final List<ReaderWordPlate> plates;
   final TextStyle? style;
   final ReaderWordRegistry registry;
   final QuranWordRange? range;
@@ -423,24 +423,28 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
         textScaler: MediaQuery.textScalerOf(context),
       )..layout(minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth);
       _painter = painter;
-      // Where the words in another ink are: a box for each line of them.
-      final inks = <({Rect box, Color color})>[];
-      for (final ink in widget.inked) {
-        final first = _words.indexWhere(
-          (item) => ink.words.contains(item.word),
-        );
-        if (first < 0) continue;
-        final last = _words.lastIndexWhere(
-          (item) => ink.words.contains(item.word),
-        );
-        for (final box in painter.getBoxesForSelection(
-          TextSelection(
-            baseOffset: _offsets[first],
-            extentOffset: _offsets[last] + _words[last].text.length,
+      // Where the plates are.
+      final plates = <({RRect box, Color fill, Color edge})>[];
+      for (final plate in widget.plates) {
+        final index = _indexOf(plate.word);
+        final box = index == null ? null : _wordBox(index);
+        if (box == null) continue;
+        plates.add((
+          // A line's box is taller than its letters and their marks,
+          // which keep to the middle of it: the plate takes that middle,
+          // and a little room at the sides.
+          box: RRect.fromRectAndRadius(
+            Rect.fromLTRB(
+              box.left - box.height * .04,
+              box.top + box.height * .14,
+              box.right + box.height * .04,
+              box.bottom - box.height * .14,
+            ),
+            Radius.circular(box.height * .13),
           ),
-        )) {
-          inks.add((box: box.toRect(), color: ink.color));
-        }
+          fill: plate.fill,
+          edge: plate.edge,
+        ));
       }
       final handles = _handles();
       return Semantics(
@@ -483,7 +487,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
                   constraints.maxWidth,
                   painter.height + (handles.isEmpty ? 0 : _knobRoom),
                 ),
-                painter: _WordsPainter(painter, inks),
+                painter: _WordsPainter(painter, plates),
               ),
               ...handles,
             ],
@@ -501,49 +505,28 @@ const _markedColor = Color(0x38C49647);
 const _knobRoom = WordRangeHandle.knob + 6;
 
 class _WordsPainter extends CustomPainter {
-  const _WordsPainter(this.painter, this.inks);
+  const _WordsPainter(this.painter, this.plates);
 
   final TextPainter painter;
 
-  /// Parts of the text drawn in another colour than its own.
-  final List<({Rect box, Color color})> inks;
+  /// Plates under words of the text.
+  final List<({RRect box, Color fill, Color edge})> plates;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (inks.isEmpty) {
-      painter.paint(canvas, Offset.zero);
-      return;
-    }
-    // The text outside the boxes, as it is.
-    var rest = Path()..addRect(Offset.zero & Size(size.width, painter.height));
-    for (final ink in inks) {
-      rest = Path.combine(
-        PathOperation.difference,
-        rest,
-        Path()..addRect(ink.box),
-      );
-    }
-    canvas
-      ..save()
-      ..clipPath(rest, doAntiAlias: false);
-    painter.paint(canvas, Offset.zero);
-    canvas.restore();
-    // Inside a box the same glyphs, their every pixel in the box's colour:
-    // the shape of a letter or a mark is what the script drew.
-    for (final ink in inks) {
+    // Under the text: the text itself is drawn as ever.
+    for (final plate in plates) {
       canvas
-        ..saveLayer(ink.box, Paint())
-        ..clipRect(ink.box, doAntiAlias: false);
-      painter.paint(canvas, Offset.zero);
-      canvas
-        ..drawRect(
-          ink.box,
+        ..drawRRect(plate.box, Paint()..color = plate.fill)
+        ..drawRRect(
+          plate.box,
           Paint()
-            ..color = ink.color
-            ..blendMode = BlendMode.srcIn,
-        )
-        ..restore();
+            ..color = plate.edge
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
     }
+    painter.paint(canvas, Offset.zero);
   }
 
   @override

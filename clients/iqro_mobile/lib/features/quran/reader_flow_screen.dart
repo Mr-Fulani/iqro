@@ -177,12 +177,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   var _followWords = const <QuranWord>[];
   QuranWord? _followWord;
 
-  /// The words read so far, written in [recitationRead]: from the word
-  /// reading began at to the last one read, by their places in
-  /// [_followWords]. No word is read yet while [_followRead] is null.
-  var _followBegan = 0;
-  int? _followRead;
-
   /// The place waits, in red, on a word the reader left out or said as another.
   var _followWrong = false;
 
@@ -564,7 +558,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       setState(() {
         _listener = null;
         _followWord = null;
-        _followRead = null;
         _followWrong = false;
       });
       unawaited(WakelockPlus.disable());
@@ -614,8 +607,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       _listener = listener;
       // Reading begins here; nothing is read yet.
       _followWord = words.isEmpty ? null : words[start < 0 ? 0 : start];
-      _followBegan = start < 0 ? 0 : start;
-      _followRead = null;
       _followWrong = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _showPlace());
@@ -636,7 +627,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     setState(() {
       _listener = null;
       _followWord = null;
-      _followRead = null;
     });
     unawaited(WakelockPlus.disable());
     listener.dispose();
@@ -697,52 +687,39 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _matcher?.moveTo(index);
     if (_listener case final ModelRecitationListener model) model.moveTo(index);
     _followWord = word;
-    _followBegan = index;
-    _followRead = null;
     _followWrong = false;
     _showPlace();
   }
 
-  /// The word at [index] is read: it and the words before it, from where
-  /// reading began, are written in the colour of what is read. Read from
-  /// before that place (the reader went back), reading begins there.
+  /// The reader is on the word at [index]: the plate goes under it.
   void _read(int index) {
     _followWord = _followWords[index];
-    if (index < _followBegan) _followBegan = index;
-    _followRead = index;
     _followWrong = false;
     _showPlace();
   }
 
-  /// The word at [index] was left out or read wrongly: it is written in
-  /// red and waited on; what is read ends before it.
+  /// The word at [index] was left out or read wrongly: the plate under it
+  /// is red, and it is waited on.
   void _wait(int index) {
     _followWord = _followWords[index];
-    _followRead = index > _followBegan ? index - 1 : null;
     _followWrong = true;
     _showPlace();
   }
 
-  /// The words in another ink than the text's: those read, and the one to
-  /// be read again.
-  List<ReaderWordInk> _followInks() {
-    if (_listener == null) return const <ReaderWordInk>[];
-    final read = _followRead;
-    final range = read == null || read < _followBegan
-        ? null
-        : QuranWordRange.between(
-            _followWords[_followBegan],
-            _followWords[read],
-          );
-    return <ReaderWordInk>[
-      if (range != null) (words: range, color: recitationRead),
-      if (_followWord case final word? when _followWrong)
-        (words: QuranWordRange.single(word), color: recitationWrong),
+  /// The plate under the word the reader is on, or is to read again. The
+  /// rest of the text stays as it is.
+  List<ReaderWordPlate> _followPlates() {
+    final word = _followWord;
+    if (_listener == null || word == null) return const <ReaderWordPlate>[];
+    return <ReaderWordPlate>[
+      _followWrong
+          ? (word: word, fill: recitationWrongPlate, edge: recitationWrong)
+          : (word: word, fill: recitationPlate, edge: recitationPlateEdge),
     ];
   }
 
-  /// Shows the words read in their colour and keeps the place in the
-  /// upper part of the screen, so the lines to come are in view.
+  /// Puts the plate under its word and keeps that word's line about the
+  /// middle of the screen, the lines read above it and those to come below.
   void _showPlace() {
     final word = _followWord;
     final stack = _stackKey.currentContext?.findRenderObject();
@@ -753,14 +730,17 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     // Its ayah is not on screen.
     if (rect == null) return;
     final height = stack.size.height;
+    // Left where it is while its line is near the middle; a line further
+    // up or down is brought there.
+    final at = rect.center.dy;
     if (!_scrollController.hasClients ||
-        (rect.top > 0 && rect.bottom < height * .6)) {
+        (at > height * .32 && at < height * .58)) {
       return;
     }
     final position = _scrollController.position;
     unawaited(
       _scrollController.animateTo(
-        (position.pixels + rect.top - height * .25).clamp(
+        (position.pixels + at - height * .45).clamp(
           position.minScrollExtent,
           position.maxScrollExtent,
         ),
@@ -1102,7 +1082,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                           }
                           final ayah = items[index - 1];
                           final words = ayahWords(ayah);
-                          final inks = _followInks();
+                          final plates = _followPlates();
                           final page = pageOf(ayah);
                           final pageEnded =
                               index > 1 &&
@@ -1156,7 +1136,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                 style: style,
                                 registry: _wordRegistry,
                                 range: _words.range,
-                                inked: inks,
+                                plates: plates,
                                 // The ayah a quarter of a hizb starts at, while
                                 // it is announced.
                                 marked:

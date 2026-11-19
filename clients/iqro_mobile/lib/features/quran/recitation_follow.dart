@@ -265,13 +265,17 @@ const recitationGold = Color(0xFFC49647);
 const recitationMissesAtOnce = 2;
 const recitationMissPause = Duration(milliseconds: 1500);
 
-/// The red a word left out or said as another is written in.
+/// The red of a word left out or said as another.
 const recitationWrong = Color(0xFFC62828);
 
-/// The colour words read aloud are written in, on the Mushaf's paper: a
-/// dark gold, apart from the colours a Mushaf's script gives its letters
-/// and plain to read (5.5 to 1 against the paper).
-const recitationRead = Color(0xFF8A5E10);
+/// The plate under the word a reader is on: the app's gold, soft enough
+/// for the letters on it to keep their own colours (those of a Mushaf
+/// with tajweed too) and plain to see at a glance; and its edge.
+const recitationPlate = Color(0x66E0B354);
+const recitationPlateEdge = Color(0xFFC49647);
+
+/// The plate under a word left out or said as another, and its edge.
+const recitationWrongPlate = Color(0x38E53935);
 
 /// When the hint by the microphone first comes, how long it stays and how
 /// long it is away before it comes again.

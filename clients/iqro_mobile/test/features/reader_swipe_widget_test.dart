@@ -112,7 +112,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the microphone writes the words the reader says in colour', (
+  testWidgets('the microphone puts a plate under the word the reader says', (
     tester,
   ) async {
     final speech = _Speech();
@@ -129,22 +129,22 @@ void main() {
     // Animations off: the rings of a listening microphone never settle.
     final app = await _pump(tester, reducedMotion: true);
     await _swipe(tester, await _card(tester, 3), 220);
-    // The words of the ayah written in another ink than the text's: those
-    // read, from the first to the last; the one waited for in red.
-    List<ReaderWordInk> inks() => tester
+    // The plate under a word of the ayah: gold under the one the reader is
+    // on, red under the one waited for. The text itself is not touched.
+    List<ReaderWordPlate> plates() => tester
         .widget<ReaderAyahWords>(
           find.byKey(const ValueKey('reader-flow-ayah-3')),
         )
-        .inked;
-    QuranWordRange? read() => inks()
-        .where((ink) => ink.color == recitationRead)
-        .map((ink) => ink.words)
+        .plates;
+    QuranWord? on() => plates()
+        .where((plate) => plate.fill == recitationPlate)
+        .map((plate) => plate.word)
         .firstOrNull;
-    QuranWord? waited() => inks()
-        .where((ink) => ink.color == recitationWrong)
-        .map((ink) => ink.words.start)
+    QuranWord? waited() => plates()
+        .where((plate) => plate.fill == recitationWrongPlate)
+        .map((plate) => plate.word)
         .firstOrNull;
-    expect(inks(), isEmpty);
+    expect(plates(), isEmpty);
     // No lens is laid over the text, on or off.
     expect(find.byType(RawMagnifier), findsNothing);
 
@@ -210,8 +210,10 @@ void main() {
     expect(hint(), 0);
     // No word for a while: the reader is told the phone does not hear.
     expect(line(), 'Не слышу. Читайте вслух и проверьте интернет');
-    // Before a word is said nothing is read, and nothing covers the text.
-    expect(inks(), isEmpty);
+    // Under the first word of the ayah at the top, before a word is said:
+    // where to read from. One plate, and nothing over the text.
+    expect(on(), const QuranWord(2, 3, 1));
+    expect(plates(), hasLength(1));
     expect(find.byType(RawMagnifier), findsNothing);
 
     void hear(String words) => speech.onTextRecognition!(
@@ -223,18 +225,17 @@ void main() {
       }),
     );
 
-    // The first word heard: it is written as read.
+    // The first word heard: the plate is under it already.
     hear('الذين');
     await tester.pumpAndSettle();
-    expect(read()!.start, const QuranWord(2, 3, 1));
-    expect(read()!.end, const QuranWord(2, 3, 1));
+    expect(on(), const QuranWord(2, 3, 1));
     expect(waited(), isNull);
 
-    // The next: what is read reaches it.
+    // The next: the plate goes to it, and to it alone.
     hear('الذين يؤمنون');
     await tester.pumpAndSettle();
-    expect(read()!.start, const QuranWord(2, 3, 1));
-    expect(read()!.end, const QuranWord(2, 3, 2));
+    expect(on(), const QuranWord(2, 3, 2));
+    expect(plates(), hasLength(1));
     expect(
       tester
           .widget<Text>(find.byKey(const ValueKey('reader-flow-follow-heard')))
@@ -244,9 +245,9 @@ void main() {
 
     hear('الذين يؤمنون بالغيب');
     await tester.pumpAndSettle();
-    expect(read()!.end, const QuranWord(2, 3, 3));
+    expect(on(), const QuranWord(2, 3, 3));
 
-    // A larger text: the same words are read.
+    // A larger text: the plate is still under its word.
     const word = QuranWord(2, 3, 3);
     Rect onWord() {
       final registry = tester
@@ -267,11 +268,10 @@ void main() {
     await two.up();
     await tester.pumpAndSettle();
     expect(onWord().height, greaterThan(small.height));
-    expect(read()!.end, word);
+    expect(on(), word);
 
-    // Two words that are not the next one: the word left out is written
-    // in red and waited on, what is read ends before it, and the phone
-    // buzzes once.
+    // Two words that are not the next one: the plate goes to the word
+    // left out, in red, and waits there; the phone buzzes once.
     const expected = QuranWord(2, 3, 4);
     Rect rectOf(QuranWord word) => tester
         .widget<ReaderAyahWords>(
@@ -286,18 +286,18 @@ void main() {
     hear('الذين يؤمنون بالغيب كتاب نور');
     await tester.pumpAndSettle();
     expect(waited(), expected);
-    expect(read()!.end, word);
+    expect(on(), isNull);
+    expect(plates(), hasLength(1));
     expect(buzzes, 1);
     hear('الذين يؤمنون بالغيب كتاب نور ظلام');
     await tester.pumpAndSettle();
     expect(buzzes, 1);
-    // Read rightly: it is one of the words read, and none is waited for.
+    // Read rightly: the plate under it is gold again.
     hear('');
     hear('ويقيمون');
     await tester.pumpAndSettle();
     expect(waited(), isNull);
-    expect(read()!.start, const QuranWord(2, 3, 1));
-    expect(read()!.end, expected);
+    expect(on(), expected);
 
     // One word that is not the next one, and then nothing: a mistake
     // after a moment.
@@ -313,13 +313,13 @@ void main() {
     await tester.tapAt(rectOf(const QuranWord(2, 3, 7)).center);
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    // Nothing is read from there yet, and no word is waited for.
-    expect(inks(), isEmpty);
+    // The plate is under it, and no word is waited for.
+    expect(on(), const QuranWord(2, 3, 7));
+    expect(waited(), isNull);
     hear('');
     hear('رزقناهم ينفقون');
     await tester.pumpAndSettle();
-    expect(read()!.start, const QuranWord(2, 3, 7));
-    expect(read()!.end, const QuranWord(2, 3, 8));
+    expect(on(), const QuranWord(2, 3, 8));
 
     // The recogniser stops after a pause: the next listen starts.
     speech.onStatus!('doneNoResult');
@@ -353,7 +353,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 80));
     await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
     await tester.pumpAndSettle();
-    expect(inks(), isEmpty);
+    expect(plates(), isEmpty);
     expect(speech.listens, listens);
     // The package waits a moment for a last result.
     await tester.pump(const Duration(seconds: 3));
