@@ -1,0 +1,37 @@
+PR #306 (the plate, two rules against false stops), #307 (a stop on a word is no mistake) and #309 (the imala of
+11:41, the ayn) together, as release 1.0.14 (15) has them. A Mac, the app's Dart code
+(tool/recitation_model/harness.dart) on the merged tree, the same as main at e1c2a2cb, recordings from everyayah.com,
+the same sets as out/11_stops.txt and
+out/12_imala_ayn.txt. 20.11.2026.
+
+# The question: do the three work together no worse than each alone. They do: every number is the one #307 and
+# #309 gave on their own branches.
+
+# 2:2 and 2:7 of 24 reciters, each ayah alone
+clean: {recitations: 48, words: 456, words reached: 366, false mistakes: 6}
+# alone (#307, out/11_stops.txt): words reached 366, false mistakes 6; release 1.0.13: 342 and 15
+
+# 36 recitations of whole surahs, 24 with an ayah cut out, 84 with a word cut out
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 7, lens went on past the word left out: 7, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 744, false mistakes: 4, lens before the word began: 2}
+word: {recitations: 84, noticed on the right word: 76, more than one mistake: 17, lens went on past the word left out: 34, false mistake before it: 5}
+ayah: next word begins → red lens: median 0.51 s, 90 % 0.58 s, worst 0.60 s (23)
+clean: word begins → lens on it: median 0.18 s, 90 % 0.35 s, worst 1.20 s (744)
+word: next word begins → red lens: median 0.66 s, 90 % 1.25 s, worst 10.25 s (76)
+# alone (#307): ayah 23 of 24, clean 744 words reached and 4 false mistakes, word 76 of 84
+# before #307 (main with #306): word 79 of 84, clean 719 words reached and 4 false mistakes — the known price of #307
+
+# 2:5, 2:19, 2:26, 2:177, 2:255, 3:7, 5:26, 24:35 of 8 reciters, each ayah alone (long ayat with the marks of a stop)
+clean: {recitations: 64, words: 2200, words reached: 1738, false mistakes: 69}
+# alone (#307): 1738 and 69; before #307: 1248 and 67
+
+# 11:41, 12:11, 19:1, 42:2, 75:27 of three reciters (the set of out/12_imala_ayn.txt)
+whole: {recitations: 15, words: 81, false stops: 0, words reached: 81, places of the three rules: 0}
+# alone (#309): false stops 0, words reached 81; before #309: 3 and 66
+
+# On the phone (Redmi Note 7, build 1.0.14 (15) as "IQRO test", the sound from the speakers of a Mac at 31 %)
+# 2:7 of al-Husary with the stop on "ghishawah": the plate went word by word, gold to the end of the ayah, 2 runs of 2
+# 2:7 of al-Ghamdi joined: gold to the end of the ayah, 1 run of 1
+# Seen and not explained: 16-20 s after the recording of al-Husary ended, in a quiet room, the plate went on by itself
+# to the first word of 2:8 and turned red (2 runs of 2 with al-Husary; not after al-Ghamdi; not in 45 s of silence
+# after that). The stand ends a recording with one second of silence and does not show this.
