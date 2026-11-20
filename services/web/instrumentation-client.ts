@@ -10,3 +10,9 @@ if (dsn) {
   if (document.readyState === "complete") start();
   else window.addEventListener("load", start, { once: true });
 }
+
+// Every App Router navigation (links, router.push, back and forward) starts
+// here; components/NavigationProgress.tsx draws the bar at the top.
+export function onRouterTransitionStart(url: string) {
+  window.dispatchEvent(new CustomEvent("iqro:navigation-start", { detail: url }));
+}
