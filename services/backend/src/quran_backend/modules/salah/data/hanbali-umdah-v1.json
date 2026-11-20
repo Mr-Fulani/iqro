@@ -122,7 +122,8 @@
           "ru": {
             "transliteration": "Субхана-кя, Аллахумма, ва би-хамди-кя, ва табаракя исму-кя ва та'аля джадду-кя ва ля иляха гайру-кя."
           }
-        }
+        },
+        "audio_media": "audio-istiftah"
       }
     },
     {
@@ -370,7 +371,8 @@
           "tr": {
             "meaning": "Çok yüce Rabbimi tüm noksanlıklardan tenzih ederim."
           }
-        }
+        },
+        "audio_media": "audio-ruku-tasbih"
       }
     },
     {
@@ -383,7 +385,8 @@
           "en": {
             "meaning": "May Allah answer the one who praises Him."
           }
-        }
+        },
+        "audio_media": "audio-sami-allah"
       }
     },
     {
@@ -598,7 +601,8 @@
           "tr": {
             "meaning": "Allah'ın adıyla."
           }
-        }
+        },
+        "audio_media": "audio-wudu-basmala"
       }
     },
     {
@@ -606,7 +610,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 13
+        "source_number": 13,
+        "audio_media": "audio-after-wudu"
       }
     },
     {
@@ -1030,6 +1035,26 @@
     {
       "key": "audio-eid-takbir",
       "file": "media/audio-eid-takbir.mp3"
+    },
+    {
+      "key": "audio-wudu-basmala",
+      "file": "media/audio-wudu-basmala.mp3"
+    },
+    {
+      "key": "audio-after-wudu",
+      "file": "media/audio-after-wudu.mp3"
+    },
+    {
+      "key": "audio-istiftah",
+      "file": "media/audio-istiftah.mp3"
+    },
+    {
+      "key": "audio-ruku-tasbih",
+      "file": "media/audio-ruku-tasbih.mp3"
+    },
+    {
+      "key": "audio-sami-allah",
+      "file": "media/audio-sami-allah.mp3"
     }
   ],
   "sections": [

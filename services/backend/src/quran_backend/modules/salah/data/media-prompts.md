@@ -181,9 +181,13 @@ slightly raised upwards, hands relaxed in front of him, a few drops of water on 
 
 Записи лежат в `media/` рядом с иллюстрациями и подключаются через `audio_media` встроенной формулы.
 
-- `audio-takbir.mp3` — «Аллаху акбар», такбират аль-ихрам, 1,6 с: archive.org, `takbiratul-ihram_202510`.
-- `audio-taawwudh.mp3` — та'аввуз, 5,3 с: EveryAyah, `Husary_128kbps/audhubillah.mp3`.
-- `audio-amin.mp3` (1,1 с), `audio-taslim.mp3` (2,6 с; один файл для `taslim` и `taslim-one`),
-  `audio-eid-dhikr.mp3` (13,5 с), `audio-eid-takbir.mp3` (10,0 с) — синтез речи ElevenLabs, голос
-  «Stanislav», запись владельца от 20.11.2026, нарезана из одного файла. Тексты для остальной
-  озвучки — `docs/guides/salah-audio/texts-to-voice.md`.
+Все записи — синтез речи ElevenLabs, голос «Stanislav», записи владельца от 20.11.2026
+(MP3 128 кбит/с, моно, около −24 LUFS). Своя запись формулы заменяет запись сборника ду‘а.
+
+- `audio-takbir.mp3` (1,6 с), `audio-taawwudh.mp3` (3,2 с) — перезаписаны этим голосом
+  (раньше: archive.org `takbiratul-ihram_202510` и EveryAyah `Husary_128kbps/audhubillah.mp3`).
+- `audio-amin.mp3` (1,0 с), `audio-taslim.mp3` (2,6 с; один файл для `taslim` и `taslim-one`),
+  `audio-eid-dhikr.mp3` (13,5 с), `audio-eid-takbir.mp3` (10,0 с).
+- `audio-wudu-basmala.mp3` (1,4 с), `audio-after-wudu.mp3` (9,0 с), `audio-istiftah.mp3` (8,8 с),
+  `audio-ruku-tasbih.mp3` (2,4 с), `audio-sami-allah.mp3` (2,5 с) — формулы из сборника.
+- Тексты для остальной озвучки — `docs/guides/salah-audio/texts-to-voice.md`.

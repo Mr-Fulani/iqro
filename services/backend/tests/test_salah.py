@@ -155,6 +155,11 @@ def test_course_snapshot_ships_the_recordings_its_formulas_point_to() -> None:
         "taslim-one": "audio-taslim",
         "eid-dhikr": "audio-eid-dhikr",
         "eid-takbir": "audio-eid-takbir",
+        "wudu-basmala": "audio-wudu-basmala",
+        "after-wudu": "audio-after-wudu",
+        "istiftah": "audio-istiftah",
+        "ruku-tasbih": "audio-ruku-tasbih",
+        "sami-allah": "audio-sami-allah",
     }
     for key in recorded.values():
         recording = COURSE_SNAPSHOT.parent / media[key]["file"]
