@@ -6,7 +6,8 @@
   (`LICENSE-Apache-2.0.txt`), файл `onnx/model-int8.onnx` без изменений,
   sha256 `79cca1a2fc7ef81e325a3071a5f26cfec69203ef2c63177549065cdc1022c373`. Построена на
   `tarteel-ai/whisper-base-ar-quran` (Apache-2.0) и разметке `obadx/muaalem-model-v3_2` (MIT).
-- `expected.json` — ожидаемые звуки каждого аята и места гунны и мадда муттасыль; строится
+- `expected.json` — ожидаемые звуки каждого аята (для каждого слова — и при слитном чтении, и при остановке
+  на нём; звуки только одного из вариантов помечены необязательными) и места гунны и мадда муттасыль; строится
   `tool/recitation_model/build_table.py` движком правил модели (`imam.py`) и `quran-transcript` (MIT).
 - `mel_filters.bin` — 80 мел-фильтров Whisper (тот же скрипт).
 - `LICENSE-onnxruntime.txt` — лицензия ONNX Runtime (MIT), которая исполняет модель; сама библиотека —

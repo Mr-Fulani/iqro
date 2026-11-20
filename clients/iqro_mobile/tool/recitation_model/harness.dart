@@ -86,7 +86,7 @@ void main(List<String> args) {
           break search;
         }
       }
-      ayahs[0] = ExpectedAyah(sounds, ayah.spans, ayah.units);
+      ayahs[0] = ExpectedAyah(sounds, ayah.spans, ayah.units, ayah.loose);
     }
     final pipeline = RecitationPipeline(
       session: session,
