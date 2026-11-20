@@ -216,6 +216,7 @@ MP3QURAN_RECITER_NAMES: dict[str, tuple[str, str]] = {
     "wasel-almethen": ("Василь аль-Музан", "Vasıl el-Müzen"),
     "wishear-hayder-arbili": ("Вишьяр Хайдар Арбили", "Vişyar Haydar Erbili"),
     "yahya-hawwa": ("Яхья Хавва", "Yahya Havva"),
+    "yasser-al-qurashi": ("Ясир аль-Кураши", "Yasir el-Kureşi"),
     "yasser-al-faylakawi": ("Ясир аль-Файлакави", "Yasir el-Faylakavi"),
     "yasser-salamah": ("Ясир Салама", "Yasir Selame"),
     "yousef-alshoaey": ("Юсуф аш-Шувайи", "Yusuf eş-Şüveyi"),

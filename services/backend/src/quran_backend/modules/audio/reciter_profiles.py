@@ -493,7 +493,7 @@ RECITER_PROFILES = {
     "qf-175-abdullah-hamad-abu-sharida": ABDULLAH_ABU_SHARIDA,
     "qf-3-abdur-rahman-as-sudais": ABDUR_RAHMAN_AS_SUDAIS,
     "qf-4-abu-bakr-al-shatri": ABU_BAKR_AL_SHATRI,
-    "qf-176-ahmed-tahoun": AHMED_TAHOUN,
+    "qf-176-ahmed-abdelhamid-tahoun": AHMED_TAHOUN,
     "qf-19-ahmed-ibn-ali-al-ajmy": AHMED_AL_AJMY,
     "qf-160-bandar-baleela": BANDAR_BALEELA,
     "qf-5-hani-ar-rifai": HANI_AR_RIFAI,
