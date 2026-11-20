@@ -1,0 +1,19 @@
+Does the app's follower stop when one tajweed rule is broken? A Mac, the app's Dart code (tool/recitation_model/harness.dart),
+recordings of masters from everyayah.com, up to 20 per rule; made by scripts/mutate_cases.py, read by scripts/parse.py. 20.11.2026.
+Each line: the rule broken, then 'text before → text the recitation was run against' examples (✓ stopped, — not).
+
+# a right recitation against a text changed in one place: did the follower stop?
+ikhfa_as_izhar: {'recitations': 20, 'not stopped': 16, 'stopped on the word': 3, 'stopped elsewhere only': 1}   e.g. 103:2 لءِںںںسَا → لءِنسَا —; 103:2 لءِںںںسَا → لءِنسَا —; 2:3 ميُںںںفِق → ميُنفِق —
+izhar_as_ikhfa: {'recitations': 20, 'not stopped': 19, 'stopped on the word': 1}   e.g. 108:2 َوَنحَر → َوَںںںحَر —; 112:4 ُوَنءَح → ُوَںںںءَح —; 113:3 ِقِنءِذ → ِقِںںںءِذ —
+letter_added: {'recitations': 20, 'not stopped': 19, 'stopped on the word': 1}   e.g. 1:5 َنَستَع → َنَتَع —; 2:2 ارَيبَف → ارَبَف ✓; 108:3 ُوَلءَب → ُوَءَب —
+madd_added: {'recitations': 20, 'not stopped': 19, 'stopped on the word': 1}   e.g. 1:5 ييَااكَن → ييَكَن —; 108:3 َشَاانِء → َشَنِء —; 2:2 ُلَاارَي → ُلَرَي —
+madd_dropped: {'recitations': 20, 'not stopped': 20}   e.g. 1:5 ُوَءِي → ُوَااءِي —; 2:2 ۦهِهُد → ۦهِۦۦهُد —; 112:1 اهُءَح → اهُۥۥءَح —
+mim_ikhfa_as_izhar: {'recitations': 9, 'not stopped': 9}   e.g. 104:4 َيُ۾۾۾بَذ → َيُمبَذ —; 88:22 يهِ۾۾۾بِم → يهِمبِم —; 96:15 َعَ۾۾۾بِن → َعَمبِن —
+mim_izhar_as_ikhfa: {'recitations': 20, 'not stopped': 18, 'stopped on the word': 1, 'stopped elsewhere only': 1}   e.g. 112:3 َلَميُۥ → َلَ۾۾۾يُۥ —; 2:5 ِهِموَء → ِهِ۾۾۾وَء —; 112:3 َلَميُۥ → َلَ۾۾۾يُۥ —
+no_qalqalah: {'recitations': 20, 'not stopped': 20}   e.g. 1:5 نَستَع → نَسڇتَع —; 2:2 رَيبَف → رَيڇبَف —; 108:3 وَلءَب → وَلڇءَب —
+no_sakt: {'recitations': 5, 'not stopped': 5}   e.g. 75:27 مَنۜرَا → مَنرَا —; 83:14 بَلۜرَا → بَلرَا —; 75:27 مَنۜرَا → مَنرَا —
+qalqalah_added: {'recitations': 20, 'not stopped': 20}   e.g. 108:3 ءَبڇتَر → ءَبتَر —; 112:3 لِدڇوَل → لِدوَل —; 108:3 ءَبڇتَر → ءَبتَر —
+shadda_dropped: {'recitations': 20, 'not stopped': 20}   e.g. 1:5 ُوَءِيي → ُوَءءِيي —; 2:2 ۦهِهُدَ → ۦهِههُدَ —; 108:3 ِءَكَهُ → ِءَككَهُ —
+sukun_on_vowel: {'recitations': 20, 'not stopped': 20}   e.g. 1:5 نَستَع → نَسَتَع —; 2:2 رَيبَف → رَيَبَف —; 108:3 وَلءَب → وَلَءَب —
+vowel_on_sukun: {'recitations': 20, 'not stopped': 19, 'stopped on the word': 1}   e.g. 1:5 دُوَءِي → دُوءِي —; 2:2 ۦۦهِهُد → ۦۦههُد —; 108:3 ءَكَهُو → ءَكهُو —
+
