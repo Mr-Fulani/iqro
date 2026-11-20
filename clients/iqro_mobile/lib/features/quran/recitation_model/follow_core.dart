@@ -145,6 +145,8 @@ const _maxSkip = 14; // words that may be left out at once
 const _ahead = 70; // sounds of the text looked at ahead of the place
 const _settle = 10; // frames a word has been over before it is final
 const _stallSounds = 10; // sounds of other speech that are a mistake
+const _skipSounds = 3; // sounds of a later word that are a word left out
+const _alikeSounds = 5; // … of one that begins as the word expected
 const _backSounds = 6; // … that may be two words read again
 const _goodSound = -4.0;
 const _absentSound = -12.0; // a sound the model does not hear at all
@@ -287,6 +289,16 @@ class RecitationFollowCore {
     }
     if (skipped) {
       // The reader went on with a later word: enough of it to be sure.
+      // A later word that begins as the one expected does ("yunfiquna",
+      // and the "yu'minuna" after it) takes more: for a moment in the
+      // middle of a word the model may hear that one.
+      final alike =
+          passage.wordEnd[next] - passage.wordStart[next] >= 2 &&
+          passage.wordEnd[word] - passage.wordStart[word] >= 2 &&
+          passage.sounds[passage.wordStart[next]] ==
+              passage.sounds[passage.wordStart[word]] &&
+          passage.sounds[passage.wordStart[next] + 1] ==
+              passage.sounds[passage.wordStart[word] + 1];
       final start = passage.wordStart[word] - path.lo;
       var sure = 0;
       for (
@@ -302,7 +314,10 @@ class RecitationFollowCore {
         }
       }
       if (sure >=
-          math.min(3, passage.wordEnd[word] - passage.wordStart[word])) {
+          math.min(
+            alike ? _alikeSounds : _skipSounds,
+            passage.wordEnd[word] - passage.wordStart[word],
+          )) {
         _miss(events);
         _dropTo(first + from + _lastFrame(path) + 1);
       }

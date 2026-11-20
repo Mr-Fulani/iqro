@@ -74,7 +74,7 @@ void main() {
   ) async {
     final app = await _pump(tester);
     await _swipe(tester, await _card(tester, 3), 220);
-    final ayah = find.byKey(const ValueKey('reader-flow-ayah-3'));
+    final ayah = find.byKey(const ValueKey('reader-flow-ayah-1'));
     final before = tester.getSize(ayah).height;
 
     Future<void> pinch(double from, double to) async {
@@ -112,6 +112,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the ayahs of a page of the Mushaf run on in the same lines of '
+      'the plain text, a paragraph to a page', (tester) async {
+    await _pump(tester);
+    await _swipe(tester, await _card(tester, 3), 220);
+    List<int> ayahsOf(int first) => tester
+        .widget<ReaderAyahWords>(
+          find.byKey(ValueKey('reader-flow-ayah-$first')),
+        )
+        .flowAyahs!
+        .map((ayah) => ayah.ayah)
+        .toList();
+    // Six ayahs to a page here: the first page is one paragraph, and the
+    // ayah the text opened at is in it.
+    expect(ayahsOf(1), <int>[1, 2, 3, 4, 5, 6]);
+    expect(_place(tester), 'Аят 3 · стр. 1');
+    for (final ayah in <int>[2, 3, 4, 5, 6]) {
+      expect(find.byKey(ValueKey('reader-flow-ayah-$ayah')), findsNothing);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the microphone puts a plate under the word the reader says', (
     tester,
   ) async {
@@ -133,7 +154,7 @@ void main() {
     // on, red under the one waited for. The text itself is not touched.
     List<ReaderWordPlate> plates() => tester
         .widget<ReaderAyahWords>(
-          find.byKey(const ValueKey('reader-flow-ayah-3')),
+          find.byKey(const ValueKey('reader-flow-ayah-1')),
         )
         .plates;
     QuranWord? on() => plates()
@@ -252,7 +273,7 @@ void main() {
     Rect onWord() {
       final registry = tester
           .widget<ReaderAyahWords>(
-            find.byKey(const ValueKey('reader-flow-ayah-3')),
+            find.byKey(const ValueKey('reader-flow-ayah-1')),
           )
           .registry;
       return registry.wordRect(word)!;
@@ -275,7 +296,7 @@ void main() {
     const expected = QuranWord(2, 3, 4);
     Rect rectOf(QuranWord word) => tester
         .widget<ReaderAyahWords>(
-          find.byKey(const ValueKey('reader-flow-ayah-3')),
+          find.byKey(const ValueKey('reader-flow-ayah-1')),
         )
         .registry
         .wordRect(word)!;
@@ -610,7 +631,7 @@ void main() {
     await tester.pump(mushafScriptWait);
     await tester.pumpAndSettle();
     expect(_place(tester), 'Аят 2 · стр. 1');
-    expect(_fonts(tester, 'reader-flow-ayah-2'), contains('qf-page-1'));
+    expect(_fonts(tester, 'reader-flow-ayah-1'), contains('qf-page-1'));
     expect(tester.takeException(), isNull);
   });
 
@@ -667,7 +688,7 @@ void main() {
     );
     for (var frame = 0; frame < 60; frame++) {
       await tester.pump(const Duration(milliseconds: 16));
-      mushafFontOnly('reader-flow-ayah-2');
+      mushafFontOnly('reader-flow-ayah-1');
     }
     expect(frames, greaterThan(10));
     await tester.pumpAndSettle();
@@ -722,7 +743,7 @@ void main() {
       );
       expect(_place(tester), 'Аят 2 · стр. 1');
       final before = tester
-          .getSize(find.byKey(const ValueKey('reader-flow-ayah-2')))
+          .getSize(find.byKey(const ValueKey('reader-flow-ayah-1')))
           .height;
 
       await tester.tap(find.byKey(const ValueKey('reader-flow-text-size')));
@@ -735,7 +756,7 @@ void main() {
       await tester.tapAt(const Offset(4, 4));
       await tester.pumpAndSettle();
       expect(
-        tester.getSize(find.byKey(const ValueKey('reader-flow-ayah-2'))).height,
+        tester.getSize(find.byKey(const ValueKey('reader-flow-ayah-1'))).height,
         greaterThan(before),
       );
       expect(_place(tester), 'Аят 2 · стр. 1');
@@ -868,7 +889,12 @@ Set<String?> _fonts(WidgetTester tester, String key) {
   if (words is Text) {
     visit(words.textSpan ?? TextSpan(style: words.style));
   } else if (words is ReaderAyahWords) {
-    (words.spans ?? words.flowAyahs?.single.spans)?.forEach(visit);
+    (words.spans ??
+            // A paragraph of the plain text holds the ayahs of a page.
+            words.flowAyahs?.expand(
+              (ayah) => ayah.spans ?? const <InlineSpan>[],
+            ))
+        ?.forEach(visit);
   }
   return families;
 }

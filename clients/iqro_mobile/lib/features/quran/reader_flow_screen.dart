@@ -144,7 +144,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   final _scrollController = ScrollController();
   final _viewportKey = GlobalKey();
   final _stackKey = GlobalKey();
-  final _ayahKeys = <int, GlobalKey>{};
   final _wordRegistry = ReaderWordRegistry();
   final _selectionBounds = ValueNotifier<Rect?>(null);
   late final WordRangeController _words;
@@ -227,7 +226,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         surah: widget.surah,
         rubs: rubs,
         viewportKey: _viewportKey,
-        ayahKeys: _ayahKeys,
+        ayahRect: _ayahRect,
       ),
     );
   }
@@ -319,6 +318,25 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   RenderBox? get _viewportBox {
     final box = _viewportKey.currentContext?.findRenderObject();
     return box is RenderBox && box.attached && box.hasSize ? box : null;
+  }
+
+  /// Where [ayah] is on screen, from its first word to the end of its
+  /// last: ayahs share their lines, and none has a box of its own.
+  Rect? _ayahRect(int ayah) {
+    final first = _wordRegistry.wordRect(QuranWord(widget.surah, ayah, 1));
+    if (first == null) return null;
+    final next = _wordRegistry.wordRect(QuranWord(widget.surah, ayah + 1, 1));
+    final bottom = next == null || next.top <= first.top
+        ? first.bottom
+        : next.top;
+    final box = _viewportBox;
+    final left = box?.localToGlobal(Offset.zero).dx ?? first.left;
+    return Rect.fromLTRB(
+      left,
+      first.top,
+      left + (box?.size.width ?? first.width),
+      bottom,
+    );
   }
 
   /// Brings [ayah]'s first word to the top of the screen.
@@ -935,12 +953,59 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     );
   }
 
+  List<QuranAyah>? _groupedItems;
+  Map<String, List<int>>? _groupedPages;
+  var _groups = const <List<QuranAyah>>[];
+
+  /// The ayahs as the paragraphs they are written in: those of one page
+  /// of the Mushaf run on in the same lines, an ayah beginning where the
+  /// one before it ends, as on the page. A paragraph of very many words
+  /// is laid out too slowly, so a long page is two or three.
+  List<List<QuranAyah>> _paragraphs(
+    List<QuranAyah> items,
+    Map<String, List<int>>? versePages,
+  ) {
+    if (identical(items, _groupedItems) &&
+        identical(versePages, _groupedPages)) {
+      return _groups;
+    }
+    final groups = <List<QuranAyah>>[];
+    int? page;
+    var words = 0;
+    for (final ayah in items) {
+      final on = mushafPageOfAyah(
+        versePages,
+        widget.surah,
+        ayah.number,
+        ayah.pages,
+      );
+      final count = ayahWords(ayah).length;
+      if (groups.isEmpty ||
+          (on != null && page != null && on != page) ||
+          words + count > _paragraphWords) {
+        groups.add(<QuranAyah>[]);
+        words = 0;
+      }
+      groups.last.add(ayah);
+      words += count;
+      page = on ?? page;
+    }
+    // The paragraphs changed under the reader: the ayah read stays put.
+    if (_groupedItems != null) _keepPlace();
+    _groupedItems = items;
+    _groupedPages = versePages;
+    return _groups = groups;
+  }
+
+  static const _paragraphWords = 120;
+
   Widget _text(
     List<QuranAyah> items,
     double size,
     Map<String, List<int>>? versePages,
   ) {
     _schedulePlace(items);
+    final groups = _paragraphs(items, versePages);
     final theme = Theme.of(context);
     final style = theme.textTheme.headlineMedium?.copyWith(
       color: mushafInkColor,
@@ -1044,8 +1109,11 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                         // The surah's title comes with its first ayah.
                         initialIndex: widget.initialAyah <= 1
                             ? 0
-                            : items.indexWhere(
-                                    (item) => item.number == widget.initialAyah,
+                            : groups.indexWhere(
+                                    (group) => group.any(
+                                      (item) =>
+                                          item.number == widget.initialAyah,
+                                    ),
                                   ) +
                                   1,
                         padding: EdgeInsets.fromLTRB(
@@ -1054,7 +1122,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                           side,
                           _words.range == null ? 32 : 280,
                         ),
-                        itemCount: items.length + 2,
+                        itemCount: groups.length + 2,
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             return _FlowHeader(
@@ -1064,7 +1132,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                               style: style,
                             );
                           }
-                          if (index == items.length + 1) {
+                          if (index == groups.length + 1) {
                             return widget.surah >= lastSurah
                                 ? QuranEndCard(surah: surah, paper: true)
                                 : NextSurahCard(
@@ -1082,38 +1150,50 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                     paper: true,
                                   );
                           }
-                          final ayah = items[index - 1];
-                          final words = ayahWords(ayah);
+                          final group = groups[index - 1];
                           final plates = _followPlates();
-                          final page = pageOf(ayah);
+                          final page = pageOf(group.first);
                           final pageEnded =
                               index > 1 &&
                               page != null &&
-                              page != pageOf(items[index - 2]);
+                              page != pageOf(groups[index - 2].last);
+                          final marked = _rubMark.mark?.startAyah.ayah;
                           final text = Consumer(
                             builder: (context, ref, _) {
-                              final script = watchMushafAyahScript(
-                                ref,
-                                surah: widget.surah,
-                                ayah: ayah.number,
-                                wordCount: words.length,
-                              );
-                              // The Mushaf's script reflows the text when it
-                              // arrives: the ayah at the top stays there.
-                              // Once the reader scrolls, pages load ahead of
-                              // the screen and move nothing on it.
-                              if (script == null) {
-                                _plainAyahs.add(ayah.number);
-                              } else if (_plainAyahs.remove(ayah.number) &&
-                                  !_dragged) {
-                                _keepPlace();
-                              }
-                              return ReaderAyahWords.flow(
-                                key: ValueKey(
-                                  'reader-flow-ayah-${ayah.number}',
-                                ),
-                                surah: widget.surah,
-                                ayahs: <ReaderAyahText>[
+                              final texts = <ReaderAyahText>[];
+                              QuranWordRange? rub;
+                              for (final ayah in group) {
+                                final words = ayahWords(ayah);
+                                final script = watchMushafAyahScript(
+                                  ref,
+                                  surah: widget.surah,
+                                  ayah: ayah.number,
+                                  wordCount: words.length,
+                                );
+                                // The Mushaf's script reflows the text when
+                                // it arrives: the ayah at the top stays
+                                // there. Once the reader scrolls, pages
+                                // load ahead of the screen and move nothing
+                                // on it.
+                                if (script == null) {
+                                  _plainAyahs.add(ayah.number);
+                                } else if (_plainAyahs.remove(ayah.number) &&
+                                    !_dragged) {
+                                  _keepPlace();
+                                }
+                                // The ayah a quarter of a hizb starts at,
+                                // while it is announced.
+                                if (marked == ayah.number && words.isNotEmpty) {
+                                  rub = QuranWordRange.between(
+                                    QuranWord(widget.surah, ayah.number, 1),
+                                    QuranWord(
+                                      widget.surah,
+                                      ayah.number,
+                                      words.length,
+                                    ),
+                                  );
+                                }
+                                texts.add(
                                   ReaderAyahText(
                                     ayah: ayah.number,
                                     words: words,
@@ -1129,11 +1209,18 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                             ],
                                           ),
                                   ),
-                                ],
+                                );
+                              }
+                              return ReaderAyahWords.flow(
+                                key: ValueKey(
+                                  'reader-flow-ayah-${group.first.number}',
+                                ),
+                                surah: widget.surah,
+                                ayahs: texts,
                                 // Lines from edge to edge of the screen at
                                 // any size, the room their words leave
-                                // shared out between them; an ayah's last
-                                // line in the middle.
+                                // shared out between them; the last line
+                                // of a page in the middle.
                                 textAlign: TextAlign.center,
                                 fill: true,
                                 markerStyle: const TextStyle(
@@ -1143,59 +1230,28 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                 registry: _wordRegistry,
                                 range: _words.range,
                                 plates: plates,
-                                // The ayah a quarter of a hizb starts at, while
-                                // it is announced.
-                                marked:
-                                    _marked ??
-                                    (_rubMark.mark?.startAyah.ayah ==
-                                                ayah.number &&
-                                            words.isNotEmpty
-                                        ? QuranWordRange.between(
-                                            QuranWord(
-                                              widget.surah,
-                                              ayah.number,
-                                              1,
-                                            ),
-                                            QuranWord(
-                                              widget.surah,
-                                              ayah.number,
-                                              words.length,
-                                            ),
-                                          )
-                                        : null),
+                                marked: _marked ?? rub,
                                 playingWord: _words.playingWord,
                                 onRange: (range) => _selectWords(items, range),
                                 onDrag: _followWordDrag,
                               );
                             },
                           );
-                          // Each ayah begins a line of its own; the lines
-                          // of the whole text are one step apart, between
-                          // ayahs as within them.
-                          return Padding(
-                            key: _ayahKeys.putIfAbsent(
-                              ayah.number,
-                              GlobalKey.new,
-                            ),
-                            padding: EdgeInsets.zero,
-                            child: pageEnded
-                                ? Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: <Widget>[
-                                      ReaderPageBreak(
-                                        key: ValueKey(
-                                          'reader-flow-page-end-${page - 1}',
-                                        ),
-                                        paper: true,
-                                        label:
-                                            '${context.l10n.page} ${readerDigits(language, page - 1)}',
-                                      ),
-                                      SizedBox(height: size * .5),
-                                      text,
-                                    ],
-                                  )
-                                : text,
+                          if (!pageEnded) return text;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              ReaderPageBreak(
+                                key: ValueKey(
+                                  'reader-flow-page-end-${page - 1}',
+                                ),
+                                paper: true,
+                                label:
+                                    '${context.l10n.page} ${readerDigits(language, page - 1)}',
+                              ),
+                              SizedBox(height: size * .5),
+                              text,
+                            ],
                           );
                         },
                       ),
@@ -1238,7 +1294,7 @@ class _FlowHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     const color = _markerColor;
     return Padding(
-      padding: EdgeInsets.only(bottom: size * .5),
+      padding: EdgeInsets.only(bottom: size * .15),
       child: Column(
         children: <Widget>[
           if (name?.isNotEmpty ?? false)
@@ -1246,14 +1302,22 @@ class _FlowHeader extends StatelessWidget {
               'سُورَةُ $name',
               textAlign: TextAlign.center,
               textDirection: TextDirection.rtl,
-              style: style?.copyWith(fontSize: size * .7, color: color),
+              style: style?.copyWith(
+                fontSize: size * .7,
+                color: color,
+                height: 1.5,
+              ),
             ),
           if (opening != null)
             Text(
               opening!,
               textAlign: TextAlign.center,
               textDirection: TextDirection.rtl,
-              style: style?.copyWith(fontSize: size * .8, color: color),
+              style: style?.copyWith(
+                fontSize: size * .8,
+                color: color,
+                height: 1.5,
+              ),
             ),
         ],
       ),
