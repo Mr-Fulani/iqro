@@ -42,4 +42,4 @@ word: {recitations: 84, noticed on the right word: 76, more than one mistake: 17
 # 2:5, 2:19, 2:26, 2:177, 2:255, 3:7, 5:26, 24:35 of 8 reciters, each ayah alone: long ayat with the marks of
 # a stop, where reciters stop, and go back a few words after a breath
 stops: clean: {recitations: 64, words: 2200, words reached: 1738, false mistakes: 69}
-main:  MAINMARKS
+main:  clean: {recitations: 64, words: 2200, words reached: 1248, false mistakes: 67}
