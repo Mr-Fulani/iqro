@@ -521,7 +521,8 @@
             "meaning": "Allah'tan bağışlanma dilerim, Allah'tan bağışlanma dilerim, Allah'tan bağışlanma dilerim. Allah'ım! Sen Selâm'sın, selâmet Sendendir. Ey celâl ve ikram sahibi, Sen ne yücesin!",
             "transliteration": "Estağfirullâh, estağfirullâh, estağfirullâh. Allâhümme ente's-selâm ve minke's-selâm, tebârekte yâ ze'l-celâli ve'l-ikrâm."
           }
-        }
+        },
+        "audio_media": "audio-after-prayer-istighfar"
       }
     },
     {
@@ -547,7 +548,8 @@
             "meaning": "Allah'ı tüm noksanlıklardan tenzih ederim, hamd Allah'adır, Allah en büyüktür.",
             "transliteration": "Sübhânallâh, velhamdülillâh, vallâhu ekber."
           }
-        }
+        },
+        "audio_media": "audio-after-prayer-tasbih"
       }
     },
     {
@@ -568,7 +570,8 @@
           "tr": {
             "meaning": "Allahım! Hidâyet verdiklerinin arasında beni hidâyet üzere sâbit kıl.Âfiyet verdiklerinin arasında bana da âfiyet ver. İşlerini üstlendiklerinin arasında benim de işimi üstlen (ve beni nefsime bırakma). Verdiğini benim için bereketli kıl ve takdir ettiğin şeylerin şerrinden beni koru.Şüphesiz sen (dilediğin şekilde) hükmedersin ve senin hükmünü bozacak kimse yoktur. Kimi dost edinirsen zelil olmaz. Kimi de düşman edinirsen, o asla aziz olmaz. Rabbimiz, sen mübârek ve yücesin."
           }
-        }
+        },
+        "audio_media": "audio-qunut"
       }
     },
     {
@@ -594,7 +597,8 @@
             "meaning": "Mutlak hükümdar ve her türlü noksanlıktan uzak olan Allah'ı tenzih ederim.",
             "transliteration": "Sübhâne'l-Meliki'l-Kuddûs."
           }
-        }
+        },
+        "audio_media": "audio-after-witr"
       }
     },
     {
@@ -1085,6 +1089,22 @@
     {
       "key": "audio-before-taslim",
       "file": "media/audio-before-taslim.mp3"
+    },
+    {
+      "key": "audio-after-prayer-istighfar",
+      "file": "media/audio-after-prayer-istighfar.mp3"
+    },
+    {
+      "key": "audio-after-prayer-tasbih",
+      "file": "media/audio-after-prayer-tasbih.mp3"
+    },
+    {
+      "key": "audio-qunut",
+      "file": "media/audio-qunut.mp3"
+    },
+    {
+      "key": "audio-after-witr",
+      "file": "media/audio-after-witr.mp3"
     }
   ],
   "sections": [

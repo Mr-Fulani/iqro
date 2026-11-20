@@ -191,5 +191,7 @@ slightly raised upwards, hands relaxed in front of him, a few drops of water on 
 - `audio-wudu-basmala.mp3` (1,4 с), `audio-after-wudu.mp3` (9,0 с), `audio-istiftah.mp3` (8,8 с),
   `audio-ruku-tasbih.mp3` (2,4 с), `audio-sami-allah.mp3` (2,5 с), `audio-rabbana-hamd.mp3` (5,9 с),
   `audio-sujud-tasbih.mp3` (2,4 с), `audio-between-sujud.mp3` (3,2 с), `audio-tashahhud.mp3` (18,8 с),
-  `audio-salawat.mp3` (22,8 с), `audio-before-taslim.mp3` (11,5 с) — формулы из сборника.
+  `audio-salawat.mp3` (22,8 с), `audio-before-taslim.mp3` (11,6 с),
+  `audio-after-prayer-istighfar.mp3` (12,2 с), `audio-after-prayer-tasbih.mp3` (5,1 с),
+  `audio-qunut.mp3` (26,0 с), `audio-after-witr.mp3` (2,4 с) — формулы из сборника.
 - Тексты для остальной озвучки — `docs/guides/salah-audio/texts-to-voice.md`.
