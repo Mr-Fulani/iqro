@@ -190,4 +190,62 @@ void main() {
     expect(core.next, 1);
     expect(core.wrong, isTrue);
   });
+
+  group('a word may be stopped on', () {
+    // Three words. The second ends in 7 8 when the reading goes on and in
+    // 30 when it is stopped on; the third begins with 31 only after a stop.
+    RecitationFollowCore core() => RecitationFollowCore(
+      RecitationPassage(<ExpectedAyah>[
+        ExpectedAyah(
+          Uint8List.fromList(<int>[
+            1, 2, 3, //
+            4, 5, 6, 7, 8, 30, //
+            31, 9, 10, 11, 12,
+          ]),
+          <(int, int)>[(0, 3), (3, 9), (9, 14)],
+          <(int, int, int, int, int)>[],
+          <int>{6, 7, 8, 9},
+        ),
+      ]),
+    );
+
+    test('read on, it has the sounds of reading on', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 0, 0, //
+      ]);
+      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+      expect(follower.next, 3);
+    });
+
+    test('stopped on, it has the sounds of the stop, and the next word '
+        'those of a beginning', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 30, 0, 0, 0, 0, 0, 0, //
+        31, 9, 10, 11, 12, 0, 0, 0,
+      ]);
+      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+      expect(follower.next, 3);
+    });
+
+    test('with neither ending said it is read all the same: the reader '
+        'stopped on its last letter', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 0, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, //
+      ]);
+      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+    });
+
+    test('a sound that is always said is still asked for', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 20, 21, 30, 0, 0, 0, 0, 0, 0, //
+        31, 9, 10, 11, 12, 0, 0, 0,
+      ]);
+      expect(seen, contains('miss 1'));
+      expect(follower.next, 1);
+    });
+  });
 }

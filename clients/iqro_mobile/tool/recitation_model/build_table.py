@@ -3,6 +3,9 @@
   expected.json    for every ayah: the sounds a correct Hafs recitation has (the model's phonetic script, the ayah
                    read alone and stopped on), where each word's sounds are, and the places of the three tajweed
                    rules the trial build remarks on (ghunnah, idgham with ghunnah, madd muttasil)
+                   A reader may stop on any word and go on from the next: the sounds a word has only when it is
+                   stopped on, or only when read on from, or only when begun after a stop, are all written, and
+                   listed as ones that need not be heard
   mel_filters.bin  Whisper's 80 mel filters over 201 frequency bins, float32
 
   python build_table.py <folder of the model's files: config.json, imam.py> <output folder>
@@ -19,6 +22,63 @@ from quran_transcript import Aya  # noqa: E402
 from faster_whisper.feature_extractor import FeatureExtractor  # noqa: E402
 
 symbols = json.load(open(f'{model_dir}/config.json'))['phonemes']
+
+
+def runs(text):
+    """The text as runs of one sound: (sound, how many)."""
+    out = []
+    for c in text:
+        if out and out[-1][0] == c: out[-1][1] += 1
+        else: out.append([c, 1])
+    return out
+
+
+def union(word, other):
+    """`word`: [sound, count, needed, written in the ayah read through] runs; `other`: another way the word is said. Every sound of either, in order;
+    one that only one of the two has need not be heard."""
+    from difflib import SequenceMatcher
+    b = runs(other)
+    out = []
+    for op, i1, i2, j1, j2 in SequenceMatcher(None, [r[0] for r in word], [r[0] for r in b], autojunk=False).get_opcodes():
+        if op == 'equal': out += word[i1:i2]
+        else:
+            out += [[s, n, False, own] for s, n, _, own in word[i1:i2]]
+            out += [[s, 1, False, False] for s, _ in b[j1:j2]]
+    return out
+
+
+def with_stops(words, ref):
+    """The ayah's sounds with those of a stop after any word: (text, spans, old place -> new, places not needed)."""
+    text, spans, place, loose = '', [], {}, []
+    said = []
+    for k, (s, e) in enumerate(ref.spans):
+        word = [[c, n, True, True] for c, n in runs(ref.phonemes[s:e])]
+        if k + 1 < len(words):  # stopped on
+            r = imam.expected(words[max(0, k - 2):k + 1])
+            word = union(word, r.phonemes[r.spans[-1][0]:r.spans[-1][1]])
+        if k > 0:  # begun after a stop
+            r = imam.expected(words[k:k + 3])
+            word = union(word, r.phonemes[r.spans[0][0]:r.spans[0][1]])
+        said.append(word)
+    # A sound added at a word's edge that the word beside it has there too is that word's sound, held or said
+    # again after the stop: written once, it is not taken from a place whose length is looked at.
+    for a, b in zip(said, said[1:]):
+        while a and b and not a[-1][3] and a[-1][0] == b[0][0]: a.pop()
+        while a and b and not b[0][3] and b[0][0] == a[-1][0]: b.pop(0)
+    for (s, e), word in zip(ref.spans, said):
+        start, old = len(text), s
+        for c, n, needed, own in word:
+            if own:
+                # (A place held is looked at only where its sounds are always said.)
+                if needed:
+                    for i in range(n): place[old + i] = len(text) + i
+                old += n
+            if not needed: loose += range(len(text), len(text) + n)
+            text += c * n
+        assert old == e
+        spans.append((start, len(text)))
+    return text, spans, place, loose
+
 KIND = {'ghunnah': 0, 'idgham_ghunnah': 1}
 surahs, failed = {}, []
 counts = [7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118,
@@ -33,12 +93,16 @@ for s, n in enumerate(counts, 1):
         try:
             words = Aya(s, a).get().uthmani.split(' ')
             ref = imam.expected(words)
+            text, spans, place, loose = with_stops(words, ref)
             units = []
             for u in ref.units:
-                if u.kind in KIND: units += [KIND[u.kind], u.s, u.e, u.word, u.golden]
-                elif u.kind == 'madd' and u.rule.startswith('Mottasel'): units += [2, u.s, u.e, u.word, u.golden]
-            assert all(c in symbols for c in ref.phonemes)
-            ayat.append([ref.phonemes, [x for span in ref.spans for x in span], units])
+                # A place held is looked at only where every sound of it is always said.
+                if any(i not in place for i in range(u.s, u.e)): continue
+                at = [place[u.s], place[u.e - 1] + 1, u.word, u.golden]
+                if u.kind in KIND: units += [KIND[u.kind], *at]
+                elif u.kind == 'madd' and u.rule.startswith('Mottasel'): units += [2, *at]
+            assert all(c in symbols for c in text)
+            ayat.append([text, [x for span in spans for x in span], units, loose])
         except Exception as e:  # an ayah the phonetizer cannot write: the follower is not offered for its surah
             failed.append((s, a, repr(e)[:80])); ayat.append(None)
     surahs[str(s)] = ayat

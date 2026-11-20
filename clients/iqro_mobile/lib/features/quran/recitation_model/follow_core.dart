@@ -15,7 +15,7 @@ const recitationFrameRate = 50;
 /// One ayah of the table of expected sounds
 /// (tool/recitation_model/build_table.py).
 class ExpectedAyah {
-  ExpectedAyah(this.sounds, this.spans, this.units);
+  ExpectedAyah(this.sounds, this.spans, this.units, [this.loose = const {}]);
 
   /// Class of each sound, 1..42, as a correct reading has them: a long
   /// vowel once per count.
@@ -27,6 +27,12 @@ class ExpectedAyah {
   /// The places remarked on: kind (0 ghunnah, 1 idgham with ghunnah,
   /// 2 madd muttasil), start, end, word, counts expected.
   final List<(int, int, int, int, int)> units;
+
+  /// The sounds of [sounds] that need not be heard: those a word has only
+  /// when the reader stops on it, only when the reading goes on from it,
+  /// or only when it is begun after a stop. A reader may stop on any
+  /// word.
+  final Set<int> loose;
 
   static ExpectedAyah? fromJson(Object? json, List<String> symbols) {
     if (json is! List) return null;
@@ -45,6 +51,7 @@ class ExpectedAyah {
         for (var i = 0; i < unit.length; i += 5)
           (unit[i], unit[i + 1], unit[i + 2], unit[i + 3], unit[i + 4]),
       ],
+      json.length > 3 ? (json[3] as List).cast<int>().toSet() : const {},
     );
   }
 }
@@ -65,6 +72,9 @@ class RecitationPassage {
           if (i == start || ayah.sounds[i] != ayah.sounds[i - 1]) {
             sounds.add(ayah.sounds[i]);
             wordOf.add(wordStart.length - 1);
+            optional.add(ayah.loose.contains(i));
+          } else if (!ayah.loose.contains(i)) {
+            optional.last = false;
           }
           at[i] = sounds.length - 1;
         }
@@ -92,6 +102,9 @@ class RecitationPassage {
   final wordEnd = <int>[];
   final wordOf = <int>[];
   final ayahOf = <int>[];
+
+  /// Per sound: it need not be heard ([ExpectedAyah.loose]).
+  final optional = <bool>[];
 
   /// The places whose tajweed is looked at, by the word their last sound
   /// is in.
@@ -143,6 +156,7 @@ const _otherSound = -6.0; // a frame of speech that is not the text
 const _skipPrice = -10.0; // going on with a later word
 const _maxSkip = 14; // words that may be left out at once
 const _ahead = 70; // sounds of the text looked at ahead of the place
+const _maxLoose = 7; // sounds in a row that need not be heard
 const _settle = 10; // frames a word has been over before it is final
 const _stallSounds = 10; // sounds of other speech that are a mistake
 const _backSounds = 6; // … that may be two words read again
@@ -192,6 +206,12 @@ class RecitationFollowCore {
   /// Sounds of the passage that are final, and the frame after the last.
   var _sound = 0;
   var _frame = 0;
+
+  /// The last sound heard of the word before [_sound], when the sounds
+  /// after it in that word need not be heard and were not: the reading
+  /// goes on from it.
+  int? _heard;
+  var _heardBefore = -1;
   var _now = 0;
 
   /// Sounds of the word being read that did not fit, among the final ones.
@@ -223,6 +243,7 @@ class RecitationFollowCore {
         ? passage.wordStart[next]
         : passage.sounds.length;
     _frame = _now;
+    _heard = null;
     _bad = 0;
     fresh = true;
     wrong = false;
@@ -238,6 +259,7 @@ class RecitationFollowCore {
     next = word;
     _sound = passage.wordStart[word];
     _frame = _now;
+    _heard = null;
     _bad = 0;
     fresh = false;
     wrong = true;
@@ -263,7 +285,11 @@ class RecitationFollowCore {
       lp,
       from,
       count,
-      _sound > 0 ? _sound - 1 : 0,
+      _sound == 0
+          ? 0
+          : _heardBefore == _sound && _heard != null
+          ? _heard!
+          : _sound - 1,
       prior: _sound > 0,
       boundary: !midWord,
       skip: !fresh && !midWord,
@@ -321,10 +347,24 @@ class RecitationFollowCore {
       var said = 0;
       var bad = before;
       var lastFrame = -1;
-      for (var i = begin; i < end; i++) {
+      // Sounds that need not be heard and were not: said with the next
+      // one that was, or with the word's end.
+      var passed = 0;
+      int? heard;
+      for (var i = begin; i <= end; i++) {
+        if (i == end) {
+          said += passed;
+          break;
+        }
         final at = path.frame[i - path.lo];
-        if (at < 0) break;
-        said += 1;
+        if (at < 0) {
+          if (!passage.optional[i]) break;
+          passed += 1;
+          continue;
+        }
+        said += passed + 1;
+        passed = 0;
+        heard = i;
         lastFrame = at;
         if (_unfit(path, i)) bad += 1;
       }
@@ -389,6 +429,8 @@ class RecitationFollowCore {
       );
       next = word + 1;
       _sound = end;
+      _heard = heard;
+      _heardBefore = end;
       _frame = first + from + lastFrame + 1;
       _bad = 0;
       fresh = false;
@@ -431,6 +473,8 @@ class RecitationFollowCore {
   /// there: the model often writes the two as the long vowel alone.
   bool _unfit(_Path path, int i) {
     if (path.best[i - path.lo] >= _goodSound) return false;
+    // Nor is a sound that is said only with a stop, or only without one.
+    if (passage.optional[i]) return false;
     final sound = passage.sounds[i];
     // A word's last short vowel is not said when the reader stops on it.
     if (sound >= 32 &&
@@ -489,6 +533,7 @@ class RecitationFollowCore {
     // half-hears a right one often enough); a short vowel is either
     // there or not.
     if (!(letter || vowel) ||
+        passage.optional[i] ||
         path.best[i - path.lo] >= (letter ? _absentSound : _goodSound)) {
       return false;
     }
@@ -606,6 +651,7 @@ class RecitationFollowCore {
       var done = true;
       for (var i = passage.wordStart[word]; i < passage.wordEnd[word]; i++) {
         if (path.frame[i - path.lo] < 0) {
+          if (passage.optional[i]) continue;
           done = false;
           break;
         }
@@ -666,14 +712,17 @@ class RecitationFollowCore {
     }
     final length = hi - lo;
     // Words that begin in the slice.
-    final firstWord = passage.wordOf[prior ? lo + 1 : lo];
     final starts = <int>[]; // word → its first sound, within the slice
     final wordIds = <int>[];
     for (
-      var word = boundary ? firstWord : firstWord + 1;
+      var word = passage.wordOf[lo];
       word < passage.words && passage.wordStart[word] < hi;
       word++
     ) {
+      // (After a sound said before, that sound's word has begun; so has
+      // the word the path is to go on in the middle of.)
+      if (passage.wordStart[word] < (prior ? lo + 1 : lo)) continue;
+      if (!boundary && passage.wordStart[word] == lo) continue;
       if (passage.silent(word)) continue;
       starts.add(passage.wordStart[word] - lo);
       wordIds.add(word);
@@ -695,9 +744,16 @@ class RecitationFollowCore {
       score[lattice] = 0;
     }
     final entry = Int32List(length)..fillRange(0, length, -1);
+    // The word each sound is in, among [starts]; -1 before the first.
+    final wordAt = Int32List(length)..fillRange(0, length, -1);
     for (var j = 0; j < starts.length; j++) {
       entry[starts[j]] = j;
+      final end = j + 1 < starts.length ? starts[j + 1] : length;
+      for (var i = starts[j]; i < end; i++) {
+        wordAt[i] = j;
+      }
     }
+    final optional = passage.optional;
     for (var t = 0; t < count; t++) {
       final row = (from + t) * recitationClasses;
       // A frame on which the model hears a sound, however unsure of it,
@@ -750,6 +806,26 @@ class RecitationFollowCore {
             }
           }
         }
+        // Past sounds that need not be heard, for nothing: from the sound
+        // before them, or from before the word they begin.
+        for (var k = i - 1; k >= 0 && i - k <= _maxLoose; k--) {
+          if (!optional[lo + k]) break;
+          final first = entry[k];
+          if (first >= 0 && score[lattice + first] > best) {
+            best = score[lattice + first];
+            source = lattice + first;
+          }
+          if (k == 0) break;
+          final before = 2 * (k - 1) + 1;
+          if (sounds[lo + i] != sounds[lo + k - 1] && score[before] > best) {
+            best = score[before];
+            source = before;
+          }
+          if (score[before + 1] > best) {
+            best = score[before + 1];
+            source = before + 1;
+          }
+        }
         nextScore[symbol] = best + math.max(lp[row + sounds[lo + i]], _floor);
         back[at + symbol] = source;
         if (score[after] >= score[symbol]) {
@@ -765,8 +841,10 @@ class RecitationFollowCore {
         final state = lattice + j;
         var best = score[state];
         var source = state;
-        if (starts[j] > 0) {
-          final end = 2 * (starts[j] - 1) + 1;
+        // After the word before it, whose last sounds need not all be
+        // heard.
+        for (var e = starts[j] - 1; e >= 0 && starts[j] - e <= _maxLoose; e--) {
+          final end = 2 * e + 1;
           if (score[end] > best) {
             best = score[end];
             source = end;
@@ -775,6 +853,7 @@ class RecitationFollowCore {
             best = score[end + 1];
             source = end + 1;
           }
+          if (!optional[lo + e]) break;
         }
         nextScore[state] = best + other;
         back[at + state] = source;
@@ -803,7 +882,7 @@ class RecitationFollowCore {
       }
       final source = back[t * states + state];
       if (source >= lattice && state < lattice) {
-        final to = entry[state ~/ 2];
+        final to = wordAt[state ~/ 2];
         if (to != source - lattice) {
           skips.add((wordIds[source - lattice], wordIds[to], t));
         }
