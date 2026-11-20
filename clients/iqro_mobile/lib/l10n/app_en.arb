@@ -257,6 +257,8 @@
   "pause": "Pause",
   "previousSurah": "Previous surah",
   "nextSurah": "Next surah",
+  "previousAyah": "Previous ayah",
+  "nextAyah": "Next ayah",
   "nextSurahHint": "Pull up or tap",
   "nextSurahRelease": "Let go to open surah {number}",
   "quranEnd": "End of the Quran",

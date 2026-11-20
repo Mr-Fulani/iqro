@@ -806,6 +806,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get nextSurah => 'Следующая сура';
 
   @override
+  String get previousAyah => 'Предыдущий аят';
+
+  @override
+  String get nextAyah => 'Следующий аят';
+
+  @override
   String get nextSurahHint => 'Потяните вверх или нажмите';
 
   @override

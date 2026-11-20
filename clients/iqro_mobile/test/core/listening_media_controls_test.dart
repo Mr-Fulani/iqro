@@ -7,6 +7,8 @@ import 'package:iqro_mobile/core/audio/listening_media_controls.dart';
 const ListeningMediaLabels _labels = (
   previous: 'Предыдущая сура',
   next: 'Следующая сура',
+  previousAyah: 'Предыдущий аят',
+  nextAyah: 'Следующий аят',
   play: 'Воспроизвести',
   pause: 'Пауза',
   back10: 'Назад на 10 секунд',

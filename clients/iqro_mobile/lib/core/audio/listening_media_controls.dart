@@ -24,6 +24,8 @@ const androidSessionControlsSdk = 33;
 typedef ListeningMediaLabels = ({
   String previous,
   String next,
+  String previousAyah,
+  String nextAyah,
   String play,
   String pause,
   String back10,
@@ -58,6 +60,7 @@ String _speedIcon(double speed) {
 ListeningMediaControls listeningMediaControls({
   required bool playing,
   required bool canSkip,
+  bool ayahSkip = false,
   required double speed,
   required int? androidSdk,
   required ListeningMediaLabels labels,
@@ -73,7 +76,20 @@ ListeningMediaControls listeningMediaControls({
     androidIcon: 'drawable/iqro_media_forward_10',
     label: labels.forward10,
   );
-  // Another section owns the decoder: the card only resumes the Audio tab.
+  // The Mushaf reads several ayahs: the card steps by ayah. Every Android
+  // and iOS draws these three.
+  if (ayahSkip) {
+    return (
+      controls: <MediaControl>[
+        MediaControl.skipToPrevious.copyWith(label: labels.previousAyah),
+        playPause,
+        MediaControl.skipToNext.copyWith(label: labels.nextAyah),
+      ],
+      compact: const <int>[0, 1, 2],
+    );
+  }
+  // One sound without a queue (a dua, memorization, the Audio tab's saved
+  // surah while another section owns the decoder): pause and resume only.
   if (!canSkip) {
     return (controls: <MediaControl>[playPause], compact: const <int>[0]);
   }

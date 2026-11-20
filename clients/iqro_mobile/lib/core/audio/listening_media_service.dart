@@ -11,8 +11,10 @@ import '../../features/audio/premium_reciter_portrait.dart';
 import '../startup/startup_trace.dart';
 import 'listening_media_controls.dart';
 
-/// Android's media card belongs to the Audio tab, even while another section
-/// uses the app's shared decoder. Contextual audio never publishes its item.
+/// The system media card belongs to the Audio tab. While the Mushaf,
+/// memorization or a dua sounds, the card shows that sound instead, with
+/// pause and resume (and the ayah buttons of the Mushaf); short clips never
+/// publish their item.
 /// A reciter without a portrait shows the app's default figure, from a local
 /// file so the lock screen has it offline too.
 class ListeningMediaService extends BaseAudioHandler with SeekHandler {
@@ -134,6 +136,7 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
     Duration position = Duration.zero,
     double speed = 1,
     bool canSkip = false,
+    bool ayahSkip = false,
   }) {
     if (item != null && item.artUri == null && defaultArtwork != null) {
       item = item.copyWith(artUri: defaultArtwork);
@@ -158,6 +161,7 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
         : listeningMediaControls(
             playing: playing,
             canSkip: canSkip,
+            ayahSkip: ayahSkip,
             speed: speed,
             androidSdk: androidSdk,
             labels: _labels?.call() ?? _englishLabels,
@@ -263,6 +267,8 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
 const ListeningMediaLabels _englishLabels = (
   previous: 'Previous surah',
   next: 'Next surah',
+  previousAyah: 'Previous ayah',
+  nextAyah: 'Next ayah',
   play: 'Play',
   pause: 'Pause',
   back10: 'Back 10 seconds',
