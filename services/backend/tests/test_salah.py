@@ -160,6 +160,12 @@ def test_course_snapshot_ships_the_recordings_its_formulas_point_to() -> None:
         "istiftah": "audio-istiftah",
         "ruku-tasbih": "audio-ruku-tasbih",
         "sami-allah": "audio-sami-allah",
+        "rabbana-hamd": "audio-rabbana-hamd",
+        "sujud-tasbih": "audio-sujud-tasbih",
+        "between-sujud": "audio-between-sujud",
+        "tashahhud": "audio-tashahhud",
+        "salawat": "audio-salawat",
+        "before-taslim": "audio-before-taslim",
     }
     for key in recorded.values():
         recording = COURSE_SNAPSHOT.parent / media[key]["file"]

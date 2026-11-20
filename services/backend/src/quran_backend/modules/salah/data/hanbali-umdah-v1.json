@@ -394,7 +394,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 39
+        "source_number": 39,
+        "audio_media": "audio-rabbana-hamd"
       }
     },
     {
@@ -410,7 +411,8 @@
           "tr": {
             "meaning": "En yüce Rabbimi tüm noksanlıklardan tenzih ederim."
           }
-        }
+        },
+        "audio_media": "audio-sujud-tasbih"
       }
     },
     {
@@ -418,7 +420,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 48
+        "source_number": 48,
+        "audio_media": "audio-between-sujud"
       }
     },
     {
@@ -434,7 +437,8 @@
           "ru": {
             "meaning": "Приветствия Аллаху, и молитвы и лучшие слова, мир тебе, о Пророк, и милость Аллаха и благословения Его, мир нам и праведным рабам Аллаха. Свидетельствую, что нет бога, кроме Аллаха, и свидетельствую, что Мухаммад - Его раб и Его посланник."
           }
-        }
+        },
+        "audio_media": "audio-tashahhud"
       }
     },
     {
@@ -450,7 +454,8 @@
           "ru": {
             "meaning": "О Аллах, благослови Мухаммада и семейство Мухаммада, как благословил Ты Ибрахима и семейство Ибрахима, поистине, Ты - Достойный похвалы. Славный! О Аллах, пошли благословения Мухаммаду и семейству Мухаммада, как послал Ты их Ибрахиму и семейству Ибрахима, поистине. Ты - Достойный похвалы, Славный!"
           }
-        }
+        },
+        "audio_media": "audio-salawat"
       }
     },
     {
@@ -463,7 +468,8 @@
           "en": {
             "meaning": "O Allah, I take refuge in You from the punishment of the grave, from the torment of the Fire, from the trials and tribulations of life and death and from the evil affliction of Al-Maseeh Ad-Dajjal."
           }
-        }
+        },
+        "audio_media": "audio-before-taslim"
       }
     },
     {
@@ -1055,6 +1061,30 @@
     {
       "key": "audio-sami-allah",
       "file": "media/audio-sami-allah.mp3"
+    },
+    {
+      "key": "audio-rabbana-hamd",
+      "file": "media/audio-rabbana-hamd.mp3"
+    },
+    {
+      "key": "audio-sujud-tasbih",
+      "file": "media/audio-sujud-tasbih.mp3"
+    },
+    {
+      "key": "audio-between-sujud",
+      "file": "media/audio-between-sujud.mp3"
+    },
+    {
+      "key": "audio-tashahhud",
+      "file": "media/audio-tashahhud.mp3"
+    },
+    {
+      "key": "audio-salawat",
+      "file": "media/audio-salawat.mp3"
+    },
+    {
+      "key": "audio-before-taslim",
+      "file": "media/audio-before-taslim.mp3"
     }
   ],
   "sections": [
