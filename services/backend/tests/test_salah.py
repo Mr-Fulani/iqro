@@ -147,7 +147,34 @@ def test_course_snapshot_ships_the_recordings_its_formulas_point_to() -> None:
         if formula["source"].get("audio_media")
     }
 
-    assert recorded == {"takbir": "audio-takbir", "taawwudh": "audio-taawwudh"}
+    assert recorded == {
+        "takbir": "audio-takbir",
+        "taawwudh": "audio-taawwudh",
+        "amin": "audio-amin",
+        "taslim": "audio-taslim",
+        "taslim-one": "audio-taslim",
+        "eid-dhikr": "audio-eid-dhikr",
+        "eid-takbir": "audio-eid-takbir",
+        "wudu-basmala": "audio-wudu-basmala",
+        "after-wudu": "audio-after-wudu",
+        "istiftah": "audio-istiftah",
+        "ruku-tasbih": "audio-ruku-tasbih",
+        "sami-allah": "audio-sami-allah",
+        "rabbana-hamd": "audio-rabbana-hamd",
+        "sujud-tasbih": "audio-sujud-tasbih",
+        "between-sujud": "audio-between-sujud",
+        "tashahhud": "audio-tashahhud",
+        "salawat": "audio-salawat",
+        "before-taslim": "audio-before-taslim",
+        "after-prayer-istighfar": "audio-after-prayer-istighfar",
+        "after-prayer-tasbih": "audio-after-prayer-tasbih",
+        "qunut": "audio-qunut",
+        "after-witr": "audio-after-witr",
+        "janazah-dua": "audio-janazah-dua",
+        "janazah-dua-general": "audio-janazah-dua-general",
+        "janazah-dua-child": "audio-janazah-dua-child",
+        "istisqa-dua": "audio-istisqa-dua",
+    }
     for key in recorded.values():
         recording = COURSE_SNAPSHOT.parent / media[key]["file"]
         assert 0 < recording.stat().st_size <= MAX_AUDIO_BYTES

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "course": {
     "slug": "hanbali-umdah",
-    "version": "2026-11-12",
+    "version": "2026-11-20",
     "methodology": "hanbali",
     "source_title": {
       "ru": "Умдат аль-фикх (Ибн Кудама), по муътамаду мазхаба",
@@ -122,7 +122,8 @@
           "ru": {
             "transliteration": "Субхана-кя, Аллахумма, ва би-хамди-кя, ва табаракя исму-кя ва та'аля джадду-кя ва ля иляха гайру-кя."
           }
-        }
+        },
+        "audio_media": "audio-istiftah"
       }
     },
     {
@@ -213,7 +214,8 @@
             "meaning": "Allah'ım, duamızı kabul et",
             "transliteration": "Âmîn"
           }
-        }
+        },
+        "audio_media": "audio-amin"
       }
     },
     {
@@ -369,7 +371,8 @@
           "tr": {
             "meaning": "Çok yüce Rabbimi tüm noksanlıklardan tenzih ederim."
           }
-        }
+        },
+        "audio_media": "audio-ruku-tasbih"
       }
     },
     {
@@ -382,7 +385,8 @@
           "en": {
             "meaning": "May Allah answer the one who praises Him."
           }
-        }
+        },
+        "audio_media": "audio-sami-allah"
       }
     },
     {
@@ -390,7 +394,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 39
+        "source_number": 39,
+        "audio_media": "audio-rabbana-hamd"
       }
     },
     {
@@ -406,7 +411,8 @@
           "tr": {
             "meaning": "En yüce Rabbimi tüm noksanlıklardan tenzih ederim."
           }
-        }
+        },
+        "audio_media": "audio-sujud-tasbih"
       }
     },
     {
@@ -414,7 +420,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 48
+        "source_number": 48,
+        "audio_media": "audio-between-sujud"
       }
     },
     {
@@ -430,7 +437,8 @@
           "ru": {
             "meaning": "Приветствия Аллаху, и молитвы и лучшие слова, мир тебе, о Пророк, и милость Аллаха и благословения Его, мир нам и праведным рабам Аллаха. Свидетельствую, что нет бога, кроме Аллаха, и свидетельствую, что Мухаммад - Его раб и Его посланник."
           }
-        }
+        },
+        "audio_media": "audio-tashahhud"
       }
     },
     {
@@ -446,7 +454,8 @@
           "ru": {
             "meaning": "О Аллах, благослови Мухаммада и семейство Мухаммада, как благословил Ты Ибрахима и семейство Ибрахима, поистине, Ты - Достойный похвалы. Славный! О Аллах, пошли благословения Мухаммаду и семейству Мухаммада, как послал Ты их Ибрахиму и семейству Ибрахима, поистине. Ты - Достойный похвалы, Славный!"
           }
-        }
+        },
+        "audio_media": "audio-salawat"
       }
     },
     {
@@ -459,7 +468,8 @@
           "en": {
             "meaning": "O Allah, I take refuge in You from the punishment of the grave, from the torment of the Fire, from the trials and tribulations of life and death and from the evil affliction of Al-Maseeh Ad-Dajjal."
           }
-        }
+        },
+        "audio_media": "audio-before-taslim"
       }
     },
     {
@@ -484,7 +494,8 @@
             "meaning": "Allah'ın selâmı ve rahmeti üzerinize olsun",
             "transliteration": "Esselâmü aleyküm ve rahmetullâh"
           }
-        }
+        },
+        "audio_media": "audio-taslim"
       }
     },
     {
@@ -510,7 +521,8 @@
             "meaning": "Allah'tan bağışlanma dilerim, Allah'tan bağışlanma dilerim, Allah'tan bağışlanma dilerim. Allah'ım! Sen Selâm'sın, selâmet Sendendir. Ey celâl ve ikram sahibi, Sen ne yücesin!",
             "transliteration": "Estağfirullâh, estağfirullâh, estağfirullâh. Allâhümme ente's-selâm ve minke's-selâm, tebârekte yâ ze'l-celâli ve'l-ikrâm."
           }
-        }
+        },
+        "audio_media": "audio-after-prayer-istighfar"
       }
     },
     {
@@ -536,7 +548,8 @@
             "meaning": "Allah'ı tüm noksanlıklardan tenzih ederim, hamd Allah'adır, Allah en büyüktür.",
             "transliteration": "Sübhânallâh, velhamdülillâh, vallâhu ekber."
           }
-        }
+        },
+        "audio_media": "audio-after-prayer-tasbih"
       }
     },
     {
@@ -557,7 +570,8 @@
           "tr": {
             "meaning": "Allahım! Hidâyet verdiklerinin arasında beni hidâyet üzere sâbit kıl.Âfiyet verdiklerinin arasında bana da âfiyet ver. İşlerini üstlendiklerinin arasında benim de işimi üstlen (ve beni nefsime bırakma). Verdiğini benim için bereketli kıl ve takdir ettiğin şeylerin şerrinden beni koru.Şüphesiz sen (dilediğin şekilde) hükmedersin ve senin hükmünü bozacak kimse yoktur. Kimi dost edinirsen zelil olmaz. Kimi de düşman edinirsen, o asla aziz olmaz. Rabbimiz, sen mübârek ve yücesin."
           }
-        }
+        },
+        "audio_media": "audio-qunut"
       }
     },
     {
@@ -583,7 +597,8 @@
             "meaning": "Mutlak hükümdar ve her türlü noksanlıktan uzak olan Allah'ı tenzih ederim.",
             "transliteration": "Sübhâne'l-Meliki'l-Kuddûs."
           }
-        }
+        },
+        "audio_media": "audio-after-witr"
       }
     },
     {
@@ -596,7 +611,8 @@
           "tr": {
             "meaning": "Allah'ın adıyla."
           }
-        }
+        },
+        "audio_media": "audio-wudu-basmala"
       }
     },
     {
@@ -604,7 +620,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 13
+        "source_number": 13,
+        "audio_media": "audio-after-wudu"
       }
     },
     {
@@ -649,7 +666,8 @@
             "meaning": "Allah en büyüktür, pek büyüktür; hamd Allah'adır, pek çok hamd; sabah akşam Allah'ı tesbih ederim; Allah Peygamber Muhammed'e ve ailesine salât ve bol selâm etsin",
             "transliteration": "Allâhu ekber kebîrâ, ve'l-hamdü lillâhi kesîrâ, ve sübhânallâhi bükraten ve asîlâ, ve sallallâhu alâ Muhammedini'n-nebiyyi ve âlihî ve selleme teslîmen kesîrâ"
           }
-        }
+        },
+        "audio_media": "audio-eid-dhikr"
       }
     },
     {
@@ -674,7 +692,8 @@
             "meaning": "Allah en büyüktür, Allah en büyüktür, Allah'tan başka ilâh yoktur; Allah en büyüktür, Allah en büyüktür ve hamd Allah'adır",
             "transliteration": "Allâhu ekber, Allâhu ekber, lâ ilâhe illallâh, vallâhu ekber, Allâhu ekber ve lillâhi'l-hamd"
           }
-        }
+        },
+        "audio_media": "audio-eid-takbir"
       }
     },
     {
@@ -682,7 +701,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 156
+        "source_number": 156,
+        "audio_media": "audio-janazah-dua"
       }
     },
     {
@@ -690,7 +710,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 157
+        "source_number": 157,
+        "audio_media": "audio-janazah-dua-general"
       }
     },
     {
@@ -698,7 +719,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 161
+        "source_number": 161,
+        "audio_media": "audio-janazah-dua-child"
       }
     },
     {
@@ -706,7 +728,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 169
+        "source_number": 169,
+        "audio_media": "audio-istisqa-dua"
       }
     },
     {
@@ -731,7 +754,8 @@
             "meaning": "Allah'ın selâmı ve rahmeti üzerinize olsun",
             "transliteration": "Esselâmü aleyküm ve rahmetullâh"
           }
-        }
+        },
+        "audio_media": "audio-taslim"
       }
     }
   ],
@@ -1009,6 +1033,98 @@
     {
       "key": "audio-taawwudh",
       "file": "media/audio-taawwudh.mp3"
+    },
+    {
+      "key": "audio-amin",
+      "file": "media/audio-amin.mp3"
+    },
+    {
+      "key": "audio-taslim",
+      "file": "media/audio-taslim.mp3"
+    },
+    {
+      "key": "audio-eid-dhikr",
+      "file": "media/audio-eid-dhikr.mp3"
+    },
+    {
+      "key": "audio-eid-takbir",
+      "file": "media/audio-eid-takbir.mp3"
+    },
+    {
+      "key": "audio-wudu-basmala",
+      "file": "media/audio-wudu-basmala.mp3"
+    },
+    {
+      "key": "audio-after-wudu",
+      "file": "media/audio-after-wudu.mp3"
+    },
+    {
+      "key": "audio-istiftah",
+      "file": "media/audio-istiftah.mp3"
+    },
+    {
+      "key": "audio-ruku-tasbih",
+      "file": "media/audio-ruku-tasbih.mp3"
+    },
+    {
+      "key": "audio-sami-allah",
+      "file": "media/audio-sami-allah.mp3"
+    },
+    {
+      "key": "audio-rabbana-hamd",
+      "file": "media/audio-rabbana-hamd.mp3"
+    },
+    {
+      "key": "audio-sujud-tasbih",
+      "file": "media/audio-sujud-tasbih.mp3"
+    },
+    {
+      "key": "audio-between-sujud",
+      "file": "media/audio-between-sujud.mp3"
+    },
+    {
+      "key": "audio-tashahhud",
+      "file": "media/audio-tashahhud.mp3"
+    },
+    {
+      "key": "audio-salawat",
+      "file": "media/audio-salawat.mp3"
+    },
+    {
+      "key": "audio-before-taslim",
+      "file": "media/audio-before-taslim.mp3"
+    },
+    {
+      "key": "audio-after-prayer-istighfar",
+      "file": "media/audio-after-prayer-istighfar.mp3"
+    },
+    {
+      "key": "audio-after-prayer-tasbih",
+      "file": "media/audio-after-prayer-tasbih.mp3"
+    },
+    {
+      "key": "audio-qunut",
+      "file": "media/audio-qunut.mp3"
+    },
+    {
+      "key": "audio-after-witr",
+      "file": "media/audio-after-witr.mp3"
+    },
+    {
+      "key": "audio-janazah-dua",
+      "file": "media/audio-janazah-dua.mp3"
+    },
+    {
+      "key": "audio-janazah-dua-general",
+      "file": "media/audio-janazah-dua-general.mp3"
+    },
+    {
+      "key": "audio-janazah-dua-child",
+      "file": "media/audio-janazah-dua-child.mp3"
+    },
+    {
+      "key": "audio-istisqa-dua",
+      "file": "media/audio-istisqa-dua.mp3"
     }
   ],
   "sections": [
