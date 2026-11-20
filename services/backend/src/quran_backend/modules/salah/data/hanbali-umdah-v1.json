@@ -701,7 +701,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 156
+        "source_number": 156,
+        "audio_media": "audio-janazah-dua"
       }
     },
     {
@@ -709,7 +710,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 157
+        "source_number": 157,
+        "audio_media": "audio-janazah-dua-general"
       }
     },
     {
@@ -717,7 +719,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 161
+        "source_number": 161,
+        "audio_media": "audio-janazah-dua-child"
       }
     },
     {
@@ -725,7 +728,8 @@
       "source": {
         "kind": "dua",
         "collection": "hisn-al-muslim",
-        "source_number": 169
+        "source_number": 169,
+        "audio_media": "audio-istisqa-dua"
       }
     },
     {
@@ -1105,6 +1109,22 @@
     {
       "key": "audio-after-witr",
       "file": "media/audio-after-witr.mp3"
+    },
+    {
+      "key": "audio-janazah-dua",
+      "file": "media/audio-janazah-dua.mp3"
+    },
+    {
+      "key": "audio-janazah-dua-general",
+      "file": "media/audio-janazah-dua-general.mp3"
+    },
+    {
+      "key": "audio-janazah-dua-child",
+      "file": "media/audio-janazah-dua-child.mp3"
+    },
+    {
+      "key": "audio-istisqa-dua",
+      "file": "media/audio-istisqa-dua.mp3"
     }
   ],
   "sections": [

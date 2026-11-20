@@ -193,5 +193,7 @@ slightly raised upwards, hands relaxed in front of him, a few drops of water on 
   `audio-sujud-tasbih.mp3` (2,4 с), `audio-between-sujud.mp3` (3,2 с), `audio-tashahhud.mp3` (18,8 с),
   `audio-salawat.mp3` (22,8 с), `audio-before-taslim.mp3` (11,6 с),
   `audio-after-prayer-istighfar.mp3` (12,2 с), `audio-after-prayer-tasbih.mp3` (5,1 с),
-  `audio-qunut.mp3` (26,0 с), `audio-after-witr.mp3` (2,4 с) — формулы из сборника.
-- Тексты для остальной озвучки — `docs/guides/salah-audio/texts-to-voice.md`.
+  `audio-qunut.mp3` (25,9 с), `audio-after-witr.mp3` (2,5 с), `audio-janazah-dua.mp3` (29,2 с),
+  `audio-janazah-dua-general.mp3` (25,1 с), `audio-janazah-dua-child.mp3` (5,0 с),
+  `audio-istisqa-dua.mp3` (9,9 с) — формулы из сборника.
+- Озвучены все формулы, кроме сур. Тексты — `docs/guides/salah-audio/texts-to-voice.md`.
