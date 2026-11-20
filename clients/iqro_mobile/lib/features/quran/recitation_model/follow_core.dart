@@ -184,6 +184,7 @@ const _stallSounds = 10; // sounds of other speech that are a mistake
 const _skipSounds = 3; // sounds of a later word that are a word left out
 const _alikeSounds = 5; // … of one that begins as the word expected
 const _backSounds = 6; // … that may be two words read again
+const _longWord = 9; // sounds of a word that may have two unfit
 const _goodSound = -4.0;
 const _absentSound = -12.0; // a sound the model does not hear at all
 const _sureSound = -.36; // log .7: the model is sure of what it hears
@@ -290,7 +291,11 @@ class RecitationFollowCore {
     _shown = null;
   }
 
-  static int _allowedBad(int sounds) => sounds >= 3 ? 1 : 0;
+  static int _allowedBad(int sounds) => sounds >= _longWord
+      ? 2
+      : sounds >= 3
+      ? 1
+      : 0;
 
   /// [lp]: log-probabilities of [frames] frames, the first being frame
   /// [first] since the microphone was turned on.
