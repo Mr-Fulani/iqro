@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/quran/recitation_model/follow_core.dart';
+import 'package:iqro_mobile/features/quran/recitation_model/pipeline.dart';
 
 /// Two ayahs of four and two words, three sounds each, all different.
 List<ExpectedAyah> _ayahs() => <ExpectedAyah>[
@@ -189,5 +190,169 @@ void main() {
     core.sayAgain(1);
     expect(core.next, 1);
     expect(core.wrong, isTrue);
+  });
+
+  test('a later word that begins as the word expected is no word left out '
+      'until five of its sounds are heard', () {
+    // The second word and the fourth begin with the same two sounds.
+    RecitationFollowCore core() => RecitationFollowCore(
+      RecitationPassage(<ExpectedAyah>[
+        ExpectedAyah(
+          Uint8List.fromList(<int>[
+            1, 2, 3, //
+            4, 5, 6, 7, 8, 9, //
+            10, 11, 12, //
+            4, 5, 20, 21, 22, 23,
+          ]),
+          <(int, int)>[(0, 3), (3, 9), (9, 12), (12, 18)],
+          <(int, int, int, int, int)>[],
+        ),
+      ]),
+    );
+    // Four sounds that the fourth word has: the model may have misheard
+    // the second, which the reader is still on.
+    expect(
+      _follow(core(), <int>[1, 2, 3, 4, 5, 20, 21, 0, 0, 0]),
+      isNot(contains('miss 1')),
+    );
+    // All of the fourth: the second and the third were left out.
+    expect(
+      _follow(core(), <int>[1, 2, 3, 4, 5, 20, 21, 22, 23, 0, 0, 0]),
+      contains('miss 1'),
+    );
+    // A later word that begins otherwise is one after three sounds.
+    expect(
+      _follow(core(), <int>[1, 2, 3, 10, 11, 12, 0, 0, 0]),
+      contains('miss 1'),
+    );
+  });
+
+  group('silence', () {
+    // Ten seconds: the reader's voice, then nothing.
+    Float32List loudness() => Float32List(3000)
+      ..fillRange(0, 500, 1e6)
+      ..fillRange(500, 1000, 10);
+    Float32List sounds(int frames) {
+      final lp = Float32List(frames * recitationClasses)
+        ..fillRange(0, frames * recitationClasses, -20);
+      for (var t = 0; t < frames; t++) {
+        lp[t * recitationClasses + 5] = -.01;
+      }
+      return lp;
+    }
+
+    test('what the model makes up in the middle of a silence is written '
+        'over', () {
+      final lp = sounds(500);
+      hushSilence(lp, 0, 500, loudness(), 1000);
+      bool silent(int frame) => lp[frame * recitationClasses] == 0;
+      // While the reader speaks, and three tenths of a second after.
+      expect(silent(100), isFalse);
+      expect(silent(260), isFalse);
+      // Deep in the silence, to its very end.
+      expect(silent(300), isTrue);
+      expect(silent(499), isTrue);
+      expect(lp[300 * recitationClasses + 5], -20);
+    });
+
+    test('a room as loud as the voice is left as the model hears it', () {
+      final lp = sounds(500);
+      final noisy = Float32List(3000)
+        ..fillRange(0, 500, 1e6)
+        ..fillRange(500, 1000, 5e4);
+      hushSilence(lp, 0, 500, noisy, 1000);
+      expect(lp[400 * recitationClasses], -20);
+    });
+
+    test('nothing is written over before the voice is known', () {
+      final lp = sounds(100);
+      hushSilence(lp, 0, 100, Float32List(3000), 200);
+      expect(lp[50 * recitationClasses], -20);
+    });
+  });
+
+  group('a word may be stopped on', () {
+    // Three words. The second ends in 7 8 when the reading goes on and in
+    // 30 when it is stopped on; the third begins with 31 only after a stop.
+    RecitationFollowCore core() => RecitationFollowCore(
+      RecitationPassage(<ExpectedAyah>[
+        ExpectedAyah(
+          Uint8List.fromList(<int>[
+            1, 2, 3, //
+            4, 5, 6, 7, 8, 30, //
+            31, 9, 10, 11, 12,
+          ]),
+          <(int, int)>[(0, 3), (3, 9), (9, 14)],
+          <(int, int, int, int, int)>[],
+          <int>{6, 7, 8, 9},
+          // The sounds of the stop and of the new beginning.
+          <int>{8, 9},
+        ),
+      ]),
+    );
+
+    test('read on, it has the sounds of reading on', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 0, 0, //
+      ]);
+      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+      expect(follower.next, 3);
+    });
+
+    test('stopped on, it has the sounds of the stop, and the next word '
+        'those of a beginning', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 30, 0, 0, 0, 0, 0, 0, //
+        31, 9, 10, 11, 12, 0, 0, 0,
+      ]);
+      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+      expect(follower.next, 3);
+    });
+
+    test('with neither ending said it is read all the same: the reader '
+        'stopped on its last letter', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 0, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, //
+      ]);
+      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+    });
+
+    test('a word with a letter left out is not the stopped word: the '
+        'sounds of reading on that a stop leaves unsaid are not free', () {
+      // The third word is said without its 10 and its 11; the fourth
+      // follows at once.
+      final follower = RecitationFollowCore(
+        RecitationPassage(<ExpectedAyah>[
+          ExpectedAyah(
+            Uint8List.fromList(<int>[
+              1, 2, 3, //
+              4, 5, 6, //
+              9, 10, 11, 12, //
+              13, 14, 15,
+            ]),
+            <(int, int)>[(0, 3), (3, 6), (6, 10), (10, 13)],
+            <(int, int, int, int, int)>[],
+            <int>{9},
+          ),
+        ]),
+      );
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 9, 13, 14, 15, 0, 0, 0, //
+      ]);
+      expect(seen, contains('miss 2'));
+    });
+
+    test('a sound that is always said is still asked for', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 20, 21, 30, 0, 0, 0, 0, 0, 0, //
+        31, 9, 10, 11, 12, 0, 0, 0,
+      ]);
+      expect(seen, contains('miss 1'));
+      expect(follower.next, 1);
+    });
   });
 }

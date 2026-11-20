@@ -29,7 +29,7 @@ EXPECTED_CODES = {
     "qf-160-bandar-baleela",
     "qf-174-yasser-ad-dussary",
     "qf-175-abdullah-hamad-abu-sharida",
-    "qf-176-ahmed-tahoun",
+    "qf-176-ahmed-abdelhamid-tahoun",
 }
 
 

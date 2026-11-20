@@ -53,7 +53,7 @@ jobs:
       - name: Production build
         run: npm run build
       - name: Dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --audit-level=high
 
   e2e-development:
     name: Development browser regression tests (${{ matrix.shard }}/${{ strategy.job-total }})

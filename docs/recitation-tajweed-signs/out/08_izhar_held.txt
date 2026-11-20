@@ -1,0 +1,55 @@
+A ghunnah where there must be none: the clear nun of an izhar held long (found by the owner reading aloud, 20.11.2026:
+«عَذَابٌ عَظِيمٌ» with a long "n" was not stopped). The nun of a master's right recitation is played four times slower
+(the pitch kept), which holds it for about a second. scripts/izhar_stretch.py; a Mac; six reciters from everyayah.com.
+
+# 1. What the model writes (as recited it writes the nun once in all 44 places)
+{'places': 44, 'the model writes 4 ن': 5, 'the model writes 3 ن': 19, 'the model writes 2 ن': 10, 'the model writes 1 ن': 8, 'the model writes 0 ن': 2, '… and a hidden nun (ں) beside it': 6}
+Abdullah_B 1:7 نَءَنعَ  nun 0.26 s → 1.04 s: model writes َءَننننععَ
+Abdullah_B 108:2 كَوَنحَ  nun 0.28 s → 1.12 s: model writes َوَنننحَر
+Abdullah_B 112:4 فُوَنءَ  nun 0.30 s → 1.20 s: model writes ُوَنننءَح
+Abdullah_B 113:3 سِقِنءِ  nun 0.26 s → 1.04 s: model writes ِقِنننءِذ
+Abdullah_B 113:5 سِدِنءِ  nun 0.24 s → 0.96 s: model writes ِدِننءِذ
+Alafasy_12 1:7 نَءَنعَ  nun 0.22 s → 0.88 s: model writes َءَننننَعَ
+Alafasy_12 108:2 كَوَنحَ  nun 0.26 s → 1.04 s: model writes َوَنننحَر
+Alafasy_12 112:4 فُوَنءَ  nun 0.22 s → 0.88 s: model writes ُوَنننءَح
+Alafasy_12 113:3 سِقِنءِ  nun 0.18 s → 0.72 s: model writes ِقِنننءِذ
+Alafasy_12 113:5 سِدِنءِ  nun 0.22 s → 0.88 s: model writes ِدِننءِذ
+Ayman_Sowa 108:2 كَوَنحَ  nun 0.32 s → 1.28 s: model writes َوَنننحَر
+Ayman_Sowa 112:4 فُوَنءَ  nun 0.30 s → 1.20 s: model writes ُوَنننءَح
+Ayman_Sowa 113:3 سِقِنءِ  nun 0.24 s → 0.96 s: model writes ِقِننءِذ
+Ayman_Sowa 113:5 سِدِنءِ  nun 0.26 s → 1.04 s: model writes ِدِننءِذ
+Husary_128 108:2 كَوَنحَ  nun 0.42 s → 1.68 s: model writes َوَنںںش
+Husary_128 112:4 فُوَنءَ  nun 0.44 s → 1.76 s: model writes ُوَنننءَح
+Husary_128 113:3 سِقِنءِ  nun 0.36 s → 1.44 s: model writes ِقِننكِذ
+Husary_128 113:5 سِدِنءِ  nun 0.40 s → 1.60 s: model writes ِدِنںءِ
+Khaalid_Ab 1:7 نَءَنعَ  nun 0.18 s → 0.72 s: model writes َءَنَمت
+Khaalid_Ab 108:2 كَوَنحَ  nun 0.26 s → 1.04 s: model writes َوَنننححَ
+Khaalid_Ab 112:4 فُوَنءَ  nun 0.20 s → 0.80 s: model writes ُوَنننءَح
+Khaalid_Ab 113:3 سِقِنءِ  nun 0.18 s → 0.72 s: model writes ِقِننءِذ
+Khaalid_Ab 113:5 سِدِنءِ  nun 0.22 s → 0.88 s: model writes ِدِننءِذ
+Minshawy_M 1:7 نَءَنعَ  nun 0.20 s → 0.80 s: model writes َءَننعَم
+Minshawy_M 108:2 كَوَنحَ  nun 0.32 s → 1.28 s: model writes َوَنںںح
+Minshawy_M 112:4 فُوَنءَ  nun 0.28 s → 1.12 s: model writes ُوَنننءَح
+Minshawy_M 113:3 سِقِنءِ  nun 0.26 s → 1.04 s: model writes ِقِنننءِذ
+Minshawy_M 113:5 سِدِنءِ  nun 0.28 s → 1.12 s: model writes ِدِننءِذ
+Ayman_Sowa 96:16 بَتِنخَ  nun 0.34 s → 1.36 s: model writes تِںںںخ
+Ayman_Sowa 111:2 ااعَنهُ  nun 0.30 s → 1.20 s: model writes اعَنننںهُ
+Husary_128 96:16 بَتِنخَ  nun 0.42 s → 1.68 s: model writes َتِننخرَ
+Husary_128 111:2 ااعَنهُ  nun 0.38 s → 1.52 s: model writes اعَنننُهُ
+Minshawy_M 96:16 بَتِنخَ  nun 0.36 s → 1.44 s: model writes تِںںخخ
+Minshawy_M 106:4 مممِنخَ  nun 0.34 s → 1.36 s: model writes ممُنخصَ
+Minshawy_M 111:2 ااعَنهُ  nun 0.20 s → 0.80 s: model writes اعَننننُمَ
+Ayman_Sowa 2:6 ااءُنعَ  nun 0.28 s → 1.12 s: model writes اءُننننَعَ
+Ayman_Sowa 2:7 اابُنعَ  nun 0.30 s → 1.20 s: model writes ابُننننَعَ
+Ayman_Sowa 2:10 اابُنءَ  nun 0.38 s → 1.52 s: model writes ابُنننءَل
+Husary_128 2:6 ااءُنعَ  nun 0.32 s → 1.28 s: model writes اءُنااع
+Husary_128 2:7 اابُنعَ  nun 0.28 s → 1.12 s: model writes ابُنننَعع
+Husary_128 2:10 اابُنءَ  nun 0.26 s → 1.04 s: model writes ابُنننءَل
+Minshawy_M 2:6 ااءُنعَ  nun 0.20 s → 0.80 s: model writes اءُنععَ
+Minshawy_M 2:7 اابُنعَ  nun 0.22 s → 0.88 s: model writes ابُنعَا
+Minshawy_M 2:10 اابُنءَ  nun 0.24 s → 0.96 s: model writes ابُنننءَل
+
+# 2. The app's follower on the same 44 recordings (tool/recitation_model/harness.dart, the table as on main):
+#    a red stop on the word or a neighbour: 1 of 44 (rule 30); two more stops are elsewhere (a reciter's stop inside 2:7, 106:4)
+cut: {recitations: 44, words: 283, false stops: 3, words reached: 241, rule 30: cut: 44, red stops elsewhere: 2, rule 30: red stop: 1}
+counts heard, by rule: {0: 4 of 4: 5, 2: 4 of 4: 3, 1: 3 of 3: 1, 1: 1 of 3: 1}

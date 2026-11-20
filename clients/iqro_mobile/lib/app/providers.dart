@@ -1973,6 +1973,8 @@ ListeningMediaLabels _listeningMediaLabels(String locale) {
   return (
     previous: l10n.previousSurah,
     next: l10n.nextSurah,
+    previousAyah: l10n.previousAyah,
+    nextAyah: l10n.nextAyah,
     play: l10n.play,
     pause: l10n.pause,
     back10: l10n.mediaBack10,

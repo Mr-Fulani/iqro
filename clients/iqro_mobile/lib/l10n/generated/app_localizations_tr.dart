@@ -802,6 +802,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get nextSurah => 'Sonraki sure';
 
   @override
+  String get previousAyah => 'Önceki ayet';
+
+  @override
+  String get nextAyah => 'Sonraki ayet';
+
+  @override
   String get nextSurahHint => 'Yukarı çekin veya dokunun';
 
   @override
@@ -3683,7 +3689,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get recitationNoticeHow =>
-      'Mikrofonu açın ve sesli okuyun: mercek kelimelerinizi takip eder. Bir kelimeyi atlar veya başka bir kelime söylerseniz o kelimede durur ve kırmızıya döner, telefon titrer.';
+      'Mikrofonu açın ve sesli okuyun: okuduğunuz kelime vurgulanır. Bir kelimeyi atlar veya başka bir kelime söylerseniz vurgu kırmızı olur ve telefon titrer; kelimeyi doğru okuyun, okuma devam eder.';
 
   @override
   String get recitationNoticeVoice =>

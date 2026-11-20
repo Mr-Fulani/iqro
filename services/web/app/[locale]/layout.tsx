@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { Amiri, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "../globals.css";
@@ -11,6 +12,7 @@ import { directionFor, isLocale, SUPPORTED_LOCALES } from "../../lib/i18n";
 import { Header } from "../../components/Header";
 import { MobileNavigation } from "../../components/MobileNavigation";
 import { Footer } from "../../components/Footer";
+import { NavigationProgress } from "../../components/NavigationProgress";
 import { AnalyticsConsent } from "../../components/AnalyticsConsent";
 import { AudioPlayerProvider } from "../../lib/audio-player-context";
 import { absoluteSiteUrl, createRootMetadata, SITE_NAME } from "../../lib/seo";
@@ -112,6 +114,10 @@ export default async function RootLayout({ children, params }: Props) {
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteJson }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJson }} />
+        {/* Reads the address in the browser only, so pages stay prerendered. */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <I18nProvider initialLocale={locale}>
           <AuthProvider>
             <AudioPlayerProvider playerBackgrounds={playerBackgrounds}>

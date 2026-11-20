@@ -63,4 +63,74 @@ void main() {
       expect(different, _knownDifferent);
     },
   );
+
+  test('a word of the table has the sounds of a stop on it beside those of '
+      'reading on, and neither is asked for', () {
+    final table =
+        jsonDecode(
+              File('assets/recitation_model/expected.json').readAsStringSync(),
+            )
+            as Map<String, Object?>;
+    final symbols = (table['symbols']! as List).cast<String>();
+    final surah = (table['surahs']! as Map<String, Object?>)['2']! as List;
+    String word(ExpectedAyah ayah, int index, {required bool loose}) {
+      final (start, end) = ayah.spans[index];
+      return <String>[
+        for (var i = start; i < end; i++)
+          if (ayah.loose.contains(i) == loose) symbols[ayah.sounds[i] - 1],
+      ].join();
+    }
+
+    // 2:7, the ninth word: "ghishawatun wa…" read on, "ghishawah" when the
+    // reader stops at the mark after it.
+    final seventh = ExpectedAyah.fromJson(surah[6], symbols)!;
+    expect(word(seventh, 8, loose: false), 'غِشَااوَ');
+    expect(word(seventh, 8, loose: true), 'تُووه');
+    // The "h" is the stop's own sound; the ending of reading on is the
+    // ayah's.
+    final (start, end) = seventh.spans[8];
+    expect(
+      <String>[
+        for (var i = start; i < end; i++)
+          if (seventh.added.contains(i)) symbols[seventh.sounds[i] - 1],
+      ],
+      <String>['ه'],
+    );
+    // 2:2, "la rayba fihi": a stop on either of the two words between the
+    // three-dot marks leaves only the last short vowel unsaid.
+    final second = ExpectedAyah.fromJson(surah[1], symbols)!;
+    expect(word(second, 3, loose: false), 'رَيب');
+    expect(word(second, 3, loose: true), contains('َ'));
+    expect(word(second, 4, loose: false), 'فِۦۦه');
+    expect(word(second, 4, loose: true), 'ِ');
+  });
+
+  test('the table writes the imala of 11:41 as the model hears it and takes '
+      'the long sound of the letter ayn for no idgham', () {
+    final table =
+        jsonDecode(
+              File('assets/recitation_model/expected.json').readAsStringSync(),
+            )
+            as Map<String, Object?>;
+    final symbols = (table['symbols']! as List).cast<String>();
+    final surahs = table['surahs']! as Map<String, Object?>;
+    ExpectedAyah ayah(int surah, int number) => ExpectedAyah.fromJson(
+      (surahs['$surah']! as List)[number - 1],
+      symbols,
+    )!;
+    // "majraha" with imala: a kasra and its long vowel, which is what the
+    // model writes of a right reading; the imala's own sounds it never does.
+    final hud = ayah(11, 41);
+    final (start, end) = hud.spans[5];
+    expect(
+      <String>[
+        for (var i = start; i < end; i++) symbols[hud.sounds[i] - 1],
+      ].join(),
+      'مَجڇرِۦۦهَاا',
+    );
+    // "kaf ha ya ayn sad", "ayn sin qaf": the ayn's long "y" is a madd of
+    // four or six counts, not a ghunnah that may be held too short.
+    expect(ayah(19, 1).units, isEmpty);
+    expect(ayah(42, 2).units, isEmpty);
+  });
 }

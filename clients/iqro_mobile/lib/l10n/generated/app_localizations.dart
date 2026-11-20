@@ -1518,6 +1518,18 @@ abstract class AppLocalizations {
   /// **'Next surah'**
   String get nextSurah;
 
+  /// No description provided for @previousAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous ayah'**
+  String get previousAyah;
+
+  /// No description provided for @nextAyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Next ayah'**
+  String get nextAyah;
+
   /// No description provided for @nextSurahHint.
   ///
   /// In en, this message translates to:
@@ -6537,7 +6549,7 @@ abstract class AppLocalizations {
   /// No description provided for @recitationNoticeHow.
   ///
   /// In en, this message translates to:
-  /// **'Turn the microphone on and read aloud: the lens follows your words. If you skip a word or say another one, it stops on that word and turns red, and the phone vibrates.'**
+  /// **'Turn the microphone on and read aloud: the word you are reading is highlighted. If you skip a word or say another one, the highlight turns red and the phone vibrates; read the word rightly and the reading goes on.'**
   String get recitationNoticeHow;
 
   /// No description provided for @recitationNoticeVoice.

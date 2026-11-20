@@ -1,0 +1,39 @@
+U+0640	ARABIC TATWEEL	7174	3618	1:1 ٱلرَّحْمَـٰنِ; 1:2 ٱلْعَـٰلَمِينَ; 1:3 ٱلرَّحْمَـٰنِ
+U+064B	ARABIC FATHATAN	3635	2302	2:2 هُدًى; 2:5 هُدًى; 2:10 مَرَضًا‌ۖ
+U+064C	ARABIC DAMMATAN	2385	1475	2:6 سَوَآءٌ; 2:7 غِشَـٰوَةٌ‌ۖ; 2:10 مَّرَضٌ
+U+064D	ARABIC KASRATAN	2535	1666	2:17 ظُلُمَـٰتٍ; 2:19 كَصَيِّبٍ; 2:20 شَىْءٍ
+U+064E	ARABIC FATHA	123054	6216	1:1 ٱللَّهِ; 1:2 ٱلْحَمْدُ; 1:3 ٱلرَّحْمَـٰنِ
+U+064F	ARABIC DAMMA	37454	5870	1:2 ٱلْحَمْدُ; 1:5 نَعْبُدُ; 1:6 ٱلْمُسْتَقِيمَ
+U+0650	ARABIC KASRA	46069	6021	1:1 بِسْمِ; 1:2 لِلَّهِ; 1:3 ٱلرَّحْمَـٰنِ
+U+0651	ARABIC SHADDA	22678	5620	1:1 ٱللَّهِ; 1:2 لِلَّهِ; 1:3 ٱلرَّحْمَـٰنِ
+U+0652	ARABIC SUKUN	41137	6010	1:1 بِسْمِ; 1:2 ٱلْحَمْدُ; 1:3 ٱلرَّحْمَـٰنِ
+U+0653	ARABIC MADDAH ABOVE	5376	3051	1:7 ٱلضَّآلِّينَ; 2:1 الٓمٓ; 2:4 بِمَآ
+U+0654	ARABIC HAMZA ABOVE	496	461	2:31 أَنۢبِــُٔونِى; 2:33 يَـٰٓـــَٔادَمُ; 2:35 يَـٰٓـــَٔادَمُ
+U+0655	ARABIC HAMZA BELOW	14	14	10:15 تِلْقَآىِٕ; 16:90 وَإِيتَآىِٕ; 20:130 ءَانَآىِٕ
+U+066E	ARABIC LETTER DOTLESS BEH	161	150	2:29 فَسَوَّٮٰهُنَّ; 2:102 ٱشْتَرَٮٰهُ; 2:185 هَدَٮٰكُمْ
+U+0670	ARABIC LETTER SUPERSCRIPT ALEF	8165	4099	1:1 ٱلرَّحْمَـٰنِ; 1:2 ٱلْعَـٰلَمِينَ; 1:3 ٱلرَّحْمَـٰنِ
+U+0671	ARABIC LETTER ALEF WASLA	13483	4798	1:1 ٱللَّهِ; 1:2 ٱلْحَمْدُ; 1:3 ٱلرَّحْمَـٰنِ
+U+0672	ARABIC LETTER ALEF WITH WAVY HAMZA ABOVE	1561	1268	1:6 ٱلصِّرَٲطَ; 1:7 صِرَٲطَ; 2:2 ذَٲلِكَ
+U+06D6	ARABIC SMALL HIGH LIGATURE SAD WITH LAM WITH ALEF MAKSURA	1682	1294	2:5 رَّبِّهِمْ‌ۖ; 2:7 سَمْعِهِمْ‌ۖ; 2:10 مَرَضًا‌ۖ
+U+06D7	ARABIC SMALL HIGH LIGATURE QAF WITH LAM WITH ALEF MAKSURA	603	517	2:13 ٱلسُّفَهَآءُ‌ۗ; 2:61 سَأَلْتُمْ‌ۗ; 2:74 ٱللَّهِ‌ۗ
+U+06D8	ARABIC SMALL HIGH MEEM INITIAL FORM	22	22	2:26 مَثَلاً‌ۘ; 2:118 قَوْلِهِمْ‌ۘ; 2:212 ءَامَنُواْ‌ۘ
+U+06D9	ARABIC SMALL HIGH LAM ALEF	68	64	2:25 رِّزْقًا‌ۙ; 2:120 ٱلْعِلْمِ‌ۙ; 2:145 ٱلْعِلْمِ‌ۙ
+U+06DA	ARABIC SMALL HIGH JEEM	1972	1486	2:19 ٱلْمَوْتِ‌ۚ; 2:20 قَامُواْ‌ۚ; 2:26 فَوْقَهَا‌ۚ
+U+06DB	ARABIC SMALL HIGH THREE DOTS	12	6	2:2 رَيْبَ‌ۛ; 2:195 ٱلتَّهْلُكَةِ‌ۛ; 5:26 عَلَيْهِمْ‌ۛ
+U+06DC	ARABIC SMALL HIGH SEEN	7	7	2:245 وَيَبْصُۜطُ; 7:69 بَصْۜطَةً‌ۖ; 18:1 عِوَجَاۜ
+U+06DE	ARABIC START OF RUB EL HIZB	199	199	2:26 ۞; 2:44 ۞; 2:60 ۞
+U+06DF	ARABIC SMALL HIGH ROUNDED ZERO	66	65	2:258 أَنَا۟; 3:81 وَأَنَا۟; 5:28 أَنَا۟
+U+06E0	ARABIC SMALL HIGH UPRIGHT RECTANGULAR ZERO	1	1	41:44 ءَا۠عْجَمِىٌّ۬
+U+06E2	ARABIC SMALL HIGH MEEM ISOLATED FORM	510	460	2:10 أَلِيمُۢ; 2:18 صُمُّۢ; 2:19 مُحِيطُۢ
+U+06E3	ARABIC SMALL LOW SEEN	1	1	52:37 ٱلْمُصَۣيْطِرُونَ
+U+06E5	ARABIC SMALL WAW	1257	990	2:17 حَوْلَهُۥ; 2:37 إِنَّهُۥ; 2:54 إِنَّهُۥ
+U+06E6	ARABIC SMALL YEH	957	806	2:22 بِهِۦ; 2:23 مِّثْلِهِۦ; 2:25 بِهِۦ
+U+06E7	ARABIC SMALL HIGH YEH	38	35	2:61 ٱلنَّبِيِّــۧنَ; 2:124 إِبْرَٲهِــۧمَ; 2:125 إِبْرَٲهِــۧمَ
+U+06E8	ARABIC SMALL HIGH NOON	1	1	21:88 نُـۨجِى
+U+06E9	ARABIC PLACE OF SAJDAH	15	15	7:206 ۩; 13:15 ۩; 16:50 ۩
+U+06EA	ARABIC EMPTY CENTRE LOW STOP	1	1	11:41 مَجْر۪ٮٰهَا
+U+06EB	ARABIC EMPTY CENTRE HIGH STOP	1	1	12:11 تَأْمَ۫نَّا
+U+06EC	ARABIC ROUNDED HIGH STOP WITH FILLED CENTRE	1	1	41:44 ءَا۠عْجَمِىٌّ۬
+U+06ED	ARABIC SMALL LOW MEEM	99	98	2:41 كَافِرِۭ; 2:99 ءَايَـٰتِۭ; 2:176 شِقَاقِۭ
+U+200C	ZERO WIDTH NON-JOINER	4128	2494	2:2 رَيْبَ‌ۛ; 2:5 رَّبِّهِمْ‌ۖ; 2:7 سَمْعِهِمْ‌ۖ
+Counter({'ham_wasl': 13252, 'madda_normal': 9028, 'end': 6236, 'ikhafa': 5291, 'madda_obligatory': 5166, 'ghunnah': 4923, 'madda_permissible': 4543, 'slnt': 4159, 'idgham_ghunnah': 3933, 'qalaqah': 3834, 'laam_shamsiyah': 2608, 'idgham_wo_ghunnah': 1036, 'idgham_shafawi': 832, 'iqlab': 562, 'ikhafa_shafawi': 496, 'madda_necessary': 143, 'idgham_mutajanisayn': 58, 'idgham_mutaqaribayn': 13})
