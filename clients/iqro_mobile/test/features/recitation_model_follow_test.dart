@@ -285,6 +285,8 @@ void main() {
           <(int, int)>[(0, 3), (3, 9), (9, 14)],
           <(int, int, int, int, int)>[],
           <int>{6, 7, 8, 9},
+          // The sounds of the stop and of the new beginning.
+          <int>{8, 9},
         ),
       ]),
     );
@@ -316,6 +318,31 @@ void main() {
         1, 2, 3, 4, 5, 6, 0, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, //
       ]);
       expect(seen, <String>['on 0', 'on 1', 'on 2']);
+    });
+
+    test('a word with a letter left out is not the stopped word: the '
+        'sounds of reading on that a stop leaves unsaid are not free', () {
+      // The third word is said without its 10 and its 11; the fourth
+      // follows at once.
+      final follower = RecitationFollowCore(
+        RecitationPassage(<ExpectedAyah>[
+          ExpectedAyah(
+            Uint8List.fromList(<int>[
+              1, 2, 3, //
+              4, 5, 6, //
+              9, 10, 11, 12, //
+              13, 14, 15,
+            ]),
+            <(int, int)>[(0, 3), (3, 6), (6, 10), (10, 13)],
+            <(int, int, int, int, int)>[],
+            <int>{9},
+          ),
+        ]),
+      );
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 9, 13, 14, 15, 0, 0, 0, //
+      ]);
+      expect(seen, contains('miss 2'));
     });
 
     test('a sound that is always said is still asked for', () {

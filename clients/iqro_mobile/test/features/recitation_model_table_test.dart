@@ -86,6 +86,16 @@ void main() {
     final seventh = ExpectedAyah.fromJson(surah[6], symbols)!;
     expect(word(seventh, 8, loose: false), 'غِشَااوَ');
     expect(word(seventh, 8, loose: true), 'تُووه');
+    // The "h" is the stop's own sound; the ending of reading on is the
+    // ayah's.
+    final (start, end) = seventh.spans[8];
+    expect(
+      <String>[
+        for (var i = start; i < end; i++)
+          if (seventh.added.contains(i)) symbols[seventh.sounds[i] - 1],
+      ],
+      <String>['ه'],
+    );
     // 2:2, "la rayba fihi": a stop on either of the two words between the
     // three-dot marks leaves only the last short vowel unsaid.
     final second = ExpectedAyah.fromJson(surah[1], symbols)!;

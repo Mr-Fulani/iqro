@@ -1,0 +1,45 @@
+A stop on a word is no mistake (PR #307): what it costs and what it gives. A Mac, the app's Dart code
+(tool/recitation_model/harness.dart), recordings from everyayah.com. 20.11.2026.
+"main": after PR #306 (the two rules against false stops); "stops": PR #307 on top of it.
+
+# 2:2 and 2:7 of 24 reciters, each ayah alone (many stop at "la rayb" / "fih" and at "ghishawah"): false stops
+release 1.0.13: clean: {recitations: 48, words: 456, words reached: 342, false mistakes: 15}
+stops:          clean: {recitations: 48, words: 456, words reached: 366, false mistakes: 6}
+# of them on the word ghishawah of 2:7 (word 8): 8 before, 0 with stops; what is left is the model mishearing a
+# recording (mujawwad, low bit rates), not a stop
+Abdul_Basit_Mujawwad_128kbps_7.json: misses [(6, 11.5)], reached 7 of 12
+Abdullah_Basfar_192kbps_7.json: misses [], reached 1 of 12
+Abdurrahmaan_As-Sudais_192kbps_7.json: misses [], reached 0 of 12
+Abu_Bakr_Ash-Shaatree_128kbps_7.json: misses [], reached 0 of 12
+Hani_Rifai_192kbps_2.json: misses [(4, 4.5)], reached 4 of 7
+Hani_Rifai_192kbps_7.json: misses [(7, 8.2)], reached 8 of 12
+Hudhaify_128kbps_7.json: misses [(9, 12.8)], reached 12 of 12
+Khaalid_Abdullaah_al-Qahtaanee_192kbps_7.json: misses [], reached 0 of 12
+Minshawy_Mujawwad_192kbps_2.json: misses [(3, 7.2)], reached 4 of 7
+Minshawy_Mujawwad_192kbps_7.json: misses [], reached 0 of 12
+Minshawy_Murattal_128kbps_7.json: misses [], reached 0 of 12
+Muhammad_Jibreel_128kbps_7.json: misses [(7, 9.8)], reached 8 of 12
+
+# 36 recitations of whole surahs, 24 with an ayah cut out, 84 with a word cut out (the set of out/10_false_stops.txt)
+## main
+ayah: {recitations: 24, noticed on the right word: 23, false mistake before it: 1, lens went on past the word left out: 1}
+clean: {recitations: 36, words: 822, words reached: 719, false mistakes: 4}
+word: {recitations: 84, noticed on the right word: 79, lens went on past the word left out: 37, more than one mistake: 21, false mistake before it: 4}
+## stops, a sound of reading on that a stop leaves unsaid skipped for nothing (the first version)
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 6, lens went on past the word left out: 6, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 743, false mistakes: 5, lens before the word began: 3}
+word: {recitations: 84, noticed on the right word: 70, more than one mistake: 10, lens went on past the word left out: 34, false mistake before it: 5}
+## stops, such a sound at the price of any sound not heard (_unsaidPrice; -4 gave 75 of 84)
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 7, lens went on past the word left out: 7, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 744, false mistakes: 4, lens before the word began: 2}
+word: {recitations: 84, noticed on the right word: 76, more than one mistake: 17, lens went on past the word left out: 34, false mistake before it: 5}
+# the words cut out and not noticed with stops but noticed on main: a piece of the word was left by the cut
+# ("min sha[rri]"), and the word passes with one sound unfit, as any word may
+
+# The recording with real mistakes of out/10_false_stops.txt, with stops
+  5.70 MISS 0;  45.00 MISS 8;  89.40 MISS 19;  94.70 MISS 20;
+
+# 2:5, 2:19, 2:26, 2:177, 2:255, 3:7, 5:26, 24:35 of 8 reciters, each ayah alone: long ayat with the marks of
+# a stop, where reciters stop, and go back a few words after a breath
+stops: clean: {recitations: 64, words: 2200, words reached: 1738, false mistakes: 69}
+main:  MAINMARKS

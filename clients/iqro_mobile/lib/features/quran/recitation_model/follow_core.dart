@@ -15,7 +15,13 @@ const recitationFrameRate = 50;
 /// One ayah of the table of expected sounds
 /// (tool/recitation_model/build_table.py).
 class ExpectedAyah {
-  ExpectedAyah(this.sounds, this.spans, this.units, [this.loose = const {}]);
+  ExpectedAyah(
+    this.sounds,
+    this.spans,
+    this.units, [
+    this.loose = const {},
+    this.added = const {},
+  ]);
 
   /// Class of each sound, 1..42, as a correct reading has them: a long
   /// vowel once per count.
@@ -33,6 +39,11 @@ class ExpectedAyah {
   /// or only when it is begun after a stop. A reader may stop on any
   /// word.
   final Set<int> loose;
+
+  /// Those of [loose] that the ayah read through does not have: the
+  /// sounds of a stop (the "h" a ta marbuta is stopped on, the echo of a
+  /// qalqalah) and of a word begun anew after one.
+  final Set<int> added;
 
   static ExpectedAyah? fromJson(Object? json, List<String> symbols) {
     if (json is! List) return null;
@@ -52,6 +63,7 @@ class ExpectedAyah {
           (unit[i], unit[i + 1], unit[i + 2], unit[i + 3], unit[i + 4]),
       ],
       json.length > 3 ? (json[3] as List).cast<int>().toSet() : const {},
+      json.length > 4 ? (json[4] as List).cast<int>().toSet() : const {},
     );
   }
 }
@@ -73,8 +85,10 @@ class RecitationPassage {
             sounds.add(ayah.sounds[i]);
             wordOf.add(wordStart.length - 1);
             optional.add(ayah.loose.contains(i));
-          } else if (!ayah.loose.contains(i)) {
-            optional.last = false;
+            own.add(!ayah.added.contains(i));
+          } else {
+            if (!ayah.loose.contains(i)) optional.last = false;
+            if (!ayah.added.contains(i)) own.last = true;
           }
           at[i] = sounds.length - 1;
         }
@@ -105,6 +119,10 @@ class RecitationPassage {
 
   /// Per sound: it need not be heard ([ExpectedAyah.loose]).
   final optional = <bool>[];
+
+  /// Per sound: the ayah read through has it ([ExpectedAyah.added] does
+  /// not list it).
+  final own = <bool>[];
 
   /// The places whose tajweed is looked at, by the word their last sound
   /// is in.
@@ -156,6 +174,10 @@ const _otherSound = -6.0; // a frame of speech that is not the text
 const _skipPrice = -10.0; // going on with a later word
 const _maxSkip = 14; // words that may be left out at once
 const _ahead = 70; // sounds of the text looked at ahead of the place
+// A sound of the ayah read through that a stop leaves unsaid: not free, or
+// a word with a letter left out would sooner pass for read than for left
+// out.
+const _unsaidPrice = -10.0;
 const _maxLoose = 7; // sounds in a row that need not be heard
 const _settle = 10; // frames a word has been over before it is final
 const _stallSounds = 10; // sounds of other speech that are a mistake
@@ -823,21 +845,24 @@ class RecitationFollowCore {
         }
         // Past sounds that need not be heard, for nothing: from the sound
         // before them, or from before the word they begin.
+        var price = 0.0;
         for (var k = i - 1; k >= 0 && i - k <= _maxLoose; k--) {
           if (!optional[lo + k]) break;
+          if (passage.own[lo + k]) price += _unsaidPrice;
           final first = entry[k];
-          if (first >= 0 && score[lattice + first] > best) {
-            best = score[lattice + first];
+          if (first >= 0 && score[lattice + first] + price > best) {
+            best = score[lattice + first] + price;
             source = lattice + first;
           }
           if (k == 0) break;
           final before = 2 * (k - 1) + 1;
-          if (sounds[lo + i] != sounds[lo + k - 1] && score[before] > best) {
-            best = score[before];
+          if (sounds[lo + i] != sounds[lo + k - 1] &&
+              score[before] + price > best) {
+            best = score[before] + price;
             source = before;
           }
-          if (score[before + 1] > best) {
-            best = score[before + 1];
+          if (score[before + 1] + price > best) {
+            best = score[before + 1] + price;
             source = before + 1;
           }
         }
@@ -858,17 +883,19 @@ class RecitationFollowCore {
         var source = state;
         // After the word before it, whose last sounds need not all be
         // heard.
+        var price = 0.0;
         for (var e = starts[j] - 1; e >= 0 && starts[j] - e <= _maxLoose; e--) {
           final end = 2 * e + 1;
-          if (score[end] > best) {
-            best = score[end];
+          if (score[end] + price > best) {
+            best = score[end] + price;
             source = end;
           }
-          if (score[end + 1] > best) {
-            best = score[end + 1];
+          if (score[end + 1] + price > best) {
+            best = score[end + 1] + price;
             source = end + 1;
           }
           if (!optional[lo + e]) break;
+          if (passage.own[lo + e]) price += _unsaidPrice;
         }
         nextScore[state] = best + other;
         back[at + state] = source;

@@ -5,7 +5,7 @@
                    rules the trial build remarks on (ghunnah, idgham with ghunnah, madd muttasil)
                    A reader may stop on any word and go on from the next: the sounds a word has only when it is
                    stopped on, or only when read on from, or only when begun after a stop, are all written, and
-                   listed as ones that need not be heard
+                   listed as ones that need not be heard; those the ayah read through does not have are listed again
   mel_filters.bin  Whisper's 80 mel filters over 201 frequency bins, float32
 
   python build_table.py <folder of the model's files: config.json, imam.py> <output folder>
@@ -48,8 +48,9 @@ def union(word, other):
 
 
 def with_stops(words, ref):
-    """The ayah's sounds with those of a stop after any word: (text, spans, old place -> new, places not needed)."""
-    text, spans, place, loose = '', [], {}, []
+    """The ayah's sounds with those of a stop after any word: (text, spans, old place -> new, places not needed,
+    those of them that the ayah read through does not have)."""
+    text, spans, place, loose, added = '', [], {}, [], []
     said = []
     for k, (s, e) in enumerate(ref.spans):
         word = [[c, n, True, True] for c, n in runs(ref.phonemes[s:e])]
@@ -74,10 +75,11 @@ def with_stops(words, ref):
                     for i in range(n): place[old + i] = len(text) + i
                 old += n
             if not needed: loose += range(len(text), len(text) + n)
+            if not own: added += range(len(text), len(text) + n)
             text += c * n
         assert old == e
         spans.append((start, len(text)))
-    return text, spans, place, loose
+    return text, spans, place, loose, added
 
 KIND = {'ghunnah': 0, 'idgham_ghunnah': 1}
 surahs, failed = {}, []
@@ -93,7 +95,7 @@ for s, n in enumerate(counts, 1):
         try:
             words = Aya(s, a).get().uthmani.split(' ')
             ref = imam.expected(words)
-            text, spans, place, loose = with_stops(words, ref)
+            text, spans, place, loose, added = with_stops(words, ref)
             units = []
             for u in ref.units:
                 # A place held is looked at only where every sound of it is always said.
@@ -102,7 +104,7 @@ for s, n in enumerate(counts, 1):
                 if u.kind in KIND: units += [KIND[u.kind], *at]
                 elif u.kind == 'madd' and u.rule.startswith('Mottasel'): units += [2, *at]
             assert all(c in symbols for c in text)
-            ayat.append([text, [x for span in spans for x in span], units, loose])
+            ayat.append([text, [x for span in spans for x in span], units, loose, added])
         except Exception as e:  # an ayah the phonetizer cannot write: the follower is not offered for its surah
             failed.append((s, a, repr(e)[:80])); ayat.append(None)
     surahs[str(s)] = ayat
