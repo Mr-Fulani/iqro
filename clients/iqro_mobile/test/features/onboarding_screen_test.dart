@@ -128,6 +128,21 @@ void main() {
     );
   });
 
+  // iPad 11" upright: the step was as wide as the screen, with a switch at
+  // the far edge from its label.
+  testWidgets('a tablet keeps a step in a centred column', (tester) async {
+    await pumpOnboarding(
+      tester,
+      stored: const <String, Object>{'locale': 'ru'},
+      initialStep: OnboardingStep.exactReminders,
+      size: const Size(834, 1194),
+    );
+    final title = tester.getRect(find.text(_ru.onboardingExactTitle));
+    expect(title.left, (834 - 600) / 2);
+    expect(title.right, lessThanOrEqualTo((834 + 600) / 2));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the tour pages through all four slides', (tester) async {
     await pumpOnboarding(
       tester,

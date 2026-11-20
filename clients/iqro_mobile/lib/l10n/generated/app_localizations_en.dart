@@ -543,6 +543,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mushafMode => 'Mushaf';
 
   @override
+  String get mushafNightOn => 'Night mode';
+
+  @override
+  String get mushafNightOff => 'Light page';
+
+  @override
   String get readerPlainText => 'Arabic text';
 
   @override

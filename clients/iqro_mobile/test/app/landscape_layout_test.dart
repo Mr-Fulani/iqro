@@ -17,6 +17,7 @@ import 'package:iqro_mobile/features/calendar/calendar_catalog.dart';
 import 'package:iqro_mobile/features/calendar/hijri_calendar_service.dart';
 import 'package:iqro_mobile/features/home/home_screen.dart';
 import 'package:iqro_mobile/features/memorization/memorization_repository.dart';
+import 'package:iqro_mobile/features/more/more_screen.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
 import 'package:iqro_mobile/features/quran/mushaf_offline_repository.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
@@ -128,11 +129,31 @@ void main() {
             );
             expect(tester.takeException(), isNull, reason: reason);
             final screen = size / ratio;
-            final bar = tester.getRect(find.byType(NavigationBar));
-            expect(bar.bottom, screen.height, reason: reason);
+            // A phone on its side has its tabs in a rail at the start edge:
+            // the player and the pages end at the system inset instead.
+            final rail =
+                size.width > size.height && size.shortestSide / ratio < 600;
+            final double barTop;
+            if (rail) {
+              expect(find.byType(NavigationBar), findsNothing, reason: reason);
+              barTop = screen.height - (buttons ? 0 : 16);
+              final railRect = tester.getRect(find.byType(NavigationRail));
+              expect(railRect.left, 0, reason: reason);
+              expect(railRect.bottom, screen.height, reason: reason);
+              expect(
+                tester.getRect(find.byType(IqroMiniPlayer)).left,
+                greaterThanOrEqualTo(railRect.right),
+                reason: reason,
+              );
+            } else {
+              expect(find.byType(NavigationRail), findsNothing, reason: reason);
+              final bar = tester.getRect(find.byType(NavigationBar));
+              expect(bar.bottom, screen.height, reason: reason);
+              barTop = bar.top;
+            }
             final player = tester.getRect(find.byType(IqroMiniPlayer));
             expect(player.top, greaterThan(0), reason: reason);
-            expect(player.bottom, moreOrLessEquals(bar.top), reason: reason);
+            expect(player.bottom, moreOrLessEquals(barTop), reason: reason);
             final visible = tester.getRect(
               collapsed
                   ? find.byKey(const ValueKey('mini-player-expand'))
@@ -141,7 +162,7 @@ void main() {
                       matching: find.byType(ListTile),
                     ),
             );
-            expect(visible.bottom, lessThanOrEqualTo(bar.top), reason: reason);
+            expect(visible.bottom, lessThanOrEqualTo(barTop), reason: reason);
             // The page scrolls its last card clear of the bar too.
             final page = find
                 .byWidgetPredicate(
@@ -160,12 +181,76 @@ void main() {
               for (var index = 0; index < texts.evaluate().length; index++)
                 tester.getRect(texts.at(index)).bottom,
             ].reduce((a, b) => a > b ? a : b);
-            expect(contentEnd, lessThanOrEqualTo(bar.top), reason: reason);
+            expect(contentEnd, lessThanOrEqualTo(barTop), reason: reason);
           }
         }
       });
     }
   }
+
+  // iPhone 15, Redmi Note 7 and a small 640x320 dp phone, on their side.
+  for (final (size, ratio) in <(Size, double)>[
+    (const Size(2556, 1179), 3.0),
+    (_landscape, _pixelRatio),
+    (const Size(1280, 640), 2.0),
+  ]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('on its side ($size, scale=$scale) the rail holds all five '
+          'tabs and switches them', (tester) async {
+        await _pumpShell(
+          tester,
+          tab: 0,
+          size: size,
+          pixelRatio: ratio,
+          scale: scale,
+        );
+        expect(tester.takeException(), isNull);
+        final l10n = _l10n(tester);
+        final rail = find.byType(NavigationRail);
+        final railRect = tester.getRect(rail);
+        expect(railRect.width, lessThanOrEqualTo(64 + 79 / ratio + 1));
+        for (final label in [
+          l10n.navHome,
+          l10n.navQuran,
+          l10n.navPlan,
+          l10n.navAudio,
+          l10n.navMore,
+        ]) {
+          final tab = find.descendant(
+            of: rail,
+            matching: find.byTooltip(label),
+          );
+          expect(tab, findsOneWidget, reason: label);
+          final rect = tester.getRect(tab);
+          expect(rect.top, greaterThanOrEqualTo(0), reason: label);
+          expect(
+            rect.bottom,
+            lessThanOrEqualTo(size.height / ratio),
+            reason: label,
+          );
+        }
+        await tester.tap(
+          find.descendant(of: rail, matching: find.byTooltip(l10n.navMore)),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.widget<NavigationRail>(rail).selectedIndex, 4);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('turning the phone keeps the open tab and its scroll', (
+    tester,
+  ) async {
+    await _pumpShell(tester, tab: 4, size: const Size(1080, 2340));
+    expect(find.byType(NavigationBar), findsOneWidget);
+    final element = tester.element(find.byType(MoreScreen));
+    tester.view.physicalSize = _landscape;
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(tester.element(find.byType(MoreScreen)), same(element));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('portrait keeps the cards above the surah list', (tester) async {
     await _pumpShell(tester, tab: 1, size: const Size(1080, 2340));

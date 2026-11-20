@@ -546,6 +546,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mushafMode => 'Мусхаф';
 
   @override
+  String get mushafNightOn => 'Ночной режим';
+
+  @override
+  String get mushafNightOff => 'Светлая страница';
+
+  @override
   String get readerPlainText => 'Арабский текст';
 
   @override

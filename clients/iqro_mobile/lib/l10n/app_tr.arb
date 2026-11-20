@@ -160,6 +160,8 @@
   "alFatiha": "Fâtiha",
   "textMode": "Metin",
   "mushafMode": "Mushaf",
+  "mushafNightOn": "Gece modu",
+  "mushafNightOff": "Açık sayfa",
   "readerPlainText": "Arapça metin",
   "readerSwipeHint": "Sağa kaydırın: Arapça metin, sola: Mushaf",
   "readerPlainTextPlace": "Ayet {ayah} · s. {page}",

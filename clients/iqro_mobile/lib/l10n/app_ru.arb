@@ -160,6 +160,8 @@
   "alFatiha": "Аль-Фатиха",
   "textMode": "Текст",
   "mushafMode": "Мусхаф",
+  "mushafNightOn": "Ночной режим",
+  "mushafNightOff": "Светлая страница",
   "readerPlainText": "Арабский текст",
   "readerSwipeHint": "Свайп вправо — арабский текст, влево — Мусхаф",
   "readerPlainTextPlace": "Аят {ayah} · стр. {page}",

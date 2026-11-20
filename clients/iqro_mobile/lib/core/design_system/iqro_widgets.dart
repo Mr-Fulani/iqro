@@ -55,7 +55,8 @@ Future<T?> showIqroSheet<T>({
   ),
 );
 
-/// Widest a page's content grows in landscape, padding included.
+/// Widest a page's content grows in landscape and on a tablet, padding
+/// included.
 const iqroLandscapeContentWidth = 640.0;
 
 /// Shortest screen side of a tablet (Material's medium window class).
@@ -69,11 +70,13 @@ double iqroPageWidth(
   double? tabletContentWidth,
 }) {
   final screen = MediaQuery.sizeOf(context);
+  final tablet = screen.shortestSide >= iqroTabletShortestSide;
   final double? limit;
-  if (tabletContentWidth != null &&
-      screen.shortestSide >= iqroTabletShortestSide) {
+  if (tabletContentWidth != null && tablet) {
     limit = tabletContentWidth;
-  } else if (screen.width > screen.height) {
+  } else if (tablet || screen.width > screen.height) {
+    // A tablet held upright is as wide as a phone on its side: the same
+    // column keeps lines readable and a switch next to its label.
     limit = iqroLandscapeContentWidth;
   } else {
     limit = null;

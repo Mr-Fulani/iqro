@@ -63,4 +63,62 @@ void main() {
     // Above the 72 dp bar, which itself sits above the 48 dp system bar.
     expect(last.bottom, 800 - 48 - 72 - 4);
   });
+
+  // iPad mini and iPad 11", an Android tablet, and phones for comparison.
+  for (final (device, size, width) in <(String, Size, double)>[
+    ('iPad mini upright', const Size(744, 1133), 640),
+    ('iPad upright', const Size(834, 1194), 640),
+    ('iPad on its side', const Size(1194, 834), 640),
+    ('Android tablet upright', const Size(800, 1280), 640),
+    ('small tablet upright', const Size(600, 960), 600),
+    ('iPhone upright', const Size(393, 852), 393),
+    ('iPhone on its side', const Size(852, 393), 640),
+  ]) {
+    testWidgets('$device: a page is $width dp wide, centred', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: IqroPage(
+              padding: EdgeInsets.zero,
+              child: SizedBox(
+                key: ValueKey('content'),
+                width: double.infinity,
+                height: 40,
+              ),
+            ),
+          ),
+        ),
+      );
+      final content = tester.getRect(find.byKey(const ValueKey('content')));
+      expect(content.width, width);
+      expect(content.center.dx, size.width / 2);
+    });
+  }
+
+  testWidgets('a tablet screen with its own width keeps it upright', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(834, 1194);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: IqroPage(
+            padding: EdgeInsets.zero,
+            tabletContentWidth: 1100,
+            child: SizedBox(
+              key: ValueKey('content'),
+              width: double.infinity,
+              height: 40,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.getSize(find.byKey(const ValueKey('content'))).width, 834);
+  });
 }
