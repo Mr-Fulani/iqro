@@ -9,6 +9,8 @@
 - `expected.json` — ожидаемые звуки каждого аята (для каждого слова — и при слитном чтении, и при остановке
   на нём; звуки только одного из вариантов помечены необязательными) и места гунны и мадда муттасыль; строится
   `tool/recitation_model/build_table.py` движком правил модели (`imam.py`) и `quran-transcript` (MIT).
+  Имала в 11:41 записана так, как её слышит модель (кясра и долгий «и»); протяжный «й» буквы ‘айн в 19:1 и
+  42:2 местом гунны не считается (`docs/recitation-on-device-spike/out/12_imala_ayn.txt`).
 - `mel_filters.bin` — 80 мел-фильтров Whisper (тот же скрипт).
 - `LICENSE-onnxruntime.txt` — лицензия ONNX Runtime (MIT), которая исполняет модель; сама библиотека —
   зависимость Gradle `com.microsoft.onnxruntime:onnxruntime-android`.

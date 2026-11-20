@@ -96,8 +96,15 @@ for s, n in enumerate(counts, 1):
             words = Aya(s, a).get().uthmani.split(' ')
             ref = imam.expected(words)
             text, spans, place, loose, added = with_stops(words, ref)
+            # The model writes the imala of 11:41 as a kasra and its long vowel: so it is written here, or a right
+            # reading is stopped (docs/recitation-tajweed-signs).
+            text = text.replace('۪', 'ِ').replace('ـ', 'ۦ')
+            starts = [x for x, _ in ref.spans[1:]]
             units = []
             for u in ref.units:
+                # The engine takes any long ي / و for a nun merged into it; the one of the letter ʿayn (19:1, 42:2)
+                # lies within a word and is a madd, which may be read shorter.
+                if u.kind == 'idgham_ghunnah' and not any(u.s <= x <= u.e for x in starts): continue
                 # A place held is looked at only where every sound of it is always said.
                 if any(i not in place for i in range(u.s, u.e)): continue
                 at = [place[u.s], place[u.e - 1] + 1, u.word, u.golden]

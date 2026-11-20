@@ -1,0 +1,21 @@
+A right reading that was stopped as a mistake: the imala of 11:41. A Mac, the app's Dart code
+(tool/recitation_model/harness.dart), recordings of al-Husary, Ayman Suwayd and al-Minshawi from everyayah.com,
+the ayat as recited. 20.11.2026.
+
+# The table wrote "majraha" with the imala's own two sounds; the model never writes them (0 of 3: it writes a kasra
+# and its long vowel), so two sounds of the word did not fit. Now the word is written as the model hears it.
+# In 19:1 and 42:2 the long "y" of the letter ayn was listed as an idgham with ghunnah, whose length is looked at:
+# a reader who holds the ayn for two counts could be stopped. It is listed no more.
+# 15 recitations: 11:41, 12:11 (ishmam), 19:1, 42:2, 75:27 (sakt), three reciters each.
+## before
+  Ayman_Sowaid_64kbps-11-41.json
+  8.30 MISS 5
+  Husary_128kbps-11-41.json
+  6.50 MISS 5
+  Minshawy_Murattal_128kbps-11-41.json
+  6.60 MISS 5
+whole: {recitations: 15, words: 81, false stops: 3, words reached: 66, places of the three rules: 0}
+counts heard, by rule: {0: 4 of 4: 6, 1: 4 of 5: 2}
+## after
+whole: {recitations: 15, words: 81, false stops: 0, words reached: 81, places of the three rules: 0}
+counts heard, by rule: {0: 4 of 4: 6}
