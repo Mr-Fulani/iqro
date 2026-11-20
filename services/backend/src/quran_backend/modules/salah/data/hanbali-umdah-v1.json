@@ -2,7 +2,7 @@
   "schema_version": 1,
   "course": {
     "slug": "hanbali-umdah",
-    "version": "2026-11-12",
+    "version": "2026-11-20",
     "methodology": "hanbali",
     "source_title": {
       "ru": "Умдат аль-фикх (Ибн Кудама), по муътамаду мазхаба",
@@ -213,7 +213,8 @@
             "meaning": "Allah'ım, duamızı kabul et",
             "transliteration": "Âmîn"
           }
-        }
+        },
+        "audio_media": "audio-amin"
       }
     },
     {
@@ -484,7 +485,8 @@
             "meaning": "Allah'ın selâmı ve rahmeti üzerinize olsun",
             "transliteration": "Esselâmü aleyküm ve rahmetullâh"
           }
-        }
+        },
+        "audio_media": "audio-taslim"
       }
     },
     {
@@ -649,7 +651,8 @@
             "meaning": "Allah en büyüktür, pek büyüktür; hamd Allah'adır, pek çok hamd; sabah akşam Allah'ı tesbih ederim; Allah Peygamber Muhammed'e ve ailesine salât ve bol selâm etsin",
             "transliteration": "Allâhu ekber kebîrâ, ve'l-hamdü lillâhi kesîrâ, ve sübhânallâhi bükraten ve asîlâ, ve sallallâhu alâ Muhammedini'n-nebiyyi ve âlihî ve selleme teslîmen kesîrâ"
           }
-        }
+        },
+        "audio_media": "audio-eid-dhikr"
       }
     },
     {
@@ -674,7 +677,8 @@
             "meaning": "Allah en büyüktür, Allah en büyüktür, Allah'tan başka ilâh yoktur; Allah en büyüktür, Allah en büyüktür ve hamd Allah'adır",
             "transliteration": "Allâhu ekber, Allâhu ekber, lâ ilâhe illallâh, vallâhu ekber, Allâhu ekber ve lillâhi'l-hamd"
           }
-        }
+        },
+        "audio_media": "audio-eid-takbir"
       }
     },
     {
@@ -731,7 +735,8 @@
             "meaning": "Allah'ın selâmı ve rahmeti üzerinize olsun",
             "transliteration": "Esselâmü aleyküm ve rahmetullâh"
           }
-        }
+        },
+        "audio_media": "audio-taslim"
       }
     }
   ],
@@ -1009,6 +1014,22 @@
     {
       "key": "audio-taawwudh",
       "file": "media/audio-taawwudh.mp3"
+    },
+    {
+      "key": "audio-amin",
+      "file": "media/audio-amin.mp3"
+    },
+    {
+      "key": "audio-taslim",
+      "file": "media/audio-taslim.mp3"
+    },
+    {
+      "key": "audio-eid-dhikr",
+      "file": "media/audio-eid-dhikr.mp3"
+    },
+    {
+      "key": "audio-eid-takbir",
+      "file": "media/audio-eid-takbir.mp3"
     }
   ],
   "sections": [

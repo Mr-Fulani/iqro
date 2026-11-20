@@ -147,7 +147,15 @@ def test_course_snapshot_ships_the_recordings_its_formulas_point_to() -> None:
         if formula["source"].get("audio_media")
     }
 
-    assert recorded == {"takbir": "audio-takbir", "taawwudh": "audio-taawwudh"}
+    assert recorded == {
+        "takbir": "audio-takbir",
+        "taawwudh": "audio-taawwudh",
+        "amin": "audio-amin",
+        "taslim": "audio-taslim",
+        "taslim-one": "audio-taslim",
+        "eid-dhikr": "audio-eid-dhikr",
+        "eid-takbir": "audio-eid-takbir",
+    }
     for key in recorded.values():
         recording = COURSE_SNAPSHOT.parent / media[key]["file"]
         assert 0 < recording.stat().st_size <= MAX_AUDIO_BYTES
