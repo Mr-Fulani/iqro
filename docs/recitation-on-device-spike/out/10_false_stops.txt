@@ -1,0 +1,54 @@
+False red stops on a right reading, and what was done about them. A Mac, the app's Dart code
+(tool/recitation_model/harness.dart), recordings of six reciters from everyayah.com. 20.11.2026.
+"before": the rules of release 1.0.13 (PR #299); "after": with the two rules of 20.11.2026.
+
+# Two causes, found on al-Husary's 2:1-2:5 read through (in "before" below: clean-Husary_128kbps-2, a false stop
+# on the last word of 2:3)
+#  1. A later word that begins as the word expected: "yunfiquna" (2:3) and the "yu'minuna" of 2:4. In the middle of
+#     the word the model heard three sounds that fit the later word, and that was taken for a word left out.
+#     After: such a word takes five sounds (three as before for any other word).
+#  2. Silence. After two seconds of it and more the model writes sounds that were not said, and a wait before the
+#     next ayah gave a red stop (2:1 -> 2:2 with a pause of 3.2 s: red on the first word of 2:2 for 1.6 s).
+#     After: frames in the middle of a silence are written over with silence (hushSilence in pipeline.dart).
+
+# One recording with real mistakes and pauses (al-Husary): "alif lam ra" (10:1) where 2:1 is written, 2:1, 2:2,
+# 2:4 (2:3 left out), 2:3, 2:4 without its fourth word, 2:4, 2:5; a second of silence between them
+before:   5.70 MISS 0;  29.30 MISS 1;  45.00 MISS 8;  78.50 MISS 15;
+after:    5.70 MISS 0;  45.00 MISS 8;  89.40 MISS 19;  94.70 MISS 20;
+# right: MISS 0 (alif lam ra), MISS 8 (the ayah left out), MISS 19 and 20 (the word left out, then the reading goes on past it);
+# false, before: MISS 1 at 29.3 s (silence), MISS 15 at 78.5 s (yunfiquna), after which nothing more was followed
+
+# 36 recitations of whole surahs, 24 with an ayah cut out, 84 with a word cut out (as out/09_stops.txt; the set was
+# made again, so its numbers differ a little from that file's)
+## before
+ayah: {recitations: 24, noticed on the right word: 23, false mistake before it: 1, lens went on past the word left out: 1}
+clean: {recitations: 36, words: 822, words reached: 699, false mistakes: 5}
+word: {recitations: 84, noticed on the right word: 79, lens went on past the word left out: 37, more than one mistake: 21, false mistake before it: 4}
+ayah: next word begins → red lens: median 0.51 s, 90 % 0.58 s, worst 0.60 s (23)
+clean: word begins → lens on it: median 0.22 s, 90 % 0.44 s, worst 1.83 s (699)
+word: next word begins → red lens: median 0.61 s, 90 % 1.18 s, worst 10.25 s (79)
+## after
+ayah: {recitations: 24, noticed on the right word: 23, false mistake before it: 1, lens went on past the word left out: 1}
+clean: {recitations: 36, words: 822, words reached: 719, false mistakes: 4}
+word: {recitations: 84, noticed on the right word: 79, lens went on past the word left out: 37, more than one mistake: 21, false mistake before it: 4}
+ayah: next word begins → red lens: median 0.51 s, 90 % 0.58 s, worst 0.60 s (23)
+clean: word begins → lens on it: median 0.22 s, 90 % 0.44 s, worst 1.83 s (719)
+word: next word begins → red lens: median 0.61 s, 90 % 1.18 s, worst 10.25 s (79)
+
+# 174 single ayat as recited (whole) and 73 with a ghunnah or a madd cut short (cut)
+## before
+cut: {recitations: 73, words: 302, false stops: 32, words reached: 232, rule 0: cut: 65, red stops elsewhere: 1, rule 0: red stop: 27, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}
+whole: {recitations: 174, words: 657, false stops: 3, words reached: 634, places of the three rules: 83}
+## after
+cut: {recitations: 73, words: 302, false stops: 32, words reached: 232, rule 0: cut: 65, red stops elsewhere: 1, rule 0: red stop: 27, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}
+whole: {recitations: 174, words: 657, false stops: 3, words reached: 634, places of the three rules: 83}
+
+# the same 174 with one short vowel of the text changed (--mutate=haraka), then one letter (--mutate=letter)
+## haraka, before
+whole: {recitations: 174, sound changed: 150, red stop on the word: 143, red stops on other words: 1, words: 36, false stops: 0, words reached: 34, places of the three rules: 18, not noticed: 4, word not reached: 3}
+## haraka, after
+whole: {recitations: 174, sound changed: 150, red stop on the word: 143, red stops on other words: 1, words: 36, false stops: 0, words reached: 34, places of the three rules: 18, not noticed: 4, word not reached: 3}
+## letter, before
+whole: {recitations: 174, sound changed: 162, not noticed: 32, red stops on other words: 2, red stop on the word: 126, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, word not reached: 4}
+## letter, after
+whole: {recitations: 174, sound changed: 162, not noticed: 32, red stops on other words: 2, red stop on the word: 126, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, word not reached: 4}

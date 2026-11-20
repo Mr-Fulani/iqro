@@ -144,7 +144,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   final _scrollController = ScrollController();
   final _viewportKey = GlobalKey();
   final _stackKey = GlobalKey();
-  final _ayahKeys = <int, GlobalKey>{};
   final _wordRegistry = ReaderWordRegistry();
   final _selectionBounds = ValueNotifier<Rect?>(null);
   late final WordRangeController _words;
@@ -176,10 +175,8 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   RecitationMatcher? _matcher;
   var _followWords = const <QuranWord>[];
   QuranWord? _followWord;
-  Rect? _followRect;
-  var _followGlide = true;
 
-  /// The lens waits on a word the reader left out or said as another.
+  /// The place waits, in red, on a word the reader left out or said as another.
   var _followWrong = false;
 
   Timer? _missTimer;
@@ -229,7 +226,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         surah: widget.surah,
         rubs: rubs,
         viewportKey: _viewportKey,
-        ayahKeys: _ayahKeys,
+        ayahRect: _ayahRect,
       ),
     );
   }
@@ -323,6 +320,25 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     return box is RenderBox && box.attached && box.hasSize ? box : null;
   }
 
+  /// Where [ayah] is on screen, from its first word to the end of its
+  /// last: ayahs share their lines, and none has a box of its own.
+  Rect? _ayahRect(int ayah) {
+    final first = _wordRegistry.wordRect(QuranWord(widget.surah, ayah, 1));
+    if (first == null) return null;
+    final next = _wordRegistry.wordRect(QuranWord(widget.surah, ayah + 1, 1));
+    final bottom = next == null || next.top <= first.top
+        ? first.bottom
+        : next.top;
+    final box = _viewportBox;
+    final left = box?.localToGlobal(Offset.zero).dx ?? first.left;
+    return Rect.fromLTRB(
+      left,
+      first.top,
+      left + (box?.size.width ?? first.width),
+      bottom,
+    );
+  }
+
   /// Brings [ayah]'s first word to the top of the screen.
   void _alignTo(int ayah) {
     if (!mounted || !_scrollController.hasClients) return;
@@ -367,10 +383,9 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       _alignTo(ayah);
       _reportBounds();
       if (_followWord == null) return;
-      // The lens goes with its word, once the text has moved.
-      _followGlide = false;
+      // The place stays in view, once the text has moved.
       WidgetsBinding.instance
-        ..addPostFrameCallback((_) => _placeLens())
+        ..addPostFrameCallback((_) => _showPlace())
         ..scheduleFrame();
     });
   }
@@ -561,7 +576,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       setState(() {
         _listener = null;
         _followWord = null;
-        _followRect = null;
         _followWrong = false;
       });
       unawaited(WakelockPlus.disable());
@@ -609,12 +623,11 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         : RecitationListener(onHeard: _onHeard);
     setState(() {
       _listener = listener;
-      // The lens shows where to read from.
+      // Reading begins here; nothing is read yet.
       _followWord = words.isEmpty ? null : words[start < 0 ? 0 : start];
       _followWrong = false;
-      _followGlide = false;
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _placeLens());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showPlace());
     unawaited(WakelockPlus.enable());
     var on = await listener.start();
     if (!on &&
@@ -632,7 +645,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     setState(() {
       _listener = null;
       _followWord = null;
-      _followRect = null;
     });
     unawaited(WakelockPlus.disable());
     listener.dispose();
@@ -648,10 +660,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     _missTimer?.cancel();
     if (heard.reached case final index?) {
       // At once: the word's place is known before the next frame.
-      _followWord = _followWords[index];
-      _followWrong = false;
-      _followGlide = true;
-      _placeLens();
+      _read(index);
     } else if (heard.misses >= recitationMissesAtOnce) {
       _markWrong();
     } else if (heard.misses > 0) {
@@ -662,31 +671,29 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     }
   }
 
-  /// The model's follower says where the lens goes, and whether the word
+  /// The model's follower says where the place is, and whether the word
   /// there was left out or said as another.
   void _onModelPlace(int index, bool wrong) {
     if (!mounted || _listener == null || index >= _followWords.length) return;
-    _followWord = _followWords[index];
-    _followWrong = wrong;
-    _followGlide = true;
-    if (wrong && ref.read(appPreferencesProvider).readerHaptics) {
+    if (!wrong) {
+      _read(index);
+      return;
+    }
+    _wait(index);
+    if (ref.read(appPreferencesProvider).readerHaptics) {
       unawaited(HapticFeedback.vibrate());
     }
-    _placeLens();
   }
 
-  /// The reader left the expected word out or said another: the lens waits
+  /// The reader left the expected word out or said another: the place waits
   /// on that word, in red, and the phone gives a short buzz.
   void _markWrong() {
     final index = _matcher?.expected;
     if (!mounted || _listener == null || index == null || _followWrong) return;
-    _followWord = _followWords[index];
-    _followWrong = true;
-    _followGlide = true;
+    _wait(index);
     if (ref.read(appPreferencesProvider).readerHaptics) {
       unawaited(HapticFeedback.vibrate());
     }
-    _placeLens();
   }
 
   /// A tap on a word while the microphone is on: reading starts from it.
@@ -699,32 +706,59 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     if (_listener case final ModelRecitationListener model) model.moveTo(index);
     _followWord = word;
     _followWrong = false;
-    _followGlide = true;
-    _placeLens();
+    _showPlace();
   }
 
-  /// Puts the lens on its word and keeps that word in the upper part of the
-  /// screen, so the lines to come are in view.
-  void _placeLens() {
+  /// The reader is on the word at [index]: the plate goes under it.
+  void _read(int index) {
+    _followWord = _followWords[index];
+    _followWrong = false;
+    _showPlace();
+  }
+
+  /// The word at [index] was left out or read wrongly: the plate under it
+  /// is red, and it is waited on.
+  void _wait(int index) {
+    _followWord = _followWords[index];
+    _followWrong = true;
+    _showPlace();
+  }
+
+  /// The plate under the word the reader is on, or is to read again. The
+  /// rest of the text stays as it is.
+  List<ReaderWordPlate> _followPlates() {
+    final word = _followWord;
+    if (_listener == null || word == null) return const <ReaderWordPlate>[];
+    return <ReaderWordPlate>[
+      _followWrong
+          ? (word: word, fill: recitationWrongPlate, edge: recitationWrong)
+          : (word: word, fill: recitationPlate, edge: recitationPlateEdge),
+    ];
+  }
+
+  /// Puts the plate under its word and keeps that word's line about the
+  /// middle of the screen, the lines read above it and those to come below.
+  void _showPlace() {
     final word = _followWord;
     final stack = _stackKey.currentContext?.findRenderObject();
-    if (!mounted || word == null || stack is! RenderBox) return;
+    if (!mounted) return;
+    setState(() {});
+    if (word == null || stack is! RenderBox) return;
     final rect = _wordRegistry.wordRectIn(word, stack);
-    if (rect == null) {
-      // Its ayah is not on screen: the colour of the lens still changes.
-      setState(() {});
-      return;
-    }
-    setState(() => _followRect = rect);
+    // Its ayah is not on screen.
+    if (rect == null) return;
     final height = stack.size.height;
+    // Left where it is while its line is near the middle; a line further
+    // up or down is brought there.
+    final at = rect.center.dy;
     if (!_scrollController.hasClients ||
-        (rect.top > 0 && rect.bottom < height * .6)) {
+        (at > height * .32 && at < height * .58)) {
       return;
     }
     final position = _scrollController.position;
     unawaited(
       _scrollController.animateTo(
-        (position.pixels + rect.top - height * .25).clamp(
+        (position.pixels + at - height * .45).clamp(
           position.minScrollExtent,
           position.maxScrollExtent,
         ),
@@ -919,19 +953,68 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     );
   }
 
+  List<QuranAyah>? _groupedItems;
+  Map<String, List<int>>? _groupedPages;
+  var _groups = const <List<QuranAyah>>[];
+
+  /// The ayahs as the paragraphs they are written in: those of one page
+  /// of the Mushaf run on in the same lines, an ayah beginning where the
+  /// one before it ends, as on the page. A paragraph of very many words
+  /// is laid out too slowly, so a long page is two or three.
+  List<List<QuranAyah>> _paragraphs(
+    List<QuranAyah> items,
+    Map<String, List<int>>? versePages,
+  ) {
+    if (identical(items, _groupedItems) &&
+        identical(versePages, _groupedPages)) {
+      return _groups;
+    }
+    final groups = <List<QuranAyah>>[];
+    int? page;
+    var words = 0;
+    for (final ayah in items) {
+      final on = mushafPageOfAyah(
+        versePages,
+        widget.surah,
+        ayah.number,
+        ayah.pages,
+      );
+      final count = ayahWords(ayah).length;
+      if (groups.isEmpty ||
+          (on != null && page != null && on != page) ||
+          words + count > _paragraphWords) {
+        groups.add(<QuranAyah>[]);
+        words = 0;
+      }
+      groups.last.add(ayah);
+      words += count;
+      page = on ?? page;
+    }
+    // The paragraphs changed under the reader: the ayah read stays put.
+    if (_groupedItems != null) _keepPlace();
+    _groupedItems = items;
+    _groupedPages = versePages;
+    return _groups = groups;
+  }
+
+  static const _paragraphWords = 120;
+
   Widget _text(
     List<QuranAyah> items,
     double size,
     Map<String, List<int>>? versePages,
   ) {
     _schedulePlace(items);
+    final groups = _paragraphs(items, versePages);
     final theme = Theme.of(context);
     final style = theme.textTheme.headlineMedium?.copyWith(
       color: mushafInkColor,
       fontFamily: IqroTheme.arabicFontFamily,
       fontWeight: FontWeight.normal,
       fontSize: size,
-      height: 2,
+      // Room for the marks over and under a line, and no more: a large
+      // text is not to leave the screen half empty.
+      height: 1.8,
     );
     int? pageOf(QuranAyah ayah) =>
         mushafPageOfAyah(versePages, widget.surah, ayah.number, ayah.pages);
@@ -1007,15 +1090,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                           unawaited(_markVisibleRub());
                         }
                         if (notification is ScrollUpdateNotification) {
-                          // The lens stays on its word as the text moves.
-                          if (_followRect case final rect?) {
-                            setState(() {
-                              _followGlide = false;
-                              _followRect = rect.shift(
-                                Offset(0, -(notification.scrollDelta ?? 0)),
-                              );
-                            });
-                          }
                           if (_words.range != null) _reportBounds();
                           // A jump to keep the place reports nothing new.
                           if (!_jumping && _pinch == null) {
@@ -1035,8 +1109,11 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                         // The surah's title comes with its first ayah.
                         initialIndex: widget.initialAyah <= 1
                             ? 0
-                            : items.indexWhere(
-                                    (item) => item.number == widget.initialAyah,
+                            : groups.indexWhere(
+                                    (group) => group.any(
+                                      (item) =>
+                                          item.number == widget.initialAyah,
+                                    ),
                                   ) +
                                   1,
                         padding: EdgeInsets.fromLTRB(
@@ -1045,7 +1122,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                           side,
                           _words.range == null ? 32 : 280,
                         ),
-                        itemCount: items.length + 2,
+                        itemCount: groups.length + 2,
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             return _FlowHeader(
@@ -1055,7 +1132,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                               style: style,
                             );
                           }
-                          if (index == items.length + 1) {
+                          if (index == groups.length + 1) {
                             return widget.surah >= lastSurah
                                 ? QuranEndCard(surah: surah, paper: true)
                                 : NextSurahCard(
@@ -1073,37 +1150,50 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                     paper: true,
                                   );
                           }
-                          final ayah = items[index - 1];
-                          final words = ayahWords(ayah);
-                          final page = pageOf(ayah);
+                          final group = groups[index - 1];
+                          final plates = _followPlates();
+                          final page = pageOf(group.first);
                           final pageEnded =
                               index > 1 &&
                               page != null &&
-                              page != pageOf(items[index - 2]);
+                              page != pageOf(groups[index - 2].last);
+                          final marked = _rubMark.mark?.startAyah.ayah;
                           final text = Consumer(
                             builder: (context, ref, _) {
-                              final script = watchMushafAyahScript(
-                                ref,
-                                surah: widget.surah,
-                                ayah: ayah.number,
-                                wordCount: words.length,
-                              );
-                              // The Mushaf's script reflows the text when it
-                              // arrives: the ayah at the top stays there.
-                              // Once the reader scrolls, pages load ahead of
-                              // the screen and move nothing on it.
-                              if (script == null) {
-                                _plainAyahs.add(ayah.number);
-                              } else if (_plainAyahs.remove(ayah.number) &&
-                                  !_dragged) {
-                                _keepPlace();
-                              }
-                              return ReaderAyahWords.flow(
-                                key: ValueKey(
-                                  'reader-flow-ayah-${ayah.number}',
-                                ),
-                                surah: widget.surah,
-                                ayahs: <ReaderAyahText>[
+                              final texts = <ReaderAyahText>[];
+                              QuranWordRange? rub;
+                              for (final ayah in group) {
+                                final words = ayahWords(ayah);
+                                final script = watchMushafAyahScript(
+                                  ref,
+                                  surah: widget.surah,
+                                  ayah: ayah.number,
+                                  wordCount: words.length,
+                                );
+                                // The Mushaf's script reflows the text when
+                                // it arrives: the ayah at the top stays
+                                // there. Once the reader scrolls, pages
+                                // load ahead of the screen and move nothing
+                                // on it.
+                                if (script == null) {
+                                  _plainAyahs.add(ayah.number);
+                                } else if (_plainAyahs.remove(ayah.number) &&
+                                    !_dragged) {
+                                  _keepPlace();
+                                }
+                                // The ayah a quarter of a hizb starts at,
+                                // while it is announced.
+                                if (marked == ayah.number && words.isNotEmpty) {
+                                  rub = QuranWordRange.between(
+                                    QuranWord(widget.surah, ayah.number, 1),
+                                    QuranWord(
+                                      widget.surah,
+                                      ayah.number,
+                                      words.length,
+                                    ),
+                                  );
+                                }
+                                texts.add(
                                   ReaderAyahText(
                                     ayah: ayah.number,
                                     words: words,
@@ -1119,67 +1209,49 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                                             ],
                                           ),
                                   ),
-                                ],
-                                textAlign: TextAlign.start,
+                                );
+                              }
+                              return ReaderAyahWords.flow(
+                                key: ValueKey(
+                                  'reader-flow-ayah-${group.first.number}',
+                                ),
+                                surah: widget.surah,
+                                ayahs: texts,
+                                // Lines from edge to edge of the screen at
+                                // any size, the room their words leave
+                                // shared out between them; the last line
+                                // of a page in the middle.
+                                textAlign: TextAlign.center,
+                                fill: true,
                                 markerStyle: const TextStyle(
                                   color: _markerColor,
                                 ),
-                                kashida: true,
                                 style: style,
                                 registry: _wordRegistry,
                                 range: _words.range,
-                                // The ayah a quarter of a hizb starts at, while
-                                // it is announced.
-                                marked:
-                                    _marked ??
-                                    (_rubMark.mark?.startAyah.ayah ==
-                                                ayah.number &&
-                                            words.isNotEmpty
-                                        ? QuranWordRange.between(
-                                            QuranWord(
-                                              widget.surah,
-                                              ayah.number,
-                                              1,
-                                            ),
-                                            QuranWord(
-                                              widget.surah,
-                                              ayah.number,
-                                              words.length,
-                                            ),
-                                          )
-                                        : null),
+                                plates: plates,
+                                marked: _marked ?? rub,
                                 playingWord: _words.playingWord,
                                 onRange: (range) => _selectWords(items, range),
                                 onDrag: _followWordDrag,
                               );
                             },
                           );
-                          // Each ayah a paragraph of its own, a blank line
-                          // between them.
-                          return Padding(
-                            key: _ayahKeys.putIfAbsent(
-                              ayah.number,
-                              GlobalKey.new,
-                            ),
-                            padding: EdgeInsets.only(bottom: size * .9),
-                            child: pageEnded
-                                ? Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: <Widget>[
-                                      ReaderPageBreak(
-                                        key: ValueKey(
-                                          'reader-flow-page-end-${page - 1}',
-                                        ),
-                                        paper: true,
-                                        label:
-                                            '${context.l10n.page} ${readerDigits(language, page - 1)}',
-                                      ),
-                                      SizedBox(height: size * .5),
-                                      text,
-                                    ],
-                                  )
-                                : text,
+                          if (!pageEnded) return text;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              ReaderPageBreak(
+                                key: ValueKey(
+                                  'reader-flow-page-end-${page - 1}',
+                                ),
+                                paper: true,
+                                label:
+                                    '${context.l10n.page} ${readerDigits(language, page - 1)}',
+                              ),
+                              SizedBox(height: size * .5),
+                              text,
+                            ],
                           );
                         },
                       ),
@@ -1194,12 +1266,6 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                       ),
                     ),
                   if (_loupe case final point?) WordRangeLoupe(point: point),
-                  if (_followRect case final rect?)
-                    RecitationLens(
-                      word: rect,
-                      glide: _followGlide,
-                      wrong: _followWrong,
-                    ),
                   RubMarkToast(controller: _rubMark),
                 ],
               ),
@@ -1228,7 +1294,7 @@ class _FlowHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     const color = _markerColor;
     return Padding(
-      padding: EdgeInsets.only(bottom: size * .5),
+      padding: EdgeInsets.only(bottom: size * .15),
       child: Column(
         children: <Widget>[
           if (name?.isNotEmpty ?? false)
@@ -1236,14 +1302,22 @@ class _FlowHeader extends StatelessWidget {
               'سُورَةُ $name',
               textAlign: TextAlign.center,
               textDirection: TextDirection.rtl,
-              style: style?.copyWith(fontSize: size * .7, color: color),
+              style: style?.copyWith(
+                fontSize: size * .7,
+                color: color,
+                height: 1.5,
+              ),
             ),
           if (opening != null)
             Text(
               opening!,
               textAlign: TextAlign.center,
               textDirection: TextDirection.rtl,
-              style: style?.copyWith(fontSize: size * .8, color: color),
+              style: style?.copyWith(
+                fontSize: size * .8,
+                color: color,
+                height: 1.5,
+              ),
             ),
         ],
       ),

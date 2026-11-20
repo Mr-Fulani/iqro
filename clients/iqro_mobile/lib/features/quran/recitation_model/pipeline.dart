@@ -5,7 +5,7 @@ import 'follow_core.dart';
 import 'mel.dart';
 import 'model_session.dart';
 
-/// What the model follower tells the screen: the lens goes to [word] of
+/// What the model follower tells the screen: the place is [word] of
 /// the passage; red when it was left out or read wrongly.
 class ModelPlace {
   ModelPlace(this.word, {required this.wrong});
@@ -17,7 +17,7 @@ class ModelPlace {
 /// (seconds since the microphone was on), what the model and the rest took.
 typedef ModelStepTiming = ({double heard, int modelMs, int restMs});
 
-/// Microphone sound in, lens places out: each step puts the last
+/// Microphone sound in, places out: each step puts the last
 /// [windowFrames] of sound through the model and the follower.
 class RecitationPipeline {
   RecitationPipeline({
@@ -52,7 +52,30 @@ class RecitationPipeline {
   var _historyEnd = 0;
   ModelStepTiming? lastTiming;
 
-  void add(Int16List pcm) => _mel.add(pcm);
+  /// How loud each hundredth of a second of the last half minute was
+  /// (the mean square of its samples), the newest last.
+  static const _loudnessKept = 3000;
+  final _loudness = Float32List(_loudnessKept);
+  var _loudnessCount = 0;
+  var _square = 0.0;
+  var _squared = 0;
+
+  void add(Int16List pcm) {
+    _mel.add(pcm);
+    for (final sample in pcm) {
+      _square += sample * sample;
+      _squared += 1;
+      if (_squared == 160) {
+        _loudness[_loudnessCount % _loudnessKept] = _square / 160;
+        _loudnessCount += 1;
+        _square = 0;
+        _squared = 0;
+      }
+    }
+  }
+
+  void _hush(Float32List lp, int first, int end) =>
+      hushSilence(lp, first, end, _loudness, _loudnessCount);
 
   bool get due => _mel.samples - _stepped >= minStepSamples;
 
@@ -73,6 +96,7 @@ class RecitationPipeline {
     if (lp == null) return events;
     final first = from ~/ 2;
     final end = first + (to - from) ~/ 2;
+    _hush(lp, first, end);
     // What slid out of the history's reach is dropped; the new frames
     // replace what an earlier step heard of them.
     final newFirst = end > historyFrames ? end - historyFrames : 0;
@@ -174,4 +198,41 @@ class RecitationPipeline {
 
   /// For the harness: the last place looked at and the counts heard.
   ({TajweedPlace place, int counts})? lastHeld;
+}
+
+/// Writes silence over the model's frames [first]..[end] ([lp] begins
+/// with frame [first]) wherever the reader said nothing: no hundredth of
+/// a second within three tenths of the frame is within 20 dB of how loud
+/// the reader's voice is (the loudest fifth of what [loudness] keeps, a
+/// ring of the mean squares of the last [count] hundredths). After two
+/// seconds of silence the model makes up sounds, and a reader who waits
+/// before the next ayah would be told of a mistake. Only the middle of a
+/// silence is written over: a letter said softly, or the closure of one,
+/// has louder sound beside it.
+void hushSilence(
+  Float32List lp,
+  int first,
+  int end,
+  Float32List loudness,
+  int count,
+) {
+  const around = 30;
+  final kept = math.min(count, loudness.length);
+  if (kept < 300) return;
+  final all = Float32List.sublistView(loudness, 0, kept).toList()..sort();
+  final quiet = all[kept * 4 ~/ 5] / 100;
+  for (var frame = first; frame < end; frame++) {
+    // A frame of the model is two hundredths of a second.
+    final from = math.max(count - kept, frame * 2 - around);
+    final to = math.min(count, frame * 2 + 2 + around);
+    if (to - from < around) continue;
+    var silent = true;
+    for (var at = from; at < to && silent; at++) {
+      silent = loudness[at % loudness.length] < quiet;
+    }
+    if (!silent) continue;
+    final row = (frame - first) * recitationClasses;
+    lp.fillRange(row, row + recitationClasses, -20);
+    lp[row] = 0;
+  }
 }
