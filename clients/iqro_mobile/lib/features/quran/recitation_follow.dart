@@ -256,7 +256,7 @@ class RecitationListener {
   }
 }
 
-/// The gold of the lens and of the microphone when its hint is up.
+/// The gold of the microphone when its hint is up.
 const recitationGold = Color(0xFFC49647);
 
 /// How many words in a row that are not the one expected are a mistake
@@ -268,63 +268,14 @@ const recitationMissPause = Duration(milliseconds: 1500);
 /// The red of a word left out or said as another.
 const recitationWrong = Color(0xFFC62828);
 
-/// The pointer of the recitation check: a round lens over the word the reader has said,
-/// gold; over the word he left out or said as another, red, where it waits
-/// until that word is read.
-class RecitationLens extends StatelessWidget {
-  const RecitationLens({
-    required this.word,
-    required this.glide,
-    this.wrong = false,
-    super.key,
-  });
+/// The plate under the word a reader is on: the app's gold, soft enough
+/// for the letters on it to keep their own colours (those of a Mushaf
+/// with tajweed too) and plain to see at a glance; and its edge.
+const recitationPlate = Color(0x66E0B354);
+const recitationPlateEdge = Color(0xFFC49647);
 
-  /// The word's box, in the stack the lens is put in.
-  final Rect word;
-
-  /// False while the text scrolls under the lens: it then keeps to its word.
-  final bool glide;
-  final bool wrong;
-
-  @override
-  Widget build(BuildContext context) {
-    // As wide as the word, within what a line and its neighbours leave.
-    final size =
-        word.width.clamp(word.height * .9, word.height * 1.5).toDouble() + 12;
-    final color = wrong ? recitationWrong : recitationGold;
-    return AnimatedPositioned.fromRect(
-      key: const ValueKey('recitation-lens'),
-      rect: Rect.fromCircle(center: word.center, radius: size / 2),
-      // Short: the lens is late by what the recogniser takes already.
-      duration: glide ? const Duration(milliseconds: 60) : Duration.zero,
-      curve: Curves.easeOut,
-      child: IgnorePointer(
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            RawMagnifier(
-              size: Size.square(size),
-              magnificationScale: 1.2,
-              decoration: MagnifierDecoration(
-                shape: CircleBorder(
-                  side: BorderSide(color: color, width: wrong ? 3.5 : 2.5),
-                ),
-              ),
-            ),
-            if (wrong)
-              DecoratedBox(
-                key: const ValueKey('recitation-lens-wrong'),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: recitationWrong.withValues(alpha: .16),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+/// The plate under a word left out or said as another, and its edge.
+const recitationWrongPlate = Color(0x38E53935);
 
 /// When the hint by the microphone first comes, how long it stays and how
 /// long it is away before it comes again.

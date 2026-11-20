@@ -22,12 +22,15 @@ QuranDivision? rubStartingIn(
 
 /// The quarter of [surah] whose first ayah is fairly in view in the list
 /// under [viewportKey]: half of it, or enough of a long one to read its
-/// first lines. [ayahKeys] holds the key of each built ayah by its number.
+/// first lines. [ayahKeys] holds the key of each built ayah by its number;
+/// where ayahs share their lines and have no box each, [ayahRect] says
+/// where one is on screen.
 QuranDivision? rubVisibleIn({
   required int surah,
   required List<QuranDivision> rubs,
   required GlobalKey viewportKey,
-  required Map<int, GlobalKey> ayahKeys,
+  Map<int, GlobalKey> ayahKeys = const {},
+  Rect? Function(int ayah)? ayahRect,
 }) {
   final viewportBox = viewportKey.currentContext?.findRenderObject();
   if (viewportBox is! RenderBox || !viewportBox.hasSize) return null;
@@ -35,15 +38,25 @@ QuranDivision? rubVisibleIn({
   final viewportBottom = viewportTop + viewportBox.size.height;
   for (final rub in rubs) {
     if (rub.startAyah.surah != surah) continue;
-    final box = ayahKeys[rub.startAyah.ayah]?.currentContext
-        ?.findRenderObject();
-    if (box is! RenderBox || !box.hasSize) continue;
-    final top = box.localToGlobal(Offset.zero).dy;
-    final bottom = top + box.size.height;
+    final double top;
+    final double height;
+    if (ayahRect != null) {
+      final rect = ayahRect(rub.startAyah.ayah);
+      if (rect == null) continue;
+      top = rect.top;
+      height = rect.height;
+    } else {
+      final box = ayahKeys[rub.startAyah.ayah]?.currentContext
+          ?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) continue;
+      top = box.localToGlobal(Offset.zero).dy;
+      height = box.size.height;
+    }
+    final bottom = top + height;
     final visible =
         bottom.clamp(viewportTop, viewportBottom) -
         top.clamp(viewportTop, viewportBottom);
-    if (visible >= (box.size.height * .5).clamp(36, 160)) return rub;
+    if (visible >= (height * .5).clamp(36, 160)) return rub;
   }
   return null;
 }

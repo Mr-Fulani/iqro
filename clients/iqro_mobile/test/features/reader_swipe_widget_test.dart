@@ -74,7 +74,7 @@ void main() {
   ) async {
     final app = await _pump(tester);
     await _swipe(tester, await _card(tester, 3), 220);
-    final ayah = find.byKey(const ValueKey('reader-flow-ayah-3'));
+    final ayah = find.byKey(const ValueKey('reader-flow-ayah-1'));
     final before = tester.getSize(ayah).height;
 
     Future<void> pinch(double from, double to) async {
@@ -112,7 +112,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the microphone puts a lens on the word the reader says', (
+  testWidgets('the ayahs of a page of the Mushaf run on in the same lines of '
+      'the plain text, a paragraph to a page', (tester) async {
+    await _pump(tester);
+    await _swipe(tester, await _card(tester, 3), 220);
+    List<int> ayahsOf(int first) => tester
+        .widget<ReaderAyahWords>(
+          find.byKey(ValueKey('reader-flow-ayah-$first')),
+        )
+        .flowAyahs!
+        .map((ayah) => ayah.ayah)
+        .toList();
+    // Six ayahs to a page here: the first page is one paragraph, and the
+    // ayah the text opened at is in it.
+    expect(ayahsOf(1), <int>[1, 2, 3, 4, 5, 6]);
+    expect(_place(tester), 'Аят 3 · стр. 1');
+    for (final ayah in <int>[2, 3, 4, 5, 6]) {
+      expect(find.byKey(ValueKey('reader-flow-ayah-$ayah')), findsNothing);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the microphone puts a plate under the word the reader says', (
     tester,
   ) async {
     final speech = _Speech();
@@ -129,8 +150,24 @@ void main() {
     // Animations off: the rings of a listening microphone never settle.
     final app = await _pump(tester, reducedMotion: true);
     await _swipe(tester, await _card(tester, 3), 220);
-    final lens = find.byKey(const ValueKey('recitation-lens'));
-    expect(lens, findsNothing);
+    // The plate under a word of the ayah: gold under the one the reader is
+    // on, red under the one waited for. The text itself is not touched.
+    List<ReaderWordPlate> plates() => tester
+        .widget<ReaderAyahWords>(
+          find.byKey(const ValueKey('reader-flow-ayah-1')),
+        )
+        .plates;
+    QuranWord? on() => plates()
+        .where((plate) => plate.fill == recitationPlate)
+        .map((plate) => plate.word)
+        .firstOrNull;
+    QuranWord? waited() => plates()
+        .where((plate) => plate.fill == recitationWrongPlate)
+        .map((plate) => plate.word)
+        .firstOrNull;
+    expect(plates(), isEmpty);
+    // No lens is laid over the text, on or off.
+    expect(find.byType(RawMagnifier), findsNothing);
 
     // A hint by the microphone comes a moment after the text opens, goes
     // and comes again, until the microphone is pressed.
@@ -194,12 +231,11 @@ void main() {
     expect(hint(), 0);
     // No word for a while: the reader is told the phone does not hear.
     expect(line(), 'Не слышу. Читайте вслух и проверьте интернет');
-    // On the first word of the ayah at the top, before a word is said:
-    // at the right end of an Arabic line. A circle.
-    expect(lens, findsOneWidget);
-    final first = tester.getRect(lens);
-    expect(first.right, greaterThan(250));
-    expect(first.width, closeTo(first.height, .01));
+    // Under the first word of the ayah at the top, before a word is said:
+    // where to read from. One plate, and nothing over the text.
+    expect(on(), const QuranWord(2, 3, 1));
+    expect(plates(), hasLength(1));
+    expect(find.byType(RawMagnifier), findsNothing);
 
     void hear(String words) => speech.onTextRecognition!(
       jsonEncode(<String, Object>{
@@ -210,19 +246,17 @@ void main() {
       }),
     );
 
-    // The first word heard: the lens is on it already.
+    // The first word heard: the plate is under it already.
     hear('الذين');
     await tester.pumpAndSettle();
-    expect(
-      (tester.getRect(lens).center - first.center).distance,
-      closeTo(0, .01),
-    );
+    expect(on(), const QuranWord(2, 3, 1));
+    expect(waited(), isNull);
 
-    // The next: the lens goes to it, to the left.
+    // The next: the plate goes to it, and to it alone.
     hear('الذين يؤمنون');
     await tester.pumpAndSettle();
-    final second = tester.getRect(lens);
-    expect(second.center.dx, lessThan(first.center.dx));
+    expect(on(), const QuranWord(2, 3, 2));
+    expect(plates(), hasLength(1));
     expect(
       tester
           .widget<Text>(find.byKey(const ValueKey('reader-flow-follow-heard')))
@@ -232,25 +266,19 @@ void main() {
 
     hear('الذين يؤمنون بالغيب');
     await tester.pumpAndSettle();
-    // On: further left, or on the line below.
-    final third = tester.getRect(lens);
-    expect(
-      third.center.dx < second.center.dx || third.top > second.top,
-      isTrue,
-    );
+    expect(on(), const QuranWord(2, 3, 3));
 
-    // A larger text: the lens is still on its word, which has moved.
+    // A larger text: the plate is still under its word.
     const word = QuranWord(2, 3, 3);
     Rect onWord() {
       final registry = tester
           .widget<ReaderAyahWords>(
-            find.byKey(const ValueKey('reader-flow-ayah-3')),
+            find.byKey(const ValueKey('reader-flow-ayah-1')),
           )
           .registry;
       return registry.wordRect(word)!;
     }
 
-    expect(onWord().contains(tester.getCenter(lens)), isTrue);
     final small = onWord();
     final one = await tester.startGesture(const Offset(130, 600));
     final two = await tester.startGesture(const Offset(230, 600));
@@ -261,63 +289,58 @@ void main() {
     await two.up();
     await tester.pumpAndSettle();
     expect(onWord().height, greaterThan(small.height));
-    expect(onWord().contains(tester.getCenter(lens)), isTrue);
+    expect(on(), word);
 
-    // Two words that are not the next one: the lens waits on the word
-    // left out, in red, and the phone buzzes once.
+    // Two words that are not the next one: the plate goes to the word
+    // left out, in red, and waits there; the phone buzzes once.
     const expected = QuranWord(2, 3, 4);
-    final wrong = find.byKey(const ValueKey('recitation-lens-wrong'));
     Rect rectOf(QuranWord word) => tester
         .widget<ReaderAyahWords>(
-          find.byKey(const ValueKey('reader-flow-ayah-3')),
+          find.byKey(const ValueKey('reader-flow-ayah-1')),
         )
         .registry
         .wordRect(word)!;
-    expect(wrong, findsNothing);
+    expect(waited(), isNull);
     hear('الذين يؤمنون بالغيب كتاب');
     await tester.pump(const Duration(milliseconds: 200));
-    expect(wrong, findsNothing);
+    expect(waited(), isNull);
     hear('الذين يؤمنون بالغيب كتاب نور');
     await tester.pumpAndSettle();
-    expect(wrong, findsOneWidget);
-    expect(rectOf(expected).contains(tester.getCenter(lens)), isTrue);
+    expect(waited(), expected);
+    expect(on(), isNull);
+    expect(plates(), hasLength(1));
     expect(buzzes, 1);
     hear('الذين يؤمنون بالغيب كتاب نور ظلام');
     await tester.pumpAndSettle();
     expect(buzzes, 1);
-    // Read rightly: gold again, and on.
+    // Read rightly: the plate under it is gold again.
     hear('');
     hear('ويقيمون');
     await tester.pumpAndSettle();
-    expect(wrong, findsNothing);
-    expect(rectOf(expected).contains(tester.getCenter(lens)), isTrue);
+    expect(waited(), isNull);
+    expect(on(), expected);
 
     // One word that is not the next one, and then nothing: a mistake
     // after a moment.
     hear('ويقيمون كتاب');
     await tester.pump(recitationMissPause - const Duration(milliseconds: 100));
-    expect(wrong, findsNothing);
+    expect(waited(), isNull);
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
-    expect(wrong, findsOneWidget);
+    expect(waited(), const QuranWord(2, 3, 5));
     expect(buzzes, 2);
 
     // A tap on a word: the reading starts from it.
     await tester.tapAt(rectOf(const QuranWord(2, 3, 7)).center);
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    expect(wrong, findsNothing);
-    expect(
-      rectOf(const QuranWord(2, 3, 7)).contains(tester.getCenter(lens)),
-      isTrue,
-    );
+    // The plate is under it, and no word is waited for.
+    expect(on(), const QuranWord(2, 3, 7));
+    expect(waited(), isNull);
     hear('');
     hear('رزقناهم ينفقون');
     await tester.pumpAndSettle();
-    expect(
-      rectOf(const QuranWord(2, 3, 8)).contains(tester.getCenter(lens)),
-      isTrue,
-    );
+    expect(on(), const QuranWord(2, 3, 8));
 
     // The recogniser stops after a pause: the next listen starts.
     speech.onStatus!('doneNoResult');
@@ -351,7 +374,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 80));
     await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
     await tester.pumpAndSettle();
-    expect(lens, findsNothing);
+    expect(plates(), isEmpty);
     expect(speech.listens, listens);
     // The package waits a moment for a last result.
     await tester.pump(const Duration(seconds: 3));
@@ -608,7 +631,7 @@ void main() {
     await tester.pump(mushafScriptWait);
     await tester.pumpAndSettle();
     expect(_place(tester), 'Аят 2 · стр. 1');
-    expect(_fonts(tester, 'reader-flow-ayah-2'), contains('qf-page-1'));
+    expect(_fonts(tester, 'reader-flow-ayah-1'), contains('qf-page-1'));
     expect(tester.takeException(), isNull);
   });
 
@@ -665,7 +688,7 @@ void main() {
     );
     for (var frame = 0; frame < 60; frame++) {
       await tester.pump(const Duration(milliseconds: 16));
-      mushafFontOnly('reader-flow-ayah-2');
+      mushafFontOnly('reader-flow-ayah-1');
     }
     expect(frames, greaterThan(10));
     await tester.pumpAndSettle();
@@ -720,7 +743,7 @@ void main() {
       );
       expect(_place(tester), 'Аят 2 · стр. 1');
       final before = tester
-          .getSize(find.byKey(const ValueKey('reader-flow-ayah-2')))
+          .getSize(find.byKey(const ValueKey('reader-flow-ayah-1')))
           .height;
 
       await tester.tap(find.byKey(const ValueKey('reader-flow-text-size')));
@@ -733,7 +756,7 @@ void main() {
       await tester.tapAt(const Offset(4, 4));
       await tester.pumpAndSettle();
       expect(
-        tester.getSize(find.byKey(const ValueKey('reader-flow-ayah-2'))).height,
+        tester.getSize(find.byKey(const ValueKey('reader-flow-ayah-1'))).height,
         greaterThan(before),
       );
       expect(_place(tester), 'Аят 2 · стр. 1');
@@ -866,7 +889,12 @@ Set<String?> _fonts(WidgetTester tester, String key) {
   if (words is Text) {
     visit(words.textSpan ?? TextSpan(style: words.style));
   } else if (words is ReaderAyahWords) {
-    (words.spans ?? words.flowAyahs?.single.spans)?.forEach(visit);
+    (words.spans ??
+            // A paragraph of the plain text holds the ayahs of a page.
+            words.flowAyahs?.expand(
+              (ayah) => ayah.spans ?? const <InlineSpan>[],
+            ))
+        ?.forEach(visit);
   }
   return families;
 }

@@ -1,0 +1,57 @@
+Ayat with special signs as three masters recite them (Husary, Ayman Sowaid, Minshawy; everyayah.com), the text unchanged:
+every stop is a false one. A Mac, the app's Dart code. scripts/own_cases.py, scripts/parse.py. 20.11.2026.
+
+# ayat with special signs as recited (3 reciters): false stops
+2:27: recitations 3, words 20, reached 60 of 60, false stops 1
+2:245: recitations 3, words 16, reached 39 of 48, false stops 3
+3:1: recitations 3, words 1, reached 3 of 3, false stops 0
+7:69: recitations 3, words 27, reached 71 of 81, false stops 2
+10:51: recitations 3, words 11, reached 28 of 33, false stops 4
+11:41: recitations 3, words 11, reached 18 of 33, false stops 3
+12:11: recitations 3, words 11, reached 33 of 33, false stops 0
+18:1: recitations 3, words 11, reached 33 of 33, false stops 0
+19:1: recitations 3, words 1, reached 3 of 3, false stops 0
+27:36: recitations 3, words 16, reached 48 of 48, false stops 2
+30:54: recitations 3, words 24, reached 53 of 72, false stops 3
+36:1: recitations 3, words 1, reached 3 of 3, false stops 0
+36:52: recitations 3, words 12, reached 36 of 36, false stops 0
+41:44: recitations 3, words 30, reached 24 of 90, false stops 3
+42:1: recitations 3, words 1, reached 3 of 3, false stops 0
+42:2: recitations 3, words 1, reached 3 of 3, false stops 0
+52:37: recitations 3, words 7, reached 18 of 21, false stops 1
+68:1: recitations 3, words 4, reached 12 of 12, false stops 0
+69:28: recitations 3, words 4, reached 12 of 12, false stops 0
+75:27: recitations 3, words 3, reached 9 of 9, false stops 0
+76:4: recitations 3, words 6, reached 18 of 18, false stops 0
+76:15: recitations 3, words 8, reached 24 of 24, false stops 0
+76:16: recitations 3, words 5, reached 15 of 15, false stops 0
+77:20: recitations 3, words 5, reached 15 of 15, false stops 0
+83:14: recitations 3, words 8, reached 24 of 24, false stops 0
+88:22: recitations 3, words 3, reached 9 of 9, false stops 0
+104:4: recitations 2, words 4, reached 8 of 8, false stops 0
+104:5: recitations 1, words 4, reached 4 of 4, false stops 0
+106:1: recitations 1, words 2, reached 2 of 2, false stops 0
+111:1: recitations 3, words 5, reached 15 of 15, false stops 1
+Ayman_Sowaid_64kbps 10:51 word 6 at 11.5 s
+Ayman_Sowaid_64kbps 10:51 word 7 at 19.8 s
+Ayman_Sowaid_64kbps 11:41 word 6 at 8.3 s
+Ayman_Sowaid_64kbps 2:245 word 9 at 14.0 s
+Ayman_Sowaid_64kbps 2:245 word 11 at 24.2 s
+Ayman_Sowaid_64kbps 2:27 word 15 at 26.5 s
+Ayman_Sowaid_64kbps 27:36 word 6 at 11.9 s
+Ayman_Sowaid_64kbps 30:54 word 16 at 24.4 s
+Ayman_Sowaid_64kbps 41:44 word 8 at 16.5 s
+Ayman_Sowaid_64kbps 7:69 word 22 at 38.3 s
+Husary_128kbps 11:41 word 6 at 6.5 s
+Husary_128kbps 111:1 word 5 at 8.5 s
+Husary_128kbps 27:36 word 13 at 32.7 s
+Husary_128kbps 30:54 word 16 at 23.3 s
+Husary_128kbps 41:44 word 8 at 16.9 s
+Husary_128kbps 52:37 word 5 at 8.9 s
+Minshawy_Murattal_128kbps 10:51 word 6 at 8.8 s
+Minshawy_Murattal_128kbps 10:51 word 7 at 13.7 s
+Minshawy_Murattal_128kbps 11:41 word 6 at 6.6 s
+Minshawy_Murattal_128kbps 2:245 word 11 at 15.2 s
+Minshawy_Murattal_128kbps 30:54 word 5 at 6.1 s
+Minshawy_Murattal_128kbps 41:44 word 8 at 9.8 s
+Minshawy_Murattal_128kbps 7:69 word 22 at 29.8 s

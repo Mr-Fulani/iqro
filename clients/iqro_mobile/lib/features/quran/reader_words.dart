@@ -35,6 +35,12 @@ class ReaderWordRegistry {
   }
 }
 
+/// A soft plate with rounded corners under one word of a
+/// [ReaderAyahWords.flow] paragraph, the size of the word with its marks:
+/// the word a reader is on. It is painted under the text, so no letter or
+/// mark is covered and the script's own colours stay as they are.
+typedef ReaderWordPlate = ({QuranWord word, Color fill, Color edge});
+
 /// One ayah's words in a [ReaderAyahWords.flow] paragraph.
 class ReaderAyahText {
   const ReaderAyahText({
@@ -84,7 +90,9 @@ class ReaderAyahWords extends StatefulWidget {
        textAlign = TextAlign.center,
        markerStyle = null,
        kashida = false,
-       marked = null;
+       marked = null,
+       plates = const <ReaderWordPlate>[],
+       fill = false;
 
   /// Several ayahs running on in one paragraph, as on a Mushaf page.
   ReaderAyahWords.flow({
@@ -98,6 +106,8 @@ class ReaderAyahWords extends StatefulWidget {
     this.kashida = false,
     this.range,
     this.marked,
+    this.plates = const <ReaderWordPlate>[],
+    this.fill = false,
     this.playingWord,
     this.onDrag,
     super.key,
@@ -136,6 +146,15 @@ class ReaderAyahWords extends StatefulWidget {
 
   /// Words shown for a moment in a soft tint: the place a reader came to.
   final QuranWordRange? marked;
+
+  /// Plates under words: the one a reader is on, or is to read again.
+  final List<ReaderWordPlate> plates;
+
+  /// Every line but the last as wide as the paragraph: the room a line's
+  /// words leave is shared out between them, so a large text fills the
+  /// screen from edge to edge whatever its size. The last line keeps
+  /// [textAlign].
+  final bool fill;
   final TextStyle? style;
   final ReaderWordRegistry registry;
   final QuranWordRange? range;
@@ -246,7 +265,12 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     if (range != null && range != widget.range) widget.onRange(range);
   }
 
-  TextSpan _span(double width) {
+  /// With [lines], the text is broken where an earlier layout broke it
+  /// and the gap before each word is wider by what [lines] gives it.
+  TextSpan _span(
+    double width, {
+    ({Set<int> ends, Map<int, double> gaps})? lines,
+  }) {
     final range = widget.range;
     final marked = widget.marked;
     final children = <InlineSpan>[];
@@ -283,10 +307,17 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
           children.add(
             TextSpan(
               // A drawn-out line ends where the layout ended it.
-              text: layout?.breaks.contains(index - 1) ?? false ? '\n' : ' ',
-              style: joined
-                  ? const TextStyle(backgroundColor: wordRangeSelectionColor)
-                  : null,
+              text:
+                  (layout?.breaks.contains(index - 1) ?? false) ||
+                      (lines?.ends.contains(words.length - 1) ?? false)
+                  ? '\n'
+                  : ' ',
+              style: TextStyle(
+                backgroundColor: joined ? wordRangeSelectionColor : null,
+                // (Letter spacing: the gap is a span of its own, and
+                // word spacing does nothing to such a one.)
+                letterSpacing: lines?.gaps[words.length],
+              ),
             ),
           );
           length += 1;
@@ -326,6 +357,48 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
     _words = words;
     _offsets = offsets;
     return TextSpan(style: widget.style, children: children);
+  }
+
+  /// Where [painter] broke the text into lines, and by how much the gap
+  /// before each word is to grow for its line to be as wide as the
+  /// paragraph; null when the text is one line.
+  ({Set<int> ends, Map<int, double> gaps})? _filled(
+    TextPainter painter,
+    double width,
+  ) {
+    final metrics = painter.computeLineMetrics();
+    if (metrics.length < 2 || _words.isEmpty) return null;
+    // The words of each line: a new line begins where a word's box is
+    // lower than the one before it.
+    final firsts = <int>[0];
+    double? top;
+    for (var index = 0; index < _words.length; index++) {
+      final box = _wordBox(index);
+      if (box == null) return null;
+      if (top != null && (box.top - top).abs() > 1) firsts.add(index);
+      top = box.top;
+    }
+    if (firsts.length != metrics.length) return null;
+    // No gap grows beyond a letter's height or so: two short words do
+    // not go to the two edges of the screen.
+    final most = (widget.style?.fontSize ?? 20) * .9;
+    final ends = <int>{};
+    final gaps = <int, double>{};
+    for (var line = 0; line < firsts.length - 1; line++) {
+      final first = firsts[line];
+      final next = firsts[line + 1];
+      ends.add(next - 1);
+      final between = next - first - 1;
+      if (between < 1) continue;
+      final gap = ((width - metrics[line].width - 1) / between).clamp(
+        0.0,
+        most,
+      );
+      for (var index = first + 1; index < next; index++) {
+        gaps[index] = gap;
+      }
+    }
+    return (ends: ends, gaps: gaps);
   }
 
   Rect? _globalRect(QuranWord word) {
@@ -405,13 +478,45 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       _painter?.dispose();
-      final painter = TextPainter(
-        text: _span(constraints.maxWidth),
+      TextPainter laid(TextSpan text) => TextPainter(
+        text: text,
         textAlign: widget.textAlign,
         textDirection: TextDirection.rtl,
         textScaler: MediaQuery.textScalerOf(context),
       )..layout(minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth);
+      var painter = laid(_span(constraints.maxWidth));
       _painter = painter;
+      if (widget.fill) {
+        final lines = _filled(painter, constraints.maxWidth);
+        if (lines != null) {
+          painter.dispose();
+          painter = laid(_span(constraints.maxWidth, lines: lines));
+          _painter = painter;
+        }
+      }
+      // Where the plates are.
+      final plates = <({RRect box, Color fill, Color edge})>[];
+      for (final plate in widget.plates) {
+        final index = _indexOf(plate.word);
+        final box = index == null ? null : _wordBox(index);
+        if (box == null) continue;
+        plates.add((
+          // A line's box is taller than its letters and their marks,
+          // which keep to the middle of it: the plate takes that middle,
+          // and a little room at the sides.
+          box: RRect.fromRectAndRadius(
+            Rect.fromLTRB(
+              box.left - box.height * .04,
+              box.top + box.height * .14,
+              box.right + box.height * .04,
+              box.bottom - box.height * .14,
+            ),
+            Radius.circular(box.height * .13),
+          ),
+          fill: plate.fill,
+          edge: plate.edge,
+        ));
+      }
       final handles = _handles();
       return Semantics(
         label: _texts(widget).expand((ayah) => ayah.words).join(' '),
@@ -453,7 +558,7 @@ class _ReaderAyahWordsState extends State<ReaderAyahWords> {
                   constraints.maxWidth,
                   painter.height + (handles.isEmpty ? 0 : _knobRoom),
                 ),
-                painter: _WordsPainter(painter),
+                painter: _WordsPainter(painter, plates),
               ),
               ...handles,
             ],
@@ -471,12 +576,29 @@ const _markedColor = Color(0x38C49647);
 const _knobRoom = WordRangeHandle.knob + 6;
 
 class _WordsPainter extends CustomPainter {
-  const _WordsPainter(this.painter);
+  const _WordsPainter(this.painter, this.plates);
 
   final TextPainter painter;
 
+  /// Plates under words of the text.
+  final List<({RRect box, Color fill, Color edge})> plates;
+
   @override
-  void paint(Canvas canvas, Size size) => painter.paint(canvas, Offset.zero);
+  void paint(Canvas canvas, Size size) {
+    // Under the text: the text itself is drawn as ever.
+    for (final plate in plates) {
+      canvas
+        ..drawRRect(plate.box, Paint()..color = plate.fill)
+        ..drawRRect(
+          plate.box,
+          Paint()
+            ..color = plate.edge
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+    }
+    painter.paint(canvas, Offset.zero);
+  }
 
   @override
   bool shouldRepaint(_WordsPainter oldDelegate) =>

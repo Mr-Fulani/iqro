@@ -6537,7 +6537,7 @@ abstract class AppLocalizations {
   /// No description provided for @recitationNoticeHow.
   ///
   /// In en, this message translates to:
-  /// **'Turn the microphone on and read aloud: the lens follows your words. If you skip a word or say another one, it stops on that word and turns red, and the phone vibrates.'**
+  /// **'Turn the microphone on and read aloud: the word you are reading is highlighted. If you skip a word or say another one, the highlight turns red and the phone vibrates; read the word rightly and the reading goes on.'**
   String get recitationNoticeHow;
 
   /// No description provided for @recitationNoticeVoice.

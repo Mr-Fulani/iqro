@@ -3698,7 +3698,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get recitationNoticeHow =>
-      'شغّل الميكروفون واقرأ بصوت مسموع: العدسة تتبع كلماتك. إذا تركت كلمة أو قلت غيرها توقفت عندها واحمرّت واهتز الهاتف.';
+      'شغّل الميكروفون واقرأ بصوت مسموع: الكلمة التي تقرؤها تُظلَّل. إذا تركت كلمة أو قلت غيرها صار التظليل أحمر واهتز الهاتف؛ اقرأ الكلمة صحيحة فتستمر القراءة.';
 
   @override
   String get recitationNoticeVoice =>

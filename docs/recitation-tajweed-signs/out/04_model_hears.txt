@@ -1,0 +1,40 @@
+356 recitations, 34 longer than 28 s left out
+NormalMaddRule: 852 places; as written 848, fewer 3, none 1, more 0 | 0 of 2: 1, 1 of 2: 3, 2 of 2: 848
+     e.g. Khaalid_ 114:1 أَعُوذُ 0/2; Khaalid_ 114:5 فِى 1/2; Minshawy 3:2 إِلَـٰهَ 1/2; Minshawy 19:1 كٓهيعٓصٓ 1/2
+shadda: 377 places; as written 369, fewer 4, none 4, more 0 | 0 of 2: 4, 1 of 2: 4, 2 of 2: 369
+     e.g. Ayman_So 113:3 شَرِّ 1/2; Ayman_So 113:4 شَرِّ 0/2; Ayman_So 114:4 شَرِّ 1/2; Ayman_So 11:41 مَجْر۪ىٰهَا 0/2; Ayman_So 69:2 ٱلْحَآقَّةُ 1/2; Husary_1 11:41 مَجْر۪ىٰهَا 0/2
+qalqalah: 175 places; as written 174, fewer 0, none 1, more 0 | 0 of 1: 1, 1 of 1: 174
+     e.g. Alafasy_ 103:3 بِٱلصَّبْرِ 0/1
+AaredMaddRule: 158 places; as written 106, fewer 51, none 1, more 0 | 0 of 4: 1, 2 of 4: 44, 3 of 4: 7, 4 of 4: 106
+     e.g. Abdullah 114:1 ٱلنَّاسِ 3/4; Abdullah 114:2 ٱلنَّاسِ 3/4; Abdullah 114:3 ٱلنَّاسِ 2/4; Abdullah 114:4 ٱلْخَنَّاسِ 2/4; Abdullah 114:5 ٱلنَّاسِ 2/4; Khaalid_ 1:1 ٱلرَّحِيمِ 2/4
+ghunnah: 148 places; as written 146, fewer 2, none 0, more 0 | 3 of 4: 2, 4 of 4: 146
+     e.g. Khaalid_ 2:1 الٓمٓ 3/4; Khaalid_ 113:4 ٱلنَّفَّـٰثَـٰتِ 3/4
+ikhfa: 131 places; as written 128, fewer 3, none 0, more 0 | 1 of 3: 1, 2 of 3: 2, 3 of 3: 128
+     e.g. Khaalid_ 2:3 يُنفِقُونَ 2/3; Minshawy 42:2 عٓسٓقٓ 2/3; Minshawy 42:2 عٓسٓقٓ 1/3
+MonfaselMaddRule: 64 places; as written 60, fewer 4, none 0, more 0 | 2 of 4: 3, 3 of 4: 1, 4 of 4: 60
+     e.g. Ayman_So 11:41 وَمُرْسَىٰهَآ 2/4; Husary_1 11:41 وَمُرْسَىٰهَآ 2/4; Minshawy 11:41 وَمُرْسَىٰهَآ 2/4; Minshawy 18:38 بِرَبِّىٓ 3/4
+idgham_ghunnah: 58 places; as written 46, fewer 11, none 1, more 0 | 0 of 5: 1, 1 of 3: 5, 1 of 5: 1, 3 of 3: 19, 3 of 4: 1, 3 of 5: 3, 4 of 4: 27, 4 of 5: 1
+     e.g. Khaalid_ 2:5 هُدًۭى 3/4; Ayman_So 2:10 مَرَضًۭا 1/3; Ayman_So 19:1 كٓهيعٓصٓ 3/5; Ayman_So 42:2 عٓسٓقٓ 4/5; Husary_1 2:7 غِشَـٰوَةٌۭ 1/3; Husary_1 2:10 مَرَضًۭا 1/3
+LazemMaddRule: 53 places; as written 1, fewer 51, none 1, more 0 | 0 of 6: 1, 3 of 6: 6, 4 of 6: 42, 5 of 6: 3, 6 of 6: 1
+     e.g. Abdullah 1:7 ٱلضَّآلِّينَ 5/6; Abdullah 2:1 الٓمٓ 4/6; Abdullah 2:1 الٓمٓ 4/6; Alafasy_ 1:7 ٱلضَّآلِّينَ 4/6; Alafasy_ 2:1 الٓمٓ 4/6; Alafasy_ 2:1 الٓمٓ 4/6
+MottaselMaddRule: 33 places; as written 33, fewer 0, none 0, more 0 | 4 of 4: 33
+idgham: 28 places; as written 28, fewer 0, none 0, more 0 | 2 of 2: 28
+iqlab: 24 places; as written 22, fewer 2, none 0, more 0 | 1 of 3: 1, 2 of 3: 1, 3 of 3: 22
+     e.g. Ayman_So 96:15 لَنَسْفَعًۢا 1/3; Minshawy 88:22 عَلَيْهِم 2/3
+LeenMaddRule: 14 places; as written 0, fewer 14, none 0, more 0 | 1 of 2: 6, 1 of 4: 3, 2 of 4: 1, 3 of 4: 4
+     e.g. Abdullah 2:2 رَيْبَ 3/4; Husary_1 2:2 رَيْبَ 3/4; Ayman_So 19:1 كٓهيعٓصٓ 1/2; Ayman_So 42:2 عٓسٓقٓ 1/2; Ayman_So 106:1 قُرَيْشٍ 3/4; Ayman_So 106:4 خَوْفٍۭ 2/4
+U+06EA ۪: {'not heard': 3, 'Ayman_So 11:41 → َجڇرِۦۦهَ': 1, 'Husary_1 11:41 → َجڇرِۦۦهَ': 1, 'Minshawy 11:41 → َجڇرِۦۦهَ': 1}
+U+0640 ـ: {'not heard': 3, 'Ayman_So 11:41 → جڇرِۦۦهَا': 1, 'Husary_1 11:41 → جڇرِۦۦهَا': 1, 'Minshawy 11:41 → جڇرِۦۦهَا': 1}
+U+06DC ۜ: {'not heard': 6, 'Ayman_So 75:27 → َمَنرَاا': 1, 'Ayman_So 83:14 → ابَلرَاا': 1, 'Husary_1 75:27 → َمَنرَاا': 1, 'Husary_1 83:14 → ابَلرَاا': 1, 'Minshawy 75:27 → َمَنرَاا': 1, 'Minshawy 83:14 → ابَلرَاا': 1}
+
+# long ayat left out above: what the model writes around the tashil of 41:44, the ishmam of 12:11, 10:51 (a separate run, 24 s windows)
+# columns: ayah, reciter, wrote ٲ (tashil), ۪ (imala), ۜ (sakt), ؙ (rawm), the sounds around the place
+041044 Ayman_So False False False False
+041044 Husary_1 False False False False
+041044 Minshawy False False False False
+012011 Ayman_So False False False False مَاالَكَلَااتَءمَننننَااعَلَاايُۥۥسُف
+012011 Husary_1 False False False False مَاالَكَلَااتَءمَننننَااعَلَاايُۥۥسُف
+012011 Minshawy False False False False مَاالَكَلَااتَءمَننننَااعَلَاايُۥۥسُف
+010051 Ayman_So False False False False م۾مبِهءَاااالءَاانَوَقَدڇكُںںںتُ۾۾۾بِ
+010051 Husary_1 False False False False ُ۾۾۾بِهءَااالءَاانَوَقَدڇكُںںںتُ۾۾۾بِ
+010051 Minshawy False False False False تُ۾۾۾بِهءَهَلءَاانَوَقَدڇكُںںںتُ۾۾۾بِ
