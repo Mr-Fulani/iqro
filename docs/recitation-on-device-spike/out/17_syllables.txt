@@ -1,19 +1,17 @@
-# 21.11.2026. A syllable left out of a word, and a letter put in. The owner read "tijaratuhum" (2:16) as
-# "tijarahum" and as "tijaratuhumuna": the plate went on. Measured as before: the text is changed, the
-# recording is a master's right reading, so the recording has a syllable more or less than the text.
+# 21.11.2026. A syllable or a letter left out of a word, and a letter put in. The owner read "tijaratuhum"
+# (2:16) as "tijarahum" and as "tijaratuhumuna": the plate went on. Measured as before: the text is changed,
+# the recording is a master's right reading, so the recording has a syllable more or less than the text.
 # harness.dart --mutate=omit|omit1|add|addend on 174 single ayat (c_taj whole).
 
-# 1. A syllable left out: two sounds side by side that do not fit, the letter of them not heard at all; or one
-#    letter (not a throat letter) not heard at all between two vowels alike, the one vowel said heard as both.
+# 1. A syllable left out: a letter of the word not heard at all (not a throat letter: of those, only with the
+#    sound next to it unfit too).
    before: whole: {recitations: 174, sound changed: 108, not noticed: 101, red stops on other words: 2, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, red stop on the word: 5, word not reached: 2}
    after:  whole: {recitations: 174, sound changed: 108, red stop on the word: 98, red stops on other words: 1, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, not noticed: 8, word not reached: 2}
-   (the first of the two alone: red stop on the word: 60)
-# 2. One letter put into the text alone, next to a consonant. NOT caught: the model loses a letter of a right
-#    reading too. --strict-letters (any letter not heard at all) catches 105 of 108 and 102 syllables of 108,
-#    for two false stops more on 2:15 at x0.8 and x1.8.
+# 2. One letter left out, alone (put into the text next to a consonant). The same rule.
    before: whole: {recitations: 174, sound changed: 108, not noticed: 106, red stops on other words: 2, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2}
-   after:  whole: {recitations: 174, sound changed: 108, not noticed: 106, red stops on other words: 2, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2}
-   strict: whole: {recitations: 174, sound changed: 108, red stop on the word: 105, red stops on other words: 1, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2, not noticed: 1}
+   after:  whole: {recitations: 174, sound changed: 108, red stop on the word: 87, red stops on other words: 1, not noticed: 19, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2}
+   with the throat letters too (--strict-letters): whole: {recitations: 174, sound changed: 108, red stop on the word: 105, red stops on other words: 1, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2, not noticed: 1}
+   ... and its price: 2:15 x0.8..1.8: clean: {recitations: 32, words: 224, words reached: 214, false mistakes: 4}  (2 false)
 # 3. A syllable put in inside a word: more letters heard for sure than the word has.
    before: whole: {recitations: 174, words: 329, false stops: 0, words reached: 325, places of the three rules: 60, sound changed: 73, not noticed: 56, red stops on other words: 2, red stop on the word: 15, word not reached: 2}
    after:  whole: {recitations: 174, words: 329, false stops: 0, words reached: 325, places of the three rules: 60, sound changed: 73, not noticed: 34, red stops on other words: 2, red stop on the word: 37, word not reached: 2}
@@ -29,12 +27,13 @@
    36 surahs: clean: {recitations: 36, words: 822, words reached: 749, false mistakes: 3, lens before the word began: 2}  (749 reached, 3 false)
    an ayah left out: ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 6, lens went on past the word left out: 6, false mistake before it: 1}  (23)
    a word left out: word: {recitations: 84, noticed on the right word: 77, lens went on past the word left out: 32, more than one mistake: 13, false mistake before it: 4}  (77)
-   36 surahs x1.5: clean: {recitations: 36, words: 822, words reached: 727, false mistakes: 3}  (727 reached, 3 false)
+   36 surahs x1.5: clean: {recitations: 36, words: 822, words reached: 717, false mistakes: 3}  (727 reached, 3 false: al-Qahtani's al-Fatihah, stopped
+      on word 15 before, is stopped on word 5 now)
    2:15 x0.4..0.7: clean: {recitations: 24, words: 168, words reached: 139, false mistakes: 4}  (139 reached, 4 false)
    2:15 x0.8..1.8: clean: {recitations: 32, words: 224, words reached: 218, false mistakes: 2}  (218 reached, 2 false)
    2:2 and 2:7, stopped on a word: clean: {recitations: 48, words: 456, words reached: 387, false mistakes: 4}  (387 reached, 4 false)
    a short vowel changed: whole: {recitations: 174, sound changed: 150, red stop on the word: 142, red stops on other words: 1, words: 36, false stops: 0, words reached: 35, places of the three rules: 18, not noticed: 6, word not reached: 2}
-   a letter changed: whole: {recitations: 174, sound changed: 162, red stop on the word: 144, red stops on other words: 1, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, not noticed: 15, word not reached: 3}
+   a letter changed: whole: {recitations: 174, sound changed: 162, red stop on the word: 153, red stops on other words: 1, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, not noticed: 6, word not reached: 3}  (144 before)
    an ending changed: whole: {recitations: 174, sound changed: 102, red stop on the word: 43, red stops on other words: 1, not noticed: 57, words: 222, false stops: 0, words reached: 221, places of the three rules: 24, word not reached: 2}
    the recording with mistakes:   5.80 MISS 0;  45.00 MISS 8;  89.40 MISS 19;  94.70 MISS 20;  (the same four)
 
@@ -43,7 +42,6 @@
 #    the model hears faintly);
 #  - a hidden nun still sounding counted as a letter of the next word, a doubled letter counted once: 36 surahs
 #    x1.5, 8 false stops for 3;
-#  - a throat letter between two vowels alike: +1 on 2:15 x1.8 ("nihim") and +1 on 2:7 ("wa'ala");
+#  - a throat letter not heard at all: +1 on 2:15 x1.8 ("nihim"), +1 on x0.8 ("ya'mahun"), +1 on 2:7 ("wa'ala");
 #  - a letter with no frames of its own between its neighbours: catches nothing.
-# On the phone, from the loudspeakers: the cut "hi" is caught in about half of the runs (5 of 9), a right
-# reading of the same ayah goes through.
+# On the phone, from the loudspeakers: see the README of the app.

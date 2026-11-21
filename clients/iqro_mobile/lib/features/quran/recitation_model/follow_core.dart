@@ -244,6 +244,11 @@ const _iqlab = 40; // ۾
 const _longWord = 9; // sounds of a word that may have two unfit
 const _goodSound = -4.0;
 const _absentSound = -12.0; // a sound the model does not hear at all
+
+/// The throat letters (ء ح خ ع غ ه): the model loses one of them in a right
+/// reading too ("nihim", "wa'ala"), so one not heard is not a letter left
+/// out.
+const _throat = <int>{1, 6, 7, 18, 19, 26};
 const _sureSound = -.36; // log .7: the model is sure of what it hears
 const _never = -1e30;
 
@@ -279,8 +284,9 @@ class RecitationFollowCore {
 
   final RecitationPassage passage;
 
-  /// A letter of a word not heard at all is a mistake by itself (for the
-  /// harness: off unless a right reading is not stopped more with it).
+  /// A throat letter of a word not heard at all is a mistake by itself,
+  /// as any other letter is (for the harness: a right reading is stopped
+  /// more with it).
   static var strictLetters = false;
 
   /// For the harness: the two rules, each by itself.
@@ -517,10 +523,10 @@ class RecitationFollowCore {
           waiting = passage.own[i];
         }
       }
-      // A letter of the word that is not heard with the sound next to it:
-      // a syllable left out ("tijarahum" for "tijaratuhum"), which no
-      // word may have, however long. A letter not heard at all, alone,
-      // with [strictLetters].
+      // A letter of the word that is not heard at all: a letter or a
+      // syllable left out ("tijarahum" for "tijaratuhum"), which no word
+      // may have, however long. A throat letter only with the sound next
+      // to it unfit too, or with [strictLetters].
       int? omitted;
       var unfitBefore = false;
       for (var i = begin; i < begin + said; i++) {
@@ -535,7 +541,7 @@ class RecitationFollowCore {
           unfit = true;
           if (letter &&
               path.best[i - path.lo] < _absentSound &&
-              (strictLetters || _betweenAlike(i, begin, end))) {
+              (strictLetters || !_throat.contains(sound))) {
             omitted ??= i;
           }
         }
@@ -747,19 +753,6 @@ class RecitationFollowCore {
       _dropTo(_now - 4);
     }
     return events;
-  }
-
-  /// The letter at [i] of a word has the same vowel before it and after
-  /// it: with its syllable left out ("tijaratahum" read "tijarahum"), the
-  /// one vowel said is heard as both, and the letter alone is not heard.
-  /// Not a throat letter: between two vowels alike the model loses one of
-  /// those in a right reading too ("nihim", "wa'ala").
-  bool _betweenAlike(int i, int begin, int end) {
-    if (i - 1 < begin || i + 1 >= end) return false;
-    const throat = <int>{1, 6, 7, 18, 19, 26}; // ء ح خ ع غ ه
-    if (throat.contains(passage.sounds[i])) return false;
-    final before = passage.sounds[i - 1];
-    return before >= 29 && before <= 34 && before == passage.sounds[i + 1];
   }
 
   /// A letter put in: inside the word, more letters heard for sure than

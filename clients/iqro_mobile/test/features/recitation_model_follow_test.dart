@@ -319,9 +319,21 @@ void main() {
     );
 
     test('may have two sounds the model does not hear: read fast, a '
-        'letter at its beginning and a short vowel near its end are '
-        'often lost', () {
-      final follower = core();
+        'throat letter at its beginning and a short vowel near its end '
+        'are often lost', () {
+      final follower = RecitationFollowCore(
+        RecitationPassage(<ExpectedAyah>[
+          ExpectedAyah(
+            Uint8List.fromList(<int>[
+              1, 2, 3, //
+              26, 5, 6, 7, 8, 9, 10, 11, 33, 13, //
+              14, 15, 16,
+            ]),
+            <(int, int)>[(0, 3), (3, 13), (13, 16)],
+            <(int, int, int, int, int)>[],
+          ),
+        ]),
+      );
       final seen = _follow(follower, <int>[
         1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 0, 0, 0, //
       ]);
@@ -360,13 +372,13 @@ void main() {
       expect(whys, contains(FollowWhy.added));
     });
 
-    // A word of eleven sounds with vowels: "...sa-ti-ni-m...".
-    RecitationFollowCore vowels(int second) => RecitationFollowCore(
+    // A word of eleven sounds with vowels, [letter] between two of them.
+    RecitationFollowCore vowels(int letter) => RecitationFollowCore(
       RecitationPassage(<ExpectedAyah>[
         ExpectedAyah(
           Uint8List.fromList(<int>[
             1, 2, 3, //
-            12, 32, 3, 34, 25, second, 24, 33, 10, 32, 2, //
+            12, 32, 3, 34, letter, 34, 24, 33, 10, 32, 2, //
             14, 15, 16,
           ]),
           <(int, int)>[(0, 3), (3, 14), (14, 17)],
@@ -374,26 +386,24 @@ void main() {
         ),
       ]),
     );
+    const without = <int>[
+      1, 2, 3, 12, 32, 3, 34, 34, 24, 33, 10, 32, 2, 14, 15, 16, 0, 0, 0, //
+    ];
 
-    test('with a syllable left out between two vowels alike is a mistake: '
-        'the one vowel said is heard as both, the letter alone is not '
-        'heard', () {
-      final follower = vowels(34);
+    test('with one letter not heard at all is a mistake, the sounds on '
+        'either side of it heard: the vowel left of a syllable left out is '
+        'heard as both of two alike', () {
+      final follower = vowels(25);
       final whys = <FollowWhy>[];
-      final seen = _follow(follower, <int>[
-        1, 2, 3, 12, 32, 3, 34, 34, 24, 33, 10, 32, 2, 14, 15, 16, 0, 0, 0, //
-      ], whys);
+      final seen = _follow(follower, without, whys);
       expect(seen, contains('miss 1'));
       expect(whys, contains(FollowWhy.omitted));
     });
 
-    test('with one letter the model does not hear between two vowels that '
-        'differ is read: it loses a letter of a right reading too', () {
-      final follower = vowels(33);
-      final seen = _follow(follower, <int>[
-        1, 2, 3, 12, 32, 3, 34, 33, 24, 33, 10, 32, 2, 14, 15, 16, 0, 0, 0, //
-      ]);
-      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+    test('with a throat letter not heard is read: the model loses one of '
+        'those in a right reading too', () {
+      final follower = vowels(26);
+      expect(_follow(follower, without), <String>['on 0', 'on 1', 'on 2']);
     });
 
     test('a short word still has one at most', () {
