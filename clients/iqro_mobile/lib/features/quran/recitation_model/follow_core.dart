@@ -31,7 +31,9 @@ class ExpectedAyah {
   final List<(int, int)> spans;
 
   /// The places remarked on: kind (0 ghunnah, 1 idgham with ghunnah,
-  /// 2 madd muttasil), start, end, word, counts expected.
+  /// 2 madd muttasil, 3 a letter with a shaddah, 4 a natural madd, 5 a
+  /// clear nun before a throat letter), start, end, word, counts
+  /// expected.
   final List<(int, int, int, int, int)> units;
 
   /// The sounds of [sounds] that need not be heard: those a word has only
@@ -188,6 +190,11 @@ enum FollowWhy {
   /// A ghunnah all but left out; a madd held half as long as it is to be.
   ghunnah,
   madd,
+
+  /// A letter with a shaddah said once; a nun held where it is said
+  /// clearly and short (izhar).
+  shaddah,
+  izhar,
 }
 
 /// A word taken as read has a place whose tajweed may be looked at: its

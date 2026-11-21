@@ -3819,6 +3819,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'The qalqalah is missing: let the letter bounce';
 
   @override
+  String get recitationHintShaddah => 'Shaddah: the letter is not doubled';
+
+  @override
+  String get recitationHintIzhar => 'Izhar: the “n” is said short, not held';
+
+  @override
   String get recitationUnavailable =>
       'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.';
 

@@ -125,6 +125,31 @@ void main(List<String> args) {
         ayah.loose,
         ayah.added,
       );
+      if (mutate == 'shadda') {
+        // A letter said once, as the recording has it, is written as one
+        // with a shaddah: a reader who does not double a letter.
+        changedWord = null;
+        ayahs[0] = ayah;
+        search:
+        for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
+          final (start, end) = ayah.spans[w];
+          for (var i = start + 1; i + 1 < end; i++) {
+            final c = ayah.sounds[i];
+            if (c < 1 || c > 28 || c == 24 || c == 25) continue;
+            if (ayah.sounds[i - 1] == c || ayah.sounds[i + 1] == c) continue;
+            if (ayah.loose.contains(i)) continue;
+            ayahs[0] = ExpectedAyah(
+              ayah.sounds,
+              ayah.spans,
+              <(int, int, int, int, int)>[...ayah.units, (3, i, i + 1, w, 2)],
+              ayah.loose,
+              ayah.added,
+            );
+            changedWord = w;
+            break search;
+          }
+        }
+      }
       if (mutate == 'qalqala') {
         // A qalqalah is written where the recording has none: after a
         // letter with no vowel that is not one of "qutb jad", inside a

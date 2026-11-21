@@ -25,8 +25,8 @@ RecitationFollowCore _core() => RecitationFollowCore(
 
 /// The mistakes the follower finds in [sounds], each said on one frame
 /// with four of silence after it, fed ten frames at a time.
-List<FollowMiss> _misses(List<int> sounds) {
-  final core = _core();
+List<FollowMiss> _misses(List<int> sounds, [RecitationFollowCore? follower]) {
+  final core = follower ?? _core();
   final total = sounds.length * 5;
   final lp = Float32List(total * recitationClasses)
     ..fillRange(0, total * recitationClasses, -20);
@@ -70,6 +70,77 @@ void main() {
     expect(miss.why, FollowWhy.unknown);
   });
 
+  group('tajweed', () {
+    // 39 is the model's hidden nun (ikhfa), 25 a plain one, 38 the echo of
+    // a qalqalah.
+    RecitationFollowCore core(List<int> second, {List<int>? last}) =>
+        RecitationFollowCore(
+          RecitationPassage(<ExpectedAyah>[
+            ExpectedAyah(
+              Uint8List.fromList(<int>[1, 2, 3, ...second, 7, 8, 9]),
+              <(int, int)>[
+                (0, 3),
+                (3, 3 + second.length),
+                (3 + second.length, 6 + second.length),
+              ],
+              <(int, int, int, int, int)>[],
+            ),
+            ExpectedAyah(
+              Uint8List.fromList(last ?? <int>[13, 14, 15]),
+              <(int, int)>[
+                (0, (last ?? <int>[13, 14, 15]).length),
+              ],
+              <(int, int, int, int, int)>[],
+            ),
+          ]),
+        );
+
+    test('a nun said clearly where it is hidden is a mistake, and named', () {
+      final miss = _misses(<int>[
+        1, 2, 3, 4, 25, 5, 6, 7, 8, 9, 0, 0, 0, //
+      ], core(<int>[4, 39, 5, 6])).single;
+      expect(miss.word, 1);
+      expect(miss.why, FollowWhy.another);
+      expect(miss.expected, 39);
+      expect(miss.heard, 25);
+    });
+
+    test('hidden as written, it is none', () {
+      expect(
+        _misses(<int>[
+          1, 2, 3, 4, 39, 5, 6, 7, 8, 9, 0, 0, 0, //
+        ], core(<int>[4, 39, 5, 6])),
+        isEmpty,
+      );
+    });
+
+    test('a qalqalah left out inside an ayah is a mistake, and named', () {
+      final miss = _misses(<int>[
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, //
+      ], core(<int>[4, 38, 5, 6])).single;
+      expect(miss.word, 1);
+      expect(miss.why, FollowWhy.another);
+      expect(miss.expected, 38);
+      // Said, it is none.
+      expect(
+        _misses(<int>[
+          1, 2, 3, 4, 38, 5, 6, 7, 8, 9, 0, 0, 0, //
+        ], core(<int>[4, 38, 5, 6])),
+        isEmpty,
+      );
+    });
+
+    test('at the end of an ayah the qalqalah is there only with a stop: '
+        'left out, it is no mistake', () {
+      expect(
+        _misses(<int>[
+          1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 14, 15, 0, 0, 0, //
+        ], core(<int>[4, 5, 6], last: <int>[13, 14, 15, 38])),
+        isEmpty,
+      );
+    });
+  });
+
   group('the line under the text says why', () {
     RecitationWhy why(
       FollowWhy why, [
@@ -96,6 +167,14 @@ void main() {
         contains('Гунна'),
       );
       expect(recitationWhyText(l10n, why(FollowWhy.madd)), contains('Мадд'));
+      expect(
+        recitationWhyText(l10n, why(FollowWhy.shaddah)),
+        'Шадда: буква не удвоена',
+      );
+      expect(
+        recitationWhyText(l10n, why(FollowWhy.izhar)),
+        startsWith('Изхар'),
+      );
       // The model's own marks are not shown: the rule is named.
       expect(
         recitationWhyText(l10n, why(FollowWhy.another, 'ں', 'ن')),
@@ -133,6 +212,8 @@ void main() {
           why(FollowWhy.another, 'ڇ'),
           why(FollowWhy.ghunnah),
           why(FollowWhy.madd),
+          why(FollowWhy.shaddah),
+          why(FollowWhy.izhar),
           why(FollowWhy.unknown),
         ]) {
           final text = recitationWhyText(l10n, reason);

@@ -162,7 +162,12 @@ class RecitationPipeline {
               ModelPlace(
                 place.word,
                 wrong: true,
-                why: place.kind == 2 ? FollowWhy.madd : FollowWhy.ghunnah,
+                why: switch (place.kind) {
+                  2 || 4 => FollowWhy.madd,
+                  3 => FollowWhy.shaddah,
+                  5 => FollowWhy.izhar,
+                  _ => FollowWhy.ghunnah,
+                },
               ),
             );
             lastTiming = (
@@ -188,6 +193,36 @@ class RecitationPipeline {
   /// (a madd of half its counts or less, a ghunnah of one count or none).
   /// False when the model is unsure of a count it hears.
   bool _heldShort(TajweedPlace place, int fromFrame, int toFrame) {
+    // The table's own places are many (every long vowel): their counts
+    // are read from what the model has heard already, not heard again.
+    if (place.kind >= 3) {
+      if (!enabledPlaces.contains(place.kind)) return false;
+      var counts = 0;
+      var previous = 0;
+      for (var t = fromFrame - 3; t < toFrame + 1; t++) {
+        if (t < _historyFirst || t >= _historyEnd) continue;
+        final row = (t - _historyFirst) * recitationClasses;
+        var top = 0;
+        for (var c = 1; c < recitationClasses; c++) {
+          if (_history[row + c] > _history[row + top]) top = c;
+        }
+        if (top == place.sound && previous != top) {
+          counts += 1;
+          if (_history[row + top] < -1.2) return false; // less than .3 sure
+        }
+        previous = top;
+      }
+      lastHeld = (place: place, counts: counts);
+      return switch (place.kind) {
+        // A letter with a shaddah said once (none heard is not that: the
+        // letter was not heard here at all).
+        3 => counts == 1,
+        // A natural madd of one count, or none.
+        4 => counts <= 1,
+        // A clear nun held as a ghunnah is.
+        _ => counts >= 3,
+      };
+    }
     const before = 50;
     const after = 25;
     final from = math.max(0, fromFrame - before) * 2;
@@ -236,6 +271,11 @@ class RecitationPipeline {
   /// For the harness: the last place looked at and the counts heard.
   ({TajweedPlace place, int counts})? lastHeld;
 }
+
+/// The places of the table's own kinds (3 shaddah, 4 natural madd, 5 clear
+/// nun) that stop the place: each is on only if a right reading is not
+/// stopped by it more often than before (docs/recitation-on-device-spike).
+Set<int> enabledPlaces = <int>{5};
 
 /// The frames the line under the text goes by: eight seconds.
 const recitationEarFrames = 8 * recitationFrameRate;

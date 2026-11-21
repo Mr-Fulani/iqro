@@ -3781,6 +3781,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get recitationHintQalqalah => 'القلقلة غائبة: أظهِر نبرة الحرف';
 
   @override
+  String get recitationHintShaddah => 'الشدّة: الحرف غير مشدَّد';
+
+  @override
+  String get recitationHintIzhar => 'إظهار: النون تُنطَق قصيرة بلا إطالة';
+
+  @override
   String get recitationUnavailable =>
       'التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.';
 

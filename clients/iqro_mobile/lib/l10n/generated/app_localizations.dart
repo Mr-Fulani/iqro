@@ -6678,6 +6678,18 @@ abstract class AppLocalizations {
   /// **'The qalqalah is missing: let the letter bounce'**
   String get recitationHintQalqalah;
 
+  /// No description provided for @recitationHintShaddah.
+  ///
+  /// In en, this message translates to:
+  /// **'Shaddah: the letter is not doubled'**
+  String get recitationHintShaddah;
+
+  /// No description provided for @recitationHintIzhar.
+  ///
+  /// In en, this message translates to:
+  /// **'Izhar: the “n” is said short, not held'**
+  String get recitationHintIzhar;
+
   /// No description provided for @recitationUnavailable.
   ///
   /// In en, this message translates to:

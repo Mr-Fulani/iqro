@@ -3768,6 +3768,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get recitationHintQalqalah => 'Kalkale yok: harfi titreşimle okuyun';
 
   @override
+  String get recitationHintShaddah => 'Şedde: harf çift okunmadı';
+
+  @override
+  String get recitationHintIzhar => 'İzhar: «n» uzatılmadan kısa okunur';
+
+  @override
   String get recitationUnavailable =>
       'Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.';
 

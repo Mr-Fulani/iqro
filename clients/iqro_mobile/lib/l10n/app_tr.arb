@@ -1144,6 +1144,8 @@
   "recitationHintIkhfa": "İhfa: «n» burada açık okunmaz, genizden gizleyin",
   "recitationHintIqlab": "İklab: «b»den önceki «n» genizden «m» okunur",
   "recitationHintQalqalah": "Kalkale yok: harfi titreşimle okuyun",
+  "recitationHintShaddah": "Şedde: harf çift okunmadı",
+  "recitationHintIzhar": "İzhar: «n» uzatılmadan kısa okunur",
   "recitationUnavailable": "Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.",
   "recitationNoArabic": "Bu telefondaki konuşma tanıma Arapçayı desteklemiyor.",
   "recitationNoNetwork": "Konuşma tanıma hizmetine bağlanılamıyor. İnterneti kontrol edin."

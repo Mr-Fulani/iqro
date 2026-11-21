@@ -3843,6 +3843,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get recitationHintQalqalah => 'Калькаля пропущена: дайте букве отзвук';
 
   @override
+  String get recitationHintShaddah => 'Шадда: буква не удвоена';
+
+  @override
+  String get recitationHintIzhar => 'Изхар: «н» читается коротко, без протяжки';
+
+  @override
   String get recitationUnavailable =>
       'Распознавание речи недоступно: на телефоне нет службы распознавания или микрофон не разрешён.';
 
