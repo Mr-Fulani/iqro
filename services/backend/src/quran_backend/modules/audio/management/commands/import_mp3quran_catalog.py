@@ -44,12 +44,17 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Show what would be added without reading the files or writing anything.",
+            help="Show what would be added or changed; reads no files and writes nothing.",
         )
 
     def handle(self, *args: Any, **options: Any) -> None:  # noqa: ARG002
         if options["apply_profiles"]:
-            changed = apply_reciter_profiles()
+            changed = apply_reciter_profiles(dry_run=options["dry_run"])
+            if options["dry_run"]:
+                self.stdout.write(f"to update: {len(changed)}")
+                for code in changed:
+                    self.stdout.write(f"  {code}")
+                return
             self.stdout.write(self.style.SUCCESS(f"done: {len(changed)} reciters updated"))
             return
         source = Mp3QuranCatalogClient()
