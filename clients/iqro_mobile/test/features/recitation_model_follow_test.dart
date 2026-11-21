@@ -360,6 +360,42 @@ void main() {
       expect(whys, contains(FollowWhy.added));
     });
 
+    // A word of eleven sounds with vowels: "...sa-ti-ni-m...".
+    RecitationFollowCore vowels(int second) => RecitationFollowCore(
+      RecitationPassage(<ExpectedAyah>[
+        ExpectedAyah(
+          Uint8List.fromList(<int>[
+            1, 2, 3, //
+            12, 32, 3, 34, 25, second, 24, 33, 10, 32, 2, //
+            14, 15, 16,
+          ]),
+          <(int, int)>[(0, 3), (3, 14), (14, 17)],
+          <(int, int, int, int, int)>[],
+        ),
+      ]),
+    );
+
+    test('with a syllable left out between two vowels alike is a mistake: '
+        'the one vowel said is heard as both, the letter alone is not '
+        'heard', () {
+      final follower = vowels(34);
+      final whys = <FollowWhy>[];
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 12, 32, 3, 34, 34, 24, 33, 10, 32, 2, 14, 15, 16, 0, 0, 0, //
+      ], whys);
+      expect(seen, contains('miss 1'));
+      expect(whys, contains(FollowWhy.omitted));
+    });
+
+    test('with one letter the model does not hear between two vowels that '
+        'differ is read: it loses a letter of a right reading too', () {
+      final follower = vowels(33);
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 12, 32, 3, 34, 33, 24, 33, 10, 32, 2, 14, 15, 16, 0, 0, 0, //
+      ]);
+      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+    });
+
     test('a short word still has one at most', () {
       final follower = RecitationFollowCore(
         RecitationPassage(<ExpectedAyah>[

@@ -3,22 +3,29 @@
 # recording is a master's right reading, so the recording has a syllable more or less than the text.
 # harness.dart --mutate=omit|omit1|add|addend on 174 single ayat (c_taj whole).
 
-# 1. A syllable left out: two sounds side by side that do not fit, the letter of them not heard at all.
+# 1. A syllable left out: two sounds side by side that do not fit, the letter of them not heard at all; or one
+#    letter (not a throat letter) not heard at all between two vowels alike, the one vowel said heard as both.
    before: whole: {recitations: 174, sound changed: 108, not noticed: 101, red stops on other words: 2, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, red stop on the word: 5, word not reached: 2}
-   after:  whole: {recitations: 174, sound changed: 108, not noticed: 46, red stops on other words: 1, red stop on the word: 60, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2}
-# 2. One letter left out, alone. NOT caught (not asked for: the model loses a letter of a right reading too).
+   after:  whole: {recitations: 174, sound changed: 108, red stop on the word: 98, red stops on other words: 1, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, not noticed: 8, word not reached: 2}
+   (the first of the two alone: red stop on the word: 60)
+# 2. One letter put into the text alone, next to a consonant. NOT caught: the model loses a letter of a right
+#    reading too. --strict-letters (any letter not heard at all) catches 105 of 108 and 102 syllables of 108,
+#    for two false stops more on 2:15 at x0.8 and x1.8.
    before: whole: {recitations: 174, sound changed: 108, not noticed: 106, red stops on other words: 2, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2}
    after:  whole: {recitations: 174, sound changed: 108, not noticed: 106, red stops on other words: 2, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2}
+   strict: whole: {recitations: 174, sound changed: 108, red stop on the word: 105, red stops on other words: 1, words: 198, false stops: 0, words reached: 197, places of the three rules: 42, word not reached: 2, not noticed: 1}
 # 3. A syllable put in inside a word: more letters heard for sure than the word has.
    before: whole: {recitations: 174, words: 329, false stops: 0, words reached: 325, places of the three rules: 60, sound changed: 73, not noticed: 56, red stops on other words: 2, red stop on the word: 15, word not reached: 2}
-   after:  whole: {recitations: 174, words: 329, false stops: 0, words reached: 325, places of the three rules: 60, sound changed: 73, not noticed: 37, red stops on other words: 3, red stop on the word: 34, word not reached: 2}
+   after:  whole: {recitations: 174, words: 329, false stops: 0, words reached: 325, places of the three rules: 60, sound changed: 73, not noticed: 34, red stops on other words: 2, red stop on the word: 37, word not reached: 2}
 # 4. A syllable put in at the end of a word, before the next one.
    before: whole: {recitations: 174, sound changed: 97, not noticed: 91, red stops on other words: 2, words: 227, false stops: 0, words reached: 226, places of the three rules: 36, red stop on the word: 4, word not reached: 2}
    after:  whole: {recitations: 174, sound changed: 97, not noticed: 83, red stops on other words: 7, words: 227, false stops: 0, words reached: 226, places of the three rules: 36, red stop on the word: 12, word not reached: 2}
+# 5. Real sound: the syllable "hi" cut out of "tughyanihim" in eight masters' 2:15 (cutsyl.py).
+   with the rule: clean: {recitations: 8, words: 56, words reached: 48, false mistakes: 8}  (every one is the cut word)
+   without (--no-omitted): clean: {recitations: 8, words: 56, words reached: 56, false mistakes: 0}
 
 # A right reading, after (before in brackets):
    174 single ayat: whole: {recitations: 174, words: 657, false stops: 2, words reached: 644, places of the three rules: 83}  (2 false)
-   73 cut: cut: {recitations: 73, words: 302, false stops: 36, words reached: 243, rule 0: cut: 65, red stops elsewhere: 3, rule 0: red stop: 29, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}  (rule 0: red stop 29)
    36 surahs: clean: {recitations: 36, words: 822, words reached: 749, false mistakes: 3, lens before the word began: 2}  (749 reached, 3 false)
    an ayah left out: ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 6, lens went on past the word left out: 6, false mistake before it: 1}  (23)
    a word left out: word: {recitations: 84, noticed on the right word: 77, lens went on past the word left out: 32, more than one mistake: 13, false mistake before it: 4}  (77)
@@ -31,6 +38,12 @@
    an ending changed: whole: {recitations: 174, sound changed: 102, red stop on the word: 43, red stops on other words: 1, not noticed: 57, words: 222, false stops: 0, words reached: 221, places of the three rules: 24, word not reached: 2}
    the recording with mistakes:   5.80 MISS 0;  45.00 MISS 8;  89.40 MISS 19;  94.70 MISS 20;  (the same four)
 
-# What was tried and taken back: any two unfit sounds side by side as a syllable left out (2:15 x0.55 and x1.8:
-# +1 false stop each, a letter the model hears faintly); a hidden nun still sounding counted as a letter of
-# the next word, and a doubled letter counted once (36 surahs x1.5: 8 false stops for 3).
+# What was tried and taken back:
+#  - any two unfit sounds side by side as a syllable left out: 2:15 x0.55 and x1.8, +1 false stop each (a letter
+#    the model hears faintly);
+#  - a hidden nun still sounding counted as a letter of the next word, a doubled letter counted once: 36 surahs
+#    x1.5, 8 false stops for 3;
+#  - a throat letter between two vowels alike: +1 on 2:15 x1.8 ("nihim") and +1 on 2:7 ("wa'ala");
+#  - a letter with no frames of its own between its neighbours: catches nothing.
+# On the phone, from the loudspeakers: the cut "hi" is caught in about half of the runs (5 of 9), a right
+# reading of the same ayah goes through.
