@@ -6,9 +6,12 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   ANALYTICS_CONSENT_EVENT,
   ANALYTICS_CONSENT_KEY,
+  ANALYTICS_REMINDER_KEY,
   analyticsConfig,
   hasAnalytics,
+  noteAnalyticsVisit,
   readConsent,
+  readReminderDue,
   removeAnalyticsData,
   startAnalytics,
   trackPageView,
@@ -22,7 +25,7 @@ const config = analyticsConfig();
 
 function subscribe(onChange: () => void) {
   const onStorage = (event: StorageEvent) => {
-    if (event.key === ANALYTICS_CONSENT_KEY) onChange();
+    if (event.key === ANALYTICS_CONSENT_KEY || event.key === ANALYTICS_REMINDER_KEY) onChange();
   };
   window.addEventListener(ANALYTICS_CONSENT_EVENT, onChange);
   window.addEventListener("storage", onStorage);
@@ -56,13 +59,20 @@ function useConsent(): Consent | null | "pending" {
   return useSyncExternalStore(subscribe, readConsent, () => "pending");
 }
 
+/** A month after a refusal the banner asks once more (lib/analytics.ts). */
+function useReminderDue(): boolean {
+  return useSyncExternalStore(subscribe, readReminderDue, () => false);
+}
+
 /**
  * Starts the counters for a visitor who agreed, reports client-side page views
  * and, until the visitor decides, shows the banner after the first interaction.
+ * A visitor who declined sees it once more a month later, in other words.
  */
 export function AnalyticsConsent() {
   const { locale, t } = useI18n();
   const consent = useConsent();
+  const reminder = useReminderDue();
   const interacted = useFirstInteraction();
   const pathname = usePathname();
 
@@ -73,21 +83,27 @@ export function AnalyticsConsent() {
 
   useEffect(() => {
     trackPageView();
-  }, [pathname]);
+    if (hasAnalytics(config)) noteAnalyticsVisit();
+  }, [pathname, consent]);
 
-  if (!hasAnalytics(config) || consent !== null || !interacted) return null;
+  const asking = consent === null || (consent === "denied" && reminder);
+  if (!hasAnalytics(config) || !asking || !interacted) return null;
   return (
-    <section className="analytics-consent" aria-label={t("analytics.bannerTitle")} data-testid="analytics-consent">
+    <section
+      className="analytics-consent"
+      aria-label={t("analytics.bannerTitle")}
+      data-testid={reminder ? "analytics-reminder" : "analytics-consent"}
+    >
       <p>
-        {t("analytics.bannerText")}{" "}
+        {t(reminder ? "analytics.reminderText" : "analytics.bannerText")}{" "}
         <Link href={localizedPath(locale, "/cookies")}>{t("analytics.more")}</Link>
       </p>
       <div className="analytics-consent-actions">
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => writeConsent("denied")}>
-          {t("analytics.decline")}
+          {t(reminder ? "analytics.reminderDecline" : "analytics.decline")}
         </button>
         <button type="button" className="btn btn-primary btn-sm" onClick={() => writeConsent("granted")}>
-          {t("analytics.accept")}
+          {t(reminder ? "analytics.reminderAccept" : "analytics.accept")}
         </button>
       </div>
     </section>
