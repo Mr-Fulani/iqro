@@ -1,0 +1,78 @@
+Slow reading, and the line that said "I can't hear you" to a loud reader. A Mac, the app's Dart code
+(tool/recitation_model/harness.dart), recordings from everyayah.com made slower or faster with ffmpeg's atempo
+(the pitch stays). 21.11.2026. "before": the long word rule of out/13_long_words.txt; "after": this change.
+
+# The owner read 2:15 slowly, in his own voice: "tughyanihim" would not pass, and the line under the text said
+# to read louder. Read fast it passed. Two causes of the first, found on recordings made slower:
+#  1. A short vowel held. A slow reader holds his short vowels a little, and the model writes each as the short
+#     vowel and its long one ("bi-i-him"). The frames of the long one were speech the text does not have; the
+#     path went wrong and took the reading for a later word ("fi-i") begun instead: a word left out.
+#     After: the long vowel right after its short one is more of the same sound - not where the text has that
+#     long vowel there, and not for a sound a word only begins with after a stop.
+#  2. A word judged before it ended. In the middle of a slow word the model hears wrongly for a while (a held
+#     "ll" as "m") and puts it right as more of the word comes; the word was called a mistake a fifth of a second
+#     after its last sound so far. After: sounds that do not fit are a mistake once the word is over - the next
+#     word has begun, the reader is silent, or a second has gone by. Another letter heard for sure stops the
+#     place at once, as before (waiting for it too cost three changed vowels of 150).
+# The second: the line was shown whenever no word was taken for eight seconds, whatever the microphone heard.
+#     After: "I can't hear you" only when the model writes next to no sounds for sure since the last word taken;
+#     when it does, "I can hear you, but the word was not recognised".
+
+# 2:15 of eight reciters at 0.7, 0.55 and 0.4 of their pace
+before: clean: {recitations: 24, words: 168, words reached: 104, false mistakes: 10}
+after:  clean: {recitations: 24, words: 168, words reached: 139, false mistakes: 4}
+# at 0.4 the first word itself is not taken with most of them: slower than anyone reads, and atempo's own sound
+
+# 36 recitations of whole surahs at 0.6 of their pace
+before: clean: {recitations: 36, words: 822, words reached: 465, false mistakes: 36, lens before the word began: 1}
+after:  clean: {recitations: 36, words: 822, words reached: 566, false mistakes: 25, lens before the word began: 1}
+# still many: a recording made slower is not a reader reading slowly, and what is left is the model mishearing it
+
+# 2:15 of eight reciters at 0.8, 1.25, 1.5 and 1.8 of their pace
+before: clean: {recitations: 32, words: 224, words reached: 221, false mistakes: 2}
+after:  clean: {recitations: 32, words: 224, words reached: 224, false mistakes: 1}
+
+# The 36 at 1.5 of their pace
+before: clean: {recitations: 36, words: 822, words reached: 726, false mistakes: 4}
+after:  clean: {recitations: 36, words: 822, words reached: 741, false mistakes: 2}
+
+# The 36 at their own pace, 24 with an ayah cut out, 84 with a word cut out
+## before
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 7, lens went on past the word left out: 7, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 744, false mistakes: 4, lens before the word began: 2}
+word: {recitations: 84, noticed on the right word: 76, more than one mistake: 18, lens went on past the word left out: 34, false mistake before it: 5}
+## after
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 6, lens went on past the word left out: 6, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 749, false mistakes: 3, lens before the word began: 2}
+word: {recitations: 84, noticed on the right word: 77, lens went on past the word left out: 33, more than one mistake: 14, false mistake before it: 4}
+
+# 174 single ayat as recited (whole), 73 with a ghunnah or a madd cut short (cut)
+## before
+cut: {recitations: 73, words: 302, false stops: 35, words reached: 237, rule 0: cut: 65, red stops elsewhere: 4, rule 0: red stop: 27, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}
+whole: {recitations: 174, words: 657, false stops: 2, words reached: 627, places of the three rules: 83}
+## after
+cut: {recitations: 73, words: 302, false stops: 37, words reached: 244, rule 0: cut: 65, red stops elsewhere: 4, rule 0: red stop: 29, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}
+whole: {recitations: 174, words: 657, false stops: 2, words reached: 644, places of the three rules: 83}
+
+# The 174 with one short vowel of the text changed, then one letter (the harness of out/14_endings.txt, which
+# changes only sounds that reading on always has)
+## haraka, before
+whole: {recitations: 174, sound changed: 150, red stop on the word: 140, red stops on other words: 1, words: 36, false stops: 0, words reached: 34, places of the three rules: 18, not noticed: 5, word not reached: 5}
+## haraka, after
+whole: {recitations: 174, sound changed: 150, red stop on the word: 142, red stops on other words: 1, words: 36, false stops: 0, words reached: 35, places of the three rules: 18, not noticed: 6, word not reached: 2}
+## letter, before
+whole: {recitations: 174, sound changed: 162, red stop on the word: 135, red stops on other words: 3, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, not noticed: 21, word not reached: 6}
+## letter, after
+whole: {recitations: 174, sound changed: 162, red stop on the word: 138, red stops on other words: 1, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, not noticed: 21, word not reached: 3}
+
+# 2:2 and 2:7 of 24 reciters (stops inside the ayah)
+before: clean: {recitations: 48, words: 456, words reached: 370, false mistakes: 5}
+after:  clean: {recitations: 48, words: 456, words reached: 399, false mistakes: 4}
+
+# "tughyanihim" elsewhere: 2:15, 6:110, 7:186, 10:11, 23:75 of eight reciters
+before: clean: {recitations: 40, words: 472, words reached: 455, false mistakes: 10}
+after:  clean: {recitations: 40, words: 472, words reached: 455, false mistakes: 8}
+
+# The recording with real mistakes of out/10_false_stops.txt
+before:   5.70 MISS 0;  45.00 MISS 8;  89.40 MISS 19;  94.70 MISS 20;
+after:    5.80 MISS 0;  45.00 MISS 8;  89.40 MISS 19;  94.70 MISS 20;

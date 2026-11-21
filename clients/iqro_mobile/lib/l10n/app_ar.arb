@@ -1131,6 +1131,7 @@
   "recitationListening": "أستمع…",
   "recitationNotHearing": "لا أسمعك. اقرأ بصوت مسموع وتحقق من الإنترنت",
   "recitationNotHearingOnDevice": "لا أسمعك. اقرأ بصوت مسموع وقرّب الهاتف",
+  "recitationNotRecognised": "أسمعك، لكن لم أتعرّف على الكلمة. أعد قراءتها",
   "recitationUnavailable": "التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.",
   "recitationNoArabic": "التعرّف على الكلام في هذا الهاتف لا يدعم العربية.",
   "recitationNoNetwork": "لا يوجد اتصال بخدمة التعرّف على الكلام. تحقق من الإنترنت."

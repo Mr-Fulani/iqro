@@ -3737,6 +3737,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا أسمعك. اقرأ بصوت مسموع وقرّب الهاتف';
 
   @override
+  String get recitationNotRecognised =>
+      'أسمعك، لكن لم أتعرّف على الكلمة. أعد قراءتها';
+
+  @override
   String get recitationUnavailable =>
       'التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.';
 
