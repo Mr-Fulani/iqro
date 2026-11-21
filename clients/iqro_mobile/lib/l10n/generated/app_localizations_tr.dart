@@ -1833,6 +1833,16 @@ class AppLocalizationsTr extends AppLocalizations {
       'Henüz seçim yapmadınız. Seçim yapana kadar Google Analytics kapalı kalır.';
 
   @override
+  String get analyticsReminderText =>
+      'IQRO\'yu bir aydır kullanıyorsunuz. Google Analytics ile kullanım istatistiklerine izin verin; bu, uygulamayı geliştirmemize yardımcı olur. İzin vermeseniz de uygulama aynı şekilde çalışır.';
+
+  @override
+  String get analyticsReminderAccept => 'İzin ver';
+
+  @override
+  String get analyticsReminderDecline => 'Hayır, teşekkürler';
+
+  @override
   String get reminders => 'Hatırlatıcılar';
 
   @override

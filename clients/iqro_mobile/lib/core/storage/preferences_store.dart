@@ -270,6 +270,13 @@ class PreferencesStore {
   Future<void> writeAnalyticsConsent(String value) =>
       _preferences.setString('iqro_analytics_consent_v1', value);
 
+  /// The one reminder after a refusal (`AnalyticsReminder`), as JSON.
+  String? get analyticsReminder =>
+      _preferences.getString('iqro_analytics_reminder_v1');
+
+  Future<void> writeAnalyticsReminder(String value) =>
+      _preferences.setString('iqro_analytics_reminder_v1', value);
+
   /// Google Play update checks on this device (`app_update_controller.dart`):
   /// the last check, «Позже» and an accepted download, as JSON.
   String? get appUpdateRecord => _preferences.getString('iqro_app_update_v1');

@@ -152,6 +152,162 @@ void main() {
     });
   });
 
+  group('reminder after a refusal', () {
+    var now = DateTime(2026, 11, 21, 9);
+    setUp(() => now = DateTime(2026, 11, 21, 9));
+
+    Future<(AnalyticsController, PreferencesStore, _FakeBackend)> controller([
+      Map<String, Object> values = const {},
+    ]) async {
+      final backend = _FakeBackend();
+      final store = await _store(values);
+      return (
+        AnalyticsController(store, backend, clock: () => now),
+        store,
+        backend,
+      );
+    }
+
+    /// Opens the app on [days] more days, one day apart.
+    void openOn(AnalyticsController controller, int days) {
+      for (var i = 0; i < days; i++) {
+        now = now.add(const Duration(days: 1));
+        controller.noteVisit();
+      }
+    }
+
+    test('the limits are 30 days and 5 days of use', () {
+      expect(analyticsReminderAfterDays, 30);
+      expect(analyticsReminderActiveDays, 5);
+    });
+
+    test('a refusal remembers its day', () async {
+      final (analytics, store, _) = await controller();
+      await analytics.setConsent(AnalyticsConsent.denied);
+      await Future<void>.delayed(Duration.zero);
+      final reminder = AnalyticsReminder.parse(store.analyticsReminder);
+      expect(reminder.declinedOn, '2026-11-21');
+      expect(reminder.days, 1);
+      expect(reminder.done, isFalse);
+      expect(analytics.reminderDue.value, isFalse);
+    });
+
+    test('not before 30 days, however often the app is opened', () async {
+      final (analytics, _, _) = await controller();
+      await analytics.setConsent(AnalyticsConsent.denied);
+      openOn(analytics, 29);
+      expect(analytics.reminderDue.value, isFalse);
+      openOn(analytics, 1);
+      expect(analytics.reminderDue.value, isTrue);
+    });
+
+    test('not with fewer than 5 days of use, however long ago', () async {
+      final (analytics, _, _) = await controller();
+      await analytics.setConsent(AnalyticsConsent.denied);
+      openOn(analytics, 3); // four days with the day of the refusal
+      now = now.add(const Duration(days: 60));
+      // The same day again does not count twice.
+      analytics.noteVisit();
+      analytics.noteVisit();
+      expect(analytics.reminderDue.value, isTrue);
+    });
+
+    test('four days of use are not enough', () async {
+      final (analytics, _, _) = await controller();
+      await analytics.setConsent(AnalyticsConsent.denied);
+      openOn(analytics, 2);
+      now = now.add(const Duration(days: 60));
+      analytics.noteVisit();
+      expect(analytics.reminderDue.value, isFalse);
+    });
+
+    test('a second refusal is final, also after a restart', () async {
+      final (analytics, store, backend) = await controller();
+      await analytics.setConsent(AnalyticsConsent.denied);
+      openOn(analytics, 30);
+      expect(analytics.reminderDue.value, isTrue);
+
+      await analytics.setConsent(AnalyticsConsent.denied);
+      await Future<void>.delayed(Duration.zero);
+      expect(analytics.reminderDue.value, isFalse);
+      expect(store.analyticsConsent, 'denied');
+      expect(backend.calls, isNot(contains('enable')));
+
+      final restarted = AnalyticsController(store, backend, clock: () => now);
+      openOn(restarted, 400);
+      expect(restarted.reminderDue.value, isFalse);
+    });
+
+    test('the reminder waits for an answer across restarts', () async {
+      final (analytics, store, backend) = await controller();
+      await analytics.setConsent(AnalyticsConsent.denied);
+      openOn(analytics, 30);
+      await Future<void>.delayed(Duration.zero);
+      now = now.add(const Duration(days: 1));
+      final restarted = AnalyticsController(store, backend, clock: () => now);
+      expect(restarted.reminderDue.value, isTrue);
+    });
+
+    test('agreeing on the reminder turns statistics on for good', () async {
+      final (analytics, store, backend) = await controller();
+      await analytics.setConsent(AnalyticsConsent.denied);
+      openOn(analytics, 30);
+      await analytics.setConsent(AnalyticsConsent.granted);
+      await Future<void>.delayed(Duration.zero);
+      expect(backend.calls, ['disable', 'enable']);
+      expect(store.analyticsConsent, 'granted');
+      expect(analytics.reminderDue.value, isFalse);
+
+      // Switching it off in Settings later is not asked about again.
+      await analytics.setConsent(AnalyticsConsent.denied);
+      openOn(analytics, 60);
+      expect(analytics.reminderDue.value, isFalse);
+    });
+
+    test('an old refusal without a date counts from the first run', () async {
+      final (analytics, store, _) = await controller({
+        'iqro_analytics_consent_v1': 'denied',
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        AnalyticsReminder.parse(store.analyticsReminder).declinedOn,
+        '2026-11-21',
+      );
+      openOn(analytics, 29);
+      expect(analytics.reminderDue.value, isFalse);
+      openOn(analytics, 1);
+      expect(analytics.reminderDue.value, isTrue);
+    });
+
+    test('nobody who agreed or has not answered is reminded', () async {
+      final (granted, _, _) = await controller({
+        'iqro_analytics_consent_v1': 'granted',
+      });
+      openOn(granted, 60);
+      expect(granted.reminderDue.value, isFalse);
+
+      final (unanswered, store, _) = await controller();
+      openOn(unanswered, 60);
+      expect(unanswered.reminderDue.value, isFalse);
+      expect(store.analyticsReminder, isNull);
+    });
+
+    test(
+      'a refusal in Settings before the reminder restarts the count',
+      () async {
+        final (analytics, _, _) = await controller();
+        await analytics.setConsent(AnalyticsConsent.denied);
+        openOn(analytics, 20);
+        await analytics.setConsent(AnalyticsConsent.granted);
+        await analytics.setConsent(AnalyticsConsent.denied);
+        openOn(analytics, 29);
+        expect(analytics.reminderDue.value, isFalse);
+        openOn(analytics, 1);
+        expect(analytics.reminderDue.value, isTrue);
+      },
+    );
+  });
+
   test('audio_play tells a surah, one ayah and a range apart', () {
     const track = AudioTrack(
       id: 't',
@@ -185,9 +341,11 @@ void main() {
     Future<(_FakeBackend, PreferencesStore)> pump(
       WidgetTester tester, {
       bool configured = true,
+      Map<String, Object> values = const {},
+      Locale locale = const Locale('ru'),
     }) async {
       final backend = _FakeBackend();
-      final store = await _store();
+      final store = await _store(values);
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
@@ -198,7 +356,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: IqroTheme.light(),
-            locale: const Locale('ru'),
+            locale: locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const Scaffold(
@@ -252,6 +410,80 @@ void main() {
       expect(store.analyticsConsent, 'denied');
       expect(backend.calls, isNot(contains('enable')));
     });
+
+    testWidgets('a month after a refusal the card asks once more', (
+      tester,
+    ) async {
+      final (backend, store) = await pump(
+        tester,
+        values: {
+          'iqro_analytics_consent_v1': 'denied',
+          'iqro_analytics_reminder_v1':
+              '{"declinedOn":"2020-01-01","lastDay":"2020-02-01","days":5,"done":false}',
+        },
+      );
+      expect(find.byKey(const ValueKey('analytics-consent')), findsNothing);
+      expect(find.byKey(const ValueKey('analytics-reminder')), findsOneWidget);
+      expect(find.textContaining('Вы пользуетесь IQRO уже месяц'), findsOne);
+      expect(find.text('Политика конфиденциальности'), findsOneWidget);
+      // Nothing is promised or held back.
+      expect(find.textContaining('прогресс'), findsNothing);
+      expect(find.textContaining('курс'), findsNothing);
+
+      await tester.tap(find.text('Нет, спасибо'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('analytics-reminder')), findsNothing);
+      expect(store.analyticsConsent, 'denied');
+      expect(AnalyticsReminder.parse(store.analyticsReminder).done, isTrue);
+      expect(backend.calls, isEmpty);
+      // The switch in Settings stays.
+      expect(
+        find.byKey(const ValueKey('analytics-consent-setting')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('«Разрешить» on the reminder turns statistics on', (
+      tester,
+    ) async {
+      final (backend, store) = await pump(
+        tester,
+        values: {
+          'iqro_analytics_consent_v1': 'denied',
+          'iqro_analytics_reminder_v1':
+              '{"declinedOn":"2020-01-01","lastDay":"2020-02-01","days":5,"done":false}',
+        },
+      );
+      await tester.tap(find.text('Разрешить'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('analytics-reminder')), findsNothing);
+      expect(store.analyticsConsent, 'granted');
+      expect(backend.calls, ['enable']);
+    });
+
+    for (final locale in AppLocalizations.supportedLocales) {
+      testWidgets('the reminder fits a narrow phone in $locale', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(320, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pump(
+          tester,
+          locale: locale,
+          values: {
+            'iqro_analytics_consent_v1': 'denied',
+            'iqro_analytics_reminder_v1':
+                '{"declinedOn":"2020-01-01","lastDay":"2020-02-01","days":5,"done":false}',
+          },
+        );
+        expect(
+          find.byKey(const ValueKey('analytics-reminder')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets('builds without Firebase never ask', (tester) async {
       await pump(tester, configured: false);
