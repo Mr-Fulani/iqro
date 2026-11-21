@@ -1347,6 +1347,10 @@ String recitationWhyText(AppLocalizations l10n, RecitationWhy why) {
     FollowWhy.skipped => l10n.recitationHintSkipped,
     FollowWhy.ghunnah => l10n.recitationHintGhunnah,
     FollowWhy.madd => l10n.recitationHintMadd,
+    // The hidden nun said clearly (the model's own marks for it).
+    FollowWhy.another when why.expected == 'ں' => l10n.recitationHintIkhfa,
+    FollowWhy.another when why.expected == '۾' => l10n.recitationHintIqlab,
+    FollowWhy.another when why.expected == 'ڇ' => l10n.recitationHintQalqalah,
     FollowWhy.another when isVowel(why.expected) && isVowel(why.heard) =>
       l10n.recitationHintVowel(vowel(why.heard), vowel(why.expected)),
     FollowWhy.another when why.expected.isNotEmpty && why.heard.isNotEmpty =>

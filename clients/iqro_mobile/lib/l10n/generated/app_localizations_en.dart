@@ -3807,6 +3807,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'The word was not recognised. Read it again';
 
   @override
+  String get recitationHintIkhfa =>
+      'Ikhfa: the “n” is not said clearly here — hide it in the nose';
+
+  @override
+  String get recitationHintIqlab =>
+      'Iqlab: the “n” before “b” is read as a nasal “m”';
+
+  @override
+  String get recitationHintQalqalah =>
+      'The qalqalah is missing: let the letter bounce';
+
+  @override
   String get recitationUnavailable =>
       'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.';
 

@@ -6660,6 +6660,24 @@ abstract class AppLocalizations {
   /// **'The word was not recognised. Read it again'**
   String get recitationHintUnknown;
 
+  /// No description provided for @recitationHintIkhfa.
+  ///
+  /// In en, this message translates to:
+  /// **'Ikhfa: the “n” is not said clearly here — hide it in the nose'**
+  String get recitationHintIkhfa;
+
+  /// No description provided for @recitationHintIqlab.
+  ///
+  /// In en, this message translates to:
+  /// **'Iqlab: the “n” before “b” is read as a nasal “m”'**
+  String get recitationHintIqlab;
+
+  /// No description provided for @recitationHintQalqalah.
+  ///
+  /// In en, this message translates to:
+  /// **'The qalqalah is missing: let the letter bounce'**
+  String get recitationHintQalqalah;
+
   /// No description provided for @recitationUnavailable.
   ///
   /// In en, this message translates to:

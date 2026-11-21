@@ -1141,6 +1141,9 @@
   "recitationHintGhunnah": "الغنّة قصيرة: أطِل الصوت من الأنف",
   "recitationHintMadd": "المدّ قصير: أطِل الحرف",
   "recitationHintUnknown": "لم أتعرّف على الكلمة. أعد قراءتها",
+  "recitationHintIkhfa": "إخفاء: النون لا تُظهَر هنا، أخفِها بغنّة",
+  "recitationHintIqlab": "إقلاب: النون قبل الباء تُقلَب ميمًا بغنّة",
+  "recitationHintQalqalah": "القلقلة غائبة: أظهِر نبرة الحرف",
   "recitationUnavailable": "التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.",
   "recitationNoArabic": "التعرّف على الكلام في هذا الهاتف لا يدعم العربية.",
   "recitationNoNetwork": "لا يوجد اتصال بخدمة التعرّف على الكلام. تحقق من الإنترنت."

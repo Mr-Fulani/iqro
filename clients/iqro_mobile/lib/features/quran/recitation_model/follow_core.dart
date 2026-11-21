@@ -218,6 +218,9 @@ const _skipSounds = 3; // sounds of a later word that are a word left out
 const _alikeSounds = 5; // … of one that begins as the word expected
 const _backSounds = 6; // … that may be two words read again
 const _pauseFrames = 10; // frames of silence that are a stop
+const _nun = 25;
+const _ikhfa = 39; // ں
+const _iqlab = 40; // ۾
 const _longWord = 9; // sounds of a word that may have two unfit
 const _goodSound = -4.0;
 const _absentSound = -12.0; // a sound the model does not hear at all
@@ -796,12 +799,14 @@ class RecitationFollowCore {
     final expected = passage.sounds[i];
     final letter = expected >= 1 && expected <= 28;
     final vowel = expected >= 32 && expected <= 34;
+    // The nun that is hidden (ikhfa) or turned into a mim (iqlab).
+    final hidden = expected == _ikhfa || expected == _iqlab;
     // A letter must not be heard at all where it is written (the model
-    // half-hears a right one often enough); a short vowel is either
-    // there or not.
-    if (!(letter || vowel) ||
+    // half-hears a right one often enough), nor the hidden nun; a short
+    // vowel is either there or not.
+    if (!(letter || vowel || hidden) ||
         (passage.optional[i] && !strict) ||
-        path.best[i - path.lo] >= (letter ? _absentSound : _goodSound)) {
+        path.best[i - path.lo] >= (vowel ? _goodSound : _absentSound)) {
       return null;
     }
     final at = path.frame[i - path.lo];
@@ -810,8 +815,13 @@ class RecitationFollowCore {
     for (var c = 2; c < recitationClasses; c++) {
       if (lp[row + c] > lp[row + top]) top = c;
     }
-    // A letter for a letter, a short vowel for a short vowel.
-    final same = letter ? top <= 28 : top >= 32 && top <= 34;
+    // A letter for a letter, a short vowel for a short vowel; for the
+    // hidden nun a plain one, said clearly where it is to be hidden.
+    final same = hidden
+        ? top == _nun
+        : letter
+        ? top <= 28
+        : top >= 32 && top <= 34;
     if (!same || top == expected || lp[row + top] < _sureSound) return null;
     // A nun read as a mim or a mim as a nun is the rules' doing.
     if ((expected == 24 && top == 23) || (expected == 23 && top == 24)) {

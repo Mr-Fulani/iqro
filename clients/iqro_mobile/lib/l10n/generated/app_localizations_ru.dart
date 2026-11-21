@@ -3832,6 +3832,17 @@ class AppLocalizationsRu extends AppLocalizations {
       'Слово не распознано. Прочитайте его ещё раз';
 
   @override
+  String get recitationHintIkhfa =>
+      'Ихфа: «н» здесь не читается ясно — скройте его в нос';
+
+  @override
+  String get recitationHintIqlab =>
+      'Икляб: «н» перед «б» читается как «м» в нос';
+
+  @override
+  String get recitationHintQalqalah => 'Калькаля пропущена: дайте букве отзвук';
+
+  @override
   String get recitationUnavailable =>
       'Распознавание речи недоступно: на телефоне нет службы распознавания или микрофон не разрешён.';
 

@@ -3757,6 +3757,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String get recitationHintUnknown => 'Kelime tanınmadı. Tekrar okuyun';
 
   @override
+  String get recitationHintIkhfa =>
+      'İhfa: «n» burada açık okunmaz, genizden gizleyin';
+
+  @override
+  String get recitationHintIqlab =>
+      'İklab: «b»den önceki «n» genizden «m» okunur';
+
+  @override
+  String get recitationHintQalqalah => 'Kalkale yok: harfi titreşimle okuyun';
+
+  @override
   String get recitationUnavailable =>
       'Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.';
 

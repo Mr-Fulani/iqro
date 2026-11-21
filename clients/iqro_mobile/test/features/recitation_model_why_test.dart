@@ -96,6 +96,19 @@ void main() {
         contains('Гунна'),
       );
       expect(recitationWhyText(l10n, why(FollowWhy.madd)), contains('Мадд'));
+      // The model's own marks are not shown: the rule is named.
+      expect(
+        recitationWhyText(l10n, why(FollowWhy.another, 'ں', 'ن')),
+        startsWith('Ихфа'),
+      );
+      expect(
+        recitationWhyText(l10n, why(FollowWhy.another, '۾', 'ن')),
+        startsWith('Икляб'),
+      );
+      expect(
+        recitationWhyText(l10n, why(FollowWhy.another, 'ڇ')),
+        startsWith('Калькаля'),
+      );
       expect(
         recitationWhyText(l10n, why(FollowWhy.unknown)),
         'Слово не распознано. Прочитайте его ещё раз',
@@ -115,6 +128,9 @@ void main() {
           why(FollowWhy.skipped),
           why(FollowWhy.another, 'م', 'ر'),
           why(FollowWhy.another, 'َ', 'ِ'),
+          why(FollowWhy.another, 'ں', 'ن'),
+          why(FollowWhy.another, '۾', 'ن'),
+          why(FollowWhy.another, 'ڇ'),
           why(FollowWhy.ghunnah),
           why(FollowWhy.madd),
           why(FollowWhy.unknown),

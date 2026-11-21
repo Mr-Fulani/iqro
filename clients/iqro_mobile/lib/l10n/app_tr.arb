@@ -1141,6 +1141,9 @@
   "recitationHintGhunnah": "Gunne çok kısa: sesi genizden uzatın",
   "recitationHintMadd": "Med çok kısa: harfi daha uzun çekin",
   "recitationHintUnknown": "Kelime tanınmadı. Tekrar okuyun",
+  "recitationHintIkhfa": "İhfa: «n» burada açık okunmaz, genizden gizleyin",
+  "recitationHintIqlab": "İklab: «b»den önceki «n» genizden «m» okunur",
+  "recitationHintQalqalah": "Kalkale yok: harfi titreşimle okuyun",
   "recitationUnavailable": "Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.",
   "recitationNoArabic": "Bu telefondaki konuşma tanıma Arapçayı desteklemiyor.",
   "recitationNoNetwork": "Konuşma tanıma hizmetine bağlanılamıyor. İnterneti kontrol edin."

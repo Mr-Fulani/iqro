@@ -3772,6 +3772,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get recitationHintUnknown => 'لم أتعرّف على الكلمة. أعد قراءتها';
 
   @override
+  String get recitationHintIkhfa => 'إخفاء: النون لا تُظهَر هنا، أخفِها بغنّة';
+
+  @override
+  String get recitationHintIqlab => 'إقلاب: النون قبل الباء تُقلَب ميمًا بغنّة';
+
+  @override
+  String get recitationHintQalqalah => 'القلقلة غائبة: أظهِر نبرة الحرف';
+
+  @override
   String get recitationUnavailable =>
       'التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.';
 

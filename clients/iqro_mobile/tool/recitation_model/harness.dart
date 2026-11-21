@@ -73,6 +73,22 @@ void main(List<String> args) {
       search:
       for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
         final (start, end) = ayah.spans[w];
+        if (mutate == 'ikhfa') {
+          // A nun said clearly before another letter, as the recording
+          // has it, is written as one to be hidden: a reader's clear nun
+          // where the text has ikhfa.
+          for (var i = start + 1; i + 1 < end; i++) {
+            if (ayah.loose.contains(i) || ayah.loose.contains(i + 1)) continue;
+            if (sounds[i] != 25 || sounds[i - 1] == 25 || sounds[i + 1] == 25) {
+              continue;
+            }
+            if (sounds[i + 1] < 1 || sounds[i + 1] > 28) continue;
+            sounds[i] = 39;
+            changedWord = w;
+            break search;
+          }
+          continue;
+        }
         if (mutate == 'ending') {
           if (w + 1 >= ayah.spans.length) continue;
           for (var i = end - 1; i > start; i--) {
