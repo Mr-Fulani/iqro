@@ -8,9 +8,20 @@ import 'model_session.dart';
 /// What the model follower tells the screen: the place is [word] of
 /// the passage; red when it was left out or read wrongly.
 class ModelPlace {
-  ModelPlace(this.word, {required this.wrong});
+  ModelPlace(
+    this.word, {
+    required this.wrong,
+    this.why = FollowWhy.unknown,
+    this.expected = 0,
+    this.heard = 0,
+  });
   final int word;
   final bool wrong;
+
+  /// With [wrong]: why ([FollowMiss]).
+  final FollowWhy why;
+  final int expected;
+  final int heard;
 }
 
 /// One step, for the harness's measurements: the sound heard when it began
@@ -132,14 +143,28 @@ class RecitationPipeline {
       switch (event) {
         case FollowPlace(:final word):
           events.add(ModelPlace(word, wrong: false));
-        case FollowMiss(:final word):
-          events.add(ModelPlace(word, wrong: true));
+        case FollowMiss(:final word, :final why, :final expected, :final heard):
+          events.add(
+            ModelPlace(
+              word,
+              wrong: true,
+              why: why,
+              expected: expected,
+              heard: heard,
+            ),
+          );
         case FollowHeld(:final place, :final fromFrame, :final toFrame):
           if (_heldShort(place, fromFrame, toFrame)) {
             // Held far too short: the word is to be read again, and what
             // this step heard after it does not count.
             core.sayAgain(place.word);
-            events.add(ModelPlace(place.word, wrong: true));
+            events.add(
+              ModelPlace(
+                place.word,
+                wrong: true,
+                why: place.kind == 2 ? FollowWhy.madd : FollowWhy.ghunnah,
+              ),
+            );
             lastTiming = (
               heard: _stepped / 16000,
               modelMs: modelMs,

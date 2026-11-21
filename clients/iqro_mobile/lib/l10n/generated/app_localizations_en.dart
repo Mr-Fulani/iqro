@@ -3773,6 +3773,40 @@ class AppLocalizationsEn extends AppLocalizations {
       'I can hear you, but the word was not recognised. Read it again';
 
   @override
+  String get recitationHintSkipped => 'A word was left out. Read it';
+
+  @override
+  String recitationHintLetter(String heard, String expected) {
+    return 'Heard “$heard” instead of “$expected”';
+  }
+
+  @override
+  String recitationHintVowel(String heard, String expected) {
+    return 'Another vowel: heard $heard, written $expected';
+  }
+
+  @override
+  String get recitationVowelFatha => 'fatha';
+
+  @override
+  String get recitationVowelKasra => 'kasra';
+
+  @override
+  String get recitationVowelDamma => 'damma';
+
+  @override
+  String get recitationHintGhunnah =>
+      'The ghunnah is too short: hold the nasal sound';
+
+  @override
+  String get recitationHintMadd =>
+      'The madd is too short: hold the vowel longer';
+
+  @override
+  String get recitationHintUnknown =>
+      'The word was not recognised. Read it again';
+
+  @override
   String get recitationUnavailable =>
       'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.';
 

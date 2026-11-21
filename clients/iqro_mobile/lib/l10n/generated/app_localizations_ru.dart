@@ -3798,6 +3798,40 @@ class AppLocalizationsRu extends AppLocalizations {
       'Слышу вас, но слово не распознано. Прочитайте его ещё раз';
 
   @override
+  String get recitationHintSkipped => 'Слово пропущено. Прочитайте его';
+
+  @override
+  String recitationHintLetter(String heard, String expected) {
+    return 'Слышно «$heard» вместо «$expected»';
+  }
+
+  @override
+  String recitationHintVowel(String heard, String expected) {
+    return 'Другая огласовка: слышна $heard, а написана $expected';
+  }
+
+  @override
+  String get recitationVowelFatha => 'фатха';
+
+  @override
+  String get recitationVowelKasra => 'кясра';
+
+  @override
+  String get recitationVowelDamma => 'дамма';
+
+  @override
+  String get recitationHintGhunnah =>
+      'Гунна слишком короткая: потяните звук в нос';
+
+  @override
+  String get recitationHintMadd =>
+      'Мадд слишком короткий: тяните гласную дольше';
+
+  @override
+  String get recitationHintUnknown =>
+      'Слово не распознано. Прочитайте его ещё раз';
+
+  @override
   String get recitationUnavailable =>
       'Распознавание речи недоступно: на телефоне нет службы распознавания или микрофон не разрешён.';
 

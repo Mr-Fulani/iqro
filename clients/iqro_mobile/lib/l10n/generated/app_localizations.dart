@@ -6606,6 +6606,60 @@ abstract class AppLocalizations {
   /// **'I can hear you, but the word was not recognised. Read it again'**
   String get recitationNotRecognised;
 
+  /// No description provided for @recitationHintSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'A word was left out. Read it'**
+  String get recitationHintSkipped;
+
+  /// No description provided for @recitationHintLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'Heard “{heard}” instead of “{expected}”'**
+  String recitationHintLetter(String heard, String expected);
+
+  /// No description provided for @recitationHintVowel.
+  ///
+  /// In en, this message translates to:
+  /// **'Another vowel: heard {heard}, written {expected}'**
+  String recitationHintVowel(String heard, String expected);
+
+  /// No description provided for @recitationVowelFatha.
+  ///
+  /// In en, this message translates to:
+  /// **'fatha'**
+  String get recitationVowelFatha;
+
+  /// No description provided for @recitationVowelKasra.
+  ///
+  /// In en, this message translates to:
+  /// **'kasra'**
+  String get recitationVowelKasra;
+
+  /// No description provided for @recitationVowelDamma.
+  ///
+  /// In en, this message translates to:
+  /// **'damma'**
+  String get recitationVowelDamma;
+
+  /// No description provided for @recitationHintGhunnah.
+  ///
+  /// In en, this message translates to:
+  /// **'The ghunnah is too short: hold the nasal sound'**
+  String get recitationHintGhunnah;
+
+  /// No description provided for @recitationHintMadd.
+  ///
+  /// In en, this message translates to:
+  /// **'The madd is too short: hold the vowel longer'**
+  String get recitationHintMadd;
+
+  /// No description provided for @recitationHintUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The word was not recognised. Read it again'**
+  String get recitationHintUnknown;
+
   /// No description provided for @recitationUnavailable.
   ///
   /// In en, this message translates to:

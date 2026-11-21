@@ -156,8 +156,38 @@ class FollowPlace extends FollowEvent {
 
 /// [word] was left out or said as another: it is written in red and waited on.
 class FollowMiss extends FollowEvent {
-  FollowMiss(this.word);
+  FollowMiss(
+    this.word, {
+    this.why = FollowWhy.unknown,
+    this.expected = 0,
+    this.heard = 0,
+  });
   final int word;
+
+  /// Why, as far as the follower can say; [FollowWhy.unknown] when it
+  /// cannot: a reason made up is worse than none.
+  final FollowWhy why;
+
+  /// With [FollowWhy.another]: the sound written and the sound heard in
+  /// its place (classes of the model).
+  final int expected;
+  final int heard;
+}
+
+/// Why a word is waited on in red.
+enum FollowWhy {
+  /// What was said is not the word: no more can be said of it.
+  unknown,
+
+  /// The reader went on with a later word.
+  skipped,
+
+  /// Another letter or short vowel was heard for sure in a sound's place.
+  another,
+
+  /// A ghunnah all but left out; a madd held half as long as it is to be.
+  ghunnah,
+  madd,
 }
 
 /// A word taken as read has a place whose tajweed may be looked at: its
@@ -375,7 +405,7 @@ class RecitationFollowCore {
             alike ? _alikeSounds : _skipSounds,
             passage.wordEnd[word] - passage.wordStart[word],
           )) {
-        _miss(events);
+        _miss(events, why: FollowWhy.skipped);
         _dropTo(first + from + _lastFrame(path) + 1);
       }
       return events;
@@ -482,16 +512,19 @@ class RecitationFollowCore {
       }
       // Another letter or short vowel heard for sure in a sound's place,
       // or more than one sound that does not fit: said as another.
-      var other = false;
-      for (var i = begin; i < end && !other; i++) {
-        other = _saidAsAnother(
+      int? otherAt;
+      int? otherHeard;
+      for (var i = begin; i < end && otherHeard == null; i++) {
+        otherHeard = _saidAsAnother(
           path,
           i,
           lp,
           from,
           strict: _asReadOn(i, start, end, joinedBefore, joinedAfter),
         );
+        if (otherHeard != null) otherAt = i;
       }
+      final other = otherHeard != null;
       final asAnother = other || bad > _allowedBad(end - start);
       if (asAnother || bad > allowed) {
         // Sounds that do not fit are no mistake while the word may still
@@ -514,7 +547,13 @@ class RecitationFollowCore {
             for (var i = start; began && i < start + 3; i++) {
               began = !_unfit(path, i);
             }
-            _miss(events, first: began);
+            _miss(
+              events,
+              first: began,
+              why: other ? FollowWhy.another : FollowWhy.unknown,
+              expected: other ? passage.sounds[otherAt!] : 0,
+              heard: otherHeard ?? 0,
+            );
           }
           _dropTo(first + from + lastFrame + 1);
         }
@@ -746,8 +785,8 @@ class RecitationFollowCore {
   /// The sound at [i] was said as another: where the path has it the
   /// model is sure of a different letter or short vowel, one that is not
   /// a neighbour of it in the word (a neighbour there means only that
-  /// the sound was not heard).
-  bool _saidAsAnother(
+  /// the sound was not heard). That sound, or null.
+  int? _saidAsAnother(
     _Path path,
     int i,
     Float32List lp,
@@ -763,7 +802,7 @@ class RecitationFollowCore {
     if (!(letter || vowel) ||
         (passage.optional[i] && !strict) ||
         path.best[i - path.lo] >= (letter ? _absentSound : _goodSound)) {
-      return false;
+      return null;
     }
     final at = path.frame[i - path.lo];
     final row = (from + at) * recitationClasses;
@@ -773,19 +812,19 @@ class RecitationFollowCore {
     }
     // A letter for a letter, a short vowel for a short vowel.
     final same = letter ? top <= 28 : top >= 32 && top <= 34;
-    if (!same || top == expected || lp[row + top] < _sureSound) return false;
+    if (!same || top == expected || lp[row + top] < _sureSound) return null;
     // A nun read as a mim or a mim as a nun is the rules' doing.
     if ((expected == 24 && top == 23) || (expected == 23 && top == 24)) {
-      return false;
+      return null;
     }
     for (var k = i - 2; k <= i + 2; k++) {
       if (k == i || k < path.lo || k - path.lo >= path.frame.length) continue;
       final frame = path.frame[k - path.lo];
       if (passage.sounds[k] == top && frame >= 0 && (frame - at).abs() <= 2) {
-        return false;
+        return null;
       }
     }
-    return true;
+    return top;
   }
 
   int _lastFrame(_Path path) {
@@ -810,11 +849,17 @@ class RecitationFollowCore {
     events.add(FollowPlace(word));
   }
 
-  void _miss(List<FollowEvent> events, {bool first = false}) {
+  void _miss(
+    List<FollowEvent> events, {
+    bool first = false,
+    FollowWhy why = FollowWhy.unknown,
+    int expected = 0,
+    int heard = 0,
+  }) {
     if (wrong || (fresh && !first)) return;
     wrong = true;
     _shown = null;
-    events.add(FollowMiss(next));
+    events.add(FollowMiss(next, why: why, expected: expected, heard: heard));
   }
 
   /// Sounds the model hears in these frames, whatever they are.

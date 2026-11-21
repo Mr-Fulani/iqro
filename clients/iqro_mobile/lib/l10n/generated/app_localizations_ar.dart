@@ -3741,6 +3741,37 @@ class AppLocalizationsAr extends AppLocalizations {
       'أسمعك، لكن لم أتعرّف على الكلمة. أعد قراءتها';
 
   @override
+  String get recitationHintSkipped => 'تُرِكت كلمة. اقرأها';
+
+  @override
+  String recitationHintLetter(String heard, String expected) {
+    return 'سُمِع «$heard» بدل «$expected»';
+  }
+
+  @override
+  String recitationHintVowel(String heard, String expected) {
+    return 'حركة أخرى: سُمِعت $heard والمكتوب $expected';
+  }
+
+  @override
+  String get recitationVowelFatha => 'فتحة';
+
+  @override
+  String get recitationVowelKasra => 'كسرة';
+
+  @override
+  String get recitationVowelDamma => 'ضمة';
+
+  @override
+  String get recitationHintGhunnah => 'الغنّة قصيرة: أطِل الصوت من الأنف';
+
+  @override
+  String get recitationHintMadd => 'المدّ قصير: أطِل الحرف';
+
+  @override
+  String get recitationHintUnknown => 'لم أتعرّف على الكلمة. أعد قراءتها';
+
+  @override
   String get recitationUnavailable =>
       'التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.';
 

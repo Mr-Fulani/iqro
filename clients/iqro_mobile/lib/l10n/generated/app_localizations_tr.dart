@@ -3726,6 +3726,37 @@ class AppLocalizationsTr extends AppLocalizations {
       'Sizi duyuyorum ama kelime tanınmadı. Tekrar okuyun';
 
   @override
+  String get recitationHintSkipped => 'Bir kelime atlandı. Onu okuyun';
+
+  @override
+  String recitationHintLetter(String heard, String expected) {
+    return '«$expected» yerine «$heard» duyuldu';
+  }
+
+  @override
+  String recitationHintVowel(String heard, String expected) {
+    return 'Başka hareke: $heard duyuldu, yazılan $expected';
+  }
+
+  @override
+  String get recitationVowelFatha => 'fetha';
+
+  @override
+  String get recitationVowelKasra => 'kesra';
+
+  @override
+  String get recitationVowelDamma => 'damme';
+
+  @override
+  String get recitationHintGhunnah => 'Gunne çok kısa: sesi genizden uzatın';
+
+  @override
+  String get recitationHintMadd => 'Med çok kısa: harfi daha uzun çekin';
+
+  @override
+  String get recitationHintUnknown => 'Kelime tanınmadı. Tekrar okuyun';
+
+  @override
   String get recitationUnavailable =>
       'Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.';
 
