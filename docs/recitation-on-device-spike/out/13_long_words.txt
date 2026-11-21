@@ -1,0 +1,63 @@
+A long word read fast: "tughyanihim" (2:15) would not pass. A Mac, the app's Dart code
+(tool/recitation_model/harness.dart), recordings from everyayah.com. 21.11.2026.
+"before": main after PR #311 (release 1.0.14); "after": a word of nine sounds or more may have two unfit sounds.
+
+# The cause. The table has the word right (طُغيَاانِهِم, eleven sounds). At the reciters' own pace it passes with all
+# eight of them. Read 1.8 times faster it stops two of the eight: the model is unsure of the ط the word begins with
+# (it writes ض or ت as readily) and of the short vowel or the ه of "-him", and a word could have one unfit sound,
+# however long it was. A sound said as another letter for sure still stops the place, as before.
+#   Minshawy, x1.8: ط -4.7, the second kasra of "-him" -4.9 (a sound is unfit under -4.0)
+#   Basfar,   x1.8: ط -4.1, ه -13.3
+
+# 2:15 of eight reciters at 0.8, 1.25, 1.5 and 1.8 of their pace
+before: clean: {recitations: 32, words: 224, words reached: 216, false mistakes: 6}
+  Abdullah_Basfar_192kbps_002015_x1.8.json: misses [(5, 4.0)], reached 6 of 7
+  Alafasy_128kbps_002015_x1.8.json: misses [(3, 2.3)], reached 4 of 7
+  Khaalid_Abdullaah_al-Qahtaanee_192kbps_002015_x1.25.json: misses [(6, 6.4)], reached 7 of 7
+  Khaalid_Abdullaah_al-Qahtaanee_192kbps_002015_x1.5.json: misses [(6, 5.4)], reached 7 of 7
+  Khaalid_Abdullaah_al-Qahtaanee_192kbps_002015_x1.8.json: misses [(3, 2.4)], reached 4 of 7
+  Minshawy_Murattal_128kbps_002015_x1.8.json: misses [(5, 4.4)], reached 6 of 7
+after:  clean: {recitations: 32, words: 224, words reached: 221, false mistakes: 2}
+  Alafasy_128kbps_002015_x1.8.json: misses [(3, 2.3)], reached 4 of 7
+  Khaalid_Abdullaah_al-Qahtaanee_192kbps_002015_x1.5.json: misses [(6, 5.4)], reached 7 of 7
+
+# The word elsewhere: 2:15, 6:110, 7:186, 10:11, 23:75 of eight reciters at their own pace
+before: clean: {recitations: 40, words: 472, words reached: 448, false mistakes: 11}
+after:  clean: {recitations: 40, words: 472, words reached: 455, false mistakes: 10}
+# (no stop is on the word itself, before or after; the stops left are on other words)
+
+# 36 recitations of whole surahs read 1.5 times faster
+before: clean: {recitations: 36, words: 822, words reached: 702, false mistakes: 5}
+after:  clean: {recitations: 36, words: 822, words reached: 726, false mistakes: 4}
+
+# The same 36 at their own pace, 24 with an ayah cut out, 84 with a word cut out
+## before
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 7, lens went on past the word left out: 7, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 744, false mistakes: 4, lens before the word began: 2}
+word: {recitations: 84, noticed on the right word: 76, more than one mistake: 17, lens went on past the word left out: 34, false mistake before it: 5}
+## after
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 7, lens went on past the word left out: 7, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 744, false mistakes: 4, lens before the word began: 2}
+word: {recitations: 84, noticed on the right word: 76, more than one mistake: 18, lens went on past the word left out: 34, false mistake before it: 5}
+
+# 174 single ayat as recited (whole), 73 with a ghunnah or a madd cut short (cut)
+## before
+cut: {recitations: 73, words: 302, false stops: 35, words reached: 237, rule 0: cut: 65, red stops elsewhere: 4, rule 0: red stop: 27, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}
+whole: {recitations: 174, words: 657, false stops: 2, words reached: 627, places of the three rules: 83}
+## after
+cut: {recitations: 73, words: 302, false stops: 35, words reached: 237, rule 0: cut: 65, red stops elsewhere: 4, rule 0: red stop: 27, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}
+whole: {recitations: 174, words: 657, false stops: 2, words reached: 627, places of the three rules: 83}
+
+# The 174 with one short vowel of the text changed (--mutate=haraka), then one letter (--mutate=letter)
+## haraka, before
+whole: {recitations: 174, sound changed: 162, not noticed: 66, red stops on other words: 1, red stop on the word: 90, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, word not reached: 6}
+## haraka, after
+whole: {recitations: 174, sound changed: 162, not noticed: 66, red stops on other words: 1, red stop on the word: 90, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, word not reached: 6}
+## letter, before
+whole: {recitations: 174, sound changed: 162, red stop on the word: 123, red stops on other words: 1, not noticed: 33, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, word not reached: 6}
+## letter, after
+whole: {recitations: 174, sound changed: 162, red stop on the word: 123, red stops on other words: 1, not noticed: 33, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, word not reached: 6}
+
+# A note on the numbers of main, not of this change: a short vowel changed is noticed 90 times of 162 now; before
+# PR #307 (out/10_false_stops.txt) it was 143 of 150. A word's ending is said otherwise when the reader stops on
+# it, so since PR #307 the sounds of an ending are not asked for, and a vowel changed there is not noticed.

@@ -3794,6 +3794,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не слышу. Читайте вслух, ближе к телефону';
 
   @override
+  String get recitationNotRecognised =>
+      'Слышу вас, но слово не распознано. Прочитайте его ещё раз';
+
+  @override
   String get recitationUnavailable =>
       'Распознавание речи недоступно: на телефоне нет службы распознавания или микрофон не разрешён.';
 

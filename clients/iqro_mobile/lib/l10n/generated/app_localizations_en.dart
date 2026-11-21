@@ -3769,6 +3769,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'I can\'t hear you. Read aloud, closer to the phone';
 
   @override
+  String get recitationNotRecognised =>
+      'I can hear you, but the word was not recognised. Read it again';
+
+  @override
   String get recitationUnavailable =>
       'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.';
 

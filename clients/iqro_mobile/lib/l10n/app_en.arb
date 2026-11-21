@@ -1293,6 +1293,7 @@
   "recitationListening": "Listening…",
   "recitationNotHearing": "I can't hear you. Read aloud and check the internet",
   "recitationNotHearingOnDevice": "I can't hear you. Read aloud, closer to the phone",
+  "recitationNotRecognised": "I can hear you, but the word was not recognised. Read it again",
   "recitationUnavailable": "Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.",
   "recitationNoArabic": "Speech recognition on this phone does not support Arabic.",
   "recitationNoNetwork": "No connection to the speech recognition service. Check the internet."
