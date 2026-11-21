@@ -125,6 +125,44 @@ void main(List<String> args) {
         ayah.loose,
         ayah.added,
       );
+      if (mutate == 'qalqala') {
+        // A qalqalah is written where the recording has none: after a
+        // letter with no vowel that is not one of "qutb jad", inside a
+        // word. A reader who leaves a qalqalah out.
+        const bounce = <int>{21, 16, 2, 5, 8};
+        changedWord = null;
+        ayahs[0] = ayah;
+        search:
+        for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
+          final (start, end) = ayah.spans[w];
+          for (var i = start + 1; i + 1 < end; i++) {
+            final c = ayah.sounds[i];
+            final next = ayah.sounds[i + 1];
+            if (c < 1 || c > 28 || next < 1 || next > 28 || c == next) continue;
+            if (bounce.contains(c) || ayah.sounds[i - 1] == c) continue;
+            if (ayah.loose.contains(i) || ayah.loose.contains(i + 1)) continue;
+            int moved(int at) => at > i ? at + 1 : at;
+            ayahs[0] = ExpectedAyah(
+              Uint8List.fromList(<int>[
+                ...ayah.sounds.sublist(0, i + 1),
+                38,
+                ...ayah.sounds.sublist(i + 1),
+              ]),
+              <(int, int)>[
+                for (final (s, e) in ayah.spans) (moved(s), e > i ? e + 1 : e),
+              ],
+              <(int, int, int, int, int)>[
+                for (final (kind, s, e, word, golden) in ayah.units)
+                  (kind, moved(s), e > i ? e + 1 : e, word, golden),
+              ],
+              ayah.loose.map(moved).toSet(),
+              ayah.added.map(moved).toSet(),
+            );
+            changedWord = w;
+            break search;
+          }
+        }
+      }
     }
     final pipeline = RecitationPipeline(
       session: session,

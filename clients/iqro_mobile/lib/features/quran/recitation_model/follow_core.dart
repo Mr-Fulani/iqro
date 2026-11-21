@@ -218,6 +218,7 @@ const _skipSounds = 3; // sounds of a later word that are a word left out
 const _alikeSounds = 5; // … of one that begins as the word expected
 const _backSounds = 6; // … that may be two words read again
 const _pauseFrames = 10; // frames of silence that are a stop
+const _qalqalah = 38; // ڇ
 const _nun = 25;
 const _ikhfa = 39; // ں
 const _iqlab = 40; // ۾
@@ -526,6 +527,24 @@ class RecitationFollowCore {
           strict: _asReadOn(i, start, end, joinedBefore, joinedAfter),
         );
         if (otherHeard != null) otherAt = i;
+      }
+      // A qalqalah that is not there at all: the echo a letter of "qutb
+      // jad" has when it stands with no vowel. Not at the end of an ayah,
+      // where it is there only if the reader stops.
+      if (otherHeard == null) {
+        final ayahEnds =
+            word + 1 >= passage.words ||
+            passage.ayahOf[word + 1] != passage.ayahOf[word];
+        for (var i = begin; i < end; i++) {
+          if (passage.sounds[i] != _qalqalah || passage.optional[i]) continue;
+          if (ayahEnds && i + 1 == end) continue;
+          final at = path.frame[i - path.lo];
+          if (at >= 0 && path.best[i - path.lo] < _absentSound) {
+            otherAt = i;
+            otherHeard = 0;
+            break;
+          }
+        }
       }
       final other = otherHeard != null;
       final asAnother = other || bad > _allowedBad(end - start);
