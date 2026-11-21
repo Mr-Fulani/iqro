@@ -59,7 +59,7 @@ void main(List<String> args) {
       for (final a in (meta['ayahs'] as List).cast<int>())
         ExpectedAyah.fromJson(surah[a - 1], symbols)!,
     ];
-    // --mutate=haraka|letter: one sound of the text is changed to another,
+    // --mutate=haraka|letter|ending: one sound of the text is changed to another,
     // so a right recitation differs from it by that sound, as a reader's
     // slip would.
     int? changedWord;
@@ -67,10 +67,26 @@ void main(List<String> args) {
       final ayah = ayahs.first;
       final sounds = Uint8List.fromList(ayah.sounds);
       const long = <int, int>{32: 29, 34: 30, 33: 31};
+      // A sound that reading on always has (one a stop changes is not
+      // asked for after a stop). With "ending": the last short vowel of a
+      // word that another word follows, which only a stop leaves unsaid.
       search:
       for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
         final (start, end) = ayah.spans[w];
+        if (mutate == 'ending') {
+          if (w + 1 >= ayah.spans.length) continue;
+          for (var i = end - 1; i > start; i--) {
+            if (ayah.added.contains(i)) continue;
+            final c = sounds[i];
+            if (c < 32 || c > 34) break;
+            sounds[i] = const <int, int>{32: 34, 34: 33, 33: 32}[c]!;
+            changedWord = w;
+            break search;
+          }
+          continue;
+        }
         for (var i = start + 1; i < end; i++) {
+          if (ayah.loose.contains(i)) continue;
           final c = sounds[i];
           final fits = mutate == 'haraka'
               ? c >= 32 && c <= 34 && (i + 1 >= end || sounds[i + 1] != long[c])
@@ -86,7 +102,13 @@ void main(List<String> args) {
           break search;
         }
       }
-      ayahs[0] = ExpectedAyah(sounds, ayah.spans, ayah.units, ayah.loose);
+      ayahs[0] = ExpectedAyah(
+        sounds,
+        ayah.spans,
+        ayah.units,
+        ayah.loose,
+        ayah.added,
+      );
     }
     final pipeline = RecitationPipeline(
       session: session,

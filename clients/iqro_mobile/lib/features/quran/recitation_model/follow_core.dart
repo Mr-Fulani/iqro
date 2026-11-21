@@ -169,6 +169,8 @@ class FollowHeld extends FollowEvent {
   final int toFrame;
 }
 
+// The long vowel each short one is written as when it is held: َ ا, ُ ۥ, ِ ۦ.
+const _heldAs = <int, int>{32: 29, 33: 31, 34: 30};
 const _floor = -10.0; // the most a sound that does not fit costs
 const _otherSound = -6.0; // a frame of speech that is not the text
 const _skipPrice = -10.0; // going on with a later word
@@ -179,6 +181,7 @@ const _ahead = 70; // sounds of the text looked at ahead of the place
 // out.
 const _unsaidPrice = -10.0;
 const _maxLoose = 7; // sounds in a row that need not be heard
+const _overFrames = 50; // frames after which a word is over, whatever follows
 const _settle = 10; // frames a word has been over before it is final
 const _stallSounds = 10; // sounds of other speech that are a mistake
 const _skipSounds = 3; // sounds of a later word that are a word left out
@@ -432,7 +435,14 @@ class RecitationFollowCore {
       }
       final asAnother = other || bad > _allowedBad(end - start);
       if (asAnother || bad > allowed) {
-        if (word == next && lastFrame <= last - _settle) {
+        // Sounds that do not fit are no mistake while the word may still
+        // be going on: read slowly, the model hears the middle of a word
+        // wrongly for a while and puts it right as more of it comes.
+        // (Another letter heard for sure is one at once: waiting for it
+        // too lets a changed vowel by now and then.)
+        if (word == next &&
+            lastFrame <= last - _settle &&
+            (other || _over(path, lp, from, end, lastFrame, last))) {
           trace?.call('rejected word=$word other=$other bad=$bad');
           _sound = start;
           _bad = 0;
@@ -508,6 +518,35 @@ class RecitationFollowCore {
       _dropTo(_now - 4);
     }
     return events;
+  }
+
+  /// The word whose sounds end at [end] of the passage, the last of them
+  /// on frame [lastFrame], is over: the reader went silent after it, the
+  /// next word has begun, or a second has gone by.
+  bool _over(
+    _Path path,
+    Float32List lp,
+    int from,
+    int end,
+    int lastFrame,
+    int last,
+  ) {
+    if (lastFrame <= last - _overFrames) return true;
+    var silent = 0;
+    for (var t = lastFrame + 1; t <= last; t++) {
+      // What the microphone's silence is written as (hushSilence).
+      final row = (from + t) * recitationClasses;
+      silent = lp[row] == 0 && lp[row + 1] == -20 ? silent + 1 : 0;
+      if (silent >= _settle) return true;
+    }
+    var begun = 0;
+    for (var i = end; i - path.lo < path.frame.length && i < end + 6; i++) {
+      if (path.frame[i - path.lo] > lastFrame &&
+          path.best[i - path.lo] >= _goodSound) {
+        begun += 1;
+      }
+    }
+    return begun >= 2;
   }
 
   /// The sound at [i] of the passage was not heard where the path has it.
@@ -800,13 +839,12 @@ class RecitationFollowCore {
       final row = (from + t) * recitationClasses;
       // A frame on which the model hears a sound, however unsure of it,
       // is no silence: passing over it costs what a wrong sound does.
-      var heard = false;
+      // What the model writes on the frame; 0 is nothing.
+      var top = 0;
       for (var c = 1; c < recitationClasses; c++) {
-        if (lp[row + c] > lp[row]) {
-          heard = true;
-          break;
-        }
+        if (lp[row + c] > lp[row + top]) top = c;
       }
+      final heard = top != 0;
       final blank = heard ? _floor : math.max(lp[row], _floor);
       final at = t * states;
       nextScore[0] = score[0] + blank;
@@ -871,7 +909,25 @@ class RecitationFollowCore {
             source = before + 1;
           }
         }
-        nextScore[symbol] = best + math.max(lp[row + sounds[lo + i]], _floor);
+        // A short vowel held is written by the model as its long one
+        // ("bi-i-him" read slowly): more of the same sound, not speech
+        // that the text does not have.
+        // Not where the text has that long vowel after it: there it is
+        // the long vowel's own sound, whose length is looked at.
+        var said = lp[row + sounds[lo + i]];
+        final held = _heldAs[sounds[lo + i]];
+        // And only on a frame where the long vowel is what the model
+        // writes: a guess at one, on a nasal that is held, is not it.
+        // Nor a sound that need not be said at all (the vowel a word is
+        // begun with after a stop): it would take the long vowels of the
+        // word before for its own.
+        if (held != null &&
+            top == held &&
+            !optional[lo + i] &&
+            (lo + i + 1 >= sounds.length || sounds[lo + i + 1] != held)) {
+          said = lp[row + held];
+        }
+        nextScore[symbol] = best + math.max(said, _floor);
         back[at + symbol] = source;
         if (score[after] >= score[symbol]) {
           nextScore[after] = score[after] + blank;

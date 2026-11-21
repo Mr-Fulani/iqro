@@ -3722,6 +3722,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Sizi duyamıyorum. Sesli okuyun, telefona yaklaşın';
 
   @override
+  String get recitationNotRecognised =>
+      'Sizi duyuyorum ama kelime tanınmadı. Tekrar okuyun';
+
+  @override
   String get recitationUnavailable =>
       'Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.';
 
