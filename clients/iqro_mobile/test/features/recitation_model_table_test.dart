@@ -130,7 +130,14 @@ void main() {
     );
     // "kaf ha ya ayn sad", "ayn sin qaf": the ayn's long "y" is a madd of
     // four or six counts, not a ghunnah that may be held too short.
-    expect(ayah(19, 1).units, isEmpty);
-    expect(ayah(42, 2).units, isEmpty);
+    // (Kinds 0 and 1 are the ghunnah and the idgham with ghunnah; nor is
+    // the long "y" a letter with a shaddah, kind 3.)
+    for (final units in <List<(int, int, int, int, int)>>[
+      ayah(19, 1).units,
+      ayah(42, 2).units,
+    ]) {
+      expect(units.where((unit) => unit.$1 <= 1), isEmpty);
+      expect(units.where((unit) => unit.$1 == 3 && unit.$5 != 2), isEmpty);
+    }
   });
 }

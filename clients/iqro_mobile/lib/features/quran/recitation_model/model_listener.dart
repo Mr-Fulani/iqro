@@ -58,6 +58,9 @@ class ModelRecitationListener implements RecitationListener {
   /// read wrongly.
   final void Function(int word, bool wrong) onPlace;
 
+  /// Why the word waited on in red is waited on; null while none is.
+  final hint = ValueNotifier<RecitationWhy?>(null);
+
   @override
   ValueChanged<String> get onHeard => (_) {};
 
@@ -105,8 +108,11 @@ class ModelRecitationListener implements RecitationListener {
           _toWorker = port;
         case bool ok:
           if (!ready.isCompleted) ready.complete(ok);
-        case (int word, bool wrong):
+        case (int word, bool wrong, int why, String expected, String heard):
           if (_disposed) return;
+          hint.value = wrong
+              ? (why: FollowWhy.values[why], expected: expected, heard: heard)
+              : null;
           _lastPlace = _clock.elapsedMilliseconds;
           ear.value = (heard: words[word], deaf: false, trouble: null);
           onPlace(word, wrong);
@@ -169,7 +175,10 @@ class ModelRecitationListener implements RecitationListener {
   }
 
   /// Reading starts from this word.
-  void moveTo(int word) => _toWorker?.send(word);
+  void moveTo(int word) {
+    hint.value = null;
+    _toWorker?.send(word);
+  }
 
   /// Turns the microphone off and lets the model's memory go.
   @override
@@ -200,11 +209,17 @@ class ModelRecitationListener implements RecitationListener {
     _disposed = true;
     unawaited(stop());
     ear.dispose();
+    hint.dispose();
   }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+/// Why a word is waited on in red, for the line under the text: with
+/// [FollowWhy.another], the sound written and the sound heard, as the
+/// model writes them (a letter, or a short vowel's mark).
+typedef RecitationWhy = ({FollowWhy why, String expected, String heard});
 
 /// Sounds in eight seconds that are a reader reading: fewer are a room's
 /// noise or a word now and then.
@@ -279,7 +294,14 @@ void _work(
     scheduled = false;
     if (!pipeline.due) return;
     for (final event in pipeline.step()) {
-      out.send((event.word, event.wrong));
+      String symbol(int sound) => sound > 0 ? symbols[sound - 1] : '';
+      out.send((
+        event.word,
+        event.wrong,
+        event.why.index,
+        symbol(event.expected),
+        symbol(event.heard),
+      ));
       placed = pipeline.frames;
     }
     // Twice a second: whether the reader is heard since the last word

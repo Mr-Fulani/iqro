@@ -31,7 +31,9 @@ class ExpectedAyah {
   final List<(int, int)> spans;
 
   /// The places remarked on: kind (0 ghunnah, 1 idgham with ghunnah,
-  /// 2 madd muttasil), start, end, word, counts expected.
+  /// 2 madd muttasil, 3 a letter with a shaddah, 4 a natural madd, 5 a
+  /// clear nun before a throat letter), start, end, word, counts
+  /// expected.
   final List<(int, int, int, int, int)> units;
 
   /// The sounds of [sounds] that need not be heard: those a word has only
@@ -156,8 +158,43 @@ class FollowPlace extends FollowEvent {
 
 /// [word] was left out or said as another: it is written in red and waited on.
 class FollowMiss extends FollowEvent {
-  FollowMiss(this.word);
+  FollowMiss(
+    this.word, {
+    this.why = FollowWhy.unknown,
+    this.expected = 0,
+    this.heard = 0,
+  });
   final int word;
+
+  /// Why, as far as the follower can say; [FollowWhy.unknown] when it
+  /// cannot: a reason made up is worse than none.
+  final FollowWhy why;
+
+  /// With [FollowWhy.another]: the sound written and the sound heard in
+  /// its place (classes of the model).
+  final int expected;
+  final int heard;
+}
+
+/// Why a word is waited on in red.
+enum FollowWhy {
+  /// What was said is not the word: no more can be said of it.
+  unknown,
+
+  /// The reader went on with a later word.
+  skipped,
+
+  /// Another letter or short vowel was heard for sure in a sound's place.
+  another,
+
+  /// A ghunnah all but left out; a madd held half as long as it is to be.
+  ghunnah,
+  madd,
+
+  /// A letter with a shaddah said once; a nun held where it is said
+  /// clearly and short (izhar).
+  shaddah,
+  izhar,
 }
 
 /// A word taken as read has a place whose tajweed may be looked at: its
@@ -188,6 +225,10 @@ const _skipSounds = 3; // sounds of a later word that are a word left out
 const _alikeSounds = 5; // … of one that begins as the word expected
 const _backSounds = 6; // … that may be two words read again
 const _pauseFrames = 10; // frames of silence that are a stop
+const _qalqalah = 38; // ڇ
+const _nun = 25;
+const _ikhfa = 39; // ں
+const _iqlab = 40; // ۾
 const _longWord = 9; // sounds of a word that may have two unfit
 const _goodSound = -4.0;
 const _absentSound = -12.0; // a sound the model does not hear at all
@@ -375,7 +416,7 @@ class RecitationFollowCore {
             alike ? _alikeSounds : _skipSounds,
             passage.wordEnd[word] - passage.wordStart[word],
           )) {
-        _miss(events);
+        _miss(events, why: FollowWhy.skipped);
         _dropTo(first + from + _lastFrame(path) + 1);
       }
       return events;
@@ -482,16 +523,37 @@ class RecitationFollowCore {
       }
       // Another letter or short vowel heard for sure in a sound's place,
       // or more than one sound that does not fit: said as another.
-      var other = false;
-      for (var i = begin; i < end && !other; i++) {
-        other = _saidAsAnother(
+      int? otherAt;
+      int? otherHeard;
+      for (var i = begin; i < end && otherHeard == null; i++) {
+        otherHeard = _saidAsAnother(
           path,
           i,
           lp,
           from,
           strict: _asReadOn(i, start, end, joinedBefore, joinedAfter),
         );
+        if (otherHeard != null) otherAt = i;
       }
+      // A qalqalah that is not there at all: the echo a letter of "qutb
+      // jad" has when it stands with no vowel. Not at the end of an ayah,
+      // where it is there only if the reader stops.
+      if (otherHeard == null) {
+        final ayahEnds =
+            word + 1 >= passage.words ||
+            passage.ayahOf[word + 1] != passage.ayahOf[word];
+        for (var i = begin; i < end; i++) {
+          if (passage.sounds[i] != _qalqalah || passage.optional[i]) continue;
+          if (ayahEnds && i + 1 == end) continue;
+          final at = path.frame[i - path.lo];
+          if (at >= 0 && path.best[i - path.lo] < _absentSound) {
+            otherAt = i;
+            otherHeard = 0;
+            break;
+          }
+        }
+      }
+      final other = otherHeard != null;
       final asAnother = other || bad > _allowedBad(end - start);
       if (asAnother || bad > allowed) {
         // Sounds that do not fit are no mistake while the word may still
@@ -514,7 +576,13 @@ class RecitationFollowCore {
             for (var i = start; began && i < start + 3; i++) {
               began = !_unfit(path, i);
             }
-            _miss(events, first: began);
+            _miss(
+              events,
+              first: began,
+              why: other ? FollowWhy.another : FollowWhy.unknown,
+              expected: other ? passage.sounds[otherAt!] : 0,
+              heard: otherHeard ?? 0,
+            );
           }
           _dropTo(first + from + lastFrame + 1);
         }
@@ -746,8 +814,8 @@ class RecitationFollowCore {
   /// The sound at [i] was said as another: where the path has it the
   /// model is sure of a different letter or short vowel, one that is not
   /// a neighbour of it in the word (a neighbour there means only that
-  /// the sound was not heard).
-  bool _saidAsAnother(
+  /// the sound was not heard). That sound, or null.
+  int? _saidAsAnother(
     _Path path,
     int i,
     Float32List lp,
@@ -757,13 +825,15 @@ class RecitationFollowCore {
     final expected = passage.sounds[i];
     final letter = expected >= 1 && expected <= 28;
     final vowel = expected >= 32 && expected <= 34;
+    // The nun that is hidden (ikhfa) or turned into a mim (iqlab).
+    final hidden = expected == _ikhfa || expected == _iqlab;
     // A letter must not be heard at all where it is written (the model
-    // half-hears a right one often enough); a short vowel is either
-    // there or not.
-    if (!(letter || vowel) ||
+    // half-hears a right one often enough), nor the hidden nun; a short
+    // vowel is either there or not.
+    if (!(letter || vowel || hidden) ||
         (passage.optional[i] && !strict) ||
-        path.best[i - path.lo] >= (letter ? _absentSound : _goodSound)) {
-      return false;
+        path.best[i - path.lo] >= (vowel ? _goodSound : _absentSound)) {
+      return null;
     }
     final at = path.frame[i - path.lo];
     final row = (from + at) * recitationClasses;
@@ -771,21 +841,26 @@ class RecitationFollowCore {
     for (var c = 2; c < recitationClasses; c++) {
       if (lp[row + c] > lp[row + top]) top = c;
     }
-    // A letter for a letter, a short vowel for a short vowel.
-    final same = letter ? top <= 28 : top >= 32 && top <= 34;
-    if (!same || top == expected || lp[row + top] < _sureSound) return false;
+    // A letter for a letter, a short vowel for a short vowel; for the
+    // hidden nun a plain one, said clearly where it is to be hidden.
+    final same = hidden
+        ? top == _nun
+        : letter
+        ? top <= 28
+        : top >= 32 && top <= 34;
+    if (!same || top == expected || lp[row + top] < _sureSound) return null;
     // A nun read as a mim or a mim as a nun is the rules' doing.
     if ((expected == 24 && top == 23) || (expected == 23 && top == 24)) {
-      return false;
+      return null;
     }
     for (var k = i - 2; k <= i + 2; k++) {
       if (k == i || k < path.lo || k - path.lo >= path.frame.length) continue;
       final frame = path.frame[k - path.lo];
       if (passage.sounds[k] == top && frame >= 0 && (frame - at).abs() <= 2) {
-        return false;
+        return null;
       }
     }
-    return true;
+    return top;
   }
 
   int _lastFrame(_Path path) {
@@ -810,11 +885,17 @@ class RecitationFollowCore {
     events.add(FollowPlace(word));
   }
 
-  void _miss(List<FollowEvent> events, {bool first = false}) {
+  void _miss(
+    List<FollowEvent> events, {
+    bool first = false,
+    FollowWhy why = FollowWhy.unknown,
+    int expected = 0,
+    int heard = 0,
+  }) {
     if (wrong || (fresh && !first)) return;
     wrong = true;
     _shown = null;
-    events.add(FollowMiss(next));
+    events.add(FollowMiss(next, why: why, expected: expected, heard: heard));
   }
 
   /// Sounds the model hears in these frames, whatever they are.

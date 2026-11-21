@@ -6606,6 +6606,90 @@ abstract class AppLocalizations {
   /// **'I can hear you, but the word was not recognised. Read it again'**
   String get recitationNotRecognised;
 
+  /// No description provided for @recitationHintSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'A word was left out. Read it'**
+  String get recitationHintSkipped;
+
+  /// No description provided for @recitationHintLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'Heard “{heard}” instead of “{expected}”'**
+  String recitationHintLetter(String heard, String expected);
+
+  /// No description provided for @recitationHintVowel.
+  ///
+  /// In en, this message translates to:
+  /// **'Another vowel: heard {heard}, written {expected}'**
+  String recitationHintVowel(String heard, String expected);
+
+  /// No description provided for @recitationVowelFatha.
+  ///
+  /// In en, this message translates to:
+  /// **'fatha'**
+  String get recitationVowelFatha;
+
+  /// No description provided for @recitationVowelKasra.
+  ///
+  /// In en, this message translates to:
+  /// **'kasra'**
+  String get recitationVowelKasra;
+
+  /// No description provided for @recitationVowelDamma.
+  ///
+  /// In en, this message translates to:
+  /// **'damma'**
+  String get recitationVowelDamma;
+
+  /// No description provided for @recitationHintGhunnah.
+  ///
+  /// In en, this message translates to:
+  /// **'The ghunnah is too short: hold the nasal sound'**
+  String get recitationHintGhunnah;
+
+  /// No description provided for @recitationHintMadd.
+  ///
+  /// In en, this message translates to:
+  /// **'The madd is too short: hold the vowel longer'**
+  String get recitationHintMadd;
+
+  /// No description provided for @recitationHintUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The word was not recognised. Read it again'**
+  String get recitationHintUnknown;
+
+  /// No description provided for @recitationHintIkhfa.
+  ///
+  /// In en, this message translates to:
+  /// **'Ikhfa: the “n” is not said clearly here — hide it in the nose'**
+  String get recitationHintIkhfa;
+
+  /// No description provided for @recitationHintIqlab.
+  ///
+  /// In en, this message translates to:
+  /// **'Iqlab: the “n” before “b” is read as a nasal “m”'**
+  String get recitationHintIqlab;
+
+  /// No description provided for @recitationHintQalqalah.
+  ///
+  /// In en, this message translates to:
+  /// **'The qalqalah is missing: let the letter bounce'**
+  String get recitationHintQalqalah;
+
+  /// No description provided for @recitationHintShaddah.
+  ///
+  /// In en, this message translates to:
+  /// **'Shaddah: the letter is not doubled'**
+  String get recitationHintShaddah;
+
+  /// No description provided for @recitationHintIzhar.
+  ///
+  /// In en, this message translates to:
+  /// **'Izhar: the “n” is said short, not held'**
+  String get recitationHintIzhar;
+
   /// No description provided for @recitationUnavailable.
   ///
   /// In en, this message translates to:
