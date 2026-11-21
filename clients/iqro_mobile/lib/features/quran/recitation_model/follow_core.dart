@@ -187,6 +187,7 @@ const _stallSounds = 10; // sounds of other speech that are a mistake
 const _skipSounds = 3; // sounds of a later word that are a word left out
 const _alikeSounds = 5; // … of one that begins as the word expected
 const _backSounds = 6; // … that may be two words read again
+const _pauseFrames = 10; // frames of silence that are a stop
 const _longWord = 9; // sounds of a word that may have two unfit
 const _goodSound = -4.0;
 const _absentSound = -12.0; // a sound the model does not hear at all
@@ -379,6 +380,8 @@ class RecitationFollowCore {
       }
       return events;
     }
+    // The frame of the last sound heard of the word before, in this step.
+    var previousFrame = -1;
     while (word < passage.words) {
       if (passage.silent(word)) {
         word += 1;
@@ -396,6 +399,7 @@ class RecitationFollowCore {
       // one that was, or with the word's end.
       var passed = 0;
       int? heard;
+      var firstFrame = -1;
       for (var i = begin; i <= end; i++) {
         if (i == end) {
           said += passed;
@@ -410,9 +414,58 @@ class RecitationFollowCore {
         said += passed + 1;
         passed = 0;
         heard = i;
+        if (firstFrame < 0) firstFrame = at;
         lastFrame = at;
-        if (_unfit(path, i)) bad += 1;
       }
+      // How the word's ends are to sound: as a stop has them only where
+      // the reader did stop. A word read on from, or on to, has the
+      // sounds of reading on, and another short vowel there is a mistake
+      // as anywhere.
+      final whole = begin + said >= end;
+      final joinedBefore =
+          whole &&
+          !fresh &&
+          begin == start &&
+          firstFrame >= 0 &&
+          !_silent(lp, from, word == next ? -1 : previousFrame, firstFrame);
+      // Null while it cannot be told yet: the word's last sound is still
+      // held, or the silence after it is short so far.
+      final stopped = whole && lastFrame >= 0 && heard != null
+          ? _stoppedAfter(
+              lp,
+              from,
+              lastFrame,
+              last,
+              <int>{
+                // The next word begun; more of this word itself is not it.
+                for (var i = end; i < end + 3 && i < passage.sounds.length; i++)
+                  passage.sounds[i],
+              }..removeAll(<int>[
+                for (var i = heard; i < end; i++) passage.sounds[i],
+              ]),
+            )
+          : null;
+      final joinedAfter = stopped == false;
+      // Final only once it is known, where it matters: the word has an
+      // ending that a stop changes. Not for long: other speech after the
+      // word is neither a stop nor the next word.
+      var waiting = false;
+      if (stopped == null && lastFrame > last - 2 * _settle) {
+        for (var i = end - 1; i >= start && !waiting; i--) {
+          if (!passage.optional[i]) break;
+          waiting = passage.own[i];
+        }
+      }
+      for (var i = begin; i < begin + said; i++) {
+        final strict = _asReadOn(i, start, end, joinedBefore, joinedAfter);
+        if (path.frame[i - path.lo] < 0) {
+          // Passed over: unsaid, where reading on has it.
+          if (strict && !_lastVowel(i)) bad += 1;
+        } else if (_unfit(path, i, strict: strict)) {
+          bad += 1;
+        }
+      }
+      if (lastFrame >= 0) previousFrame = lastFrame;
       // The first word after silence has no word before it to vouch for
       // it: its first sound must be there.
       final allowed =
@@ -431,7 +484,13 @@ class RecitationFollowCore {
       // or more than one sound that does not fit: said as another.
       var other = false;
       for (var i = begin; i < end && !other; i++) {
-        other = _saidAsAnother(path, i, lp, from);
+        other = _saidAsAnother(
+          path,
+          i,
+          lp,
+          from,
+          strict: _asReadOn(i, start, end, joinedBefore, joinedAfter),
+        );
       }
       final asAnother = other || bad > _allowedBad(end - start);
       if (asAnother || bad > allowed) {
@@ -462,7 +521,7 @@ class RecitationFollowCore {
         break;
       }
       _place(word, events, whole: true);
-      if (word != next || lastFrame > last - _settle) {
+      if (word != next || lastFrame > last - _settle || waiting) {
         // Not final yet; the words after it are looked at all the same.
         word += 1;
         continue;
@@ -552,17 +611,13 @@ class RecitationFollowCore {
   /// The sound at [i] of the passage was not heard where the path has it.
   /// A short vowel before its long one is let off when the long one is
   /// there: the model often writes the two as the long vowel alone.
-  bool _unfit(_Path path, int i) {
+  bool _unfit(_Path path, int i, {bool strict = false}) {
     if (path.best[i - path.lo] >= _goodSound) return false;
-    // Nor is a sound that is said only with a stop, or only without one.
-    if (passage.optional[i]) return false;
-    final sound = passage.sounds[i];
+    // Nor is a sound that is said only with a stop, or only without one,
+    // unless the reader did not stop ([strict]).
+    if (passage.optional[i] && !strict) return false;
     // A word's last short vowel is not said when the reader stops on it.
-    if (sound >= 32 &&
-        sound <= 34 &&
-        i + 1 == passage.wordEnd[passage.wordOf[i]]) {
-      return false;
-    }
+    if (_lastVowel(i)) return false;
     const long = <int, int>{32: 29, 34: 30, 33: 31}; // َ ا, ِ ۦ, ُ ۥ
     final after = long[passage.sounds[i]];
     return after == null ||
@@ -570,6 +625,92 @@ class RecitationFollowCore {
         passage.sounds[i + 1] != after ||
         i + 1 - path.lo >= path.best.length ||
         path.best[i + 1 - path.lo] < _goodSound;
+  }
+
+  /// The sound at [i] is the last short vowel its word has when read on.
+  bool _lastVowel(int i) {
+    final sound = passage.sounds[i];
+    if (sound < 32 || sound > 34) return false;
+    final end = passage.wordEnd[passage.wordOf[i]];
+    for (var k = i + 1; k < end; k++) {
+      if (passage.own[k]) return false;
+    }
+    return true;
+  }
+
+  /// The sound at [i] of the word from [start] to [end] is one that
+  /// reading on has and a stop does not, at an end of the word the reader
+  /// did not stop at: it is asked for as any sound is.
+  bool _asReadOn(
+    int i,
+    int start,
+    int end,
+    bool joinedBefore,
+    bool joinedAfter,
+  ) {
+    if (!passage.optional[i] || !passage.own[i]) return false;
+    if (joinedAfter) {
+      var trailing = true;
+      for (var k = i + 1; k < end && trailing; k++) {
+        trailing = passage.optional[k];
+      }
+      if (trailing) return true;
+    }
+    if (joinedBefore) {
+      var leading = true;
+      for (var k = start; k < i && leading; k++) {
+        leading = passage.optional[k];
+      }
+      if (leading) return true;
+    }
+    return false;
+  }
+
+  /// Whether the reader was silent for a moment between the frames [after]
+  /// and [before] of the path: a stop.
+  bool _silent(Float32List lp, int from, int after, int before) {
+    var run = 0;
+    for (var t = after + 1; t < before; t++) {
+      run = _top(lp, from + t) == 0 ? run + 1 : 0;
+      if (run >= _pauseFrames) return true;
+    }
+    return false;
+  }
+
+  /// Whether the reader stopped after a word whose last sound heard was
+  /// first on frame [after]: silence for a moment. False when one of
+  /// [next], the sounds the next word begins with, comes before any such
+  /// silence; null when neither has come by the frame [last].
+  bool? _stoppedAfter(
+    Float32List lp,
+    int from,
+    int after,
+    int last,
+    Set<int> next,
+  ) {
+    var run = 0;
+    for (var t = after + 1; t <= last; t++) {
+      final top = _top(lp, from + t);
+      if (top == 0) {
+        run += 1;
+        if (run >= _pauseFrames) return true;
+      } else if (next.contains(top)) {
+        return false;
+      } else {
+        run = 0;
+      }
+    }
+    return null;
+  }
+
+  /// What the model hears most on a frame; 0 is nothing.
+  int _top(Float32List lp, int frame) {
+    final row = frame * recitationClasses;
+    var top = 0;
+    for (var c = 1; c < recitationClasses; c++) {
+      if (lp[row + c] > lp[row + top]) top = c;
+    }
+    return top;
   }
 
   /// What may be said of how a word just taken as read was read: where
@@ -606,7 +747,13 @@ class RecitationFollowCore {
   /// model is sure of a different letter or short vowel, one that is not
   /// a neighbour of it in the word (a neighbour there means only that
   /// the sound was not heard).
-  bool _saidAsAnother(_Path path, int i, Float32List lp, int from) {
+  bool _saidAsAnother(
+    _Path path,
+    int i,
+    Float32List lp,
+    int from, {
+    bool strict = false,
+  }) {
     final expected = passage.sounds[i];
     final letter = expected >= 1 && expected <= 28;
     final vowel = expected >= 32 && expected <= 34;
@@ -614,7 +761,7 @@ class RecitationFollowCore {
     // half-hears a right one often enough); a short vowel is either
     // there or not.
     if (!(letter || vowel) ||
-        passage.optional[i] ||
+        (passage.optional[i] && !strict) ||
         path.best[i - path.lo] >= (letter ? _absentSound : _goodSound)) {
       return false;
     }
