@@ -61,5 +61,5 @@ cut: {recitations: 73, words: 302, false stops: 35, words reached: 237, rule 0: 
 whole: {recitations: 174, words: 657, false stops: 2, words reached: 627, places of the three rules: 83}
 
 # 8 long ayat with the marks of a stop, 8 reciters (the set of out/11_stops.txt)
-before: MARKSBASE
+before: clean: {recitations: 64, words: 2200, words reached: 1803, false mistakes: 67}
 after:  clean: {recitations: 64, words: 2200, words reached: 1803, false mistakes: 67}
