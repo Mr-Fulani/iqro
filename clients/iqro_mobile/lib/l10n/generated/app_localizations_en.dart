@@ -3825,6 +3825,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recitationHintIzhar => 'Izhar: the “n” is said short, not held';
 
   @override
+  String get recitationHintOmitted =>
+      'A sound or syllable of the word is left out';
+
+  @override
+  String get recitationHintAdded => 'There is an extra sound in the word';
+
+  @override
   String get recitationUnavailable =>
       'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.';
 

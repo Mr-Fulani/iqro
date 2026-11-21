@@ -1146,6 +1146,8 @@
   "recitationHintQalqalah": "القلقلة غائبة: أظهِر نبرة الحرف",
   "recitationHintShaddah": "الشدّة: الحرف غير مشدَّد",
   "recitationHintIzhar": "إظهار: النون تُنطَق قصيرة بلا إطالة",
+  "recitationHintOmitted": "سقط حرف أو مقطع من الكلمة",
+  "recitationHintAdded": "في الكلمة حرف زائد",
   "recitationUnavailable": "التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.",
   "recitationNoArabic": "التعرّف على الكلام في هذا الهاتف لا يدعم العربية.",
   "recitationNoNetwork": "لا يوجد اتصال بخدمة التعرّف على الكلام. تحقق من الإنترنت."

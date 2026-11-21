@@ -3849,6 +3849,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get recitationHintIzhar => 'Изхар: «н» читается коротко, без протяжки';
 
   @override
+  String get recitationHintOmitted => 'Пропущен звук или слог слова';
+
+  @override
+  String get recitationHintAdded => 'В слове лишний звук';
+
+  @override
   String get recitationUnavailable =>
       'Распознавание речи недоступно: на телефоне нет службы распознавания или микрофон не разрешён.';
 

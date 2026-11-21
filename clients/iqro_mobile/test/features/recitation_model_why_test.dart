@@ -175,6 +175,14 @@ void main() {
         recitationWhyText(l10n, why(FollowWhy.izhar)),
         startsWith('Изхар'),
       );
+      expect(
+        recitationWhyText(l10n, why(FollowWhy.omitted, 'ت')),
+        'Пропущен звук или слог слова',
+      );
+      expect(
+        recitationWhyText(l10n, why(FollowWhy.added, '', 'ن')),
+        'В слове лишний звук',
+      );
       // The model's own marks are not shown: the rule is named.
       expect(
         recitationWhyText(l10n, why(FollowWhy.another, 'ں', 'ن')),
@@ -214,6 +222,8 @@ void main() {
           why(FollowWhy.madd),
           why(FollowWhy.shaddah),
           why(FollowWhy.izhar),
+          why(FollowWhy.omitted, 'ت'),
+          why(FollowWhy.added, '', 'ن'),
           why(FollowWhy.unknown),
         ]) {
           final text = recitationWhyText(l10n, reason);

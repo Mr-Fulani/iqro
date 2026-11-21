@@ -6690,6 +6690,18 @@ abstract class AppLocalizations {
   /// **'Izhar: the “n” is said short, not held'**
   String get recitationHintIzhar;
 
+  /// No description provided for @recitationHintOmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'A sound or syllable of the word is left out'**
+  String get recitationHintOmitted;
+
+  /// No description provided for @recitationHintAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'There is an extra sound in the word'**
+  String get recitationHintAdded;
+
   /// No description provided for @recitationUnavailable.
   ///
   /// In en, this message translates to:

@@ -3774,6 +3774,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get recitationHintIzhar => 'İzhar: «n» uzatılmadan kısa okunur';
 
   @override
+  String get recitationHintOmitted => 'Kelimenin bir sesi veya hecesi atlandı';
+
+  @override
+  String get recitationHintAdded => 'Kelimede fazladan bir ses var';
+
+  @override
   String get recitationUnavailable =>
       'Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.';
 

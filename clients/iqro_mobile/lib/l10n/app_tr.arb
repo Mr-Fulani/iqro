@@ -1146,6 +1146,8 @@
   "recitationHintQalqalah": "Kalkale yok: harfi titreşimle okuyun",
   "recitationHintShaddah": "Şedde: harf çift okunmadı",
   "recitationHintIzhar": "İzhar: «n» uzatılmadan kısa okunur",
+  "recitationHintOmitted": "Kelimenin bir sesi veya hecesi atlandı",
+  "recitationHintAdded": "Kelimede fazladan bir ses var",
   "recitationUnavailable": "Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.",
   "recitationNoArabic": "Bu telefondaki konuşma tanıma Arapçayı desteklemiyor.",
   "recitationNoNetwork": "Konuşma tanıma hizmetine bağlanılamıyor. İnterneti kontrol edin."

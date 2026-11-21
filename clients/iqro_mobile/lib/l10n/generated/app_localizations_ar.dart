@@ -3787,6 +3787,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get recitationHintIzhar => 'إظهار: النون تُنطَق قصيرة بلا إطالة';
 
   @override
+  String get recitationHintOmitted => 'سقط حرف أو مقطع من الكلمة';
+
+  @override
+  String get recitationHintAdded => 'في الكلمة حرف زائد';
+
+  @override
   String get recitationUnavailable =>
       'التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.';
 
