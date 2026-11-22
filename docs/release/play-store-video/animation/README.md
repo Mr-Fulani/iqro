@@ -16,6 +16,23 @@
 
 H.264, 30 кадров/с, звук AAC 48 кГц, голос выровнен до −16 LUFS. Музыки нет.
 
+## Английская версия
+
+`~/Downloads/iqro-promo-vertical-en.mp4` и `~/Downloads/iqro-promo-horizontal-en.mp4` — та же анимация с
+английскими надписями. Озвучка владельца от 22.11.2026 (53,63 с), рабочая копия —
+`~/Downloads/iqro-video/voice-en-2026-11-22T11_54.mp3`. Тайминги — в `timing-en.json` (`"lang": "en"`):
+
+```bash
+python3 docs/release/play-store-video/animation/build.py --timing docs/release/play-store-video/animation/timing-en.json
+```
+
+Надписи на английском — в словаре `EN` в `index.html`; строки интерфейса (подсказка «A word was left out.
+Read it», «Daily goal», «After-prayer reading», «Credited today», названия курсов и намазов) взяты из
+`clients/iqro_mobile/lib/l10n/app_en.arb`, уведомление — из `notification_gateway.dart`. Снимки экранов —
+из `../../play-store-screenshots/en/`; английского кадра с тафсиром нет, поэтому в телефоне два экрана
+(Мусхаф и перевод), тафсир и чтецы — пунктами списка. `chips` в тайминге — когда загораются
+«Word / Letter / Vowel» (доля длины фразы 3). Английский значок Google Play — с сайта.
+
 ## Как собрать
 
 Нужны `ffmpeg`, Python-пакет `playwright` и Google Chrome.

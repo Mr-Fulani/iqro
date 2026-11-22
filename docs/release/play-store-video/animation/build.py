@@ -32,17 +32,20 @@ def probe_duration(path):
 
 
 def page_config(timing, fmt, duration):
+    lang = timing.get("lang", "ru")
     fatiha = json.loads((HERE / "assets/fatiha.json").read_text())["ayahs"]
     names = json.loads((ROOT / "services/backend/src/quran_backend/modules/names/data/asma-al-husna.json")
                        .read_text())["names"]
     return {
         "format": fmt,
+        "lang": lang,
+        "chips": timing.get("chips"),
         "cues": timing["cues"],
         "voice_offset": timing.get("voice_offset", 0),
         "duration": duration,
         "fatiha": fatiha,
-        "names": [{"ru": n["transliteration"]["ru"]} for n in names],
-        "featured": [{"arabic": n["arabic"], "ru": n["transliteration"]["ru"], "meaning": n["meaning"]["ru"]}
+        "names": [{"name": n["transliteration"][lang]} for n in names],
+        "featured": [{"arabic": n["arabic"], "name": n["transliteration"][lang], "meaning": n["meaning"][lang]}
                      for n in names[:3]],
     }
 
@@ -70,9 +73,20 @@ def render_frames(cfg, times, frames_dir, workers):
         part = times[k * per:(k + 1) * per]
         if part:
             chunks.append((cfg, part, str(frames_dir), k * per))
-    with mp.get_context("spawn").Pool(len(chunks)) as pool:
-        infos = pool.map(render_worker, chunks)
-    return infos[0]
+    # Chrome иногда зависает при закрытии, когда кадры уже сняты: ждём кадры на диске, а не процессы.
+    pool = mp.get_context("spawn").Pool(len(chunks))
+    res = pool.map_async(render_worker, chunks)
+    while not res.ready():
+        res.wait(5)
+        if len(list(Path(frames_dir).glob("*.jpg"))) >= n:
+            res.wait(20)
+            break
+    infos = res.get() if res.ready() else None
+    pool.terminate()
+    missing = [i for i in range(n) if not (Path(frames_dir) / f"{i:05d}.jpg").exists()]
+    if missing:
+        sys.exit(f"Не отрисованы кадры: {missing[:10]}…")
+    return infos[0] if infos else {"words": "?"}
 
 
 def build(fmt, timing, voice, out_dir, workers, name):
@@ -82,22 +96,27 @@ def build(fmt, timing, voice, out_dir, workers, name):
     duration = round(off + vdur + timing.get("tail", 2.0), 2)
     nframes = int(round(duration * FPS))
     cfg = page_config(timing, fmt, duration)
-    out = out_dir / f"{name}-{NAMES[fmt]}.mp4"
+    sfx = "" if timing.get("lang", "ru") == "ru" else "-" + timing["lang"]
+    out = out_dir / f"{name}-{NAMES[fmt]}{sfx}.mp4"
     with tempfile.TemporaryDirectory(prefix=f"iqro-frames-{fmt}-") as tmp:
         print(f"[{fmt}] {nframes} кадров, {duration} с — рендер…", flush=True)
         info = render_frames(cfg, [i / FPS for i in range(nframes)], tmp, workers)
         print(f"[{fmt}] слов в аятах: {info['words']}", flush=True)
-        delay = int(round(off * 1000))
-        subprocess.run([
-            "ffmpeg", "-v", "error", "-y", "-framerate", str(FPS), "-i", f"{tmp}/%05d.jpg", "-i", str(voice),
-            "-filter_complex",
-            f"[1:a]adelay={delay}:all=1,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,apad[a]",
-            "-map", "0:v", "-map", "[a]", "-t", f"{duration}",
-            "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-r", str(FPS),
-            "-c:a", "aac", "-b:a", "192k", "-ac", "2", "-movflags", "+faststart", str(out),
-        ], check=True)
-    storyboard(out, fmt, out_dir / f"{name}-{NAMES[fmt]}-storyboard.jpg", duration)
+        encode(tmp, voice, off, duration, out)
+    storyboard(out, fmt, out_dir / f"{name}-{NAMES[fmt]}{sfx}-storyboard.jpg", duration)
     print(f"[{fmt}] готово: {out}", flush=True)
+
+
+def encode(frames_dir, voice, off, duration, out):
+    delay = int(round(off * 1000))
+    subprocess.run([
+        "ffmpeg", "-v", "error", "-y", "-framerate", str(FPS), "-i", f"{frames_dir}/%05d.jpg", "-i", str(voice),
+        "-filter_complex",
+        f"[1:a]adelay={delay}:all=1,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,apad[a]",
+        "-map", "0:v", "-map", "[a]", "-t", f"{duration}",
+        "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-r", str(FPS),
+        "-c:a", "aac", "-b:a", "192k", "-ac", "2", "-movflags", "+faststart", str(out),
+    ], check=True)
 
 
 def storyboard(video, fmt, dest, duration, step=1.5):

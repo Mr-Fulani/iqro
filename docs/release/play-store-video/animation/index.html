@@ -48,7 +48,8 @@ body.h .vz { left: 1000px; top: 90px; transform: scale(.9); }
 .sub { font-family: "PT Serif", Georgia, serif; font-size: 50px; line-height: 1.18; color: var(--goldl); margin-top: 18px; }
 body.h .hl { font-size: 92px; }
 body.h .sub { font-size: 52px; }
-body.h #t5c .hl { font-size: 128px !important; }
+#t5c .hl { font-size: 150px; }
+body.h #t5c .hl { font-size: 128px; }
 .gold { color: var(--gold2); }
 .w { display: inline-block; }
 
@@ -252,11 +253,11 @@ body.h #s8 .txt { left: 830px; width: 900px; top: 300px; }
     <div class="tz"><div id="t5a"><div class="hl">Задайте дневную цель</div><div class="sub">и отмечайте чтение после каждого намаза</div></div></div>
     <div class="vz">
       <div class="card" id="plan">
-        <div class="lbl">Дневная цель</div>
+        <div class="lbl" id="lblgoal">Дневная цель</div>
         <div class="seg"><div class="on">Минуты</div><div>Страницы</div><div>Аяты</div></div>
         <div id="goalnum"><span id="gn">5</span><small>минут</small></div>
         <hr class="sep">
-        <div class="lbl">Чтение после намаза</div>
+        <div class="lbl" id="lblpr">Чтение после намаза</div>
         <div class="prayers" id="prayers"></div>
       </div>
     </div>
@@ -278,7 +279,7 @@ body.h #s8 .txt { left: 830px; width: 900px; top: 300px; }
 
   <!-- 5в -->
   <div class="scene" id="s5c">
-    <div class="tz"><div id="t5c"><div class="hl gold" style="font-size:150px">5–10 минут</div><div class="sub" id="t5cs" style="font-size:58px">и Коран всегда с вами</div></div></div>
+    <div class="tz"><div id="t5c"><div class="hl gold">5–10 минут</div><div class="sub" id="t5cs" style="font-size:58px">и Коран всегда с вами</div></div></div>
     <div class="vz">
       <svg id="ring" viewBox="0 0 720 720"><circle cx="360" cy="360" r="330" fill="none" stroke="rgba(246,242,233,.12)" stroke-width="30"/>
         <circle id="arc" cx="360" cy="360" r="330" fill="none" stroke="#E2B665" stroke-width="30" stroke-linecap="round" transform="rotate(-90 360 360)" stroke-dasharray="2073.45" stroke-dashoffset="2073.45"/></svg>
@@ -289,7 +290,7 @@ body.h #s8 .txt { left: 830px; width: 900px; top: 300px; }
   <!-- 6 -->
   <div class="scene" id="s6">
     <div class="tz"><div id="t6" class="list"><div class="eb">А ещё</div>
-      <div class="it"><b></b>Мусхаф с цветным таджвидом</div><div class="it"><b></b>Перевод</div><div class="it"><b></b>Тафсир</div><div class="it"><b></b>Любимые чтецы</div></div></div>
+      <div class="it" id="it1"><b></b>Мусхаф с цветным таджвидом</div><div class="it" id="it2"><b></b>Перевод</div><div class="it" id="it3"><b></b>Тафсир</div><div class="it" id="it4"><b></b>Любимые чтецы</div></div></div>
     <div class="vz"><div class="phone"><div class="scr">
       <img id="sc1" src="../../play-store-screenshots/ru/2-mushaf-tajweed.png" alt="">
       <img id="sc2" src="../../play-store-screenshots/ru/4-reader.png" alt="">
@@ -379,11 +380,74 @@ function words(list, t, a, gap = .09, dy = 36) {
   list.forEach((w, i) => { const k = P(t, a + i * gap, .45); st(w, k, `translateY(${(1 - k) * dy}px)`); });
 }
 
-let CUE = {}, END = 57.5, FMT = 'v';
+
+// английская версия: надписи и строки интерфейса из app_en.arb
+const EN = {
+  '#s1a': 'You read the Quran aloud —',
+  '#s1b': 'but there’s no one to check you?',
+  '#t2 .hl': 'IQRO listens',
+  '#t2 .sub': 'and follows you, word by word',
+  '#t3 .chip:nth-child(1)': 'Word', '#t3 .chip:nth-child(2)': 'Letter', '#t3 .chip:nth-child(3)': 'Vowel',
+  '#t3 .hl': 'The app stops<br>and tells you',
+  '#t3b .hl': 'Right on your phone,',
+  '#t3b .sub': 'no internet needed',
+  '#page .title': 'Al-Fatiha',
+  '#st-hint': 'A word was left out. Read it',
+  '#t4 .hl': 'A little<br><span class="gold">every day</span>',
+  '#d4a h3': 'Every day', '#d4a p': 'a little',
+  '#d4b h3': 'Once a week', '#d4b p': 'two hours',
+  '#t5a .hl': 'Set a daily goal',
+  '#t5a .sub': 'and mark your reading after each prayer',
+  '#lblgoal': 'Daily goal',
+  '#plan .seg div:nth-child(1)': 'Minutes', '#plan .seg div:nth-child(2)': 'Pages', '#plan .seg div:nth-child(3)': 'Ayahs',
+  '#goalnum small': 'minutes',
+  '#lblpr': 'After-prayer reading',
+  '#t5b .hl': 'Reminds you<br>of prayer times',
+  '#t5bs': 'and shows your progress',
+  '#notif .t1': 'IQRO · now', '#notif .t2': 'Prayer time', '#notif .t3': 'It is time for Dhuhr prayer',
+  '#prog .pl': 'Progress',
+  '#t5c .hl': '5–10 minutes',
+  '#t5cs': 'and the Quran is always with&nbsp;you',
+  '#ringc .big': 'Credited<br>today',
+  '#t6 .eb': 'And there’s more',
+  '#it1': '<b></b><span>Mushaf with <span style="white-space:nowrap">colour-coded</span> tajweed</span>',
+  '#it2': '<b></b>Translation',
+  '#it3': '<b></b>Tafsir',
+  '#it4': '<b></b>Favourite reciters',
+  '#t7a .hl': '99 Names of Allah',
+  '#t7a .sub': 'by which we call upon Him',
+  '#t7q .hl': 'Prayer times<br>and qibla',
+  '#t7q .sub': 'wherever you are',
+  '#s7b1 .hl': 'Just <span class="gold">starting out?</span>',
+  '#t7b2 .hl': 'Prayer course', '#t7b2 .sub': 'step by step',
+  '#t7b3 .hl': 'Tajweed course', '#t7b3 .sub': 'the rules of recitation, one step at&nbsp;a&nbsp;time',
+  '#cs1 h3': 'Learn to pray', '#cs1 p': 'Step by step: wudu and the five prayers',
+  '#cs2 h3': 'Tajweed', '#cs2 p': 'Reading rules step by step',
+  '#cta8': 'Get it on Google Play',
+};
+const UI = {
+  ru: { days: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'], prayers: ['Фаджр', 'Зухр', 'Аср', 'Магриб', 'Иша'], north: 'С' },
+  en: { days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], prayers: ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'], north: 'N' },
+};
+let LANG = 'ru';
+let CUE = {}, END = 57.5, FMT = 'v', CHIPS = [.05, .19, .33];
 const W = {};
 
 window.setup = async function (cfg) {
   FMT = cfg.format === '16x9' ? 'h' : 'v';
+  LANG = cfg.lang || 'ru';
+  if (cfg.chips) CHIPS = cfg.chips;
+  if (LANG === 'en') {
+    document.documentElement.lang = 'en';
+    for (const [sel, html] of Object.entries(EN)) {
+      const el = $(sel); if (!el) throw new Error('нет элемента ' + sel); el.innerHTML = html;
+    }
+    $('#sc1').src = '../../play-store-screenshots/en/2-mushaf-tajweed.png';
+    $('#sc2').src = '../../play-store-screenshots/en/4-reader.png';
+    $('#sc3').remove();   // кадра с тафсиром на английском нет — в телефоне два экрана
+    $('#badge8').src = '../../../../services/web/public/images/store/google-play-en.webp';
+    $('#t5c .hl').style.fontSize = FMT === 'v' ? '124px' : '112px';   // «5–10 minutes» в одну строку
+  }
   document.body.className = FMT;
   const off = cfg.voice_offset || 0;
   for (const [k, v] of Object.entries(cfg.cues)) CUE[k] = v + off;
@@ -410,7 +474,7 @@ window.setup = async function (cfg) {
   });
 
   // 4: дни
-  const dn = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const dn = UI[LANG].days;
   const check = (c) => `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
   for (const id of ['#d4a', '#d4b']) {
     const d = $(id + ' .days');
@@ -420,7 +484,7 @@ window.setup = async function (cfg) {
     });
   }
   // 5а: намазы
-  ['Фаджр', 'Зухр', 'Аср', 'Магриб', 'Иша'].forEach((n) => {
+  UI[LANG].prayers.forEach((n) => {
     $('#prayers').insertAdjacentHTML('beforeend', `<div class="pr"><div class="ck"></div>${n}</div>`);
   });
   // 5б: пальма и календарь
@@ -429,14 +493,14 @@ window.setup = async function (cfg) {
   // 7а: колесо имён
   const wn = $('#wnames');
   cfg.names.forEach((n, i) => {
-    const s = document.createElement('span'); s.textContent = n.ru;
+    const s = document.createElement('span'); s.textContent = n.name;
     s.style.transform = `rotate(${i * 360 / 99 - 90}deg) translateX(226px)`; wn.appendChild(s);
   });
   // длинные имена не должны выходить за круг
   const spans = [...wn.children], maxW = Math.max(...spans.map((s) => s.offsetWidth));
   if (maxW > 196) spans.forEach((s) => { s.style.fontSize = (17 * 196 / maxW).toFixed(2) + 'px'; });
   cfg.featured.forEach((n) => {
-    $('#hub').insertAdjacentHTML('beforeend', `<div class="nm"><div class="a ar">${n.arabic}</div><div class="r">${n.ru}</div><div class="m">${n.meaning}</div></div>`);
+    $('#hub').insertAdjacentHTML('beforeend', `<div class="nm"><div class="a ar">${n.arabic}</div><div class="r">${n.name}</div><div class="m">${n.meaning}</div></div>`);
   });
   // 7а: компас
   let svg = '';
@@ -444,13 +508,13 @@ window.setup = async function (cfg) {
     const a = i * 5 * Math.PI / 180, r1 = 262, r2 = i % 18 === 0 ? 226 : i % 6 === 0 ? 238 : 248;
     svg += `<line x1="${290 + r1 * Math.sin(a)}" y1="${290 - r1 * Math.cos(a)}" x2="${290 + r2 * Math.sin(a)}" y2="${290 - r2 * Math.cos(a)}" stroke="#0B5D4B" stroke-width="${i % 6 === 0 ? 5 : 3}" stroke-linecap="round"/>`;
   }
-  svg += `<text x="290" y="112" text-anchor="middle" font-family="-apple-system,sans-serif" font-weight="700" font-size="46" fill="#17201D">С</text>
+  svg += `<text x="290" y="112" text-anchor="middle" font-family="-apple-system,sans-serif" font-weight="700" font-size="46" fill="#17201D">${UI[LANG].north}</text>
     <polygon points="290,10 274,-14 306,-14" fill="#17201D" transform="translate(0,30)"/>
     <g id="needle"><polygon points="290,96 268,290 312,290" fill="#0B5D4B"/><polygon points="290,484 268,290 312,290" fill="#D9D4C6"/>
     <rect x="270" y="78" width="40" height="40" rx="6" fill="#17201D" transform="rotate(0 290 98)"/></g>
     <circle cx="290" cy="290" r="22" fill="#fff" stroke="#0B5D4B" stroke-width="6"/>`;
   $('#csvg').innerHTML = svg;
-  [['Фаджр', '06:23'], ['Зухр', '12:51'], ['Аср', '15:20'], ['Магриб', '17:40'], ['Иша', '19:11']].forEach(([n, v]) => {
+  ['06:23', '12:51', '15:20', '17:40', '19:11'].map((v, i) => [UI[LANG].prayers[i], v]).forEach(([n, v]) => {
     $('#times').insertAdjacentHTML('beforeend', `<div class="tm"><div class="n">${n}</div><div class="v">${v}</div></div>`);
   });
   // 7б: шаги
@@ -540,7 +604,7 @@ window.render = function (t) {
     // фишки: слово, буква, огласовка — в такт фразе
     const L3 = C['3b'] - C['3'];
     [...document.querySelectorAll('#t3 .chip')].forEach((ch, i) => {
-      const a = C['3'] + [.05, .19, .33][i] * L3, k = P(t, a, .35);
+      const a = C['3'] + CHIPS[i] * L3, k = P(t, a, .35);
       ch.style.opacity = .25 + .75 * k;
       ch.style.transform = `scale(${1 + .08 * Math.sin(Math.PI * clamp((t - a) / .4))})`;
       ch.style.background = `rgba(226,182,101,${.22 * k})`;
@@ -645,8 +709,9 @@ window.render = function (t) {
     $('#s6 .phone').style.transform = `translateY(${(1 - kph) * 160}px) rotate(${(1 - kph) * 4}deg)`;
     const k2 = P(t, C['6'] + .42 * L, .4, E.io), k3 = P(t, C['6'] + .62 * L, .4, E.io);
     $('#sc1').style.transform = `translateX(${-100 * k2}%)`;
-    $('#sc2').style.transform = `translateX(${100 * (1 - k2) - 100 * k3}%)`;
-    $('#sc3').style.transform = `translateX(${100 * (1 - k3)}%)`;
+    const sc3 = $('#sc3');
+    $('#sc2').style.transform = `translateX(${100 * (1 - k2) - (sc3 ? 100 * k3 : 0)}%)`;
+    if (sc3) sc3.style.transform = `translateX(${100 * (1 - k3)}%)`;
   }
 
   // 7а имена
