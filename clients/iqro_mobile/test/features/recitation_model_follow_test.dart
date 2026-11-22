@@ -427,6 +427,34 @@ void main() {
       expect(seen, contains('miss 2'));
     });
 
+    test('read on with another sound for its ending, it is a mistake: '
+        'only a stop changes an ending', () {
+      final follower = core();
+      // 20 where reading on has 7, and the third word follows at once.
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 20, 8, 9, 10, 11, 12, 0, 0, 0, //
+      ]);
+      expect(seen, contains('miss 1'));
+      expect(follower.next, 1);
+    });
+
+    test('read on without its ending, it is a mistake', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 0, 0, 0, //
+      ]);
+      expect(seen, contains('miss 1'));
+    });
+
+    test('the same after a stop is no mistake', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 20, 0, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, //
+      ]);
+      expect(seen.where((e) => e.startsWith('miss')), isEmpty);
+      expect(follower.next, 3);
+    });
+
     test('a sound that is always said is still asked for', () {
       final follower = core();
       final seen = _follow(follower, <int>[

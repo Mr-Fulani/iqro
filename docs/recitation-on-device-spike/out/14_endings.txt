@@ -1,0 +1,65 @@
+A word's ending is asked for again when the reader reads on; the sounds of a stop are for a stop. A Mac, the
+app's Dart code (tool/recitation_model/harness.dart), recordings of six reciters from everyayah.com. 21.11.2026.
+"before": PR #313 (the long word rule, on main after release 1.0.14); "after": this change on top of it.
+
+# What a stop is: a fifth of a second of silence, or more, after the last sound heard of a word. If the next word
+# begins before any such silence, the reader reads on, and the sounds a stop would leave unsaid or change are
+# asked for as written.
+
+# The harness itself was wrong since PR #307: of the sounds it changes in the text to see whether the change is
+# noticed, it took the first of a word, and that is now often a sound that only a stop adds (the hamzah a word
+# begins with anew), which is never asked for. So "a short vowel changed: 90 of 162" (out/13_long_words.txt) was
+# mostly the harness; it now changes only sounds that reading on always has.
+
+# 174 single ayat as recited, one short vowel of the text changed (--mutate=haraka), one letter (--mutate=letter)
+## haraka, before
+whole: {recitations: 174, sound changed: 150, red stop on the word: 140, red stops on other words: 1, words: 36, false stops: 0, words reached: 34, places of the three rules: 18, not noticed: 5, word not reached: 5}
+## haraka, after
+whole: {recitations: 174, sound changed: 150, red stop on the word: 140, red stops on other words: 1, words: 36, false stops: 0, words reached: 34, places of the three rules: 18, not noticed: 5, word not reached: 5}
+## letter, before
+whole: {recitations: 174, sound changed: 162, red stop on the word: 135, red stops on other words: 3, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, not noticed: 21, word not reached: 6}
+## letter, after
+whole: {recitations: 174, sound changed: 162, red stop on the word: 135, red stops on other words: 3, words: 12, false stops: 0, words reached: 12, places of the three rules: 6, not noticed: 21, word not reached: 6}
+
+# The same with the last short vowel of a word changed, a word that another follows (--mutate=ending): what
+# this change is for. Not noticed where the reciter stops after the word, or the model is not sure of the vowel.
+## before
+whole: {recitations: 174, sound changed: 102, not noticed: 98, red stops on other words: 1, words: 222, false stops: 1, words reached: 214, places of the three rules: 24, word not reached: 4}
+## after
+whole: {recitations: 174, sound changed: 102, red stop on the word: 42, red stops on other words: 1, not noticed: 56, words: 222, false stops: 1, words reached: 214, places of the three rules: 24, word not reached: 4}
+
+# 2:2 and 2:7 of 24 reciters, each ayah alone: stops at "la rayb", "fih", "ghishawah", and 2:7 read on
+before: clean: {recitations: 48, words: 456, words reached: 370, false mistakes: 5}
+after:  clean: {recitations: 48, words: 456, words reached: 370, false mistakes: 5}
+# (the same recordings stop the place, none of them on "ghishawah")
+
+# The recording with real mistakes of out/10_false_stops.txt
+before:   5.70 MISS 0;  45.00 MISS 8;  89.40 MISS 19;  94.70 MISS 20;
+after:    5.70 MISS 0;  45.00 MISS 8;  89.40 MISS 19;  94.70 MISS 20;
+
+# 36 recitations of whole surahs, 24 with an ayah cut out, 84 with a word cut out
+## before
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 7, lens went on past the word left out: 7, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 744, false mistakes: 4, lens before the word began: 2}
+word: {recitations: 84, noticed on the right word: 76, more than one mistake: 18, lens went on past the word left out: 34, false mistake before it: 5}
+## after
+ayah: {recitations: 24, noticed on the right word: 23, more than one mistake: 7, lens went on past the word left out: 7, false mistake before it: 1}
+clean: {recitations: 36, words: 822, words reached: 744, false mistakes: 4, lens before the word began: 2}
+word: {recitations: 84, noticed on the right word: 76, more than one mistake: 18, lens went on past the word left out: 34, false mistake before it: 5}
+
+# The 36 read 1.5 times faster
+before: clean: {recitations: 36, words: 822, words reached: 726, false mistakes: 4}
+after:  clean: {recitations: 36, words: 822, words reached: 712, false mistakes: 5}
+# the stop added: al-Qahtani, al-Fatihah, on "na'budu" (the fastest of the six, made half as fast again)
+
+# 174 single ayat as recited (whole), 73 with a ghunnah or a madd cut short (cut)
+## before
+cut: {recitations: 73, words: 302, false stops: 35, words reached: 237, rule 0: cut: 65, red stops elsewhere: 4, rule 0: red stop: 27, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}
+whole: {recitations: 174, words: 657, false stops: 2, words reached: 627, places of the three rules: 83}
+## after
+cut: {recitations: 73, words: 302, false stops: 35, words reached: 237, rule 0: cut: 65, red stops elsewhere: 4, rule 0: red stop: 27, rule 2: cut: 6, rule 2: red stop: 4, rule 1: cut: 2}
+whole: {recitations: 174, words: 657, false stops: 2, words reached: 627, places of the three rules: 83}
+
+# 8 long ayat with the marks of a stop, 8 reciters (the set of out/11_stops.txt)
+before: clean: {recitations: 64, words: 2200, words reached: 1803, false mistakes: 67}
+after:  clean: {recitations: 64, words: 2200, words reached: 1803, false mistakes: 67}
