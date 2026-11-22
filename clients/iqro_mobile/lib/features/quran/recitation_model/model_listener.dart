@@ -76,6 +76,9 @@ class ModelRecitationListener implements RecitationListener {
   final _clock = Stopwatch();
   Timer? _watch;
   var _lastPlace = 0;
+
+  /// Sounds the model heard in the last seconds, whatever they were.
+  var _sounds = 0;
   var _disposed = false;
 
   /// False when this build has no model, the model does not load, the
@@ -107,6 +110,8 @@ class ModelRecitationListener implements RecitationListener {
           _lastPlace = _clock.elapsedMilliseconds;
           ear.value = (heard: words[word], deaf: false, trouble: null);
           onPlace(word, wrong);
+        case int sounds:
+          _sounds = sounds;
         case String note:
           _log(note);
         case null:
@@ -153,12 +158,12 @@ class ModelRecitationListener implements RecitationListener {
     _log('on');
     _lastPlace = 0;
     _watch = Timer.periodic(const Duration(seconds: 2), (_) {
-      final deaf =
-          _clock.elapsedMilliseconds - _lastPlace >
-          recitationDeafAfter.inMilliseconds;
-      if (deaf != ear.value.deaf) {
-        ear.value = (heard: ear.value.heard, deaf: deaf, trouble: null);
-      }
+      final now = modelEar(
+        heard: ear.value.heard,
+        sinceMs: _clock.elapsedMilliseconds - _lastPlace,
+        sounds: _sounds,
+      );
+      if (now != ear.value) ear.value = now;
     });
     return true;
   }
@@ -199,6 +204,28 @@ class ModelRecitationListener implements RecitationListener {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Sounds in eight seconds that are a reader reading: fewer are a room's
+/// noise or a word now and then.
+const recitationSpokenSounds = 8;
+
+/// The line under the text when the model listens. With no word taken for
+/// [recitationDeafAfter]: the reader is not heard, if the model hears
+/// next to no sounds; else the reader is heard and what is said is not
+/// the word waited on, which is not to be called a quiet voice.
+RecitationEar modelEar({
+  required String heard,
+  required int sinceMs,
+  required int sounds,
+}) {
+  final stalled = sinceMs > recitationDeafAfter.inMilliseconds;
+  final spoken = sounds >= recitationSpokenSounds;
+  return (
+    heard: heard,
+    deaf: stalled && !spoken,
+    trouble: stalled && spoken ? RecitationTrouble.unrecognised : null,
+  );
 }
 
 /// The worker: the model and the follower, off the screen's thread.
@@ -246,12 +273,20 @@ void _work(
   )..moveTo(start);
   final port = ReceivePort();
   var scheduled = false;
+  var steps = 0;
+  var placed = 0;
   void step() {
     scheduled = false;
     if (!pipeline.due) return;
     for (final event in pipeline.step()) {
       out.send((event.word, event.wrong));
+      placed = pipeline.frames;
     }
+    // Twice a second: whether the reader is heard since the last word
+    // taken. (One who has read to the end and is silent is not told that
+    // a word was not recognised.)
+    steps += 1;
+    if (steps % 5 == 0) out.send(pipeline.soundsSince(placed));
   }
 
   port.listen((message) {

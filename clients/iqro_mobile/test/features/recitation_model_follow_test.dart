@@ -271,6 +271,88 @@ void main() {
     });
   });
 
+  test('a short vowel held, as a slow reader holds it, is the same sound: '
+      'the model writes its long vowel, which the text does not have', () {
+    // "bihim" (ب ِ ه ِ م) read "bi-i-hi-im"; a later word begins "fi-i".
+    final follower = RecitationFollowCore(
+      RecitationPassage(<ExpectedAyah>[
+        ExpectedAyah(
+          Uint8List.fromList(<int>[
+            1, 3, 5, //
+            2, 34, 26, 34, 24, //
+            10, 11, 12, //
+            20, 34, 30, 13,
+          ]),
+          <(int, int)>[(0, 3), (3, 8), (8, 11), (11, 15)],
+          <(int, int, int, int, int)>[],
+        ),
+      ]),
+    );
+    final seen = _follow(follower, <int>[
+      1, 3, 5, 2, 34, 30, 30, 26, 34, 30, 24, 10, 11, 12, //
+      20, 34, 30, 13, 0, 0, 0,
+    ]);
+    expect(seen.where((e) => e.startsWith('miss')), isEmpty);
+    expect(follower.next, 4);
+  });
+
+  group('a long word', () {
+    // A word of three sounds, one of ten ("tughyanihim" has eleven), one
+    // of three.
+    RecitationFollowCore core() => RecitationFollowCore(
+      RecitationPassage(<ExpectedAyah>[
+        ExpectedAyah(
+          Uint8List.fromList(<int>[
+            1, 2, 3, //
+            4, 5, 6, 7, 8, 9, 10, 11, 12, 13, //
+            14, 15, 16,
+          ]),
+          <(int, int)>[(0, 3), (3, 13), (13, 16)],
+          <(int, int, int, int, int)>[],
+        ),
+      ]),
+    );
+
+    test('may have two sounds the model does not hear: read fast, a '
+        'letter at its beginning and a short vowel near its end are '
+        'often lost', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 0, 0, 0, //
+      ]);
+      expect(seen, <String>['on 0', 'on 1', 'on 2']);
+      expect(follower.next, 3);
+    });
+
+    test('with three such sounds is a mistake', () {
+      final follower = core();
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 0, 0, 0, //
+      ]);
+      expect(seen, contains('miss 1'));
+    });
+
+    test('a short word still has one at most', () {
+      final follower = RecitationFollowCore(
+        RecitationPassage(<ExpectedAyah>[
+          ExpectedAyah(
+            Uint8List.fromList(<int>[
+              1, 2, 3, //
+              4, 5, 6, 7, 8, 9, 10, 11, //
+              14, 15, 16,
+            ]),
+            <(int, int)>[(0, 3), (3, 11), (11, 14)],
+            <(int, int, int, int, int)>[],
+          ),
+        ]),
+      );
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 5, 6, 7, 8, 9, 11, 14, 15, 16, 0, 0, 0, //
+      ]);
+      expect(seen, contains('miss 1'));
+    });
+  });
+
   group('a word may be stopped on', () {
     // Three words. The second ends in 7 8 when the reading goes on and in
     // 30 when it is stopped on; the third begins with 31 only after a stop.

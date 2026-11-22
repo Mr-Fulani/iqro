@@ -6600,6 +6600,12 @@ abstract class AppLocalizations {
   /// **'I can\'t hear you. Read aloud, closer to the phone'**
   String get recitationNotHearingOnDevice;
 
+  /// No description provided for @recitationNotRecognised.
+  ///
+  /// In en, this message translates to:
+  /// **'I can hear you, but the word was not recognised. Read it again'**
+  String get recitationNotRecognised;
+
   /// No description provided for @recitationUnavailable.
   ///
   /// In en, this message translates to:

@@ -1346,6 +1346,7 @@ class _FollowEar extends StatelessWidget {
         RecitationTrouble.network => l10n.recitationNoNetwork,
         RecitationTrouble.language => l10n.recitationNoArabic,
         RecitationTrouble.unavailable => l10n.recitationUnavailable,
+        RecitationTrouble.unrecognised => l10n.recitationNotRecognised,
         null when value.deaf =>
           onDevice
               ? l10n.recitationNotHearingOnDevice
@@ -1353,7 +1354,12 @@ class _FollowEar extends StatelessWidget {
         null when value.heard.trim().isEmpty => l10n.recitationListening,
         null => null,
       };
-      final quiet = value.trouble != null || value.deaf;
+      // (Heard, though not taken for the word: the ear is not crossed out.)
+      final quiet =
+          value.deaf ||
+          (value.trouble != null &&
+              value.trouble != RecitationTrouble.unrecognised);
+      final warning = quiet || value.trouble != null;
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
@@ -1362,7 +1368,7 @@ class _FollowEar extends StatelessWidget {
             Icon(
               quiet ? Icons.hearing_disabled_rounded : Icons.hearing_rounded,
               size: 16,
-              color: quiet ? recitationWrong : mushafAccentColor,
+              color: warning ? recitationWrong : mushafAccentColor,
             ),
             const SizedBox(width: 8),
             Flexible(
@@ -1374,7 +1380,7 @@ class _FollowEar extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textDirection: message == null ? TextDirection.rtl : null,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: quiet ? recitationWrong : mushafAccentColor,
+                  color: warning ? recitationWrong : mushafAccentColor,
                 ),
               ),
             ),

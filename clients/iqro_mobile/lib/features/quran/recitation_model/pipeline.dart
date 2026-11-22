@@ -196,8 +196,43 @@ class RecitationPipeline {
     return counts <= place.golden - (place.kind == 2 ? 2 : 3);
   }
 
+  /// The model's frames heard so far.
+  int get frames => _historyEnd;
+
+  /// Sounds the model has heard for sure since the frame [since], in the
+  /// last eight seconds at most, whatever they are: whether the reader is
+  /// heard at all.
+  int soundsSince(int since) => soundsHeard(
+    _history,
+    _historyEnd - _historyFirst,
+    math.min(recitationEarFrames, math.max(0, _historyEnd - since)),
+  );
+
   /// For the harness: the last place looked at and the counts heard.
   ({TajweedPlace place, int counts})? lastHeld;
+}
+
+/// The frames the line under the text goes by: eight seconds.
+const recitationEarFrames = 8 * recitationFrameRate;
+
+/// How many sounds the model writes in the last [last] of the [frames]
+/// frames of [lp]: a sound begins on a frame where it is heard most and
+/// the frame before had another, or none.
+int soundsHeard(Float32List lp, int frames, int last) {
+  var sounds = 0;
+  var previous = 0;
+  for (var t = frames > last ? frames - last : 0; t < frames; t++) {
+    final row = t * recitationClasses;
+    var top = 0;
+    for (var c = 1; c < recitationClasses; c++) {
+      if (lp[row + c] > lp[row + top]) top = c;
+    }
+    // (A room's noise is written as a sound now and then, seldom for
+    // sure.)
+    if (top != 0 && top != previous && lp[row + top] >= -.36) sounds += 1;
+    previous = top;
+  }
+  return sounds;
 }
 
 /// Writes silence over the model's frames [first]..[end] ([lp] begins

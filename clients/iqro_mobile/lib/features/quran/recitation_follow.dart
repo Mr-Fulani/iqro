@@ -17,6 +17,10 @@ enum RecitationTrouble {
 
   /// No recognition service, or the microphone is not allowed.
   unavailable,
+
+  /// The reader is heard, and what is said is not taken for the word
+  /// waited on: not a microphone that hears nothing.
+  unrecognised,
 }
 
 /// What the line under the text shows while the microphone is on: the words
