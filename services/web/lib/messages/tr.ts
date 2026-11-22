@@ -228,6 +228,7 @@ const tr: Messages = {
   "footer.iosSoon": "Yakında iOS için",
   "footer.androidSoon": "Yakında Android için",
   "footer.storeDownload": "İndirin",
+  "footer.googlePlayBadge": "Google Play'den alın",
   "footer.sections": "Bölümler",
   "footer.quran": "Kur'an ve Mushaf",
   "footer.reciters": "Kâri kataloğu",

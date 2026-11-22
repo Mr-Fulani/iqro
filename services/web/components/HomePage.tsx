@@ -30,6 +30,7 @@ import { SurahNameArt } from "./SurahNameArt";
 import { AnnouncementBubble } from "./announcements/AnnouncementBubble";
 import { AnnouncementCard } from "./announcements/AnnouncementCard";
 import type { Announcement } from "../lib/announcements";
+import { GooglePlayBadge } from "./GooglePlayBadge";
 
 const HERO_SLIDES = [
   { src: "/images/home/hero-kaaba.webp", label: "home.heroKaaba" as const },
@@ -229,6 +230,16 @@ export default function HomePage({
       <TodayReadingCard home surahs={featuredSurahs} />
 
       <HomeSections />
+
+      {process.env.NEXT_PUBLIC_ANDROID_PLAY_STORE_URL?.trim() ? (
+        <section className="surface home-app-card" data-testid="home-app-card">
+          <div>
+            <h2 className="surface-title">{t("footer.mobileAppTitle")}</h2>
+            <p className="surface-subtitle">{t("footer.mobileAppDescription")}</p>
+          </div>
+          <GooglePlayBadge />
+        </section>
+      ) : null}
 
       <PrayerReadingPlanCard />
 

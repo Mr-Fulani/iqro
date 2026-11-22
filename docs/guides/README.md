@@ -106,6 +106,7 @@
 | [Вход через Google](google-sign-in/README.md) | сайт и приложение | 3 |
 | [Первый запуск приложения](first-launch/README.md) | приложение | 3 |
 | [«Что нового» в IQRO](announcements/README.md) | сайт и приложение | 3 |
+| [IQRO в Google Play](google-play-badge/README.md) | сайт | 2 |
 | [Виджет «План на день»](plan-widget/README.md) | приложение | 1 |
 | [Обновление приложения и номер версии](app-update/README.md) | приложение | 3 |
 

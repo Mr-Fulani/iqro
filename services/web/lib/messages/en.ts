@@ -228,6 +228,7 @@ const en: Messages = {
   "footer.iosSoon": "Coming soon for iOS",
   "footer.androidSoon": "Coming soon for Android",
   "footer.storeDownload": "Download on",
+  "footer.googlePlayBadge": "Get it on Google Play",
   "footer.sections": "Sections",
   "footer.quran": "Quran and Mushaf",
   "footer.reciters": "Reciter catalog",
