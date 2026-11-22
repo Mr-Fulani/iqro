@@ -110,6 +110,25 @@ for s, n in enumerate(counts, 1):
                 at = [place[u.s], place[u.e - 1] + 1, u.word, u.golden]
                 if u.kind in KIND: units += [KIND[u.kind], *at]
                 elif u.kind == 'madd' and u.rule.startswith('Mottasel'): units += [2, *at]
+            # Places of our own, by the counts the model writes (a letter doubled is written twice, a long vowel
+            # once a count): 3 a letter with a shaddah, 4 a natural madd of two counts, 5 a nun said clearly
+            # before a throat letter (izhar), which is not held. Only inside a word, and where every sound is
+            # always said.
+            ph, i = ref.phonemes, 0
+            while i < len(ph):
+                j = i
+                while j < len(ph) and ph[j] == ph[i]: j += 1
+                c, n = ph[i], j - i
+                w = next(k for k, (s, e) in enumerate(ref.spans) if s <= i < e)
+                if ref.spans[w][1] >= j and all(x in place for x in range(i, j)):
+                    kind = None
+                    # (4, a natural madd, is not written: the model, listening as the reader reads, writes one
+                    # count of the two in one place of twenty of a right reading; out/16_tajweed_rules.txt.)
+                    # (Nor 3, a letter with a shaddah, a run of two: read half as fast again, it is written once
+                    # in a right reading, and the false stops of whole surahs went from 3 to 13.)
+                    if n == 1 and c == 'ن' and j < len(ph) and ph[j] in 'ءهعحغخ': kind = 5
+                    if kind: units += [kind, place[i], place[j - 1] + 1, w, n]
+                i = j
             assert all(c in symbols for c in text)
             ayat.append([text, [x for span in spans for x in span], units, loose, added])
         except Exception as e:  # an ayah the phonetizer cannot write: the follower is not offered for its surah

@@ -1,0 +1,45 @@
+Rules of tajweed added to the recitation check, one at a time: what each catches, and what it costs a right
+reading. A Mac, the app's Dart code (tool/recitation_model/harness.dart), recordings of six reciters from
+everyayah.com. 21.11.2026. A rule is on only if a right reading is not stopped more often with it.
+
+# What the model writes, on right recitations (198 ayat), of the places the three rules by length look at
+# (hist.py: the whole ayah heard at once). The counts do not change with the pace:
+#                                     its own pace        x1.5                x0.7
+#  a letter with a shaddah (246)      2 counts: 243       241                 240      (once: 2 / 4 / 5)
+#  a natural madd of two counts (342) 2 counts: 337       334                 332      (one: 1 / 4 / 5; none: 1 / 1 / 2)
+#  a clear nun before a throat letter 1 count: 30 of 30   30                  30
+#  a letter with no shaddah (2058)    once: 2033          2008                2030     (twice: 7 / 4 / 10)
+
+# 1. Ikhfa and iqlab: a plain nun heard for sure where it is hidden or turned into a mim, and the hidden one
+#    not heard at all. ON.
+   a clear nun of the recording written as a hidden one (--mutate=ikhfa), before: sound changed: 6, not noticed: 6, red stops on other words: 0}
+                                                                         after:  sound changed: 6, red stop on the word: 5, red stops on other words: 0, not noticed: 1}
+   174 single ayat as recited, before: whole: {recitations: 174, words: 657, false stops: 2, words reached: 644, places of the three rules: 83}
+                               after:  whole: {recitations: 174, words: 657, false stops: 2, words reached: 644, places of the three rules: 83}
+   36 surahs: clean: {recitations: 36, words: 822, words reached: 749, false mistakes: 3, lens before the word began: 2}  (before: 749 reached, 3 false)
+
+# 2. Qalqalah: the echo of a letter of "qutb jad" that has no vowel is not heard at all. Not at the end of an
+#    ayah, where it is there only if the reader stops. ON.
+   an echo written where the recording has none (--mutate=qalqala): whole: {recitations: 174, sound changed: 88, red stop on the word: 80, red stops on other words: 1
+   174 single ayat: whole: {recitations: 174, words: 657, false stops: 2, words reached: 644, places of the three rules: 83}
+   36 surahs: clean: {recitations: 36, words: 822, words reached: 749, false mistakes: 3, lens before the word began: 2}
+   36 surahs x1.5: clean: {recitations: 36, words: 822, words reached: 727, false mistakes: 3}  (before: 727 reached, 3 false)
+
+# 3. A natural madd of two counts read short (one count, or none). NOT ON: listening as the reader reads, the
+#    model writes one count or none of the two in 14 places of 272 of a right reading.
+   174 single ayat with the three rules by length on: whole: {recitations: 174, words: 657, false stops: 14, words reached: 623, places of the three rules: 83}
+   counts heard, by rule: {0: 2 of 4: 22, 4: 2 of 2: 258, 0: 1 of 4: 23, 0: 3 of 4: 7, 0: 4 of 4: 61, 2: 2 of 4: 4, 2: 4 of 4: 12, 1: 2 of 4: 2, 3: 2 of 2: 69, 1: 4 of 4: 4, 2: 3 of 4: 1, 0: 0 of 4: 5, 4: 0 of 2: 4, 4: 1 of 2: 10, 5: 1 of 1: 6, 4: 4 of 2: 2}
+
+# 4. A letter with a shaddah said once. NOT ON: at its own pace a right reading is not stopped, half as fast
+#    again it is, thirteen times in 36 surahs for three.
+   with the shaddah and the clear nun on, 174 single ayat: whole: {recitations: 174, words: 657, false stops: 2, words reached: 644, places of the three rules: 83}
+   a letter said once written as one with a shaddah (--mutate=shadda): whole: {recitations: 174, sound changed: 150, red stop on the word: 137, red stops on other words: 1
+   36 surahs: clean: {recitations: 36, words: 822, words reached: 749, false mistakes: 4, lens before the word began: 2}
+   36 surahs x1.5: clean: {recitations: 36, words: 822, words reached: 668, false mistakes: 13}
+   2:15 slow: clean: {recitations: 24, words: 168, words reached: 123, false mistakes: 5}  (before: 139 reached, 4 false)
+
+# 5. A clear nun before a throat letter (izhar) held as a ghunnah is: three counts of it or more. ON. No recording
+#    here has one held, so what it catches is not measured; a right reading has one count in every place.
+   174 single ayat: whole: {recitations: 174, words: 657, false stops: 2, words reached: 644, places of the three rules: 83}
+   36 surahs: clean: {recitations: 36, words: 822, words reached: 749, false mistakes: 3, lens before the word began: 2}
+   36 surahs x1.5: clean: {recitations: 36, words: 822, words reached: 727, false mistakes: 3}

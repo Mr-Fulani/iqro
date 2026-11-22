@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,7 @@ import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/text/arabic_digits.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../dua/dua_arabic.dart';
 import 'ayah_action_sheet.dart';
@@ -23,6 +25,7 @@ import 'reader_page_turn.dart';
 import 'reader_words.dart';
 import 'recitation_follow.dart';
 import 'recitation_match.dart';
+import 'recitation_model/follow_core.dart' show FollowWhy;
 import 'recitation_model/model_listener.dart';
 import 'rub_mark.dart';
 import 'word_range.dart';
@@ -930,6 +933,10 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                     child: _listener != null
                         ? _FollowEar(
                             ear: _listener!.ear,
+                            hint: switch (_listener) {
+                              final ModelRecitationListener model => model.hint,
+                              _ => null,
+                            },
                             onDevice: _listener is ModelRecitationListener,
                           )
                         : page == null
@@ -1325,70 +1332,119 @@ class _FlowHeader extends StatelessWidget {
   }
 }
 
+/// Why a word is waited on in red, in the reader's language. A sound is
+/// named as the Mushaf writes it: a letter by itself, a short vowel by its
+/// name.
+String recitationWhyText(AppLocalizations l10n, RecitationWhy why) {
+  String vowel(String mark) => switch (mark) {
+    'َ' => l10n.recitationVowelFatha,
+    'ِ' => l10n.recitationVowelKasra,
+    'ُ' => l10n.recitationVowelDamma,
+    _ => mark,
+  };
+  bool isVowel(String mark) => mark == 'َ' || mark == 'ِ' || mark == 'ُ';
+  return switch (why.why) {
+    FollowWhy.skipped => l10n.recitationHintSkipped,
+    FollowWhy.ghunnah => l10n.recitationHintGhunnah,
+    FollowWhy.madd => l10n.recitationHintMadd,
+    FollowWhy.shaddah => l10n.recitationHintShaddah,
+    FollowWhy.izhar => l10n.recitationHintIzhar,
+    FollowWhy.omitted => l10n.recitationHintOmitted,
+    FollowWhy.added => l10n.recitationHintAdded,
+    // The hidden nun said clearly (the model's own marks for it).
+    FollowWhy.another when why.expected == 'ں' => l10n.recitationHintIkhfa,
+    FollowWhy.another when why.expected == '۾' => l10n.recitationHintIqlab,
+    FollowWhy.another when why.expected == 'ڇ' => l10n.recitationHintQalqalah,
+    FollowWhy.another when isVowel(why.expected) && isVowel(why.heard) =>
+      l10n.recitationHintVowel(vowel(why.heard), vowel(why.expected)),
+    FollowWhy.another when why.expected.isNotEmpty && why.heard.isNotEmpty =>
+      l10n.recitationHintLetter(why.heard, why.expected),
+    _ => l10n.recitationHintUnknown,
+  };
+}
+
 /// The line under the text while the microphone is on: the last words
 /// heard; that it listens, before any; that none have come for a while;
 /// or what is wrong.
 class _FollowEar extends StatelessWidget {
-  const _FollowEar({required this.ear, required this.onDevice});
+  const _FollowEar({required this.ear, required this.onDevice, this.hint});
 
   final ValueNotifier<RecitationEar> ear;
+
+  /// Why the word waited on in red is waited on, where the listener can
+  /// say: shown while it is waited on, in place of the words heard.
+  final ValueListenable<RecitationWhy?>? hint;
 
   /// The model on the phone listens: no network is to be checked.
   final bool onDevice;
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<RecitationEar>(
-    valueListenable: ear,
-    builder: (context, value, _) {
-      final l10n = context.l10n;
-      final heard = value.heard.trim().split(RegExp(r'\s+'));
-      final message = switch (value.trouble) {
-        RecitationTrouble.network => l10n.recitationNoNetwork,
-        RecitationTrouble.language => l10n.recitationNoArabic,
-        RecitationTrouble.unavailable => l10n.recitationUnavailable,
-        RecitationTrouble.unrecognised => l10n.recitationNotRecognised,
-        null when value.deaf =>
-          onDevice
-              ? l10n.recitationNotHearingOnDevice
-              : l10n.recitationNotHearing,
-        null when value.heard.trim().isEmpty => l10n.recitationListening,
-        null => null,
-      };
-      // (Heard, though not taken for the word: the ear is not crossed out.)
-      final quiet =
-          value.deaf ||
-          (value.trouble != null &&
-              value.trouble != RecitationTrouble.unrecognised);
-      final warning = quiet || value.trouble != null;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              quiet ? Icons.hearing_disabled_rounded : Icons.hearing_rounded,
-              size: 16,
-              color: warning ? recitationWrong : mushafAccentColor,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                message ??
-                    heard.sublist(math.max(0, heard.length - 4)).join(' '),
-                key: const ValueKey('reader-flow-follow-heard'),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textDirection: message == null ? TextDirection.rtl : null,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+  Widget build(BuildContext context) => hint == null
+      ? _line(context, null)
+      : ValueListenableBuilder<RecitationWhy?>(
+          valueListenable: hint!,
+          builder: (context, why, _) => _line(context, why),
+        );
+
+  Widget _line(BuildContext context, RecitationWhy? why) =>
+      ValueListenableBuilder<RecitationEar>(
+        valueListenable: ear,
+        builder: (context, value, _) {
+          final l10n = context.l10n;
+          final heard = value.heard.trim().split(RegExp(r'\s+'));
+          // Why the word is waited on, while it is: more to the point than
+          // that the reader is heard, or is not.
+          final reason = why == null ? null : recitationWhyText(l10n, why);
+          final message = switch (value.trouble) {
+            RecitationTrouble.network => l10n.recitationNoNetwork,
+            RecitationTrouble.language => l10n.recitationNoArabic,
+            RecitationTrouble.unavailable => l10n.recitationUnavailable,
+            _ when reason != null => reason,
+            RecitationTrouble.unrecognised => l10n.recitationNotRecognised,
+            null when value.deaf =>
+              onDevice
+                  ? l10n.recitationNotHearingOnDevice
+                  : l10n.recitationNotHearing,
+            null when value.heard.trim().isEmpty => l10n.recitationListening,
+            null => null,
+          };
+          // (Heard, though not taken for the word: the ear is not crossed out.)
+          final quiet =
+              value.deaf ||
+              (value.trouble != null &&
+                  value.trouble != RecitationTrouble.unrecognised);
+          final warning = quiet || value.trouble != null || reason != null;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  quiet
+                      ? Icons.hearing_disabled_rounded
+                      : Icons.hearing_rounded,
+                  size: 16,
                   color: warning ? recitationWrong : mushafAccentColor,
                 ),
-              ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    message ??
+                        heard.sublist(math.max(0, heard.length - 4)).join(' '),
+                    key: const ValueKey('reader-flow-follow-heard'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textDirection: message == null ? TextDirection.rtl : null,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: warning ? recitationWrong : mushafAccentColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       );
-    },
-  );
 }
 
 /// What the recitation check does with the voice and what it checks,

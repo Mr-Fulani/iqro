@@ -5,11 +5,39 @@
 //   dart run tool/recitation_model/harness.dart <libonnxruntime.dylib> <model-int8.onnx> assets/recitation_model <cases folder> [name filter] [-v]
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:iqro_mobile/features/quran/recitation_model/follow_core.dart';
 import 'package:iqro_mobile/features/quran/recitation_model/model_session.dart';
 import 'package:iqro_mobile/features/quran/recitation_model/pipeline.dart';
+
+/// [ayah] with [remove] sounds taken out at [at] and [insert] put there.
+ExpectedAyah _spliced(ExpectedAyah ayah, int at, int remove, List<int> insert) {
+  final by = insert.length - remove;
+  int start(int i) => i > at ? i + by : i;
+  int end(int i) => i > at ? math.max(at, i + by) : i;
+  return ExpectedAyah(
+    Uint8List.fromList(<int>[
+      ...ayah.sounds.sublist(0, at),
+      ...insert,
+      ...ayah.sounds.sublist(at + remove),
+    ]),
+    <(int, int)>[for (final (s, e) in ayah.spans) (start(s), end(e))],
+    <(int, int, int, int, int)>[
+      for (final (kind, s, e, word, golden) in ayah.units)
+        (kind, start(s), end(e), word, golden),
+    ],
+    <int>{
+      for (final i in ayah.loose)
+        if (i < at || i >= at + remove) start(i),
+    },
+    <int>{
+      for (final i in ayah.added)
+        if (i < at || i >= at + remove) start(i),
+    },
+  );
+}
 
 double pct(List<double> v, double q) {
   if (v.isEmpty) return double.nan;
@@ -19,6 +47,9 @@ double pct(List<double> v, double q) {
 
 void main(List<String> args) {
   final verbose = args.contains('-v');
+  RecitationFollowCore.strictLetters = args.contains('--strict-letters');
+  RecitationFollowCore.checkOmitted = !args.contains('--no-omitted');
+  RecitationFollowCore.checkAdded = !args.contains('--no-added');
   final mutate = args
       .where((a) => a.startsWith('--mutate='))
       .map((a) => a.substring(9))
@@ -34,7 +65,7 @@ void main(List<String> args) {
   final filters = File(
     '${args[2]}/mel_filters.bin',
   ).readAsBytesSync().buffer.asFloat32List();
-  final filter = args.length > 4 && args[4] != '-v' ? args[4] : '';
+  final filter = args.length > 4 && !args[4].startsWith('-') ? args[4] : '';
   final stats = <String, Map<String, num>>{};
   final delays = <String, List<double>>{};
   final heldCounts = <String, int>{};
@@ -73,6 +104,22 @@ void main(List<String> args) {
       search:
       for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
         final (start, end) = ayah.spans[w];
+        if (mutate == 'ikhfa') {
+          // A nun said clearly before another letter, as the recording
+          // has it, is written as one to be hidden: a reader's clear nun
+          // where the text has ikhfa.
+          for (var i = start + 1; i + 1 < end; i++) {
+            if (ayah.loose.contains(i) || ayah.loose.contains(i + 1)) continue;
+            if (sounds[i] != 25 || sounds[i - 1] == 25 || sounds[i + 1] == 25) {
+              continue;
+            }
+            if (sounds[i + 1] < 1 || sounds[i + 1] > 28) continue;
+            sounds[i] = 39;
+            changedWord = w;
+            break search;
+          }
+          continue;
+        }
         if (mutate == 'ending') {
           if (w + 1 >= ayah.spans.length) continue;
           for (var i = end - 1; i > start; i--) {
@@ -109,6 +156,129 @@ void main(List<String> args) {
         ayah.loose,
         ayah.added,
       );
+      if (const <String>{'omit', 'omit1', 'add', 'addend'}.contains(mutate)) {
+        // Sounds written that the recording does not have: a reader who
+        // leaves a syllable ("omit") or a letter ("omit1") out of a word.
+        // Sounds of the recording taken out of the text: a reader who
+        // puts a syllable in, inside a word ("add") or at its end
+        // ("addend"). In a word of six sounds or more.
+        changedWord = null;
+        ayahs[0] = ayah;
+        bool letter(int c) => c >= 1 && c <= 28;
+        bool short(int c) => c >= 32 && c <= 34;
+        bool free(int from, int to) {
+          for (var k = from; k < to; k++) {
+            if (ayah.loose.contains(k)) return false;
+          }
+          return !ayah.units.any((unit) => unit.$2 < to && unit.$3 > from);
+        }
+
+        search:
+        for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
+          final (start, end) = ayah.spans[w];
+          if (end - start < 6) continue;
+          final s = ayah.sounds;
+          if (mutate == 'addend') {
+            if (w + 1 >= ayah.spans.length) continue;
+            var last = end;
+            while (last > start && ayah.loose.contains(last - 1)) {
+              last -= 1;
+            }
+            if (last - start < 6 || !free(last - 2, last)) continue;
+            ayahs[0] = _spliced(ayah, last - 2, 2, const <int>[]);
+            changedWord = w;
+            break search;
+          }
+          for (var i = start + 2; i + 3 < end; i++) {
+            if (mutate == 'add') {
+              if (!(letter(s[i]) && short(s[i + 1]) && letter(s[i + 2]))) {
+                continue;
+              }
+              if (!short(s[i - 1]) || s[i - 2] == s[i] || !free(i - 1, i + 3)) {
+                continue;
+              }
+              ayahs[0] = _spliced(ayah, i, 2, const <int>[]);
+            } else {
+              if (!(short(s[i]) && letter(s[i + 1]) && free(i - 1, i + 2))) {
+                continue;
+              }
+              var c = (s[i + 1] + 9) % 28 + 1;
+              if (c == s[i - 1] || c == 24 || c == 25) c = c % 28 + 1;
+              ayahs[0] = _spliced(
+                ayah,
+                i + 1,
+                0,
+                mutate == 'omit' ? <int>[c, 32] : <int>[c],
+              );
+            }
+            changedWord = w;
+            break search;
+          }
+        }
+      }
+      if (mutate == 'shadda') {
+        // A letter said once, as the recording has it, is written as one
+        // with a shaddah: a reader who does not double a letter.
+        changedWord = null;
+        ayahs[0] = ayah;
+        search:
+        for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
+          final (start, end) = ayah.spans[w];
+          for (var i = start + 1; i + 1 < end; i++) {
+            final c = ayah.sounds[i];
+            if (c < 1 || c > 28 || c == 24 || c == 25) continue;
+            if (ayah.sounds[i - 1] == c || ayah.sounds[i + 1] == c) continue;
+            if (ayah.loose.contains(i)) continue;
+            ayahs[0] = ExpectedAyah(
+              ayah.sounds,
+              ayah.spans,
+              <(int, int, int, int, int)>[...ayah.units, (3, i, i + 1, w, 2)],
+              ayah.loose,
+              ayah.added,
+            );
+            changedWord = w;
+            break search;
+          }
+        }
+      }
+      if (mutate == 'qalqala') {
+        // A qalqalah is written where the recording has none: after a
+        // letter with no vowel that is not one of "qutb jad", inside a
+        // word. A reader who leaves a qalqalah out.
+        const bounce = <int>{21, 16, 2, 5, 8};
+        changedWord = null;
+        ayahs[0] = ayah;
+        search:
+        for (var w = ayah.spans.length ~/ 2; w < ayah.spans.length; w++) {
+          final (start, end) = ayah.spans[w];
+          for (var i = start + 1; i + 1 < end; i++) {
+            final c = ayah.sounds[i];
+            final next = ayah.sounds[i + 1];
+            if (c < 1 || c > 28 || next < 1 || next > 28 || c == next) continue;
+            if (bounce.contains(c) || ayah.sounds[i - 1] == c) continue;
+            if (ayah.loose.contains(i) || ayah.loose.contains(i + 1)) continue;
+            int moved(int at) => at > i ? at + 1 : at;
+            ayahs[0] = ExpectedAyah(
+              Uint8List.fromList(<int>[
+                ...ayah.sounds.sublist(0, i + 1),
+                38,
+                ...ayah.sounds.sublist(i + 1),
+              ]),
+              <(int, int)>[
+                for (final (s, e) in ayah.spans) (moved(s), e > i ? e + 1 : e),
+              ],
+              <(int, int, int, int, int)>[
+                for (final (kind, s, e, word, golden) in ayah.units)
+                  (kind, moved(s), e > i ? e + 1 : e, word, golden),
+              ],
+              ayah.loose.map(moved).toSet(),
+              ayah.added.map(moved).toSet(),
+            );
+            changedWord = w;
+            break search;
+          }
+        }
+      }
     }
     final pipeline = RecitationPipeline(
       session: session,

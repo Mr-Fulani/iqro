@@ -30,7 +30,11 @@ Float32List _frames(List<int> sounds) {
 
 /// Feeds [sounds] to a follower ten frames at a time, as the app does: the
 /// last 130 frames each step.
-List<String> _follow(RecitationFollowCore core, List<int> sounds) {
+List<String> _follow(
+  RecitationFollowCore core,
+  List<int> sounds, [
+  List<FollowWhy>? whys,
+]) {
   final lp = _frames(sounds);
   final total = sounds.length * 5;
   final seen = <String>[];
@@ -43,6 +47,7 @@ List<String> _follow(RecitationFollowCore core, List<int> sounds) {
       to * recitationClasses,
     );
     for (final event in core.step(window, to - from, from)) {
+      if (event is FollowMiss) whys?.add(event.why);
       seen.add(switch (event) {
         FollowPlace(:final word) => 'on $word',
         FollowMiss(:final word) => 'miss $word',
@@ -314,9 +319,21 @@ void main() {
     );
 
     test('may have two sounds the model does not hear: read fast, a '
-        'letter at its beginning and a short vowel near its end are '
-        'often lost', () {
-      final follower = core();
+        'throat letter at its beginning and a short vowel near its end '
+        'are often lost', () {
+      final follower = RecitationFollowCore(
+        RecitationPassage(<ExpectedAyah>[
+          ExpectedAyah(
+            Uint8List.fromList(<int>[
+              1, 2, 3, //
+              26, 5, 6, 7, 8, 9, 10, 11, 33, 13, //
+              14, 15, 16,
+            ]),
+            <(int, int)>[(0, 3), (3, 13), (13, 16)],
+            <(int, int, int, int, int)>[],
+          ),
+        ]),
+      );
       final seen = _follow(follower, <int>[
         1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 0, 0, 0, //
       ]);
@@ -330,6 +347,63 @@ void main() {
         1, 2, 3, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 0, 0, 0, //
       ]);
       expect(seen, contains('miss 1'));
+    });
+
+    test('with a syllable left out, two sounds side by side, is a '
+        'mistake: "tijaratuhum" read "tijarahum"', () {
+      final follower = core();
+      final whys = <FollowWhy>[];
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 0, 0, 0, //
+      ], whys);
+      expect(seen, contains('miss 1'));
+      expect(whys, contains(FollowWhy.omitted));
+      expect(follower.next, 1);
+    });
+
+    test('with a letter the text does not have said inside it is a '
+        'mistake', () {
+      final follower = core();
+      final whys = <FollowWhy>[];
+      final seen = _follow(follower, <int>[
+        1, 2, 3, 4, 5, 6, 7, 20, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 0, 0, //
+      ], whys);
+      expect(seen, contains('miss 1'));
+      expect(whys, contains(FollowWhy.added));
+    });
+
+    // A word of eleven sounds with vowels, [letter] between two of them.
+    RecitationFollowCore vowels(int letter) => RecitationFollowCore(
+      RecitationPassage(<ExpectedAyah>[
+        ExpectedAyah(
+          Uint8List.fromList(<int>[
+            1, 2, 3, //
+            12, 32, 3, 34, letter, 34, 24, 33, 10, 32, 2, //
+            14, 15, 16,
+          ]),
+          <(int, int)>[(0, 3), (3, 14), (14, 17)],
+          <(int, int, int, int, int)>[],
+        ),
+      ]),
+    );
+    const without = <int>[
+      1, 2, 3, 12, 32, 3, 34, 34, 24, 33, 10, 32, 2, 14, 15, 16, 0, 0, 0, //
+    ];
+
+    test('with one letter not heard at all is a mistake, the sounds on '
+        'either side of it heard: the vowel left of a syllable left out is '
+        'heard as both of two alike', () {
+      final follower = vowels(25);
+      final whys = <FollowWhy>[];
+      final seen = _follow(follower, without, whys);
+      expect(seen, contains('miss 1'));
+      expect(whys, contains(FollowWhy.omitted));
+    });
+
+    test('with a throat letter not heard is read: the model loses one of '
+        'those in a right reading too', () {
+      final follower = vowels(26);
+      expect(_follow(follower, without), <String>['on 0', 'on 1', 'on 2']);
     });
 
     test('a short word still has one at most', () {
@@ -446,13 +520,15 @@ void main() {
       expect(seen, contains('miss 1'));
     });
 
-    test('the same after a stop is no mistake', () {
+    test('a letter the text does not have, put on to the word before a '
+        'stop, is a mistake all the same: a stop adds only its own sounds', () {
       final follower = core();
       final seen = _follow(follower, <int>[
-        1, 2, 3, 4, 5, 6, 20, 0, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, //
+        1, 2, 3, 4, 5, 6, 20, 0, 0, 0, 0, 9, 10, 11, 12, //
+        // (A second of nothing: the last word is over.)
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       ]);
-      expect(seen.where((e) => e.startsWith('miss')), isEmpty);
-      expect(follower.next, 3);
+      expect(seen, contains('miss 2'));
     });
 
     test('a sound that is always said is still asked for', () {
