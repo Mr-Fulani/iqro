@@ -1,38 +1,36 @@
 # IQRO 1.0.15 (код сборки 16): «Что нового» для Google Play
 
-Вставляется в поле «Описание выпуска» Play Console целиком, с языковыми метками.
+Первый выпуск в рабочей версии Google Play (доступ одобрен 22.11.2026), поэтому текст рассказывает о
+приложении, а не о разнице с прошлой сборкой закрытого тестирования. Вставляется в поле «Описание
+выпуска» Play Console целиком, с языковыми метками.
 
 ```
 <ru-RU>
-• Проверка чтения вслух пишет, почему остановилась: пропущено слово, другая буква или огласовка, пропущен звук или слог, лишний звук
-• Замечает пропущенную букву или слог внутри слова
-• Правила таджвида: ихфа, икляб, калькаля, протянутый «н» при изхаре
-• Окончание слова проверяется при слитном чтении
-• Медленное чтение и длинные слова больше не считаются ошибкой
-• «Не слышу» появляется, только когда телефон действительно не слышит
+• Коран: Мусхаф с цветным таджвидом, перевод, тафсир, чтецы и ночная страница
+• Проверка чтения вслух: золотая плашка идёт под словом, которое вы читаете, и останавливается на ошибке
+• Приложение пишет, в чём ошибка: пропущено слово, буква или слог, другая буква или огласовка
+• Правила таджвида в проверке: гунна, мадд, ихфа, икляб, калькаля
+• Время намаза, кибла, азан, ду‘а, заучивание и план чтения
 </ru-RU>
 <en-US>
-• The recitation check says why it stopped: a word left out, another letter or vowel, a sound or syllable left out, an extra sound
-• Notices a letter or a syllable left out inside a word
-• Tajweed rules: ikhfa, iqlab, qalqalah, an “n” held at izhar
-• The ending of a word is checked when you read on without a stop
-• Slow reading and long words are no longer counted as mistakes
-• “I can't hear you” appears only when the phone really cannot hear
+• Quran: a Mushaf with coloured tajweed, translation, tafsir, reciters and a night page
+• Recitation check: a golden plate moves under the word you are reading and stops on a mistake
+• The app says what the mistake is: a word, a letter or a syllable left out, another letter or vowel
+• Tajweed rules in the check: ghunnah, madd, ikhfa, iqlab, qalqalah
+• Prayer times, qibla, adhan, du‘a, memorisation and a reading plan
 </en-US>
 <ar>
-• التحقق من التلاوة يبيّن سبب التوقف: كلمة متروكة، حرف أو حركة أخرى، حرف أو مقطع ساقط، حرف زائد
-• ينبّه إلى حرف أو مقطع سقط من داخل الكلمة
-• أحكام التجويد: الإخفاء، الإقلاب، القلقلة، إطالة النون عند الإظهار
-• يُتحقَّق من آخر الكلمة عند الوصل
-• القراءة البطيئة والكلمات الطويلة لم تعد تُحسب خطأً
-• «لا أسمعك» تظهر فقط عندما لا يسمع الهاتف فعلًا
+• القرآن: مصحف بألوان التجويد، ترجمة، تفسير، قرّاء وصفحة ليلية
+• التحقق من التلاوة: لوحة ذهبية تسير تحت الكلمة التي تقرؤها وتتوقف عند الخطأ
+• التطبيق يبيّن الخطأ: كلمة أو حرف أو مقطع متروك، حرف أو حركة أخرى
+• أحكام التجويد في التحقق: الغنّة، المدّ، الإخفاء، الإقلاب، القلقلة
+• مواقيت الصلاة، القبلة، الأذان، الأدعية، الحفظ وخطة القراءة
 </ar>
 <tr-TR>
-• Sesli okuma kontrolü neden durduğunu yazar: atlanan kelime, başka harf veya hareke, atlanan ses veya hece, fazladan ses
-• Kelimenin içinde atlanan harfi veya heceyi fark eder
-• Tecvid kuralları: ihfa, iklab, kalkale, izharda uzatılan «n»
-• Vasl ile okurken kelimenin sonu kontrol edilir
-• Yavaş okuma ve uzun kelimeler artık hata sayılmıyor
-• «Sizi duyamıyorum» yalnızca telefon gerçekten duymadığında görünür
+• Kur'an: renkli tecvidli Mushaf, meal, tefsir, kâriler ve gece sayfası
+• Sesli okuma kontrolü: okuduğunuz kelimenin altında altın bir şerit ilerler ve hatada durur
+• Uygulama hatayı yazar: atlanan kelime, harf veya hece, başka harf veya hareke
+• Kontroldeki tecvid kuralları: gunne, med, ihfa, iklab, kalkale
+• Namaz vakitleri, kıble, ezan, dualar, ezber ve okuma planı
 </tr-TR>
 ```
