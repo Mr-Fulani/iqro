@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IQRO — анимационный ролик</title>
+<!--
+  Кадры ролика. build.py открывает страницу в Chrome, вызывает setup({...}) и затем
+  render(t) для каждого кадра. Всё движение — функция от времени t, CSS-анимаций нет.
+  Времена фраз приходят из timing.json; внутри сцены движение считается от начала фразы.
+-->
+<style>
+@font-face { font-family: "Amiri Quran"; src: url("../../../../clients/iqro_mobile/assets/fonts/AmiriQuran-Regular.ttf"); }
+:root {
+  --deep: #04302a; --green: #0B5D4B; --green-d: #073E34; --mint: #D9EEE7;
+  --cream: #F6F2E9; --paper: #FFFDF8; --ink: #17201D;
+  --gold: #A07424; --gold2: #E2B665; --goldl: #f6e3b4;
+  --red: #C0392B;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; overflow: hidden; background: var(--deep); }
+body.v { width: 1080px; height: 1920px; }
+body.h { width: 1920px; height: 1080px; }
+#stage { position: absolute; inset: 0; overflow: hidden; color: var(--cream);
+  font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+.serif { font-family: "PT Serif", Georgia, serif; }
+.ar { font-family: "Amiri Quran", serif; direction: rtl; }
+
+/* фон */
+#bg { position: absolute; inset: 0;
+  background: radial-gradient(120% 80% at 50% 30%, #0B5D4B 0%, #06443a 45%, #04302a 100%); }
+#pattern { position: absolute; inset: -200px; opacity: .085;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='none' stroke='%23f6e3b4' stroke-width='2'%3E%3Crect x='45' y='45' width='70' height='70'/%3E%3Crect x='45' y='45' width='70' height='70' transform='rotate(45 80 80)'/%3E%3Ccircle cx='80' cy='80' r='18'/%3E%3Cpath d='M0 80h22M138 80h22M80 0v22M80 138v22'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 160px 160px; }
+#glow { position: absolute; width: 1400px; height: 1400px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(226,182,101,.20) 0%, rgba(226,182,101,0) 60%); }
+
+.scene { position: absolute; inset: 0; opacity: 0; }
+.tz { position: absolute; display: grid; }
+.tz > * { grid-area: 1 / 1; }
+.vz { position: absolute; width: 900px; height: 1000px; transform-origin: 0 0; }
+body.v .tz { left: 90px; right: 90px; top: 190px; height: 470px; align-items: end; }
+body.v .vz { left: 90px; top: 720px; }
+body.h .tz { left: 140px; width: 760px; top: 0; height: 1080px; align-items: center; }
+body.h .vz { left: 1000px; top: 90px; transform: scale(.9); }
+
+.eb { font-weight: 700; font-size: 28px; letter-spacing: 5px; text-transform: uppercase; color: var(--gold2); margin-bottom: 22px; }
+.hl { font-family: "PT Serif", Georgia, serif; font-weight: 700; font-size: 88px; line-height: 1.06; letter-spacing: -.5px; }
+.sub { font-family: "PT Serif", Georgia, serif; font-size: 50px; line-height: 1.18; color: var(--goldl); margin-top: 18px; }
+body.h .hl { font-size: 92px; }
+body.h .sub { font-size: 52px; }
+body.h #t5c .hl { font-size: 128px !important; }
+.gold { color: var(--gold2); }
+.w { display: inline-block; }
+
+.card { position: absolute; background: var(--paper); color: var(--ink); border-radius: 40px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.18); }
+
+/* бренд в углу */
+#brand { position: absolute; display: flex; align-items: center; gap: 16px; opacity: 0; }
+#brand img { width: 74px; height: 74px; }
+#brand span { font-family: "PT Serif", serif; font-weight: 700; font-size: 40px; letter-spacing: 3px; color: var(--cream); }
+body.v #brand { left: 70px; top: 70px; }
+body.h #brand { left: 64px; top: 52px; }
+
+/* 1 */
+#s1 .c { position: absolute; left: 0; right: 0; text-align: center; }
+body.v #s1 .c { top: 560px; padding: 0 80px; }
+body.h #s1 .c { top: 250px; padding: 0 200px; }
+#s1 .hl { font-size: 112px; line-height: 1.08; }
+body.h #s1 .hl { font-size: 104px; }
+#s1 .l2 { margin-top: 26px; }
+#wave { display: flex; justify-content: center; align-items: center; gap: 9px; height: 200px; margin-top: 70px; }
+#wave i { display: block; width: 9px; border-radius: 6px; background: var(--gold2); }
+
+/* 2–3 проверка чтения */
+#page { left: 0; top: 0; width: 900px; height: 1000px; }
+#page .head { position: absolute; left: 56px; right: 48px; top: 40px; height: 130px; display: flex; align-items: center; justify-content: space-between; }
+#page .title { font-family: "PT Serif", serif; font-weight: 700; font-size: 42px; color: var(--gold); }
+#page .title small { display: block; font-family: -apple-system, sans-serif; font-weight: 500; font-size: 26px; color: #6d746f; margin-top: 4px; }
+#mic { position: relative; width: 116px; height: 116px; }
+#mic .ring { position: absolute; inset: 0; border-radius: 50%; border: 4px solid #E59A93; }
+#mic .btn { position: absolute; inset: 0; border-radius: 50%; background: #FCEBE8; border: 4px solid #E8A6A0; display: grid; place-items: center; }
+#words { position: absolute; left: 30px; right: 30px; top: 190px; bottom: 150px; display: flex; flex-direction: column; justify-content: center; text-align: center; font-size: 76px; line-height: 1.75; }
+#words .ayl { white-space: nowrap; }
+#words .wd, #words .am { display: inline-block; position: relative; z-index: 2; padding: 0 12px; }
+#words .am { color: var(--green); font-size: 68px; }
+#plate { position: absolute; z-index: 1; border-radius: 22px; border: 4px solid #C79A45; background: #F2DFB3; }
+#status { position: absolute; left: 40px; right: 40px; bottom: 44px; height: 90px; display: flex; align-items: center; justify-content: center; gap: 18px; }
+#status .stw { position: absolute; display: flex; align-items: center; gap: 16px; }
+#st-word { font-size: 50px; color: var(--gold); }
+#st-hint { font-size: 36px; font-weight: 600; color: var(--red); }
+.chips { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 30px; }
+.chip { font-size: 36px; font-weight: 600; padding: 14px 30px; border-radius: 40px; border: 3px solid rgba(246,227,180,.35); color: var(--goldl); }
+.offline { display: flex; gap: 20px; margin-bottom: 30px; }
+.offline .ic { width: 96px; height: 96px; border-radius: 28px; background: rgba(246,227,180,.12); display: grid; place-items: center; }
+
+/* 4 */
+.dcard { left: 0; width: 900px; padding: 44px 50px; }
+.dcard h3 { margin: 0; font-family: "PT Serif", serif; font-weight: 700; font-size: 58px; }
+.dcard p { margin: 6px 0 0; font-size: 34px; font-weight: 500; }
+.days { display: flex; justify-content: space-between; margin-top: 36px; }
+.day { width: 96px; text-align: center; font-size: 26px; font-weight: 600; }
+.dot { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; margin-top: 12px; }
+#d4a .dot { background: var(--green); }
+#d4b { background: rgba(255,255,255,.07); border: 3px solid rgba(246,242,233,.18); color: var(--cream); box-shadow: none; }
+#d4b .dot { border: 3px dashed rgba(246,242,233,.3); }
+#d4b .dot.on { border: 0; background: #8f8a7c; }
+
+/* 5 */
+#plan { left: 0; top: 0; width: 900px; padding: 48px 54px; }
+.lbl { font-size: 34px; font-weight: 700; color: var(--ink); }
+.seg { display: flex; margin-top: 24px; border-radius: 22px; border: 3px solid #CBC8BE; overflow: hidden; }
+.seg div { flex: 1; text-align: center; font-size: 32px; font-weight: 600; padding: 18px 0; color: #4a524e; }
+.seg div.on { background: var(--green); color: #fff; }
+#goalnum { font-family: "PT Serif", serif; font-weight: 700; font-size: 170px; color: var(--green); line-height: 1; margin-top: 30px; }
+#goalnum small { font-size: 60px; margin-left: 18px; color: var(--ink); }
+.prayers { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 26px; }
+.pr { display: flex; align-items: center; gap: 14px; font-size: 32px; font-weight: 600; padding: 16px 26px 16px 18px; border-radius: 22px; background: #EFEEE8; color: var(--ink); }
+.pr .ck { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #b9b6ab; display: grid; place-items: center; }
+hr.sep { border: 0; border-top: 3px solid #E4E0D6; margin: 40px 0 30px; }
+#notif { left: 0; top: 0; width: 900px; height: 200px; border-radius: 36px; display: flex; align-items: center; gap: 28px; padding: 0 40px; }
+#notif img { width: 104px; height: 104px; border-radius: 24px; }
+#notif .t1 { font-size: 26px; color: #6d746f; font-weight: 600; }
+#notif .t2 { font-size: 38px; font-weight: 700; margin-top: 4px; }
+#notif .t3 { font-size: 32px; color: #3c4541; margin-top: 2px; }
+#prog { left: 0; top: 250px; width: 900px; height: 750px; overflow: hidden; }
+#prog .ph { position: absolute; left: 0; top: 0; width: 900px; height: 450px; overflow: hidden; border-radius: 40px 40px 0 0; }
+#prog .ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#prog .cal { position: absolute; left: 50px; right: 50px; top: 490px; display: grid; grid-template-columns: repeat(10, 1fr); gap: 14px 10px; }
+#prog .cal i { display: block; width: 52px; height: 52px; border-radius: 50%; border: 3px solid #D8D4C8; margin: 0 auto; }
+#prog .cal i.on { border: 0; background: var(--green); }
+#prog .pl { position: absolute; left: 40px; top: 30px; font-size: 30px; font-weight: 700; color: #fff; background: rgba(7,62,52,.75); padding: 12px 24px; border-radius: 20px; }
+#ring { position: absolute; left: 90px; top: 90px; width: 720px; height: 720px; }
+#ringc { position: absolute; left: 90px; top: 90px; width: 720px; height: 720px; display: grid; place-items: center; text-align: center; }
+#ringc .big { font-family: "PT Serif", serif; font-weight: 700; font-size: 64px; line-height: 1.1; color: var(--cream); }
+
+/* 6 */
+.phone { position: absolute; width: 536px; height: 950px; border-radius: 66px; background: #0e1513; padding: 16px;
+  box-shadow: 0 40px 100px rgba(0,0,0,.5), inset 0 0 0 2px #2a3330; }
+.phone .scr { position: relative; width: 100%; height: 100%; border-radius: 52px; overflow: hidden; background: #fff; }
+.phone .scr img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+#s6 .phone { left: 182px; top: 25px; }
+.list .it { display: flex; align-items: center; gap: 26px; font-family: "PT Serif", serif; font-weight: 700; font-size: 64px; line-height: 1.12; margin: 10px 0; }
+.list .it b { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--gold2); }
+body.v .list .it { font-size: 58px; margin: 6px 0; }
+
+/* 7а имена */
+#wheel { position: absolute; left: 0; top: 50px; width: 900px; height: 900px; }
+#wheel .disc { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(246,227,180,.35); background: rgba(255,255,255,.04); }
+#wheel .names { position: absolute; left: 450px; top: 450px; width: 0; height: 0; }
+#wheel .names span { position: absolute; left: 0; top: -12px; height: 24px; white-space: nowrap; font-size: 17px; line-height: 24px; color: rgba(246,242,233,.62); transform-origin: 0 50%; }
+#wheel .hub { position: absolute; left: 230px; top: 230px; width: 440px; height: 440px; border-radius: 50%; background: var(--paper); color: var(--ink);
+  box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+#wheel .nm { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+#wheel .nm .a { font-size: 104px; line-height: 1.2; color: var(--gold); }
+#wheel .nm .r { font-family: "PT Serif", serif; font-weight: 700; font-size: 46px; margin-top: 2px; }
+#wheel .nm .m { font-size: 30px; color: #5b635f; margin-top: 6px; }
+#wheel .ptr { position: absolute; left: 432px; top: -18px; width: 36px; height: 48px; background: var(--gold2); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+
+/* 7а кибла */
+#compass { position: absolute; left: 160px; top: 0; width: 580px; height: 580px; border-radius: 50%; background: var(--paper);
+  box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+#compass svg { position: absolute; inset: 0; }
+#times { left: 0; top: 650px; width: 900px; height: 220px; display: flex; justify-content: space-around; align-items: center; padding: 0 20px; }
+#times .tm { position: relative; z-index: 2; text-align: center; width: 160px; }
+#times .tm .n { font-size: 28px; font-weight: 600; color: #5b635f; }
+#times .tm .v { font-family: "PT Serif", serif; font-weight: 700; font-size: 46px; margin-top: 6px; }
+#times .hi { position: absolute; z-index: 1; top: 30px; height: 160px; width: 168px; border-radius: 30px; background: var(--mint); }
+
+/* 7б */
+#s7b1 .c { position: absolute; left: 0; right: 0; text-align: center; }
+body.v #s7b1 .c { top: 820px; }
+body.h #s7b1 .c { top: 440px; }
+#s7b1 .hl { font-size: 120px; }
+.course { left: 0; width: 900px; height: 420px; padding: 46px 50px; }
+.course .top { display: flex; gap: 34px; align-items: center; }
+.course .ic { flex: none; width: 140px; height: 140px; border-radius: 34px; background: var(--mint); display: grid; place-items: center; }
+.course h3 { margin: 0; font-family: "PT Serif", serif; font-weight: 700; font-size: 56px; color: var(--ink); }
+.course p { margin: 8px 0 0; font-size: 32px; color: #5b635f; }
+.steps { position: relative; display: flex; justify-content: space-between; margin-top: 56px; padding: 0 10px; }
+.steps .line, .steps .fill { position: absolute; left: 40px; right: 40px; top: 28px; height: 8px; border-radius: 4px; background: #E4E0D6; }
+.steps .fill { right: auto; background: var(--green); }
+.steps .st { position: relative; z-index: 2; width: 64px; height: 64px; border-radius: 50%; background: #fff; border: 5px solid #CBC8BE; display: grid; place-items: center;
+  font-size: 28px; font-weight: 700; color: #8a8f8b; }
+.steps .st.on { background: var(--green); border-color: var(--green); color: #fff; }
+
+/* 8 */
+#s8 .seal { position: absolute; }
+#s8 .txt { position: absolute; text-align: center; }
+body.v #s8 .seal { left: 330px; top: 440px; width: 420px; }
+body.v #s8 .txt { left: 0; right: 0; top: 930px; }
+body.h #s8 .seal { left: 250px; top: 270px; width: 520px; }
+body.h #s8 .txt { left: 830px; width: 900px; top: 300px; }
+#s8 .name { font-family: "PT Serif", serif; font-weight: 700; font-size: 190px; letter-spacing: 18px; line-height: 1; color: var(--cream); }
+#s8 .cta { font-family: "PT Serif", serif; font-size: 62px; color: var(--goldl); margin-top: 34px; }
+#s8 .badge { width: 520px; margin-top: 50px; }
+#s8 .glow8 { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(246,227,180,.45) 0%, rgba(246,227,180,0) 65%); }
+</style>
+</head>
+<body class="v">
+<div id="stage">
+  <div id="bg"></div><div id="pattern"></div><div id="glow"></div>
+
+  <div id="brand"><img src="../../../../services/web/public/iqro-wax-seal.png" alt=""><span>IQRO</span></div>
+
+  <!-- 1 -->
+  <div class="scene" id="s1">
+    <div class="c">
+      <div class="hl" id="s1a">Вы читаете Коран вслух,</div>
+      <div class="hl gold l2" id="s1b">а проверить некому?</div>
+      <div id="wave"></div>
+    </div>
+  </div>
+
+  <!-- 2–3 -->
+  <div class="scene" id="s23">
+    <div class="tz">
+      <div id="t2"><div class="hl">IQRO слушает</div><div class="sub">и идёт за вами — слово за словом</div></div>
+      <div id="t3"><div class="chips"><div class="chip">Слово</div><div class="chip">Буква</div><div class="chip">Огласовка</div></div><div class="hl">Остановится<br>и подскажет</div></div>
+      <div id="t3b"><div class="offline">
+          <div class="ic"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#f6e3b4" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10.5 18.5h3"/></svg></div>
+          <div class="ic"><svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#f6e3b4" stroke-width="1.8" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/><path d="M3 3l18 18" stroke="#E2B665" stroke-width="2.2"/></svg></div>
+        </div><div class="hl">Прямо на телефоне,</div><div class="sub">без интернета</div></div>
+    </div>
+    <div class="vz">
+      <div class="card" id="page">
+        <div class="head">
+          <div class="title">Аль-Фатиха</div>
+          <div id="mic"><div class="ring" id="r1"></div><div class="ring" id="r2"></div>
+            <div class="btn"><svg width="54" height="54" viewBox="0 0 24 24" fill="#C62828"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg></div></div>
+        </div>
+        <div id="words" class="ar"><div id="plate"></div></div>
+        <div id="status">
+          <div class="stw" id="stw1"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#A07424" stroke-width="2" stroke-linecap="round"><path d="M6 9a6 6 0 0 1 12 0c0 3-2 4-3 5.5S14 18 12 19a3 3 0 0 1-4-1"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-1.5 2-1.5 3.5"/></svg><span id="st-word" class="ar"></span></div>
+          <div class="stw" id="stw2"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round"><path d="M6 9a6 6 0 0 1 12 0c0 3-2 4-3 5.5S14 18 12 19a3 3 0 0 1-4-1"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-1.5 2-1.5 3.5"/></svg><span id="st-hint">Слово пропущено. Прочитайте его</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="scene" id="s4">
+    <div class="tz"><div id="t4"><div class="hl">Понемногу,<br><span class="gold">но каждый день</span></div></div></div>
+    <div class="vz">
+      <div class="card dcard" id="d4a" style="top:40px"><h3 style="color:var(--green)">Каждый день</h3><p style="color:var(--gold)">понемногу</p><div class="days"></div></div>
+      <div class="card dcard" id="d4b" style="top:540px"><h3>Раз в неделю</h3><p style="color:rgba(246,242,233,.7)">по два часа</p><div class="days"></div></div>
+    </div>
+  </div>
+
+  <!-- 5а -->
+  <div class="scene" id="s5a">
+    <div class="tz"><div id="t5a"><div class="hl">Задайте дневную цель</div><div class="sub">и отмечайте чтение после каждого намаза</div></div></div>
+    <div class="vz">
+      <div class="card" id="plan">
+        <div class="lbl">Дневная цель</div>
+        <div class="seg"><div class="on">Минуты</div><div>Страницы</div><div>Аяты</div></div>
+        <div id="goalnum"><span id="gn">5</span><small>минут</small></div>
+        <hr class="sep">
+        <div class="lbl">Чтение после намаза</div>
+        <div class="prayers" id="prayers"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5б -->
+  <div class="scene" id="s5b">
+    <div class="tz"><div id="t5b"><div class="hl">Напомнит<br>о намазе</div><div class="sub" id="t5bs">и покажет ваш прогресс</div></div></div>
+    <div class="vz">
+      <div class="card" id="prog">
+        <div class="ph" id="palms"></div>
+        <div class="pl">Прогресс</div>
+        <div class="cal" id="cal"></div>
+      </div>
+      <div class="card" id="notif"><img src="../../../../services/web/public/iqro-app-icon.png" alt="">
+        <div><div class="t1">IQRO · сейчас</div><div class="t2">Время намаза</div><div class="t3">Наступило время молитвы: Зухр</div></div></div>
+    </div>
+  </div>
+
+  <!-- 5в -->
+  <div class="scene" id="s5c">
+    <div class="tz"><div id="t5c"><div class="hl gold" style="font-size:150px">5–10 минут</div><div class="sub" id="t5cs" style="font-size:58px">и Коран всегда с вами</div></div></div>
+    <div class="vz">
+      <svg id="ring" viewBox="0 0 720 720"><circle cx="360" cy="360" r="330" fill="none" stroke="rgba(246,242,233,.12)" stroke-width="30"/>
+        <circle id="arc" cx="360" cy="360" r="330" fill="none" stroke="#E2B665" stroke-width="30" stroke-linecap="round" transform="rotate(-90 360 360)" stroke-dasharray="2073.45" stroke-dashoffset="2073.45"/></svg>
+      <div id="ringc"><div id="rc-in"><svg width="150" height="150" viewBox="0 0 24 24" fill="none" stroke="#E2B665" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div class="big">Сегодня<br>засчитано</div></div></div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="scene" id="s6">
+    <div class="tz"><div id="t6" class="list"><div class="eb">А ещё</div>
+      <div class="it"><b></b>Мусхаф с цветным таджвидом</div><div class="it"><b></b>Перевод</div><div class="it"><b></b>Тафсир</div><div class="it"><b></b>Любимые чтецы</div></div></div>
+    <div class="vz"><div class="phone"><div class="scr">
+      <img id="sc1" src="../../play-store-screenshots/ru/2-mushaf-tajweed.png" alt="">
+      <img id="sc2" src="../../play-store-screenshots/ru/4-reader.png" alt="">
+      <img id="sc3" src="assets/reader-tafsir.jpg" alt="">
+    </div></div></div>
+  </div>
+
+  <!-- 7а: имена -->
+  <div class="scene" id="s7a">
+    <div class="tz"><div id="t7a"><div class="hl">99 имён Аллаха</div><div class="sub">которыми мы к Нему обращаемся</div></div></div>
+    <div class="vz"><div id="wheel"><div class="disc"></div><div class="names" id="wnames"></div><div class="ptr"></div>
+      <div class="hub" id="hub"></div></div></div>
+  </div>
+
+  <!-- 7а: кибла -->
+  <div class="scene" id="s7q">
+    <div class="tz"><div id="t7q"><div class="hl">Время намаза<br>и кибла</div><div class="sub">где бы вы ни были</div></div></div>
+    <div class="vz">
+      <div id="compass"><svg viewBox="0 0 580 580" id="csvg"></svg></div>
+      <div class="card" id="times"><div class="hi" id="thi"></div></div>
+    </div>
+  </div>
+
+  <!-- 7б -->
+  <div class="scene" id="s7b1"><div class="c"><div class="hl">Только <span class="gold">начинаете?</span></div></div></div>
+  <div class="scene" id="s7b2">
+    <div class="tz">
+      <div id="t7b2"><div class="hl">Курс намаза</div><div class="sub">шаг за шагом</div></div>
+      <div id="t7b3"><div class="hl">Курс таджвида</div><div class="sub">правила чтения по шагам</div></div>
+    </div>
+    <div class="vz">
+      <div class="card course" id="cs1" style="top:40px"><div class="top"><div class="ic">
+        <svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="#0B5D4B" stroke-width="1.6" stroke-linejoin="round"><path d="M6 21V10a6 6 0 0 1 12 0v11z"/><path d="M9 21v-8a3 3 0 0 1 6 0v8"/><path d="M3 21h18"/></svg></div>
+        <div><h3>Обучение намазу</h3><p>Пошагово: вуду и пять молитв</p></div></div><div class="steps"></div></div>
+      <div class="card course" id="cs2" style="top:540px"><div class="top"><div class="ic">
+        <svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="#0B5D4B" stroke-width="1.6" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3 5v13c4-.5 7 0 9 1.5 2-1.5 5-2 9-1.5V5c-4-.5-7 0-9 1.5z"/><path d="M12 6.5v13"/></svg></div>
+        <div><h3>Таджвид</h3><p>Правила чтения по шагам</p></div></div><div class="steps"></div></div>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="scene" id="s8">
+    <div class="glow8" id="g8"></div>
+    <img class="seal" id="seal" src="../../../../services/web/public/iqro-wax-seal.png" alt="">
+    <div class="txt"><div class="name" id="nm8"></div><div class="cta" id="cta8">Скачайте в Google Play</div>
+      <img class="badge" id="badge8" src="../../../../services/web/public/images/store/google-play-ru.webp" alt=""></div>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const E = {
+  lin: (x) => x,
+  out: (x) => 1 - Math.pow(1 - x, 3),
+  io: (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+  back: (x) => { const c1 = 1.6, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); },
+};
+// прогресс 0..1 от момента a длительностью d
+const P = (t, a, d, e = E.out) => e(clamp((t - a) / d));
+function st(el, o, tr) { el.style.opacity = o; if (tr !== undefined) el.style.transform = tr; }
+// блок текста: появляется в a, уходит к b
+function blk(el, t, a, b, dy = 46) {
+  const ki = P(t, a, .5), ko = b == null ? 0 : P(t, b - .28, .32, E.io);
+  st(el, ki * (1 - ko), `translateY(${(1 - ki) * dy - ko * dy * .5}px)`);
+}
+// пословное появление
+function splitWords(el) {
+  const walk = (n) => {
+    for (const c of [...n.childNodes]) {
+      if (c.nodeType === 3) {
+        const frag = document.createDocumentFragment();
+        c.textContent.split(/(\s+)/).forEach((p) => {
+          if (!p) return;
+          if (/^\s+$/.test(p)) frag.appendChild(document.createTextNode(p));
+          else { const s = document.createElement('span'); s.className = 'w'; s.textContent = p; frag.appendChild(s); }
+        });
+        c.replaceWith(frag);
+      } else if (c.nodeType === 1 && !c.classList.contains('w')) walk(c);
+    }
+  };
+  walk(el);
+  return [...el.querySelectorAll('.w')];
+}
+function words(list, t, a, gap = .09, dy = 36) {
+  list.forEach((w, i) => { const k = P(t, a + i * gap, .45); st(w, k, `translateY(${(1 - k) * dy}px)`); });
+}
+
+let CUE = {}, END = 57.5, FMT = 'v';
+const W = {};
+
+window.setup = async function (cfg) {
+  FMT = cfg.format === '16x9' ? 'h' : 'v';
+  document.body.className = FMT;
+  const off = cfg.voice_offset || 0;
+  for (const [k, v] of Object.entries(cfg.cues)) CUE[k] = v + off;
+  END = cfg.duration;
+
+  // 1: волна
+  const wave = $('#wave');
+  for (let i = 0; i < (FMT === 'v' ? 46 : 60); i++) wave.appendChild(document.createElement('i'));
+  W.s1a = splitWords($('#s1a')); W.s1b = splitWords($('#s1b'));
+
+  // 2–3: слова аятов (текст из данных приложения)
+  const box = $('#words');
+  const digits = '٠١٢٣٤٥٦٧٨٩';
+  W.wd = [];
+  cfg.fatiha.forEach((a) => {
+    const line = document.createElement('div'); line.className = 'ayl'; box.appendChild(line);
+    a.text.split(' ').forEach((w) => {
+      const s = document.createElement('span'); s.className = 'wd'; s.textContent = w; line.appendChild(s); W.wd.push(s);
+      line.appendChild(document.createTextNode(' '));
+    });
+    const m = document.createElement('span'); m.className = 'am';
+    m.textContent = '۝' + String(a.number).split('').map((d) => digits[+d]).join('');
+    line.appendChild(m);
+  });
+
+  // 4: дни
+  const dn = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const check = (c) => `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+  for (const id of ['#d4a', '#d4b']) {
+    const d = $(id + ' .days');
+    dn.forEach((n, i) => {
+      const on = id === '#d4a' || i === 6;
+      d.insertAdjacentHTML('beforeend', `<div class="day">${n}<div class="dot ${on && id === '#d4b' ? 'on' : ''}">${on ? check('#fff') : ''}</div></div>`);
+    });
+  }
+  // 5а: намазы
+  ['Фаджр', 'Зухр', 'Аср', 'Магриб', 'Иша'].forEach((n) => {
+    $('#prayers').insertAdjacentHTML('beforeend', `<div class="pr"><div class="ck"></div>${n}</div>`);
+  });
+  // 5б: пальма и календарь
+  for (let i = 0; i <= 5; i++) $('#palms').insertAdjacentHTML('beforeend', `<img src="../../../../clients/iqro_mobile/assets/plan/palm_stage_${i}.webp" alt="">`);
+  for (let i = 0; i < 30; i++) $('#cal').appendChild(document.createElement('i'));
+  // 7а: колесо имён
+  const wn = $('#wnames');
+  cfg.names.forEach((n, i) => {
+    const s = document.createElement('span'); s.textContent = n.ru;
+    s.style.transform = `rotate(${i * 360 / 99 - 90}deg) translateX(226px)`; wn.appendChild(s);
+  });
+  // длинные имена не должны выходить за круг
+  const spans = [...wn.children], maxW = Math.max(...spans.map((s) => s.offsetWidth));
+  if (maxW > 196) spans.forEach((s) => { s.style.fontSize = (17 * 196 / maxW).toFixed(2) + 'px'; });
+  cfg.featured.forEach((n) => {
+    $('#hub').insertAdjacentHTML('beforeend', `<div class="nm"><div class="a ar">${n.arabic}</div><div class="r">${n.ru}</div><div class="m">${n.meaning}</div></div>`);
+  });
+  // 7а: компас
+  let svg = '';
+  for (let i = 0; i < 72; i++) {
+    const a = i * 5 * Math.PI / 180, r1 = 262, r2 = i % 18 === 0 ? 226 : i % 6 === 0 ? 238 : 248;
+    svg += `<line x1="${290 + r1 * Math.sin(a)}" y1="${290 - r1 * Math.cos(a)}" x2="${290 + r2 * Math.sin(a)}" y2="${290 - r2 * Math.cos(a)}" stroke="#0B5D4B" stroke-width="${i % 6 === 0 ? 5 : 3}" stroke-linecap="round"/>`;
+  }
+  svg += `<text x="290" y="112" text-anchor="middle" font-family="-apple-system,sans-serif" font-weight="700" font-size="46" fill="#17201D">С</text>
+    <polygon points="290,10 274,-14 306,-14" fill="#17201D" transform="translate(0,30)"/>
+    <g id="needle"><polygon points="290,96 268,290 312,290" fill="#0B5D4B"/><polygon points="290,484 268,290 312,290" fill="#D9D4C6"/>
+    <rect x="270" y="78" width="40" height="40" rx="6" fill="#17201D" transform="rotate(0 290 98)"/></g>
+    <circle cx="290" cy="290" r="22" fill="#fff" stroke="#0B5D4B" stroke-width="6"/>`;
+  $('#csvg').innerHTML = svg;
+  [['Фаджр', '06:23'], ['Зухр', '12:51'], ['Аср', '15:20'], ['Магриб', '17:40'], ['Иша', '19:11']].forEach(([n, v]) => {
+    $('#times').insertAdjacentHTML('beforeend', `<div class="tm"><div class="n">${n}</div><div class="v">${v}</div></div>`);
+  });
+  // 7б: шаги
+  document.querySelectorAll('.course .steps').forEach((s) => {
+    s.innerHTML = '<div class="line"></div><div class="fill"></div>' + [1, 2, 3, 4, 5, 6].map((n) => `<div class="st">${n}</div>`).join('');
+  });
+  // 8
+  'IQRO'.split('').forEach((c) => $('#nm8').insertAdjacentHTML('beforeend', `<span class="w">${c}</span>`));
+  W.t5c = splitWords($('#t5c .hl'));
+  W.s7b1 = splitWords($('#s7b1 .hl'));
+
+  await document.fonts.ready;
+  await Promise.all([...document.images].map((im) => im.decode().catch(() => { throw new Error('image ' + im.src); })));
+
+  // положение слов для плашки
+  W.rect = W.wd.map((s) => ({ x: s.offsetLeft, y: s.offsetTop, w: s.offsetWidth, h: s.offsetHeight }));
+  buildPlate();
+  return { words: W.wd.length, lastWordBottom: Math.max(...W.rect.map((r) => r.y + r.h)) };
+};
+
+// --- плашка: ключевые точки (время, слово, красная ли) ---
+let PK = [];
+function buildPlate() {
+  const c2 = CUE['2'], c3 = CUE['3'], c3b = CUE['3b'], c4 = CUE['4'];
+  PK = [];
+  const t0 = c2 + .7, t1 = c3 - .15, n1 = 4;
+  for (let i = 0; i < n1; i++) PK.push({ t: t0 + i * (t1 - t0) / n1, w: i, red: 0 });
+  PK.push({ t: c3 + .35, w: 4, red: 1 });         // пропущено «ٱلْحَمْدُ»
+  PK.push({ t: c3b + .1, w: 4, red: 0 });         // прочитано — снова золотая
+  const t2 = c3b + .75, t3 = c4 - .25, n2 = W.wd.length - 5;
+  for (let i = 0; i < n2; i++) PK.push({ t: t2 + i * (t3 - t2) / n2, w: 5 + i, red: 0 });
+}
+function plateAt(t) {
+  let i = -1;
+  for (let k = 0; k < PK.length; k++) if (t >= PK[k].t) i = k;
+  if (i < 0) return null;
+  const cur = PK[i], prev = PK[Math.max(0, i - 1)];
+  const k = P(t, cur.t, .26, E.io);
+  const a = W.rect[prev.w], b = W.rect[cur.w];
+  const r = { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), w: lerp(a.w, b.w, k), h: lerp(a.h, b.h, k) };
+  const kc = P(t, cur.t, .22);
+  const red = lerp(prev.red, cur.red, kc);
+  return { r, red, word: cur.w, redSince: cur.red ? cur.t : null, appear: P(t, PK[0].t, .3) };
+}
+const mix = (c1, c2, k) => `rgb(${c1.map((v, i) => Math.round(lerp(v, c2[i], k))).join(',')})`;
+
+function sceneEnv(el, t, a, b, opt = {}) {
+  const ki = P(t, a - .22, .44, E.io), ko = b == null ? 0 : P(t, b - .22, .44, E.io);
+  const o = ki * (1 - ko);
+  el.style.visibility = o <= 0.001 ? 'hidden' : 'visible';
+  el.style.opacity = o;
+  const s = (opt.zin ?? 1.04) - ((opt.zin ?? 1.04) - 1) * ki - ko * .03;
+  el.style.transform = `scale(${s})`;
+  return o > 0.001;
+}
+
+window.render = function (t) {
+  const C = CUE;
+  // фон
+  $('#pattern').style.transform = `translate(${(t * 7) % 160}px, ${(t * 4.5) % 160}px)`;
+  const gx = FMT === 'v' ? 540 : 960, gy = FMT === 'v' ? 800 : 500;
+  $('#glow').style.transform = `translate(${gx - 700 + Math.sin(t * .35) * 220}px, ${gy - 700 + Math.cos(t * .27) * 180}px)`;
+  // бренд
+  const kb = P(t, C['2'] - .1, .5) * (1 - P(t, C['8'] - .3, .4));
+  st($('#brand'), kb);
+
+  // 1
+  if (sceneEnv($('#s1'), t, -1, C['2'] - .3, { zin: 1 })) {  // гаснет до того, как въедет карточка
+    const L = C['2'];
+    words(W.s1a, t, .12, .11);
+    words(W.s1b, t, L * .48, .11);
+    const bars = $('#wave').children, n = bars.length;
+    const kw = P(t, .2, .6);
+    for (let i = 0; i < n; i++) {
+      const env = Math.sin(Math.PI * (i + .5) / n);
+      const v = .5 + .5 * Math.sin(t * 8.3 + i * .62) * Math.sin(t * 2.9 + i * .21 + 1);
+      bars[i].style.height = (10 + kw * env * (20 + 150 * v)) + 'px';
+      bars[i].style.opacity = .35 + .65 * env;
+    }
+  }
+
+  // 2–3
+  if (sceneEnv($('#s23'), t, C['2'], C['4'])) {
+    blk($('#t2'), t, C['2'] + .05, C['3']);
+    blk($('#t3'), t, C['3'] + .1, C['3b']);
+    blk($('#t3b'), t, C['3b'] + .05, C['4'] + .3);
+    // фишки: слово, буква, огласовка — в такт фразе
+    const L3 = C['3b'] - C['3'];
+    [...document.querySelectorAll('#t3 .chip')].forEach((ch, i) => {
+      const a = C['3'] + [.05, .19, .33][i] * L3, k = P(t, a, .35);
+      ch.style.opacity = .25 + .75 * k;
+      ch.style.transform = `scale(${1 + .08 * Math.sin(Math.PI * clamp((t - a) / .4))})`;
+      ch.style.background = `rgba(226,182,101,${.22 * k})`;
+      ch.style.borderColor = `rgba(226,182,101,${.35 + .65 * k})`;
+    });
+    const hl3 = $('#t3 .hl'); const k3 = P(t, C['3'] + .5 * L3, .45);
+    st(hl3, k3, `translateY(${(1 - k3) * 30}px)`);
+    // карточка
+    const kp = P(t, C['2'] - .05, .7, E.out);
+    $('#page').style.transform = `translateY(${(1 - kp) * 120}px)`;
+    // микрофон
+    const lis = t > C['2'] + .4 && t < C['4'];
+    const press = Math.sin(Math.PI * clamp((t - C['2'] - .3) / .3));
+    $('#mic .btn').style.transform = `scale(${1 - .1 * press})`;
+    ['#r1', '#r2'].forEach((id, j) => {
+      const ph = lis ? ((t - C['2'] + j * .8) % 1.6) / 1.6 : 0;
+      st($(id), lis ? (1 - ph) * .8 : 0, `scale(${1 + ph * .7})`);
+    });
+    // плашка
+    const pl = plateAt(t), plate = $('#plate');
+    if (pl) {
+      let dx = 0;
+      if (pl.redSince != null && t > pl.redSince) dx = Math.sin((t - pl.redSince) * 42) * 12 * Math.exp(-(t - pl.redSince) * 4.5);
+      const padx = 6, pady = 4;
+      Object.assign(plate.style, {
+        left: (pl.r.x - padx + dx) + 'px', top: (pl.r.y + pady) + 'px', width: (pl.r.w + 2 * padx) + 'px', height: (pl.r.h - 2 * pady) + 'px',
+        background: mix([242, 223, 179], [247, 207, 203], pl.red), borderColor: mix([199, 154, 69], [210, 69, 63], pl.red),
+        opacity: pl.appear,
+      });
+      $('#st-word').textContent = W.wd[pl.word].textContent;
+      const kr = pl.red;
+      st($('#stw1'), pl.appear * (1 - kr), `translateY(${kr * -20}px)`);
+      st($('#stw2'), kr, `translateY(${(1 - kr) * 20}px)`);
+    } else { plate.style.opacity = 0; st($('#stw1'), 0); st($('#stw2'), 0); }
+  }
+
+  // 4
+  if (sceneEnv($('#s4'), t, C['4'], C['5'])) {
+    const L = C['5'] - C['4'];
+    blk($('#t4'), t, C['4'] + .05, null);
+    const ka = P(t, C['4'], .6); $('#d4a').style.transform = `translateY(${(1 - ka) * 80}px)`; $('#d4a').style.opacity = ka;
+    [...document.querySelectorAll('#d4a .dot')].forEach((d, i) => {
+      const k = P(t, C['4'] + .45 + i * .2, .35, E.back); d.style.transform = `scale(${k})`;
+    });
+    const kb2 = P(t, C['4'] + .5 * L, .6);
+    st($('#d4b'), kb2 * (1 - .35 * P(t, C['4'] + .8 * L, .5)), `translateY(${(1 - kb2) * 80}px)`);
+    const dd = document.querySelector('#d4b .dot.on');
+    const kd = P(t, C['4'] + .5 * L + .5, .4, E.back); dd.style.transform = `scale(${.4 + .6 * kd})`;
+  }
+
+  // 5а
+  if (sceneEnv($('#s5a'), t, C['5'], C['5b'])) {
+    const L = C['5b'] - C['5'];
+    blk($('#t5a'), t, C['5'] + .05, null);
+    const kp = P(t, C['5'] - .1, .7); $('#plan').style.transform = `translateY(${(1 - kp) * 120}px)`;
+    $('#gn').textContent = Math.round(lerp(5, 10, P(t, C['5'] + .4, 1.1, E.io)));
+    [...document.querySelectorAll('#prayers .pr')].forEach((p, i) => {
+      const a = C['5'] + (.42 + i * .1) * L, k = P(t, a, .3, E.back), kc = P(t, a, .2);
+      const ck = p.querySelector('.ck');
+      ck.style.background = kc > .5 ? '#0B5D4B' : 'transparent';
+      ck.style.borderColor = kc > .5 ? '#0B5D4B' : '#b9b6ab';
+      ck.innerHTML = kc > .5 ? '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : '';
+      ck.style.transform = `scale(${kc > .5 ? .7 + .3 * k : 1})`;
+      p.style.background = mix([239, 238, 232], [217, 238, 231], kc);
+    });
+  }
+
+  // 5б
+  if (sceneEnv($('#s5b'), t, C['5b'], C['5c'])) {
+    const L = C['5c'] - C['5b'];
+    blk($('#t5b'), t, C['5b'] + .05, null);
+    const ks = P(t, C['5b'] + .45 * L, .5); st($('#t5bs'), ks, `translateY(${(1 - ks) * 24}px)`);
+    const kn = P(t, C['5b'] + .1, .6, E.back);
+    $('#notif').style.transform = `translateY(${(1 - kn) * -260}px)`; $('#notif').style.opacity = clamp(kn * 2);
+    const kg = P(t, C['5b'] + .3, .6); $('#prog').style.transform = `translateY(${(1 - kg) * 100}px)`; $('#prog').style.opacity = kg;
+    const stage = clamp((t - (C['5b'] + .4 * L)) / (.5 * L)) * 5;
+    [...document.querySelectorAll('#palms img')].forEach((im, i) => {
+      im.style.opacity = i === 0 ? 1 : clamp(stage - i + 1);
+      im.style.transform = `scale(${1.06 - .06 * clamp(stage / 5)})`;
+    });
+    const nc = Math.floor(clamp((t - (C['5b'] + .4 * L)) / (.52 * L)) * 30);
+    [...document.querySelectorAll('#cal i')].forEach((c, i) => c.classList.toggle('on', i < nc));
+  }
+
+  // 5в
+  if (sceneEnv($('#s5c'), t, C['5c'], C['6'])) {
+    const L = C['6'] - C['5c'];
+    words(W.t5c, t, C['5c'] + .05, .12, 50);
+    const ks = P(t, C['5c'] + .42 * L, .5); st($('#t5cs'), ks, `translateY(${(1 - ks) * 24}px)`);
+    const ka = P(t, C['5c'] + .1, .62 * L, E.io);
+    $('#arc').setAttribute('stroke-dashoffset', 2073.45 * (1 - ka));
+    const kc = P(t, C['5c'] + .7 * L, .45, E.back); st($('#rc-in'), clamp(kc * 1.5), `scale(${.6 + .4 * kc})`);
+  }
+
+  // 6
+  if (sceneEnv($('#s6'), t, C['6'], C['7a'])) {
+    const L = C['7a'] - C['6'];
+    const items = [...document.querySelectorAll('#t6 > *')];
+    const at = [0, .02, .44, .58, .72];
+    items.forEach((it, i) => { const k = P(t, C['6'] + at[i] * L, .4); st(it, k, `translateX(${(1 - k) * -40}px)`); });
+    const kph = P(t, C['6'] - .1, .8);
+    $('#s6 .phone').style.transform = `translateY(${(1 - kph) * 160}px) rotate(${(1 - kph) * 4}deg)`;
+    const k2 = P(t, C['6'] + .42 * L, .4, E.io), k3 = P(t, C['6'] + .62 * L, .4, E.io);
+    $('#sc1').style.transform = `translateX(${-100 * k2}%)`;
+    $('#sc2').style.transform = `translateX(${100 * (1 - k2) - 100 * k3}%)`;
+    $('#sc3').style.transform = `translateX(${100 * (1 - k3)}%)`;
+  }
+
+  // 7а имена
+  if (sceneEnv($('#s7a'), t, C['7a'], C['7a2'])) {
+    const L = C['7a2'] - C['7a'];
+    blk($('#t7a'), t, C['7a'] + .05, null);
+    const kw = P(t, C['7a'] - .1, .8);
+    const nmEls = [...document.querySelectorAll('#hub .nm')], n = nmEls.length;
+    const seg = L / n;
+    const idx = clamp(Math.floor((t - C['7a']) / seg), 0, n - 1);
+    // колесо поворачивается на одно имя при каждой смене и медленно плывёт
+    let steps = 0;
+    for (let i = 1; i < n; i++) steps += P(t, C['7a'] + i * seg - .15, .4, E.io);
+    $('#wnames').style.transform = `rotate(${-steps * 360 / 99 - (t - C['7a']) * 2}deg)`;
+    $('#wheel').style.transform = `scale(${.85 + .15 * kw})`; $('#wheel').style.opacity = kw;
+    nmEls.forEach((el, i) => {
+      const ki = i === 0 ? 1 : P(t, C['7a'] + i * seg - .15, .35), ko = i === n - 1 ? 0 : P(t, C['7a'] + (i + 1) * seg - .2, .25);
+      st(el, ki * (1 - ko), `translateY(${(1 - ki) * 30 - ko * 30}px)`);
+    });
+  }
+
+  // 7а кибла
+  if (sceneEnv($('#s7q'), t, C['7a2'], C['7b'])) {
+    const L = C['7b'] - C['7a2'];
+    blk($('#t7q'), t, C['7a2'] + .05, null);
+    const kc = P(t, C['7a2'] - .1, .6); $('#compass').style.transform = `scale(${.8 + .2 * kc})`; $('#compass').style.opacity = kc;
+    const kn = P(t, C['7a2'] + .15, 1.4, E.back);
+    $('#needle').setAttribute('transform', `rotate(${lerp(-60, 152, kn)} 290 290)`);
+    const kt = P(t, C['7a2'] + .25, .6); $('#times').style.transform = `translateY(${(1 - kt) * 80}px)`; $('#times').style.opacity = kt;
+    const pos = clamp((t - C['7a2'] - .6) / (.7 * L)) * 4;
+    const cols = [...document.querySelectorAll('#times .tm')];
+    const step = Math.floor(pos), f = E.io(pos - step);
+    const a = cols[Math.min(step, 4)], b = cols[Math.min(step + 1, 4)];
+    $('#thi').style.left = (lerp(a.offsetLeft, b.offsetLeft, f) - 4) + 'px';
+  }
+
+  // 7б
+  if (sceneEnv($('#s7b1'), t, C['7b'], C['7b2'], { zin: .96 })) words(W.s7b1, t, C['7b'] + .02, .14, 40);
+  if (sceneEnv($('#s7b2'), t, C['7b2'], C['8'])) {
+    blk($('#t7b2'), t, C['7b2'] + .05, C['7b3']);
+    blk($('#t7b3'), t, C['7b3'] + .05, null);
+    const k1 = P(t, C['7b2'] - .1, .6), k2 = P(t, C['7b3'] - .1, .6);
+    st($('#cs1'), k1, `translateY(${(1 - k1) * 120}px) scale(${1 - .03 * k2})`);
+    st($('#cs2'), k2, `translateY(${(1 - k2) * 140}px)`);
+    const fillSteps = (card, a, b) => {
+      const s = clamp((t - a) / (b - a)) * 5;
+      const sts = [...card.querySelectorAll('.st')];
+      sts.forEach((el, i) => el.classList.toggle('on', i <= s + 1e-6));
+      const line = card.querySelector('.line');
+      card.querySelector('.fill').style.width = (line.offsetWidth * s / 5) + 'px';
+    };
+    fillSteps($('#cs1'), C['7b2'] + .4, C['7b3'] - .1);
+    fillSteps($('#cs2'), C['7b3'] + .4, C['8'] - .1);
+  }
+
+  // 8
+  if (sceneEnv($('#s8'), t, C['8'], null, { zin: 1 })) {
+    const ks = P(t, C['8'] + .05, .8, E.back);
+    const seal = $('#seal');
+    st(seal, clamp(ks * 1.6), `scale(${.4 + .6 * ks}) rotate(${(1 - ks) * -14}deg)`);
+    const g = $('#g8'), sr = seal.getBoundingClientRect();
+    const gs = FMT === 'v' ? 900 : 1000;
+    Object.assign(g.style, { width: gs + 'px', height: gs + 'px', left: (seal.offsetLeft + seal.offsetWidth / 2 - gs / 2) + 'px', top: (seal.offsetTop + seal.offsetHeight / 2 - gs / 2) + 'px' });
+    g.style.opacity = P(t, C['8'] + .2, .8) * (.8 + .2 * Math.sin(t * 2));
+    words([...document.querySelectorAll('#nm8 .w')], t, C['8'] + .35, .09, 40);
+    const kc = P(t, C['8'] + 1.0, .5); st($('#cta8'), kc, `translateY(${(1 - kc) * 30}px)`);
+    const kg = P(t, C['8'] + 1.35, .5, E.back); st($('#badge8'), clamp(kg * 1.5), `scale(${.7 + .3 * kg})`);
+  }
+};
+</script>
+</body>
+</html>

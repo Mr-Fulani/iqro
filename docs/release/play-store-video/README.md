@@ -95,3 +95,9 @@ Python-пакет `playwright` и Chrome): какие записи и с как�
 
 На YouTube ролик не загружен и в Play Console ссылка не вставлена — это отдельный шаг по слову
 владельца.
+
+## Анимационная версия
+
+Нарезка записей владельцу не подошла: он хотел настоящую анимацию. Анимационный ролик под ту же озвучку
+— в [animation/](animation/README.md): `~/Downloads/iqro-promo-vertical.mp4` и
+`~/Downloads/iqro-promo-horizontal.mp4`, под вторую озвучку владельца. Тайминги фраз — в `animation/timing.json`, голос меняется одной командой.
