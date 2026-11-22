@@ -100,7 +100,8 @@ Production Compose без hot reload и bind-mount исходников опис
 Резервные копии и восстановление: [backup/recovery runbook](docs/backup-recovery.md).
 Уведомления о сбоях в Telegram и внешняя проверка сайта: [alerts.md](docs/alerts.md).
 Вход через Google: [google-sign-in.md](docs/google-sign-in.md). Статистика посещений:
-[analytics.md](docs/analytics.md).
+[analytics.md](docs/analytics.md). Плашка Google Play на сайте:
+[google-play-badge.md](docs/google-play-badge.md).
 Архивный регламент создания отдельной тестовой среды от VPS до DNS/TLS/R2 описан в
 [пошаговом staging runbook](docs/staging.md).
 Исторический снимок соответствия P0/MVP на 29.08.2026: [P0/MVP gap audit](docs/mvp-gap-audit.md).

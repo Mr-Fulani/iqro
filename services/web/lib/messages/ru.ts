@@ -231,6 +231,7 @@ const ru = {
   "footer.iosSoon": "Скоро для iOS",
   "footer.androidSoon": "Скоро для Android",
   "footer.storeDownload": "Скачать в",
+  "footer.googlePlayBadge": "Доступно в Google Play",
   "footer.sections": "Разделы",
   "footer.quran": "Коран и Мусхаф",
   "footer.reciters": "Каталог чтецов",

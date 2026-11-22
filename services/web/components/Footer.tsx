@@ -7,6 +7,7 @@ import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
 import { SocialLinks } from "./social/SocialLinks";
 import { MobileDisclosure } from "./MobileDisclosure";
+import { GooglePlayBadge } from "./GooglePlayBadge";
 
 type FooterProps = {
   socialProfiles?: SocialProfile[];
@@ -19,7 +20,6 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
   const playStoreUrl = process.env.NEXT_PUBLIC_ANDROID_PLAY_STORE_URL?.trim();
   const stores = [
     { name: "App Store", url: appStoreUrl, soon: t("footer.iosSoon") },
-    { name: "Google Play", url: playStoreUrl, soon: t("footer.androidSoon") },
   ];
   return (
     <footer className="app-footer">
@@ -44,6 +44,12 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
                     <strong>{store.name}</strong>
                   </div>
                 ))}
+                {playStoreUrl ? <GooglePlayBadge /> : (
+                  <div className="footer-store-badge">
+                    <span>{t("footer.androidSoon")}</span>
+                    <strong>Google Play</strong>
+                  </div>
+                )}
               </div>
               {appDownloadUrl && !playStoreUrl ? (
                 <a className="btn btn-primary footer-app-download" href={appDownloadUrl}>

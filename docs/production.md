@@ -64,6 +64,9 @@ chmod 600 services/backend/.env.production
 - `WEB_GA_MEASUREMENT_ID` и `WEB_YANDEX_METRIKA_ID` — публичные ID счётчиков Google Analytics 4 и
   Яндекс Метрики. Они тоже встраиваются в образ web при сборке; пустые значения отключают баннер
   согласия и счётчики. Подробно — [analytics.md](analytics.md).
+- `WEB_ANDROID_PLAY_STORE_URL` — адрес страницы приложения в Google Play. Тоже встраивается в
+  образ web при сборке; пустое значение скрывает плашку Google Play на сайте. Подробно —
+  [google-play-badge.md](google-play-badge.md).
 - `TELEGRAM_BOT_TOKEN` и `TELEGRAM_ALERT_CHAT_ID` — уведомления админу в Telegram. Пустые
   значения их выключают. Подробно — [alerts.md](alerts.md).
 - `QURAN_GOOGLE_WEB_CLIENT_ID` и `QURAN_GOOGLE_ANDROID_CLIENT_IDS` — вход через Google. Без

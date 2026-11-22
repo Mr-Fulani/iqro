@@ -228,6 +228,7 @@ const ar: Messages = {
   "footer.iosSoon": "قريبًا لنظام iOS",
   "footer.androidSoon": "قريبًا لنظام Android",
   "footer.storeDownload": "تنزيل من",
+  "footer.googlePlayBadge": "احصل عليه من Google Play",
   "footer.sections": "الأقسام",
   "footer.quran": "القرآن والمصحف",
   "footer.reciters": "دليل القراء",
