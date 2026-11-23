@@ -149,6 +149,18 @@ test("robots and sitemap publish only the current public route set", async ({ re
   expect(sitemap).not.toContain("/profile");
 });
 
+test("llms.txt describes the site for AI crawlers without account routes", async ({ request }) => {
+  const response = await request.get("/llms.txt");
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("text/plain");
+  const text = await response.text();
+  expect(text.startsWith("# IQRO\n")).toBe(true);
+  expect(text).toContain("https://play.google.com/store/apps/details?id=forum.iqro.app");
+  for (const path of ["/login", "/register", "/profile", "/notes", "/api/", "/admin/"]) {
+    expect(text).not.toContain(path);
+  }
+});
+
 test("courses sitemap lists a course and its lessons only on its languages", async ({ request }) => {
   const response = await request.get("/sitemaps/courses/sitemap.xml");
   expect(response.ok()).toBe(true);
