@@ -3402,6 +3402,24 @@ abstract class AppLocalizations {
   /// **'You have not chosen yet. Until you do, Google Analytics stays off.'**
   String get analyticsStateUnset;
 
+  /// No description provided for @analyticsReminderText.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been using IQRO for a month. Allow usage statistics with Google Analytics — it helps us improve the app. Without it the app works the same.'**
+  String get analyticsReminderText;
+
+  /// No description provided for @analyticsReminderAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get analyticsReminderAccept;
+
+  /// No description provided for @analyticsReminderDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'No, thanks'**
+  String get analyticsReminderDecline;
+
   /// No description provided for @reminders.
   ///
   /// In en, this message translates to:

@@ -45,6 +45,103 @@ export function parseConsent(value: string | null | undefined): AnalyticsConsent
   return value === "granted" || value === "denied" ? value : null;
 }
 
+/**
+ * One gentle reminder for visitors who declined statistics: not sooner than
+ * REMINDER_AFTER_DAYS days after the refusal, and only after visits on
+ * REMINDER_ACTIVE_DAYS different days since then. The app keeps the same pair
+ * in clients/iqro_mobile/lib/core/analytics/analytics.dart.
+ */
+export const REMINDER_AFTER_DAYS = 30;
+export const REMINDER_ACTIVE_DAYS = 5;
+export const ANALYTICS_REMINDER_KEY = "iqro_analytics_reminder_v1";
+
+/**
+ * What the reminder needs to know, kept in localStorage as JSON. Days are
+ * local calendar days, "2026-11-21". `declinedOn` is the day of the refusal;
+ * for a refusal made before the reminder existed, the first visit with it.
+ * `done`: the reminder was answered and nothing asks again.
+ */
+export type AnalyticsReminder = { declinedOn: string | null; lastDay: string | null; days: number; done: boolean };
+
+const NO_REMINDER: AnalyticsReminder = { declinedOn: null, lastDay: null, days: 0, done: false };
+
+export function parseReminder(value: string | null | undefined): AnalyticsReminder {
+  try {
+    const json = JSON.parse(value ?? "") as Partial<AnalyticsReminder>;
+    return {
+      declinedOn: typeof json.declinedOn === "string" ? json.declinedOn : null,
+      lastDay: typeof json.lastDay === "string" ? json.lastDay : null,
+      days: typeof json.days === "number" ? json.days : 0,
+      done: json.done === true,
+    };
+  } catch {
+    return NO_REMINDER;
+  }
+}
+
+function localDay(now: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/** A visit on `now` while statistics are declined. */
+export function noteReminderDay(reminder: AnalyticsReminder, now: Date): AnalyticsReminder {
+  const today = localDay(now);
+  if (reminder.done || reminder.lastDay === today) return reminder;
+  return reminder.declinedOn === null
+    ? { declinedOn: today, lastDay: today, days: 1, done: false }
+    : { ...reminder, lastDay: today, days: reminder.days + 1 };
+}
+
+export function reminderDue(reminder: AnalyticsReminder, now: Date): boolean {
+  if (reminder.done || reminder.declinedOn === null) return false;
+  const declined = Date.parse(`${reminder.declinedOn}T00:00:00Z`);
+  const today = Date.parse(`${localDay(now)}T00:00:00Z`);
+  if (Number.isNaN(declined)) return false;
+  return reminder.days >= REMINDER_ACTIVE_DAYS && (today - declined) / 86_400_000 >= REMINDER_AFTER_DAYS;
+}
+
+/**
+ * The record after an answer given on `now`. Any answer to the reminder is
+ * final; a refusal before it starts the count from that day.
+ */
+export function reminderAfterAnswer(reminder: AnalyticsReminder, consent: AnalyticsConsent, now: Date): AnalyticsReminder {
+  if (reminder.done) return reminder;
+  if (reminderDue(reminder, now)) return { ...reminder, done: true };
+  return consent === "denied" ? noteReminderDay(NO_REMINDER, now) : reminder;
+}
+
+function readReminder(): AnalyticsReminder {
+  try {
+    return parseReminder(window.localStorage.getItem(ANALYTICS_REMINDER_KEY));
+  } catch {
+    return NO_REMINDER;
+  }
+}
+
+function storeReminder(reminder: AnalyticsReminder): void {
+  try {
+    window.localStorage.setItem(ANALYTICS_REMINDER_KEY, JSON.stringify(reminder));
+  } catch {
+    // Without storage there is no reminder either.
+  }
+}
+
+/** Whether the banner should ask once more. */
+export function readReminderDue(now = new Date()): boolean {
+  return readConsent() === "denied" && reminderDue(readReminder(), now);
+}
+
+/** Counts today's visit for a visitor who declined. */
+export function noteAnalyticsVisit(now = new Date()): void {
+  if (readConsent() !== "denied") return;
+  const before = readReminder();
+  const next = noteReminderDay(before, now);
+  if (next === before) return;
+  storeReminder(next);
+  window.dispatchEvent(new Event(ANALYTICS_CONSENT_EVENT));
+}
+
 export function readConsent(): AnalyticsConsent | null {
   try {
     return parseConsent(window.localStorage.getItem(ANALYTICS_CONSENT_KEY));
@@ -57,7 +154,10 @@ export function readConsent(): AnalyticsConsent | null {
  * Remembers the choice. Withdrawing consent also removes the counters' cookies;
  * the caller reloads the page so their scripts stop too.
  */
-export function writeConsent(consent: AnalyticsConsent): void {
+export function writeConsent(consent: AnalyticsConsent, now = new Date()): void {
+  const before = readReminder();
+  const next = reminderAfterAnswer(before, consent, now);
+  if (next !== before) storeReminder(next);
   try {
     window.localStorage.setItem(ANALYTICS_CONSENT_KEY, consent);
   } catch {

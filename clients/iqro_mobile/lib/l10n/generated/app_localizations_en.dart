@@ -1838,6 +1838,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'You have not chosen yet. Until you do, Google Analytics stays off.';
 
   @override
+  String get analyticsReminderText =>
+      'You have been using IQRO for a month. Allow usage statistics with Google Analytics — it helps us improve the app. Without it the app works the same.';
+
+  @override
+  String get analyticsReminderAccept => 'Allow';
+
+  @override
+  String get analyticsReminderDecline => 'No, thanks';
+
+  @override
   String get reminders => 'Reminders';
 
   @override

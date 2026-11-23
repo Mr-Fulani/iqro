@@ -1841,6 +1841,16 @@ class AppLocalizationsRu extends AppLocalizations {
       'Вы ещё не выбрали. Пока выбора нет, Google Analytics выключен.';
 
   @override
+  String get analyticsReminderText =>
+      'Вы пользуетесь IQRO уже месяц. Разрешите статистику через Google Analytics — это поможет нам улучшать приложение. Без неё приложение работает так же.';
+
+  @override
+  String get analyticsReminderAccept => 'Разрешить';
+
+  @override
+  String get analyticsReminderDecline => 'Нет, спасибо';
+
+  @override
   String get reminders => 'Напоминания';
 
   @override

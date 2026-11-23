@@ -5,7 +5,16 @@ import {
   analyticsConfig,
   hasAnalytics,
   isAnalyticsCookie,
+  noteAnalyticsVisit,
+  noteReminderDay,
   parseConsent,
+  parseReminder,
+  readReminderDue,
+  REMINDER_ACTIVE_DAYS,
+  REMINDER_AFTER_DAYS,
+  reminderAfterAnswer,
+  reminderDue,
+  writeConsent,
   startAnalytics,
   trackEvent,
   trackPageView,
@@ -82,4 +91,106 @@ test("nothing is sent before consent; after it both counters get the same events
   // A second start (another consent event) does not load the scripts again.
   startAnalytics({ gaId: "G-TEST1", metrikaId: 42 });
   assert.equal(appended.length, 2);
+});
+
+const day = (offset: number) => new Date(2026, 10, 21 + offset, 9);
+const empty = parseReminder(null);
+
+/** A refusal on day 0, then visits on each of `offsets`. */
+function declinedThenVisited(offsets: number[]) {
+  return offsets.reduce((reminder, offset) => noteReminderDay(reminder, day(offset)), reminderAfterAnswer(empty, "denied", day(0)));
+}
+
+test("the reminder waits 30 days and 5 days of visits", () => {
+  assert.equal(REMINDER_AFTER_DAYS, 30);
+  assert.equal(REMINDER_ACTIVE_DAYS, 5);
+
+  const declined = reminderAfterAnswer(empty, "denied", day(0));
+  assert.deepEqual(declined, { declinedOn: "2026-11-21", lastDay: "2026-11-21", days: 1, done: false });
+  assert.equal(reminderDue(declined, day(0)), false);
+
+  // Every day for 29 days: too early. Day 30: due.
+  const daily = declinedThenVisited(Array.from({ length: 29 }, (_, index) => index + 1));
+  assert.equal(reminderDue(daily, day(29)), false);
+  assert.equal(reminderDue(noteReminderDay(daily, day(30)), day(30)), true);
+
+  // Long ago but only four days of visits: not yet. The same day counts once.
+  const rare = noteReminderDay(noteReminderDay(declinedThenVisited([1, 2]), day(90)), day(90));
+  assert.equal(rare.days, 4);
+  assert.equal(reminderDue(rare, day(90)), false);
+  assert.equal(reminderDue(noteReminderDay(rare, day(91)), day(91)), true);
+});
+
+test("any answer to the reminder is final; an earlier refusal restarts the count", () => {
+  const due = declinedThenVisited([1, 2, 3, 40]);
+  assert.equal(reminderDue(due, day(40)), true);
+
+  for (const answer of ["denied", "granted"] as const) {
+    const answered = reminderAfterAnswer(due, answer, day(40));
+    assert.equal(answered.done, true);
+    assert.equal(reminderDue(answered, day(400)), false);
+    // Withdrawing or declining later changes nothing.
+    assert.equal(reminderAfterAnswer(noteReminderDay(answered, day(401)), "denied", day(401)), answered);
+  }
+
+  // Allowed and withdrawn on /cookies before the reminder: counted from the new refusal.
+  const early = declinedThenVisited([1, 2]);
+  assert.equal(reminderAfterAnswer(early, "granted", day(3)), early);
+  assert.deepEqual(reminderAfterAnswer(early, "denied", day(20)), { declinedOn: "2026-12-11", lastDay: "2026-12-11", days: 1, done: false });
+
+  assert.deepEqual(parseReminder("not json"), empty);
+  assert.deepEqual(parseReminder('{"declinedOn":5,"days":"7"}'), empty);
+});
+
+test("the stored choice: an old refusal starts counting, the second one ends it, agreeing is kept", () => {
+  const items = new Map<string, string>();
+  let events = 0;
+  Object.assign(globalThis, {
+    window: {
+      location: { hostname: "iqro.forum" },
+      dispatchEvent: () => events++,
+      localStorage: {
+        getItem: (key: string) => items.get(key) ?? null,
+        setItem: (key: string, value: string) => items.set(key, value),
+        removeItem: (key: string) => items.delete(key),
+      },
+    },
+    document: { cookie: "" },
+  });
+  const stored = () => parseReminder(items.get("iqro_analytics_reminder_v1"));
+
+  // Nobody who has not answered, or agreed, is counted.
+  noteAnalyticsVisit(day(0));
+  items.set("iqro_analytics_consent_v1", "granted");
+  noteAnalyticsVisit(day(0));
+  assert.equal(items.has("iqro_analytics_reminder_v1"), false);
+
+  // A refusal from before the reminder existed: the count starts today.
+  items.set("iqro_analytics_consent_v1", "denied");
+  noteAnalyticsVisit(day(0));
+  assert.equal(stored().declinedOn, "2026-11-21");
+  assert.equal(events, 1);
+  noteAnalyticsVisit(day(0));
+  assert.equal(events, 1);
+
+  for (const offset of [5, 10, 15, 29]) noteAnalyticsVisit(day(offset));
+  assert.equal(readReminderDue(day(29)), false);
+  noteAnalyticsVisit(day(30));
+  assert.equal(readReminderDue(day(30)), true);
+  // It waits for an answer.
+  assert.equal(readReminderDue(day(45)), true);
+
+  writeConsent("denied", day(45));
+  assert.equal(items.get("iqro_analytics_consent_v1"), "denied");
+  assert.equal(stored().done, true);
+  noteAnalyticsVisit(day(400));
+  assert.equal(readReminderDue(day(400)), false);
+
+  // Agreeing on the reminder turns statistics on and closes it too.
+  items.set("iqro_analytics_reminder_v1", JSON.stringify({ declinedOn: "2026-01-01", lastDay: "2026-02-01", days: 5, done: false }));
+  assert.equal(readReminderDue(day(0)), true);
+  writeConsent("granted", day(0));
+  assert.equal(items.get("iqro_analytics_consent_v1"), "granted");
+  assert.equal(stored().done, true);
+  assert.equal(readReminderDue(day(0)), false);
 });

@@ -10,7 +10,9 @@ import '../../core/design_system/iqro_widgets.dart';
 import '../../core/share/content_share.dart';
 
 /// The question the site's cookie banner asks, above the tab bar until the
-/// user answers. Builds without Firebase IDs never show it.
+/// user answers. Someone who declined is asked once more a month later, in
+/// other words (`AnalyticsReminder`). Builds without Firebase IDs never show
+/// it.
 class AnalyticsConsentCard extends ConsumerWidget {
   const AnalyticsConsentCard({super.key});
 
@@ -18,13 +20,27 @@ class AnalyticsConsentCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final consent = ref.watch(analyticsProvider);
     final analytics = ref.read(analyticsProvider.notifier);
-    if (!analytics.available || consent != null) return const SizedBox.shrink();
+    if (!analytics.available) return const SizedBox.shrink();
+    return ValueListenableBuilder<bool>(
+      valueListenable: analytics.reminderDue,
+      builder: (context, reminder, _) {
+        if (consent != null && !reminder) return const SizedBox.shrink();
+        return _card(context, analytics, reminder: reminder);
+      },
+    );
+  }
+
+  Widget _card(
+    BuildContext context,
+    AnalyticsController analytics, {
+    required bool reminder,
+  }) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: IqroCard(
-        key: const ValueKey('analytics-consent'),
+        key: ValueKey(reminder ? 'analytics-reminder' : 'analytics-consent'),
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,7 +48,10 @@ class AnalyticsConsentCard extends ConsumerWidget {
           children: <Widget>[
             Text(l10n.analyticsTitle, style: theme.textTheme.titleSmall),
             const SizedBox(height: 6),
-            Text(l10n.analyticsCardText, style: theme.textTheme.bodySmall),
+            Text(
+              reminder ? l10n.analyticsReminderText : l10n.analyticsCardText,
+              style: theme.textTheme.bodySmall,
+            ),
             Wrap(
               alignment: WrapAlignment.end,
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -45,12 +64,20 @@ class AnalyticsConsentCard extends ConsumerWidget {
                 OutlinedButton(
                   onPressed: () =>
                       analytics.setConsent(AnalyticsConsent.denied),
-                  child: Text(l10n.analyticsDecline),
+                  child: Text(
+                    reminder
+                        ? l10n.analyticsReminderDecline
+                        : l10n.analyticsDecline,
+                  ),
                 ),
                 FilledButton(
                   onPressed: () =>
                       analytics.setConsent(AnalyticsConsent.granted),
-                  child: Text(l10n.analyticsAccept),
+                  child: Text(
+                    reminder
+                        ? l10n.analyticsReminderAccept
+                        : l10n.analyticsAccept,
+                  ),
                 ),
               ],
             ),

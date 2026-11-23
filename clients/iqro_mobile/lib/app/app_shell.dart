@@ -73,6 +73,7 @@ class _AppShellState extends ConsumerState<AppShell>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _schedulePlayerHint();
+      ref.read(analyticsProvider.notifier).noteVisit();
     } else if (state == AppLifecycleState.paused) {
       _stopPlayerHint();
     }

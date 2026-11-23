@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import re
+from io import StringIO
 from typing import Any
 
 import pytest
+from django.core.management import call_command
 
 from quran_backend.modules.audio.models import (
     AudioRendition,
@@ -407,6 +409,23 @@ def test_curated_names_replace_the_imported_ones(quran_dataset: dict[str, Any]) 
     assert reciter.name_ru == "Дауд Хамза"
     assert reciter.name_tr == "Davud Hamza"
     assert apply_reciter_profiles() == []
+
+
+@pytest.mark.django_db
+def test_apply_profiles_dry_run_writes_nothing(quran_dataset: dict[str, Any]) -> None:
+    reciter = Reciter.objects.create(
+        code="dawood-hamza", name_ar="داود حمزة", name_en="Dawood Hamza", name_ru="Дэвид Хамза"
+    )
+    before = Reciter.objects.values().get(pk=reciter.pk)
+    out = StringIO()
+
+    call_command("import_mp3quran_catalog", "--apply-profiles", "--dry-run", stdout=out)
+
+    assert Reciter.objects.values().get(pk=reciter.pk) == before
+    assert "to update: 1" in out.getvalue()
+    assert "  dawood-hamza" in out.getvalue()
+    assert "updated" not in out.getvalue()
+    assert apply_reciter_profiles() == ["dawood-hamza"]
 
 
 def test_every_curated_name_is_cyrillic_and_clean() -> None:
