@@ -1,0 +1,37 @@
+# IQRO
+
+> IQRO (https://iqro.forum) is a website and Android app for reading, listening to and studying the Quran: a Mushaf with colour-coded tajweed, translations and tafsir, reciter audio, the 99 names of Allah, prayer times with Qibla direction, and step-by-step courses on salah and tajweed.
+
+The site is available in four languages with the same sections under each prefix: Russian (`/ru`), English (`/en`), Arabic (`/ar`) and Turkish (`/tr`). The links below point to the English version; replace `/en` with another prefix for the other languages. Reading, listening and the courses are open without an account; an account is only for syncing bookmarks and progress between devices.
+
+## Quran
+
+- [Read the Quran](https://iqro.forum/en/quran): all 114 surahs by ayah or by Madani Mushaf page, with colour-coded tajweed, a choice of translations and tafsir, and navigation by juz, hizb and quarter
+- [Surah list of the Madani Mushaf (Hafs)](https://iqro.forum/en/quran/madani-hafs): every surah with a page for each ayah
+- [Reciter audio](https://iqro.forum/en/audio): complete recitations to listen to by surah and ayah
+- [Reciter catalog](https://iqro.forum/en/audio/reciters): the reciters and their published recitations
+
+## Learning
+
+- [Courses](https://iqro.forum/en/courses): short courses with notes
+- [Learning salah](https://iqro.forum/en/salah): a step-by-step course on preparing for prayer, ablution and the five daily prayers, with Arabic text, transliteration, translation and audio
+- [Tajweed course](https://iqro.forum/en/tajweed): the rules of reciting the Quran, with examples from ayahs to listen to and an exercise in every lesson
+- [Names of Allah](https://iqro.forum/en/names): the 99 names with Arabic script, meaning, explanation, a Quran ayah and a recording
+
+## Prayer and daily practice
+
+- [Prayer times and Qibla](https://iqro.forum/en/prayer): obligatory prayer times by recognised calculation methods and the Qibla direction for your location
+- [Duas and adhkar](https://iqro.forum/en/dua): Arabic text, meaning, transliteration and source references
+- [Hijri calendar](https://iqro.forum/en/calendar): dates and notable days
+
+## Mobile app
+
+- [IQRO for Android on Google Play](https://play.google.com/store/apps/details?id=forum.iqro.app): the same Quran, audio, courses and prayer times on the phone, with downloaded pages and audio available offline
+- Recitation check (app only): read an ayah aloud and the app follows you word by word and stops on a mistake. It runs on the phone itself and needs no internet connection. It is not available on the website.
+
+## Optional
+
+- [Sources and licenses](https://iqro.forum/en/sources): where the texts and recordings come from
+- [Contacts](https://iqro.forum/en/contacts): how to reach the project
+- [Privacy policy](https://iqro.forum/en/privacy)
+- [Terms of use](https://iqro.forum/en/terms)
