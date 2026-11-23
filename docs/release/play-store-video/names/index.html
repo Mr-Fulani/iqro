@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IQRO — 99 имён Аллаха (Shorts)</title>
+<!-- Кадры роликов «99 имён Аллаха». build.py вызывает setup({...}) и render(t) для каждого кадра. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600&family=Golos+Text:wght@400;500;600&display=swap">
+<style>
+:root { --ink:#0c100f; --dial:#121715; --dial2:#1c2320; --rim:#2b322e; --brass:#d1b06c; --brass-dim:#7c6a45; --text:#efe9dc; --muted:#9b9d93; --faint:#555a54; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: var(--ink); }
+#stage { position: absolute; inset: 0; color: var(--text); font-family: "Golos Text", -apple-system, sans-serif;
+  background: radial-gradient(70% 45% at 50% 42%, #17201c 0%, #0f1412 55%, #0b0e0d 100%); }
+.layer { position: absolute; inset: 0; }
+
+/* заставка и концовка */
+.mark { position: absolute; left: 50%; width: 360px; height: 360px; margin-left: -180px; }
+.mark svg { position: absolute; inset: 0; }
+.mark .ar { position: absolute; inset: 0; display: grid; place-items: center; font-family: Amiri, serif; font-size: 120px; color: var(--brass); padding-bottom: 20px; }
+.brand { position: absolute; left: 0; right: 0; text-align: center; font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 120px; letter-spacing: 26px; padding-left: 26px; }
+.tag { position: absolute; left: 0; right: 0; text-align: center; font-size: 30px; letter-spacing: 7px; color: var(--muted); text-transform: uppercase; }
+.small { position: absolute; left: 0; right: 0; text-align: center; font-size: 34px; color: var(--muted); }
+.link { position: absolute; left: 0; right: 0; text-align: center; font-size: 44px; font-weight: 600; color: var(--brass); }
+
+/* шапка */
+.eyebrow { position: absolute; top: 160px; left: 0; right: 0; text-align: center; font-weight: 600; font-size: 40px; letter-spacing: 10px; padding-left: 10px; }
+.part { position: absolute; top: 212px; left: 0; right: 0; text-align: center; font-size: 28px; letter-spacing: 7px; color: var(--muted); }
+.bar { position: absolute; top: 258px; left: 150px; width: 780px; height: 8px; display: flex; gap: 4px; }
+.bar i { flex: 1; border-radius: 4px; background: #222927; position: relative; overflow: hidden; }
+.bar i b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brass-dim); }
+.count { position: absolute; top: 280px; left: 0; right: 0; text-align: center; font-size: 30px; color: var(--muted); }
+.count b { color: var(--brass); font-weight: 600; }
+
+/* колесо */
+#dial { position: absolute; left: 120px; top: 365px; width: 840px; height: 840px; border-radius: 50%;
+  background: radial-gradient(circle, var(--dial2) 0%, var(--dial) 70%); box-shadow: 0 0 0 6px var(--rim), 0 40px 120px rgba(0,0,0,.6); }
+#ticks { position: absolute; inset: 0; }
+#names { position: absolute; left: 420px; top: 420px; width: 0; height: 0; }
+#names span { position: absolute; left: 0; top: -11px; height: 22px; line-height: 22px; white-space: nowrap; font-size: 19px; color: rgba(155,157,147,.5); transform-origin: 0 50%; }
+.core { position: absolute; left: 280px; top: 280px; width: 280px; height: 280px; border-radius: 50%; background: #0e1211;
+  box-shadow: 0 0 0 2px var(--brass-dim), 0 0 0 40px rgba(28,35,32,.6); display: grid; place-items: center; }
+#pill { position: absolute; padding: 10px 26px; border-radius: 30px; background: var(--brass); color: #17140c; font-weight: 600; font-size: 34px; white-space: nowrap;
+  box-shadow: 0 0 30px rgba(209,176,108,.45); transform-origin: 0 50%; }
+#ptr { position: absolute; width: 46px; height: 6px; border-radius: 3px; background: var(--brass); }
+
+/* имя */
+.r-ar { position: absolute; top: 1230px; left: 0; right: 0; text-align: center; font-family: Amiri, serif; font-size: 120px; line-height: 1.4; color: var(--brass); direction: rtl; }
+.r-name { position: absolute; top: 1395px; left: 0; right: 0; white-space: nowrap; text-align: center; font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 92px; line-height: 1.05; }
+.r-mean { position: absolute; top: 1500px; left: 80px; right: 80px; text-align: center; font-size: 44px; line-height: 1.25; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="layer" id="intro">
+    <div class="mark" style="top:560px"><svg viewBox="0 0 100 100" fill="none" stroke="#d1b06c" stroke-width=".7"><rect x="22" y="22" width="56" height="56"/><rect x="22" y="22" width="56" height="56" transform="rotate(45 50 50)"/><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="44" stroke="#7c6a45"/></svg><div class="ar">اقرأ</div></div>
+    <div class="brand" style="top:980px">IQRO</div>
+    <div class="tag" style="top:1135px">Читать · понимать · заучивать</div>
+  </div>
+
+  <div class="layer" id="main">
+    <div class="eyebrow">99 ИМЁН АЛЛАХА</div>
+    <div class="part" id="part"></div>
+    <div class="bar"><i><b id="f0"></b></i><i><b id="f1"></b></i><i><b id="f2"></b></i></div>
+    <div class="count"><b id="cnum">1</b> / 99</div>
+    <div id="dial">
+      <svg id="ticks" viewBox="0 0 840 840"></svg>
+      <div id="names"></div>
+      <div class="core"><svg width="150" height="150" viewBox="0 0 100 100" fill="none" stroke="#d1b06c" stroke-width="1.6"><rect x="24" y="24" width="52" height="52"/><rect x="24" y="24" width="52" height="52" transform="rotate(45 50 50)"/><circle cx="50" cy="50" r="12"/></svg></div>
+      <div id="ptr"></div>
+      <div id="pill"></div>
+    </div>
+    <div class="r-ar" id="rar"></div>
+    <div class="r-name" id="rname"></div>
+    <div class="r-mean" id="rmean"></div>
+  </div>
+
+  <div class="layer" id="outro">
+    <div class="mark" style="top:500px; transform:scale(.8)"><svg viewBox="0 0 100 100" fill="none" stroke="#d1b06c" stroke-width=".7"><rect x="22" y="22" width="56" height="56"/><rect x="22" y="22" width="56" height="56" transform="rotate(45 50 50)"/><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="44" stroke="#7c6a45"/></svg><div class="ar">اقرأ</div></div>
+    <div class="brand" style="top:880px">IQRO</div>
+    <div class="small" style="top:1040px" id="next"></div>
+    <div class="small" style="top:1110px">Все 99 имён — в приложении IQRO</div>
+    <div class="link" style="top:1210px">iqro.forum</div>
+    <div class="small" style="top:1290px">Google Play</div>
+  </div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const io = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const out = (x) => 1 - Math.pow(1 - x, 3);
+const P = (t, a, d, e = out) => e(clamp((t - a) / d));
+let CFG, R = 340, PTR = 90;   // стрелка справа (90° от верха)
+
+window.setup = async function (cfg) {
+  CFG = cfg;
+  $('#part').textContent = `ЧАСТЬ ${cfg.part} ИЗ 3`;
+  $('#next').textContent = cfg.part < 3 ? `Часть ${cfg.part + 1} — имена ${cfg.part * 33 + 1}–${cfg.part * 33 + 33}` : 'Все 99 имён пройдены';
+  const wn = $('#names');
+  cfg.all.forEach((n, i) => { const s = document.createElement('span'); s.textContent = n; wn.appendChild(s); });
+  let svg = '';
+  for (let i = 0; i < 99; i++) {
+    const a = i * 360 / 99 * Math.PI / 180, r1 = 410, r2 = i % 11 === 0 ? 384 : 398;
+    svg += `<line x1="${420 + r1 * Math.sin(a)}" y1="${420 - r1 * Math.cos(a)}" x2="${420 + r2 * Math.sin(a)}" y2="${420 - r2 * Math.cos(a)}" stroke="${i % 11 === 0 ? '#7c6a45' : '#3a423e'}" stroke-width="${i % 11 === 0 ? 3 : 2}"/>`;
+  }
+  $('#ticks').innerHTML = svg;
+  await document.fonts.ready;
+  // длинные имена не выходят за край
+  const spans = [...wn.children], maxW = Math.max(...spans.map((s) => s.offsetWidth));
+  if (maxW > 170) spans.forEach((s) => { s.style.fontSize = (19 * 170 / maxW).toFixed(1) + 'px'; });
+  // стрелка у края
+  const pr = $('#ptr'); pr.style.left = (420 + 392) + 'px'; pr.style.top = '417px';
+  return { slots: cfg.slots.length };
+};
+
+function current(t) {
+  const s = CFG.slots; let i = 0;
+  for (let k = 0; k < s.length; k++) if (t >= s[k].t) i = k;
+  return i;
+}
+
+window.render = function (t) {
+  const C = CFG, s = C.slots, T0 = s[0].t, T1 = C.outro;
+  // слои
+  const kIntro = 1 - P(t, T0 - .45, .45, io);
+  const kMain = P(t, T0 - .45, .5, io) * (1 - P(t, T1 - .3, .5, io));
+  const kOut = P(t, T1, .6, io);
+  $('#intro').style.opacity = kIntro;
+  $('#intro').style.transform = `scale(${.94 + .06 * P(t, 0, 1.2)})`;
+  $('#main').style.opacity = kMain;
+  $('#outro').style.opacity = kOut;
+  $('#outro').style.transform = `translateY(${(1 - kOut) * 40}px)`;
+
+  const i = current(t), slot = s[i], idx = slot.idx;    // idx — номер имени 0..98
+  const prevIdx = i > 0 ? s[i - 1].idx : idx - 1;
+  const k = P(t, slot.t, .5, io);
+  const pos = t < T0 ? idx : prevIdx + (idx - prevIdx) * k;   // плавный поворот
+  const rot = PTR - pos * 360 / 99;
+  [...$('#names').children].forEach((el, n) => {
+    const a = n * 360 / 99 + rot;
+    el.style.transform = `rotate(${a - 90}deg) translateX(182px)`;
+    const d = Math.abs(((n - pos) % 99 + 99 + 49.5) % 99 - 49.5);
+    el.style.color = d < .5 ? 'rgba(209,176,108,0)' : `rgba(155,157,147,${d < 3 ? .75 : .45})`;
+  });
+  // ярлык у стрелки
+  const pill = $('#pill');
+  pill.textContent = C.names[i].name;
+  pill.style.left = Math.min(640, 900 - pill.offsetWidth) + 'px'; pill.style.top = (420 - 30) + 'px';
+  pill.style.opacity = P(t, slot.t + .2, .3);
+  pill.style.transform = `translateX(${(1 - P(t, slot.t + .2, .35)) * -30}px)`;
+  // текст
+  const kt = P(t, slot.t + .15, .4), ko = i < s.length - 1 ? P(t, s[i + 1].t - .2, .2) : 0;
+  for (const [id, v] of [['#rar', C.names[i].arabic], ['#rname', C.names[i].name], ['#rmean', C.names[i].meaning]]) {
+    const el = $(id); el.textContent = v; el.style.opacity = kt * (1 - ko); el.style.transform = `translateY(${(1 - kt) * 24}px)`;
+  }
+  // длинное имя — мельче, чтобы влезло в ширину кадра
+  const rn = $('#rname'); rn.style.fontSize = '92px';
+  if (rn.scrollWidth > 960) rn.style.fontSize = Math.floor(92 * 960 / rn.scrollWidth) + 'px';
+  $('#cnum').textContent = idx + 1;
+  // полоса: три отрезка по 33 имени
+  for (let p = 0; p < 3; p++) {
+    const done = clamp((idx + (t >= T0 ? 1 : 0) - p * 33) / 33);
+    $('#f' + p).style.width = (done * 100) + '%';
+    $('#f' + p).style.background = p === C.part - 1 ? '#d1b06c' : '#7c6a45';
+  }
+};
+</script>
+</body>
+</html>
