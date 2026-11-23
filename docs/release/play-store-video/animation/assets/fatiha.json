@@ -1,0 +1,17 @@
+{
+ "source": "https://iqro.forum/api/v1/quran/editions/madani-hafs/surahs/1/ayahs (Tanzil, text_uthmani), получено 22.11.2026",
+ "ayahs": [
+  {
+   "number": 1,
+   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+  },
+  {
+   "number": 2,
+   "text": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ"
+  },
+  {
+   "number": 3,
+   "text": "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+  }
+ ]
+}
