@@ -443,8 +443,11 @@ def import_reading(
     return ImportedReading(recitation, timed, note)
 
 
-def apply_reciter_profiles() -> list[str]:
-    """Write the curated names and biographies; returns the reciters that changed."""
+def apply_reciter_profiles(*, dry_run: bool = False) -> list[str]:
+    """Write the curated names and biographies; returns the reciters that changed.
+
+    A dry run writes nothing and returns the reciters that would change.
+    """
     changed: list[str] = []
     for reciter in Reciter.objects.filter(code__in=MP3QURAN_RECITER_NAMES):
         name_ru, name_tr = MP3QURAN_RECITER_NAMES[reciter.code]
@@ -456,6 +459,9 @@ def apply_reciter_profiles() -> list[str]:
         }
         fields = [name for name, value in values.items() if getattr(reciter, name) != value]
         if not fields:
+            continue
+        if dry_run:
+            changed.append(reciter.code)
             continue
         with transaction.atomic():
             for name in fields:
