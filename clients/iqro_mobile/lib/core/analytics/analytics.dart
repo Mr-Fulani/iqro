@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,6 +21,99 @@ AnalyticsConsent? parseAnalyticsConsent(String? value) => switch (value) {
   'denied' => AnalyticsConsent.denied,
   _ => null,
 };
+
+/// One gentle reminder for people who declined statistics: not sooner than
+/// [analyticsReminderAfterDays] days after the refusal, and only after the app
+/// was opened on [analyticsReminderActiveDays] different days since then. The
+/// site keeps the same pair in services/web/lib/analytics.ts.
+const analyticsReminderAfterDays = 30;
+const analyticsReminderActiveDays = 5;
+
+/// What the reminder needs to know, kept on the device as JSON (the site keeps
+/// the same record in localStorage). Days are local calendar days.
+class AnalyticsReminder {
+  const AnalyticsReminder({
+    this.declinedOn,
+    this.lastDay,
+    this.days = 0,
+    this.done = false,
+  });
+
+  /// The day of the refusal, «2026-11-21»; for a refusal made before the
+  /// reminder existed, the first day the app ran with it.
+  final String? declinedOn;
+
+  /// The last day the app was opened, and how many different days so far.
+  final String? lastDay;
+  final int days;
+
+  /// The reminder was answered: nothing asks again.
+  final bool done;
+
+  static AnalyticsReminder parse(String? value) {
+    try {
+      final json = jsonDecode(value ?? '') as Map<String, Object?>;
+      return AnalyticsReminder(
+        declinedOn: json['declinedOn'] as String?,
+        lastDay: json['lastDay'] as String?,
+        days: json['days'] as int? ?? 0,
+        done: json['done'] as bool? ?? false,
+      );
+    } on Object {
+      return const AnalyticsReminder();
+    }
+  }
+
+  String encode() => jsonEncode(<String, Object?>{
+    'declinedOn': declinedOn,
+    'lastDay': lastDay,
+    'days': days,
+    'done': done,
+  });
+
+  static String _day(DateTime now) =>
+      '${now.year.toString().padLeft(4, '0')}-'
+      '${now.month.toString().padLeft(2, '0')}-'
+      '${now.day.toString().padLeft(2, '0')}';
+
+  /// The app was opened on [now] while statistics are declined.
+  AnalyticsReminder noteDay(DateTime now) {
+    final today = _day(now);
+    if (done || lastDay == today) return this;
+    return declinedOn == null
+        ? AnalyticsReminder(declinedOn: today, lastDay: today, days: 1)
+        : AnalyticsReminder(
+            declinedOn: declinedOn,
+            lastDay: today,
+            days: days + 1,
+          );
+  }
+
+  bool due(DateTime now) {
+    final declined = DateTime.tryParse('${declinedOn}T00:00:00Z');
+    if (done || declined == null) return false;
+    final today = DateTime.utc(now.year, now.month, now.day);
+    return days >= analyticsReminderActiveDays &&
+        today.difference(declined).inDays >= analyticsReminderAfterDays;
+  }
+
+  /// The record after an answer given on [now]. Any answer to the reminder
+  /// is final; a refusal before it starts the count from that day.
+  AnalyticsReminder afterAnswer(AnalyticsConsent consent, DateTime now) {
+    if (done) return this;
+    if (due(now)) {
+      return AnalyticsReminder(
+        declinedOn: declinedOn,
+        lastDay: lastDay,
+        days: days,
+        done: true,
+      );
+    }
+    return consent == AnalyticsConsent.denied
+        ? const AnalyticsReminder().noteDay(now)
+        : this;
+  }
+}
 
 /// The events the site sends too; names and parameters stay the same.
 enum AnalyticsEvent {
@@ -111,26 +205,68 @@ class FirebaseAnalyticsBackend implements AnalyticsBackend {
 /// The user's choice and the events. Before consent, and in builds without
 /// Firebase IDs, events are dropped.
 class AnalyticsController extends StateNotifier<AnalyticsConsent?> {
-  AnalyticsController(PreferencesStore store, AnalyticsBackend backend)
-    : _store = store,
-      _backend = backend,
-      super(parseAnalyticsConsent(store.analyticsConsent)) {
+  AnalyticsController(
+    PreferencesStore store,
+    AnalyticsBackend backend, {
+    DateTime Function() clock = DateTime.now,
+  }) : _store = store,
+       _backend = backend,
+       _clock = clock,
+       _reminder = AnalyticsReminder.parse(store.analyticsReminder),
+       super(parseAnalyticsConsent(store.analyticsConsent)) {
     if (state == AnalyticsConsent.granted) _run(backend.enable);
+    noteVisit();
   }
 
   /// A build without Firebase IDs: no question, no events.
-  AnalyticsController.disabled() : _store = null, _backend = null, super(null);
+  AnalyticsController.disabled()
+    : _store = null,
+      _backend = null,
+      _clock = DateTime.now,
+      _reminder = const AnalyticsReminder(),
+      super(null);
 
   final PreferencesStore? _store;
   final AnalyticsBackend? _backend;
+  final DateTime Function() _clock;
+  AnalyticsReminder _reminder;
+
+  /// Whether the card should ask once more ([AnalyticsReminder]).
+  final reminderDue = ValueNotifier<bool>(false);
+
+  /// The app was opened or came back to the screen: counts the day for
+  /// someone who declined.
+  void noteVisit() {
+    if (_backend == null || state != AnalyticsConsent.denied) return;
+    _setReminder(_reminder.noteDay(_clock()));
+  }
+
+  void _setReminder(AnalyticsReminder next) {
+    if (!identical(next, _reminder)) {
+      _reminder = next;
+      _run(() => _store!.writeAnalyticsReminder(next.encode()));
+    }
+    reminderDue.value = state == AnalyticsConsent.denied && next.due(_clock());
+  }
+
+  @override
+  void dispose() {
+    reminderDue.dispose();
+    super.dispose();
+  }
 
   /// Whether this build reports anywhere; otherwise no card and no setting.
   bool get available => _backend != null;
 
   Future<void> setConsent(AnalyticsConsent consent) async {
     final backend = _backend;
-    if (backend == null || consent == state) return;
+    if (backend == null) return;
+    // «Нет, спасибо» on the reminder repeats the stored answer and still
+    // closes it for good.
+    final next = _reminder.afterAnswer(consent, _clock());
+    if (consent == state) return _setReminder(next);
     state = consent;
+    _setReminder(next);
     await _store!.writeAnalyticsConsent(consent.name);
     _run(
       consent == AnalyticsConsent.granted ? backend.enable : backend.disable,
