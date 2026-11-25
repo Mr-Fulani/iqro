@@ -1,6 +1,6 @@
 FROM redis:7.4.12-alpine3.22 AS upstream
 
-RUN apk add --no-cache 'libcrypto3>=3.3.7-r2' 'libssl3>=3.3.7-r2' 'zlib>=1.3.2-r1' \
+RUN apk add --no-cache 'libcrypto3>=3.5.9-r2' 'libssl3>=3.5.9-r2' 'zlib>=1.3.2-r1' \
         'musl>=1.2.5-r13' 'musl-utils>=1.2.5-r13'
 
 FROM scratch
