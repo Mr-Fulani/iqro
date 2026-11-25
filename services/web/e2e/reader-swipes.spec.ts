@@ -152,6 +152,8 @@ test.describe("the plain text sets the surah title in the Mushaf's heading", () 
   test("the heading keeps its place within a narrow screen, with the name as text until the font comes", async ({ page }) => {
     // The pinned QUL heading font is never stored here: without it the name stays as text.
     await page.route("https://static-cdn.tarteel.ai/qul/fonts/surah-names/**", (route) => route.abort());
+    // The page loads the surahs with these lists, which the test API lacks.
+    await page.route(/\/api\/v1\/quran\/editions\/madani-hafs\/(juz|hizb|rub-el-hizb)(\?.*)?$/, (route) => route.fulfill({ json: [] }));
     await openText(page);
     await swipeAyah(page, 2, 1);
     const reader = plainText(page);
