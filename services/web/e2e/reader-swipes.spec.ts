@@ -160,12 +160,17 @@ test.describe("the plain text sets the surah title in the Mushaf's heading", () 
     await expect(reader).toBeVisible();
     const title = reader.getByTestId("plain-text-surah");
     await expect(title).toHaveText("سُورَةُ الفاتحة");
-    const box = (await title.boundingBox())!;
-    const sheet = (await reader.locator(".plain-text-body").boundingBox())!;
+    // Measured in the layout, not on screen: the sheet is still turning in.
+    const box = await title.evaluate((el) => {
+      const title = el as HTMLElement;
+      const body = title.parentElement as HTMLElement;
+      const size = getComputedStyle(title);
+      return { width: parseFloat(size.width), height: parseFloat(size.height), left: title.offsetLeft - body.offsetLeft, column: body.clientWidth };
+    });
     // The printed heading's own proportions, inside the text column.
     expect(box.width / box.height).toBeCloseTo(8116 / 980, 1);
-    expect(box.x).toBeGreaterThanOrEqual(sheet.x);
-    expect(box.x + box.width).toBeLessThanOrEqual(sheet.x + sheet.width + 0.5);
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.left + box.width).toBeLessThanOrEqual(box.column);
     expect(await reader.locator(".plain-text-scroll").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
   });
 });
