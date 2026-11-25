@@ -315,10 +315,20 @@ void main(List<String> args) {
           case ModelPlace(:final word, wrong: false):
             reached.putIfAbsent(word, () => now);
             if (verbose) print('  ${now.toStringAsFixed(2)} on $word');
-          case ModelPlace(:final word, wrong: true, :final why):
+          case ModelPlace(
+            :final word,
+            wrong: true,
+            :final why,
+            :final expected,
+            :final heard,
+          ):
             misses.add((word, now));
             if (verbose) {
-              print('  ${now.toStringAsFixed(2)} MISS $word ${why.name}');
+              print(
+                '  ${now.toStringAsFixed(2)} MISS $word ${why.name}'
+                '${expected > 0 ? ' written ${symbols[expected - 1]}' : ''}'
+                '${heard > 0 ? ' heard ${symbols[heard - 1]}' : ''}',
+              );
             }
         }
       }
