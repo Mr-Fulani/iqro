@@ -293,6 +293,10 @@ class RecitationFollowCore {
   static var checkOmitted = true;
   static var checkAdded = true;
 
+  /// For the harness: a word begun after a stop is not asked for the
+  /// ghunnah of the nun or mim merged into its first letter.
+  static var stopFreesMerged = true;
+
   /// For the harness: what each step's path was.
   void Function(String)? trace;
 
@@ -597,6 +601,7 @@ class RecitationFollowCore {
                   : previousFrame + 1,
             )
           : null;
+      final frameBefore = previousFrame;
       if (lastFrame >= 0) previousFrame = lastFrame;
       // The first word after silence has no word before it to vouch for
       // it: its first sound must be there.
@@ -712,6 +717,7 @@ class RecitationFollowCore {
         from,
         last,
         lastFrame,
+        frameBefore,
         events,
       );
       next = word + 1;
@@ -989,6 +995,8 @@ class RecitationFollowCore {
 
   /// What may be said of how a word just taken as read was read: where
   /// its ghunnah or madd was held, a sound that was not the text's.
+  /// [frameBefore]: the frame of the last sound heard of the word before,
+  /// -1 when this step's frames begin after it.
   void _judge(
     int word,
     int begin,
@@ -998,6 +1006,7 @@ class RecitationFollowCore {
     int from,
     int last,
     int lastFrame,
+    int frameBefore,
     List<FollowEvent> events,
   ) {
     final end = passage.wordEnd[word];
@@ -1011,6 +1020,16 @@ class RecitationFollowCore {
       final stop = unit.last + 1 < end
           ? path.frame[unit.last + 1 - path.lo]
           : math.min(last, lastFrame + _settle);
+      // A nun or a mim merged into the word's first letter is held only
+      // when the reading goes on into the word: after a stop the word is
+      // begun with the letter said once ("tibaqa", then "ma"), and that
+      // is no ghunnah left out.
+      if (stopFreesMerged &&
+          unit.kind <= 1 &&
+          unit.first == passage.wordStart[word] &&
+          (fresh || _silent(lp, from, frameBefore, stop))) {
+        continue;
+      }
       if (stop > start) {
         events.add(FollowHeld(unit, first + start, first + stop));
       }
