@@ -14,10 +14,13 @@ import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/audio/audio_repository.dart';
 import 'package:iqro_mobile/features/plan/plan_repository.dart';
+import 'package:iqro_mobile/features/quran/mushaf_paper.dart';
 import 'package:iqro_mobile/features/quran/quran_models.dart';
 import 'package:iqro_mobile/features/quran/quran_repository.dart';
 import 'package:iqro_mobile/features/quran/reader_anchored_list.dart';
 import 'package:iqro_mobile/features/quran/reader_screen.dart';
+import 'package:iqro_mobile/features/quran/surah_name_art.dart';
+import 'package:iqro_mobile/features/quran/truetype_glyph.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -138,6 +141,38 @@ void main() {
     expect(app.location, '/reader/3');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('the plain text sets the surah title in the printed heading '
+      'of the Mushaf, within a narrow screen', (tester) async {
+    // An 800×100 outline in font units, y pointing down.
+    final heading = GlyphOutline(
+      Path()..addRect(const Rect.fromLTRB(0, -100, 800, 0)),
+      const Rect.fromLTRB(0, -100, 800, 0),
+    );
+    await _pump(tester, heading: heading);
+    final card = tester.getCenter(find.byKey(const ValueKey('reader-ayah-1')));
+    await tester.timedDragFrom(
+      card,
+      const Offset(220, 0),
+      const Duration(milliseconds: 300),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('reader-flow')), findsOneWidget);
+
+    // The frame holds the name: no text title beside it.
+    expect(find.text('سُورَةُ البقرة'), findsNothing);
+    final art = find.byType(SurahHeadingArt);
+    expect(tester.widget<SurahHeadingArt>(art).label, 'سُورَةُ البقرة');
+    final box = tester.getRect(art);
+    expect(box.left, greaterThanOrEqualTo(0));
+    expect(box.right, lessThanOrEqualTo(360));
+    expect(box.width / box.height, closeTo(surahHeadingAspectRatio, .01));
+    expect(
+      find.descendant(of: art, matching: find.byType(CustomPaint)),
+      paints..path(color: mushafInkColor),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 /// Scrolls the reader to the card after the last ayah.
@@ -175,6 +210,7 @@ Future<_App> _pump(
   WidgetTester tester, {
   Size size = const Size(360, 800),
   int surah = 2,
+  GlyphOutline? heading,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -228,6 +264,8 @@ Future<_App> _pump(
           (ref) => AudioController(engine: _Engine()),
         ),
         ayahsProvider.overrideWith((ref, surah) async => _ayahsOf(surah)),
+        if (heading != null)
+          surahHeadingOutlineProvider(surah).overrideWithValue(heading),
         quranCatalogProvider.overrideWith(
           (ref) async => const QuranCatalog(
             surahs: <Surah>[_baqara, _imran, _falaq, _nas],

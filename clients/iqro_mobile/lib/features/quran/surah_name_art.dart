@@ -97,6 +97,62 @@ final surahNameOutlineProvider = Provider.family<GlyphOutline?, int>((
   }
 });
 
+/// The whole printed heading of a surah, the name inside its cartouche, as
+/// a Mushaf page draws it.
+final surahHeadingOutlineProvider = Provider.family<GlyphOutline?, int>((
+  ref,
+  surah,
+) {
+  final font = ref.watch(surahHeaderFontProvider).valueOrNull;
+  if (font == null || surah < 1 || surah > 114) return null;
+  try {
+    return readTrueTypeGlyph(font, _firstSurahGlyphId + surah - 1);
+  } on Object {
+    return null;
+  }
+});
+
+/// Width to height of every heading of the source font.
+const surahHeadingAspectRatio = 8116 / 980;
+
+/// A surah's heading as on a Mushaf page: the source cartouche with the
+/// name inside, as wide as its place allows. Until the source font is
+/// available, [fallback] stands in the same place, so nothing below moves.
+class SurahHeadingArt extends ConsumerWidget {
+  const SurahHeadingArt({
+    required this.surah,
+    required this.label,
+    required this.fallback,
+    this.color,
+    super.key,
+  });
+
+  final int surah;
+  final String label;
+  final Widget fallback;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final outline = ref.watch(surahHeadingOutlineProvider(surah));
+    return AspectRatio(
+      aspectRatio: surahHeadingAspectRatio,
+      child: outline == null
+          ? FittedBox(fit: BoxFit.scaleDown, child: fallback)
+          : Semantics(
+              label: label,
+              child: CustomPaint(
+                painter: _OutlinePainter(
+                  outline,
+                  color ?? Theme.of(context).colorScheme.onSurface,
+                  centered: true,
+                ),
+              ),
+            ),
+    );
+  }
+}
+
 /// A surah's name as the Mushaf prints it, fitted into [width] × [height].
 /// Until the source font is available, [fallback] is set in the app's Arabic
 /// typeface.
@@ -148,10 +204,11 @@ class SurahNameArt extends ConsumerWidget {
 }
 
 class _OutlinePainter extends CustomPainter {
-  _OutlinePainter(this.outline, this.color);
+  _OutlinePainter(this.outline, this.color, {this.centered = false});
 
   final GlyphOutline outline;
   final Color color;
+  final bool centered;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -161,9 +218,9 @@ class _OutlinePainter extends CustomPainter {
         : size.height / bounds.height;
     canvas
       ..save()
-      // Centred vertically, against the end edge like Arabic text.
+      // Centred vertically; a name against the end edge like Arabic text.
       ..translate(
-        size.width - bounds.width * scale,
+        (size.width - bounds.width * scale) / (centered ? 2 : 1),
         (size.height - bounds.height * scale) / 2,
       )
       ..scale(scale)
@@ -174,5 +231,5 @@ class _OutlinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_OutlinePainter old) =>
-      old.outline != outline || old.color != color;
+      old.outline != outline || old.color != color || old.centered != centered;
 }

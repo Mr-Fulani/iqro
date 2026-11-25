@@ -236,4 +236,43 @@ void main() {
       paints..path(color: const Color(0xFF123456)),
     );
   });
+
+  testWidgets('a framed heading is the whole source outline, and its text '
+      'fallback keeps the same place', (tester) async {
+    final outline = readTrueTypeGlyph(ByteData.sublistView(_font()), 1)!;
+    Widget app(GlyphOutline? value) => ProviderScope(
+      overrides: [surahHeadingOutlineProvider(9).overrideWithValue(value)],
+      child: const MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 320,
+            child: SurahHeadingArt(
+              surah: 9,
+              label: 'سُورَةُ التوبة',
+              color: mushafInkColor,
+              fallback: Text('سُورَةُ التوبة'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(app(null));
+    expect(find.text('سُورَةُ التوبة'), findsOneWidget);
+    final reserved = tester.getSize(find.byType(SurahHeadingArt));
+    expect(reserved.width, 320);
+    expect(reserved.width / reserved.height, closeTo(8116 / 980, .001));
+
+    await tester.pumpWidget(app(outline));
+    expect(find.text('سُورَةُ التوبة'), findsNothing);
+    expect(find.bySemanticsLabel('سُورَةُ التوبة'), findsOneWidget);
+    expect(tester.getSize(find.byType(SurahHeadingArt)), reserved);
+    expect(
+      find.descendant(
+        of: find.byType(SurahHeadingArt),
+        matching: find.byType(CustomPaint),
+      ),
+      paints..path(color: mushafInkColor),
+    );
+  });
 }
