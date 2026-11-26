@@ -540,7 +540,7 @@ input, select, textarea {
 
 /* WebKit (every iPhone browser) lets the text of a list narrower than its
    longest option stick out of the box, which makes the whole page wider than
-   the screen. Chromium already clips it. */
+   the screen. Chromium already clips it. See also `select` in mobile.css. */
 select {
   overflow: hidden;
 }
