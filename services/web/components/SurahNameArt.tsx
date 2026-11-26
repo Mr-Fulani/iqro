@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
-import { loadedSurahNameGlyph, loadSurahNameFont } from "../lib/surah-header";
+import { loadedSurahHeadingGlyph, loadedSurahNameGlyph, loadSurahNameFont } from "../lib/surah-header";
 
 const listeners = new Set<() => void>();
 let requested = false;
@@ -32,20 +32,23 @@ function subscribe(listener: () => void): () => void {
  * `fallback` as text, so hydration matches; the drawing replaces it once the
  * heading font is in memory. The font (≈190 KB) is fetched only when a name
  * comes near the screen, so pages whose names stay below the fold do not pay
- * for it; the browser cache serves it afterwards.
+ * for it; the browser cache serves it afterwards. With `framed`, the whole
+ * heading is drawn, the name inside its cartouche, as on a Mushaf page.
  */
 export function SurahNameArt({
   surah,
   fallback,
   className = "",
+  framed = false,
 }: {
   surah: number;
   fallback: string;
   className?: string;
+  framed?: boolean;
 }) {
   const glyph = useSyncExternalStore(
     subscribe,
-    () => loadedSurahNameGlyph(surah),
+    () => (framed ? loadedSurahHeadingGlyph(surah) : loadedSurahNameGlyph(surah)),
     () => undefined,
   );
   const textRef = useRef<HTMLSpanElement>(null);

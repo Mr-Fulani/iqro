@@ -7,6 +7,7 @@ import { kashidaLayout, type KashidaLayout } from "../lib/kashida";
 import { mushafPageEnds, readerDigits } from "../lib/mushaf-script";
 import { ayahTextParts, sameWord, wordKey, wordRangeContains, type QuranWord, type QuranWordRange } from "../lib/word-range";
 import { ReaderSwipeReveal, useReaderSwipe } from "./ReaderSwipe";
+import { SurahNameArt } from "./SurahNameArt";
 import { WordRangeHandles } from "./WordSelection";
 import { mushafScriptWordContent, mushafScriptWordStyle, useMushafScript } from "./useMushafScript";
 import { LAST_SURAH, NextSurahCard, QuranEnd, usePullToNext } from "./NextSurah";
@@ -314,7 +315,11 @@ export function QuranPlainText({
         </div>
         <div className="plain-text-scroll" ref={setScroller}>
           <div className="plain-text-body" ref={wordArea} style={{ fontSize: size }}>
-            {surahName && <p className="plain-text-surah" dir="rtl">{`سُورَةُ ${surahName}`}</p>}
+            {surahName && (
+              <p className="plain-text-surah" dir="rtl" data-testid="plain-text-surah">
+                <SurahNameArt surah={surah} framed fallback={`سُورَةُ ${surahName}`} />
+              </p>
+            )}
             {opening && <p className="plain-text-opening" dir="rtl">{opening}</p>}
             {/* Each ayah a paragraph of its own, a blank line between them. */}
             {ayahs.map((item, itemIndex) => {

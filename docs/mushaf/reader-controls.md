@@ -229,6 +229,29 @@
   `ReaderAyahWords.flow(kashida: true)`. Сайт: `lib/kashida.ts`, ширины меряются canvas в шрифте
   абзаца (`QuranPlainText.tsx`).
 
+## Название суры в рамке Мусхафа
+
+Замечание владельца от 25.11.2026: в чистом арабском тексте название суры стоит в той же печатной
+рамке, что и на странице Мусхафа, — в приложении и на сайте одинаково.
+
+- Рамка — глиф шрифта QUL `QCF_SurahHeader` целиком (картуш и каллиграфическое имя), тот же
+  закреплённый файл и та же заливка контуром, что у заголовков Мусхафа; своей рамки не рисуем.
+  Цвет — чернила Мусхафа (`#392d20`).
+- Ширина — вся строка текста, но не больше 12 размеров шрифта чтения; высота по пропорции глифа
+  (8116 : 980, она одна у всех 114 сур). Место занято заранее, поэтому текст под рамкой не
+  сдвигается, пока шрифт загружается. Без шрифта (нет сети, файл изменился) название остаётся
+  текстом «سُورَةُ …» на том же месте.
+- Басмала под рамкой — как раньше; у сур 1 и 9 отдельной строки басмалы нет.
+- Приложение: `SurahHeadingArt` и `surahHeadingOutlineProvider` в
+  `lib/features/quran/surah_name_art.dart`, используется в `_FlowHeader` (`reader_flow_screen.dart`).
+  Сайт: `SurahNameArt` с признаком `framed` (`loadedSurahHeadingGlyph` в `lib/surah-header.ts`),
+  стили `.plain-text-surah`. Чистый текст на сайте открывается только свайпом (телефон, планшет),
+  на компьютере его нет.
+- Тесты: `test/features/surah_header_source_test.dart`, `test/features/next_surah_widget_test.dart`;
+  `lib/surah-header.test.ts`, `e2e/reader-swipes.spec.ts`.
+
+Картинки-инструкции: [docs/guides/surah-frame-text/](../guides/surah-frame-text/README.md).
+
 ## Код и тесты
 
 - Приложение: `lib/features/quran/next_surah.dart` (`NextSurahPull`, `NextSurahCard`,

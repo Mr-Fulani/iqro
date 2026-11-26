@@ -28,6 +28,7 @@ import 'recitation_match.dart';
 import 'recitation_model/follow_core.dart' show FollowWhy;
 import 'recitation_model/model_listener.dart';
 import 'rub_mark.dart';
+import 'surah_name_art.dart';
 import 'word_range.dart';
 
 /// Where the plain text was left: the surah, which the end of one may have
@@ -1133,6 +1134,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             return _FlowHeader(
+                              surah: widget.surah,
                               name: surah?.nameAr,
                               opening: opening,
                               size: size,
@@ -1286,12 +1288,14 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
 
 class _FlowHeader extends StatelessWidget {
   const _FlowHeader({
+    required this.surah,
     required this.name,
     required this.opening,
     required this.size,
     required this.style,
   });
 
+  final int surah;
   final String? name;
   final String? opening;
   final double size;
@@ -1305,14 +1309,26 @@ class _FlowHeader extends StatelessWidget {
       child: Column(
         children: <Widget>[
           if (name?.isNotEmpty ?? false)
-            Text(
-              'سُورَةُ $name',
-              textAlign: TextAlign.center,
-              textDirection: TextDirection.rtl,
-              style: style?.copyWith(
-                fontSize: size * .7,
-                color: color,
-                height: 1.5,
+            // The printed heading of the Mushaf, cartouche and name.
+            Padding(
+              padding: EdgeInsets.only(top: size * .25, bottom: size * .2),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: size * 12),
+                child: SurahHeadingArt(
+                  surah: surah,
+                  label: 'سُورَةُ $name',
+                  color: mushafInkColor,
+                  fallback: Text(
+                    'سُورَةُ $name',
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.rtl,
+                    style: style?.copyWith(
+                      fontSize: size * .7,
+                      color: color,
+                      height: 1,
+                    ),
+                  ),
+                ),
               ),
             ),
           if (opening != null)

@@ -176,6 +176,21 @@ export function loadedSurahNameGlyph(surah: number): SurahHeaderGlyph | null | u
   return surahNames.get(surah);
 }
 
+/**
+ * The whole printed heading of `surah`, cartouche and name, as a Mushaf page
+ * draws it, once the heading font is loaded, else undefined.
+ */
+export function loadedSurahHeadingGlyph(surah: number): SurahHeaderGlyph | null | undefined {
+  if (!Number.isInteger(surah) || surah < 1 || surah > 114) return null;
+  const font = fonts.get(`${SURAH_HEADER_FONT_URL}:${SURAH_HEADER_FONT_SHA256}`)?.font;
+  if (!font) return undefined;
+  try {
+    return headingGlyphs({ ...pinnedSource, glyph_ids: { [surah]: FIRST_SURAH_GLYPH_ID + surah - 1 } }, font).get(surah) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Fetches the pinned heading font once; surah names render from it after. */
 export function loadSurahNameFont(): Promise<void> {
   return loadSurahHeaderGlyphs(pinnedSource).then(() => undefined);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { syntheticHeadingFont } from "../e2e/truetype-fixture.ts";
-import { readTrueTypeGlyph, SURAH_HEADER_FONT_SHA256, SURAH_HEADER_FONT_URL } from "./surah-header.ts";
+import { loadedSurahHeadingGlyph, readTrueTypeGlyph, SURAH_HEADER_FONT_SHA256, SURAH_HEADER_FONT_URL } from "./surah-header.ts";
 
 test("reads quadratic TrueType outlines as SVG path data with y pointing down", () => {
   const font = new DataView(syntheticHeadingFont().buffer);
@@ -30,4 +30,10 @@ test("the site pins the same heading font as the backend", async () => {
   )).replace(/"\s*\n\s*"/g, "");
   assert.ok(backend.includes(SURAH_HEADER_FONT_URL));
   assert.ok(backend.includes(SURAH_HEADER_FONT_SHA256));
+});
+
+test("a whole heading is known only for a surah, and only once the font is loaded", () => {
+  assert.equal(loadedSurahHeadingGlyph(0), null);
+  assert.equal(loadedSurahHeadingGlyph(115), null);
+  assert.equal(loadedSurahHeadingGlyph(2), undefined);
 });

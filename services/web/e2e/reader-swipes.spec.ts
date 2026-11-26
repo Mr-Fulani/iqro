@@ -146,6 +146,35 @@ for (const layout of layouts) {
   });
 }
 
+test.describe("the plain text sets the surah title in the Mushaf's heading", () => {
+  test.use({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true });
+
+  test("the heading keeps its place within a narrow screen, with the name as text until the font comes", async ({ page }) => {
+    // The pinned QUL heading font is never stored here: without it the name stays as text.
+    await page.route("https://static-cdn.tarteel.ai/qul/fonts/surah-names/**", (route) => route.abort());
+    // The page loads the surahs with these lists, which the test API lacks.
+    await page.route(/\/api\/v1\/quran\/editions\/madani-hafs\/(juz|hizb|rub-el-hizb)(\?.*)?$/, (route) => route.fulfill({ json: [] }));
+    await openText(page);
+    await swipeAyah(page, 2, 1);
+    const reader = plainText(page);
+    await expect(reader).toBeVisible();
+    const title = reader.getByTestId("plain-text-surah");
+    await expect(title).toHaveText("سُورَةُ الفاتحة");
+    // Measured in the layout, not on screen: the sheet is still turning in.
+    const box = await title.evaluate((el) => {
+      const title = el as HTMLElement;
+      const body = title.parentElement as HTMLElement;
+      const size = getComputedStyle(title);
+      return { width: parseFloat(size.width), height: parseFloat(size.height), left: title.offsetLeft - body.offsetLeft, column: body.clientWidth };
+    });
+    // The printed heading's own proportions, inside the text column.
+    expect(box.width / box.height).toBeCloseTo(8116 / 980, 1);
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.left + box.width).toBeLessThanOrEqual(box.column);
+    expect(await reader.locator(".plain-text-scroll").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  });
+});
+
 test.describe("the plain text announces a quarter of a hizb", () => {
   test.use(layouts[0].use);
 
