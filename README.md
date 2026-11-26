@@ -140,7 +140,7 @@ docker build \
 ```bash
 cd services/web
 npm ci
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run lint
 npm run typecheck
 npm run test:cache

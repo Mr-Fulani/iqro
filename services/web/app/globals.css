@@ -538,6 +538,13 @@ input, select, textarea {
   box-sizing: border-box;
 }
 
+/* WebKit (every iPhone browser) lets the text of a list narrower than its
+   longest option stick out of the box, which makes the whole page wider than
+   the screen. Chromium already clips it. */
+select {
+  overflow: hidden;
+}
+
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--border-focus);

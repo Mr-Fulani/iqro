@@ -27,12 +27,19 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /mobile-horizontal-scroll\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: chromiumExecutablePath
           ? { executablePath: chromiumExecutablePath }
           : undefined,
       },
+    },
+    {
+      // The engine of every iPhone browser, for what only it gets wrong.
+      name: "webkit",
+      testMatch: /mobile-horizontal-scroll\.spec\.ts/,
+      use: { ...devices["iPhone 14"] },
     },
   ],
   webServer: externalBaseUrl
