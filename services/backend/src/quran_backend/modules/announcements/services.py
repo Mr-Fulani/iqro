@@ -22,6 +22,7 @@ from quran_backend.modules.announcements.media import AnnouncementMediaError, po
 from quran_backend.modules.announcements.models import (
     LANGUAGE_NAMES,
     LANGUAGES,
+    PLATFORMS,
     PRIORITY_RANK,
     ActionType,
     Announcement,
@@ -568,6 +569,32 @@ def _apply_edit(
         _record_wave(original, user, WaveReason.EDIT)
     enqueue_announcements_change(action="published")
     return original
+
+
+@transaction.atomic
+def set_platforms(announcement: Announcement, user: User, platforms: list[str]) -> Announcement:
+    """Where a published announcement is shown, changed at once.
+
+    Not an edit: texts, revision, wave and counters stay as they are. An edit already
+    started gets the same platforms, so publishing it does not bring the old ones back.
+    """
+    _require(user, PUBLISH_PERMISSION)
+    locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    if locked.status not in {AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN}:
+        raise AnnouncementNotReadyError(
+            ["Платформы меняются здесь только у опубликованного или снятого объявления."]
+        )
+    if is_sensitive(locked):
+        _require(user, SENSITIVE_PERMISSION)
+    chosen = [code for code in PLATFORMS if code in platforms]
+    if not chosen:
+        raise AnnouncementNotReadyError(["Отметьте хотя бы одно место показа."])
+    locked.audience_platforms = chosen
+    locked.save(update_fields=["audience_platforms", "updated_at"])
+    Announcement.objects.filter(edit_of=locked).update(audience_platforms=chosen)
+    if locked.status == AnnouncementStatus.PUBLISHED:
+        enqueue_announcements_change(action="published")
+    return locked
 
 
 def announcements_enabled() -> bool:
