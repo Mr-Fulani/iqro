@@ -62,8 +62,9 @@ List<int> _reading(
 /// silence after it, fed ten frames at a time.
 ({List<FollowMiss> misses, List<FollowHeld> held, int next}) _follow(
   ExpectedAyah ayah,
-  List<int> sounds,
-) {
+  List<int> sounds, {
+  void Function(Float32List frames)? heard,
+}) {
   final core = RecitationFollowCore(RecitationPassage(<ExpectedAyah>[ayah]));
   final total = sounds.length * 5;
   final lp = Float32List(total * recitationClasses)
@@ -71,6 +72,7 @@ List<int> _reading(
   for (var t = 0; t < total; t++) {
     lp[t * recitationClasses + (t % 5 == 0 ? sounds[t ~/ 5] : 0)] = -.01;
   }
+  heard?.call(lp);
   final misses = <FollowMiss>[];
   final held = <FollowHeld>[];
   for (var end = 10; end <= total + 40; end += 10) {
@@ -201,5 +203,49 @@ void main() {
     expect(events.whereType<FollowMiss>(), isEmpty);
     expect(events.whereType<FollowHeld>(), isEmpty);
     expect(core.next, greaterThanOrEqualTo(6));
+  });
+
+  group('a kasra before an ayn that the model writes as a fatha', () {
+    // The owner's reading of 67:3: a stop on "tibaqan", a stop on
+    // "tafawut", then "farji'i-l-basara". On his voice the model is sure
+    // of a fatha after the jim.
+    ({List<FollowMiss> misses, int next}) read(double kasra) {
+      final ayah = _ayah(67, 3);
+      final sounds = _reading(ayah, stops: <int>{4, 11});
+      const jim = 5, ayn = 18, fatha = 32, written = 34;
+      var at = -1;
+      for (var k = 1; k + 1 < sounds.length; k++) {
+        if (sounds[k - 1] == jim &&
+            sounds[k] == written &&
+            sounds[k + 1] == ayn) {
+          at = k;
+        }
+      }
+      expect(at, greaterThan(0));
+      final seen = _follow(
+        ayah,
+        sounds,
+        heard: (lp) {
+          final row = at * 5 * recitationClasses;
+          lp[row + fatha] = -.02;
+          lp[row + written] = kasra;
+        },
+      );
+      return (misses: seen.misses, next: seen.next);
+    }
+
+    test('with a trace of the kasra heard, it is no mistake', () {
+      final seen = read(-5.7);
+      expect(seen.misses, isEmpty);
+      expect(seen.next, _ayah(67, 3).spans.length);
+    });
+
+    test('with no trace of the kasra, the vowel was changed', () {
+      final seen = read(-20);
+      expect(seen.misses.first.word, 12);
+      expect(seen.misses.first.why, FollowWhy.another);
+      expect(seen.misses.first.expected, 34);
+      expect(seen.misses.first.heard, 32);
+    });
   });
 }

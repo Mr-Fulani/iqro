@@ -244,6 +244,12 @@ const _iqlab = 40; // ۾
 const _longWord = 9; // sounds of a word that may have two unfit
 const _goodSound = -4.0;
 const _absentSound = -12.0; // a sound the model does not hear at all
+// A short vowel the model hears a trace of where it is written (more than
+// 3 in 10000) was not said as another: of a kasra before an 'ayn it now and
+// then writes a fatha, for sure, and the kasra a hundred times fainter
+// ("farji'i", 67:3). Of a vowel that was changed it hears no trace
+// (docs/recitation-on-device-spike/out/19_vowel_trace.txt).
+const _tracedVowel = -8.0;
 
 /// The throat letters (ء ح خ ع غ ه): the model loses one of them in a right
 /// reading too ("nihim", "wa'ala"), so one not heard is not a letter left
@@ -1053,11 +1059,11 @@ class RecitationFollowCore {
     // The nun that is hidden (ikhfa) or turned into a mim (iqlab).
     final hidden = expected == _ikhfa || expected == _iqlab;
     // A letter must not be heard at all where it is written (the model
-    // half-hears a right one often enough), nor the hidden nun; a short
-    // vowel is either there or not.
+    // half-hears a right one often enough), nor the hidden nun; of a
+    // short vowel no more than a trace.
     if (!(letter || vowel || hidden) ||
         (passage.optional[i] && !strict) ||
-        path.best[i - path.lo] >= (vowel ? _goodSound : _absentSound)) {
+        path.best[i - path.lo] >= (vowel ? _tracedVowel : _absentSound)) {
       return null;
     }
     final at = path.frame[i - path.lo];

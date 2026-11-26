@@ -1,0 +1,26 @@
+# 26.11.2026. "Another vowel: a fatha is heard, a kasra is written" on "farji'i" (67:3), the owner's own voice,
+# ten times of ten. He stopped on "tafawut" and began with "farji'i-l-basara"; the stop is not the cause.
+# His reading was kept by a fault-finding build (--dart-define=RECITATION_KEEP_SOUND=true) and run on the stand:
+# the same red stop on the same word. On the frame of the kasra after the jim (before the 'ayn) the model
+# writes a fatha, .98 sure, and the kasra at .003-.013 (log -4.3 .. -5.7; in other steps of the same reading
+# -2.5 .. -3.9, which passed). The rule took a written vowel heard under log -4 (_goodSound) for changed.
+#
+# What a vowel that WAS changed looks like (harness.dart --mutate=haraka|ending on 174 single ayat, six masters;
+# the text is changed, the reading is right): the written vowel's best log-probability at the red stop
+#    haraka: 142 stops: <= -12: 124, -12..-10: 11, -10..-8: 7, above -8: 0
+#    ending:  40 stops: <= -12:  29, -12..-10:  9, -10..-8: 1, above -8: 1
+# Now a short vowel is said as another only when the written one is heard under log -8 (_tracedVowel).
+
+                                                      before        after
+   the owner's 67:3                                   red stop on "farji'i"   read to "tara" (he then read it again)
+   a vowel changed inside a word (haraka): caught     142 of 150    142 of 150
+   a word's last vowel changed (ending): caught       43 of 102     42 of 102
+   the same 174 ayat read right: false stops          2             2
+   masters stopping inside long ayat (out/18, 240
+   recitations): false stops                          52            50
+      (the 23 recitations with a "read otherwise" stop were run again: 27 stops -> 25; the two gone are
+       al-Qahtani's 2:268 "ash-shaytanu", a damma heard as a kasra, and 2:23, a kasra heard as a damma)
+
+# Tests: recitation_model_waqf_test.dart, "a kasra before an ayn that the model writes as a fatha".
+# Not looked at: the other red stops of the owner's recording (67:5-6: "written ha, heard ha'", "written waw,
+# heard nun", a word passed over) - letters, not vowels; whether they were his slips is not known.
