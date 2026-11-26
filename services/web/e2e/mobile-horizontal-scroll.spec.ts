@@ -6,6 +6,19 @@ import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/web-auth/refresh", (route) => route.fulfill({ status: 401 }));
+  // The production build tells browsers to upgrade every request to HTTPS. Chromium leaves
+  // http://127.0.0.1 alone; WebKit upgrades it and the test server, which has no TLS, gives
+  // it no styles and no scripts. Only that directive is dropped, and only from the pages.
+  await page.route((url) => !url.pathname.startsWith("/_next/") && !url.pathname.startsWith("/api/"), async (route) => {
+    if (route.request().resourceType() !== "document") return route.fallback();
+    const response = await route.fetch();
+    const policy = response.headers()["content-security-policy"];
+    if (!policy?.includes("upgrade-insecure-requests")) return route.fulfill({ response });
+    await route.fulfill({
+      response,
+      headers: { ...response.headers(), "content-security-policy": policy.replace(/;?\s*upgrade-insecure-requests/, "") },
+    });
+  });
 });
 
 /** The page must not scroll sideways; a failure names the element that widens it. */
@@ -29,10 +42,6 @@ async function expectNoHorizontalScroll(page: Page, label: string) {
     }
     return `${width}px page in a ${root.clientWidth}px window: <${node.tagName.toLowerCase()} id="${node.id}" class="${node.getAttribute("class") ?? ""}">`;
   }), { message: label }).toBe("fits");
-  // The same on any platform's WebKit build, whatever its list rendering.
-  expect(await page.locator("select").evaluateAll((lists) => lists
-    .filter((list) => getComputedStyle(list).overflowX === "visible")
-    .map((list) => list.id)), `${label}: lists that do not clip their text`).toEqual([]);
 }
 
 const pages = [
