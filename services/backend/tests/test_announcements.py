@@ -55,6 +55,7 @@ from quran_backend.modules.announcements.services import (
     readiness,
     republish,
     reshow,
+    set_platforms,
     set_receipt,
     start_edit,
     withdraw,
@@ -1286,10 +1287,11 @@ def test_admin_cancels_an_edit(owner: User) -> None:
 
 
 def _published_form_data(announcement: Announcement) -> dict[str, Any]:
-    """A published page posts only the note and the read-only inlines' counters."""
+    """A published page posts the note, «Где показывать» and the read-only inlines' counters."""
     count = str(announcement.translations.count())
     return {
         "review_note": "",
+        "audience_platforms": list(announcement.audience_platforms),
         "translations-TOTAL_FORMS": count,
         "translations-INITIAL_FORMS": count,
         "translations-MIN_NUM_FORMS": "0",
@@ -1299,6 +1301,113 @@ def _published_form_data(announcement: Announcement) -> dict[str, Any]:
         "step_images-MIN_NUM_FORMS": "0",
         "step_images-MAX_NUM_FORMS": "5",
     }
+
+
+@pytest.mark.django_db
+def test_admin_changes_where_a_published_announcement_is_shown(
+    api_client: APIClient,
+    owner: User,
+    recorded_changes: list[str],
+) -> None:
+    client = Client()
+    client.force_login(owner)
+    announcement = _publish(_announcement(audience_platforms=["android"]), owner)
+    edit = start_edit(announcement, owner)
+    recorded_changes.clear()
+    page = f"/admin/announcements/announcement/{announcement.pk}/change/"
+
+    def shown(platform: str) -> bool:
+        return bool(_active(api_client, platform=platform)["results"])
+
+    body = client.get(page).content.decode()
+    assert body.index("Где показывать") < body.index("Как увидят")
+    assert "Показывается не везде: только Android." in body
+    assert "Галочки можно менять и после публикации" in body
+    for code, label in (
+        ("web", "Сайт"),
+        ("android", "Приложение Android"),
+        ("ios", "Приложение iPhone"),
+    ):
+        assert f'name="audience_platforms" value="{code}"' in body
+        assert f"{label}</label>" in body
+    assert (shown("web"), shown("android")) == (False, True)
+
+    data = _published_form_data(announcement) | {"audience_platforms": ["web", "android", "ios"]}
+    response = client.post(page, data | {"_continue": "1"}, follow=True)
+
+    body = response.content.decode()
+    assert "Где показывается теперь: везде." in body
+    assert "Показывается не везде" not in body
+    assert (shown("web"), shown("android"), shown("ios")) == (True, True, True)
+    announcement.refresh_from_db()
+    edit.refresh_from_db()
+    assert announcement.audience_platforms == ["web", "android", "ios"]
+    assert (announcement.status, announcement.revision, announcement.wave) == (
+        AnnouncementStatus.PUBLISHED,
+        1,
+        1,
+    )
+    # The edit already started must not bring the old platforms back when published.
+    assert edit.audience_platforms == ["web", "android", "ios"]
+    assert recorded_changes == ["published"]
+
+    client.post(page, data | {"audience_platforms": ["web"], "_continue": "1"})
+    assert (shown("web"), shown("android")) == (True, False)
+
+    response = client.post(page, data | {"audience_platforms": [], "_continue": "1"})
+    assert "Отметьте хотя бы одно место показа." in response.content.decode()
+    assert (shown("web"), shown("android")) == (True, False)
+
+
+@pytest.mark.django_db
+def test_admin_list_says_where_each_announcement_is_shown(owner: User) -> None:
+    client = Client()
+    client.force_login(owner)
+    _titled("Для всех")
+    _titled("Для телефонов Android", audience_platforms=["android"])
+    _titled("Для приложений", audience_platforms=["android", "ios"])
+    _titled("Сбор", kind=AnnouncementKind.FUNDRAISING, channel_bubble=False)
+
+    listing = client.get("/admin/announcements/announcement/").content.decode()
+
+    assert "Где показывается" in listing
+    for where, count in (
+        (">Везде<", 1),
+        (">Только Android<", 1),
+        (">Только Android и iPhone<", 1),
+        (">Только сайт<", 1),
+    ):
+        assert listing.count(where) == count
+
+
+@pytest.mark.django_db
+def test_where_shown_of_owner_only_announcements_is_the_owners_call(
+    owner: User,
+    editor: User,
+) -> None:
+    ordinary = _publish(_announcement(), owner)
+    fundraising = _publish(
+        _announcement(kind=AnnouncementKind.FUNDRAISING, channel_bubble=False), owner
+    )
+    draft = _announcement()
+    client = Client()
+    client.force_login(editor)
+
+    set_platforms(ordinary, editor, ["web"])
+    with pytest.raises(PermissionDenied):
+        set_platforms(fundraising, editor, ["web"])
+    with pytest.raises(AnnouncementNotReadyError):
+        set_platforms(draft, owner, ["web"])
+    with pytest.raises(AnnouncementNotReadyError):
+        set_platforms(ordinary, owner, [])
+
+    ordinary.refresh_from_db()
+    assert ordinary.audience_platforms == ["web"]
+    page = client.get(
+        f"/admin/announcements/announcement/{fundraising.pk}/change/"
+    ).content.decode()
+    assert 'name="audience_platforms"' not in page
+    assert "Только сайт" in page
 
 
 def _titled(title: str, **overrides: Any) -> Announcement:

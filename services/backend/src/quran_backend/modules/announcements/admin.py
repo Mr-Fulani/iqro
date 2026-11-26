@@ -40,6 +40,7 @@ from quran_backend.modules.announcements.models import (
     PLATFORMS,
     ActionType,
     Announcement,
+    AnnouncementKind,
     AnnouncementSettings,
     AnnouncementStatus,
     AnnouncementStep,
@@ -63,6 +64,7 @@ from quran_backend.modules.announcements.services import (
     readiness,
     republish,
     reshow,
+    set_platforms,
     sign_religious_review,
     start_edit,
     submit_for_review,
@@ -77,6 +79,9 @@ from quran_backend.modules.core.object_storage import ObjectStorageError
 logger = logging.getLogger(__name__)
 
 PLATFORM_NAMES = {"web": "Сайт", "android": "Android", "ios": "iOS"}
+# «Где показывать»: the checkboxes, and the short names for «Только …».
+WHERE_LABELS = {"web": "Сайт", "android": "Приложение Android", "ios": "Приложение iPhone"}
+WHERE_SHORT = {"web": "сайт", "android": "Android", "ios": "iPhone"}
 # Preview only; the site and the app label kinds through their own dictionaries.
 KIND_EYEBROWS = {
     "reciter": {"ru": "Новый чтец", "en": "New reciter", "ar": "قارئ جديد", "tr": "Yeni kari"},
@@ -133,10 +138,14 @@ class AnnouncementAdminForm(forms.ModelForm):  # type: ignore[type-arg]
         help_text="Ничего не отмечено — все языки, на которых заполнен текст.",
     )
     audience_platforms = forms.MultipleChoiceField(
-        label="Платформы",
-        choices=[(code, PLATFORM_NAMES[code]) for code in PLATFORMS],
+        label="Где показывать",
+        choices=[(code, WHERE_LABELS[code]) for code in PLATFORMS],
         widget=forms.CheckboxSelectMultiple,
-        help_text="Сбор средств в приложениях не показывается в любом случае.",
+        help_text=(
+            "Отмечено всё — объявление видно везде. "
+            "Сбор средств в приложениях не показывается в любом случае."
+        ),
+        error_messages={"required": "Отметьте хотя бы одно место показа."},
     )
 
     class Meta:
@@ -561,6 +570,34 @@ def _publish_panel(user: User, announcement: Announcement | None) -> dict[str, A
     }
 
 
+def _where_shown(announcement: Announcement) -> str:
+    """«Везде» or «Только …»: where the audience rules let the announcement appear."""
+    shown = [
+        code
+        for code in PLATFORMS
+        if code in (announcement.audience_platforms or [])
+        and (announcement.kind != AnnouncementKind.FUNDRAISING or code == "web")
+    ]
+    if len(shown) == len(PLATFORMS):
+        return "Везде"
+    if not shown:
+        return "Нигде"
+    return "Только " + " и ".join(WHERE_SHORT[code] for code in shown)
+
+
+def _lower_first(text: str) -> str:
+    return text[:1].lower() + text[1:]
+
+
+def _can_set_platforms(user: User, announcement: Announcement) -> bool:
+    """Whether «Где показывать» of a published announcement is the user's to change."""
+    return (
+        announcement.status in {AnnouncementStatus.PUBLISHED, AnnouncementStatus.WITHDRAWN}
+        and user.has_perm(PUBLISH_PERMISSION)
+        and (not is_sensitive(announcement) or user.has_perm(SENSITIVE_PERMISSION))
+    )
+
+
 def _publish_label(announcement: Announcement) -> str:
     return "Сохранить и опубликовать снова" if announcement.is_edit else "Сохранить и опубликовать"
 
@@ -595,6 +632,7 @@ PANEL_STATES = {
 }
 
 
+WHERE_TITLE = "Где показывать"
 WAVE_EVENTS = ("impression", "open", "click", "dismiss")
 NO_RIGHT = (
     "нет права. Сбор средств, окно с шагами, push и обязательное обновление публикует, "
@@ -626,6 +664,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "title_ru",
         "kind",
         "status_badge",
+        "where_shown",
         "period",
         "languages",
         "channels",
@@ -650,6 +689,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "status",
         "source",
         "preview",
+        "where_shown",
         "current_image",
         "stats_summary",
         "waves_history",
@@ -668,6 +708,7 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "updated_at",
     )
     fieldsets = (
+        (WHERE_TITLE, {"fields": ("audience_platforms",)}),
         ("Как увидят", {"fields": ("preview",)}),
         (
             "Основное",
@@ -701,7 +742,6 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             {
                 "fields": (
                     "audience_languages",
-                    "audience_platforms",
                     ("app_version_min", "app_version_max"),
                     "audience_auth",
                 ),
@@ -765,36 +805,75 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             ),
         )
 
-    def get_readonly_fields(self, _request: HttpRequest, obj: Any = None) -> tuple[str, ...]:
+    def get_readonly_fields(self, request: HttpRequest, obj: Any = None) -> tuple[str, ...]:
         if obj is not None and not obj.is_editable:
-            editable = [name for name in self.form.Meta.fields if name != "review_note"]
-            return (*self.readonly_fields, *editable)
+            # «Где показывать» of a published announcement stays a set of checkboxes.
+            open_fields = {"review_note"}
+            if _can_set_platforms(cast(User, request.user), obj):
+                open_fields.add("audience_platforms")
+            locked = [name for name in self.form.Meta.fields if name not in open_fields]
+            return (*self.readonly_fields, *locked)
         return self.readonly_fields
 
     def get_fieldsets(self, request: HttpRequest, obj: Any = None) -> Any:
-        fieldsets = super().get_fieldsets(request, obj)
-        if obj is not None and not obj.is_editable:
-            hidden = {"image_upload", "remove_image"}
-            return [
-                (
-                    title,
-                    {
-                        **options,
-                        "fields": [
-                            field
-                            for field in options["fields"]
-                            if not (isinstance(field, str) and field in hidden)
-                        ],
-                    },
+        fieldsets = list(super().get_fieldsets(request, obj))
+        if obj is None:
+            return fieldsets
+        where_fields: tuple[str, ...] = ("audience_platforms",)
+        hidden: set[str] = set()
+        notes: list[str] = []
+        if _where_shown(obj) != "Везде":
+            notes.append(
+                format_html(
+                    '<b class="announcement-where-narrow">Показывается не везде: {}.</b>',
+                    _lower_first(_where_shown(obj)),
                 )
-                for title, options in fieldsets
-            ]
-        return fieldsets
+            )
+        if not obj.is_editable:
+            hidden = {"image_upload", "remove_image"}
+            if "audience_platforms" in self.get_readonly_fields(request, obj):
+                # Read-only: words instead of the stored list of codes.
+                where_fields = ("where_shown",)
+            else:
+                notes.append(
+                    "Галочки можно менять и после публикации: отметьте нужное и нажмите "
+                    "«Сохранить» внизу страницы — изменение подействует сразу."
+                )
+        return [
+            (
+                title,
+                {
+                    **options,
+                    "fields": where_fields
+                    if title == WHERE_TITLE
+                    else [
+                        field
+                        for field in options["fields"]
+                        if not (isinstance(field, str) and field in hidden)
+                    ],
+                    **(
+                        {"description": format_html_join(" ", "{}", ((note,) for note in notes))}
+                        if title == WHERE_TITLE and notes
+                        else {}
+                    ),
+                },
+            )
+            for title, options in fieldsets
+        ]
 
     def save_model(self, request: HttpRequest, obj: Announcement, form: Any, change: bool) -> None:
         if not change:
             obj.created_by = cast(User, request.user)
         super().save_model(request, obj, form, change)
+        if change and not obj.is_editable and "audience_platforms" in form.changed_data:
+            # No edit and no new wave: the audience sees the change at once.
+            set_platforms(obj, cast(User, request.user), obj.audience_platforms)
+            self.message_user(
+                request,
+                f"Где показывается теперь: {_lower_first(_where_shown(obj))}. "
+                "На сайте и в приложении изменится в течение минуты.",
+                messages.SUCCESS,
+            )
 
     # List columns
 
@@ -822,6 +901,13 @@ class AnnouncementAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             label,
             extra,
         )
+
+    @admin.display(description="Где показывается")
+    def where_shown(self, obj: Announcement) -> str:
+        where = _where_shown(obj)
+        if where == "Везде":
+            return where
+        return format_html('<span style="color:#8a5a00;font-weight:700">{}</span>', where)
 
     @admin.display(description="Период", ordering="starts_at")
     def period(self, obj: Announcement) -> str:
