@@ -1,0 +1,38 @@
+# 25-26.11.2026. A stop before a word whose first letter a nun, a tanwin or a mim is merged into.
+# The owner stopped on "tibaqan" in 67:3 ("tibaqa", with the alif) and began "ma" anew: the plate went back to
+# "tibaqan" with the hint of a ghunnah held too short. The place of that ghunnah is written on the first sound
+# of the NEXT word, and after a stop the letter is said once. Now such a place is not looked at when the word
+# is begun after a stop (0.2 s without a sound) or the reading begins with it. In the table: 2336 such places
+# (a nun merged into mim 1298, a mim before mim 833, a nun into nun 205); the 4955 inside a word are as before.
+#
+# The stand was built anew for this (the old one was gone): the harness, six masters' recordings from
+# everyayah.com, make_whole_cases.py. The numbers below are not to be compared with the earlier files' ones.
+# "before" is the same code with --no-stop-frees.
+
+# 1. Masters stopping inside long ayat: 40 ayat (67:3 among them) x 6 reciters, each read right.
+   before: 240 recitations, 3222 words, 62 false stops, 2871 words reached
+           by the hint: another 25, ghunnah 16, skipped 16, added 2, madd 1, omitted 1, unknown 1
+   after:  52 false stops; ghunnah 16 -> 4
+   (only the 15 recitations with a ghunnah stop were run again: the rule takes away ghunnah stops and nothing
+    else, the other 225 cannot change. In those 15: 18 stops -> 8, 198 of 227 words reached after.)
+   67:3, the stop on "tibaqan": 5 of 6 masters stop there (Basfar, al-Afasy, Ayman Suwayd, al-Husary,
+   al-Minshawi); a red stop before for all 5, after for none.
+   The 4 ghunnah stops left are not stops of the reader: 7:115 "imma" (Basfar, al-Qahtani) and 2:64 "thumma"
+   (al-Husary) are inside a word, 2:49 (al-Qahtani) is read on, fast.
+   3 stops are new, further on in recitations that used to end at the ghunnah stop: 2:23 Ayman Suwayd (another),
+   2:10 al-Qahtani (another), 2:182 al-Qahtani (added); one "skipped" of 2:10 is gone. They are counted in 52.
+
+# 2. A ghunnah cut short in a reading read on (the cut set of out/16: surahs 103 108 112 113 114, 2:1-5).
+   before: rule 0 (ghunnah): cut 65, red stop 29; rule 1: cut 2, red stop 0; rule 2 (madd): cut 6, red stop 4
+           the same 174 ayat read right: 2 false stops (both al-Qahtani), 644 of 657 words reached
+   after:  the same in every number. (The 30 recitations with a ghunnah stop were run again with the rule on
+           and off: 29 red stops on the cut place and 1 false one, both ways, hint for hint.)
+
+# 3. Tests (test/features/recitation_model_waqf_test.dart, on the real table): a stop on a tanwin or a nun
+#    before mim, nun, waw, ya, lam, ra, ba (iqlab) and letters of ikhfa asks nothing; the same places read on
+#    are looked at as before, and one said once there is still handed to the count. Without the rule 6 fail.
+
+# 4. The phone (Redmi, "IQRO test" 1.0.15 (16) with this branch), 26.11: al-Husary's 67:3, with his stop on
+#    "tibaqan", from the Mac's speakers: the plate went to the last word of the ayah, no red stop.
+
+# Not measured: the 36 whole surahs (the rule can only take a ghunnah stop away); a living voice.

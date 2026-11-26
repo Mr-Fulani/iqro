@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'dart:io' show File, IOSink, Platform;
 import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../recitation_follow.dart';
 import 'follow_core.dart';
@@ -22,6 +23,12 @@ bool get recitationByModel => Platform.isAndroid;
 /// The threads the model works on: a step is in time on a phone's four
 /// fast cores (docs/recitation-on-device-spike).
 const _threads = 4;
+
+/// A build for finding a fault (--dart-define=RECITATION_KEEP_SOUND=true)
+/// keeps what the microphone gave since it was last turned on, and what
+/// the follower made of it, in the app's own folder on the phone
+/// (recitation.pcm, recitation.txt). No other build writes sound anywhere.
+const _keepSound = bool.fromEnvironment('RECITATION_KEEP_SOUND');
 
 void _log(String message) {
   // No word the reader says is written, only that the listener went on
@@ -79,6 +86,8 @@ class ModelRecitationListener implements RecitationListener {
   final _clock = Stopwatch();
   Timer? _watch;
   var _lastPlace = 0;
+  IOSink? _keptSound;
+  IOSink? _keptNotes;
 
   /// Sounds the model heard in the last seconds, whatever they were.
   var _sounds = 0;
@@ -114,6 +123,11 @@ class ModelRecitationListener implements RecitationListener {
               ? (why: FollowWhy.values[why], expected: expected, heard: heard)
               : null;
           _lastPlace = _clock.elapsedMilliseconds;
+          _keptNotes?.writeln(
+            '$_lastPlace ms: word $word${wrong ? ' wrong, '
+                      '${FollowWhy.values[why].name}, written "$expected", '
+                      'heard "$heard"' : ''}',
+          );
           ear.value = (heard: words[word], deaf: false, trouble: null);
           onPlace(word, wrong);
         case int sounds:
@@ -138,6 +152,17 @@ class ModelRecitationListener implements RecitationListener {
       await stop();
       return false;
     }
+    if (_keepSound) {
+      final folder = await getExternalStorageDirectory();
+      if (folder != null) {
+        _keptSound = File('${folder.path}/recitation.pcm').openWrite();
+        _keptNotes = File('${folder.path}/recitation.txt').openWrite()
+          ..writeln(
+            'surah $surah, ayahs ${ayahs.first.$1}-${ayahs.last.$1}, '
+            'from word $from; 16000 Hz, 16 bit, mono',
+          );
+      }
+    }
     final heard = Completer<bool>();
     _clock
       ..reset()
@@ -146,6 +171,7 @@ class ModelRecitationListener implements RecitationListener {
       (chunk) {
         if (chunk is! Uint8List) return;
         if (!heard.isCompleted) heard.complete(true);
+        _keptSound?.add(chunk);
         _toWorker?.send(chunk);
       },
       onError: (Object error) {
@@ -177,6 +203,9 @@ class ModelRecitationListener implements RecitationListener {
   /// Reading starts from this word.
   void moveTo(int word) {
     hint.value = null;
+    _keptNotes?.writeln(
+      '${_clock.elapsedMilliseconds} ms: moved to word $word',
+    );
     _toWorker?.send(word);
   }
 
@@ -187,6 +216,10 @@ class ModelRecitationListener implements RecitationListener {
     _watch?.cancel();
     await _sound?.cancel();
     _sound = null;
+    await _keptSound?.close();
+    await _keptNotes?.close();
+    _keptSound = null;
+    _keptNotes = null;
     final worker = _worker;
     _worker = null;
     if (worker != null) {

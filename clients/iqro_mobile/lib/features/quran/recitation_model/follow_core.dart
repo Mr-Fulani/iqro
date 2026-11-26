@@ -244,6 +244,12 @@ const _iqlab = 40; // ۾
 const _longWord = 9; // sounds of a word that may have two unfit
 const _goodSound = -4.0;
 const _absentSound = -12.0; // a sound the model does not hear at all
+// A short vowel the model hears a trace of where it is written (more than
+// 3 in 10000) was not said as another: of a kasra before an 'ayn it now and
+// then writes a fatha, for sure, and the kasra a hundred times fainter
+// ("farji'i", 67:3). Of a vowel that was changed it hears no trace
+// (docs/recitation-on-device-spike/out/19_vowel_trace.txt).
+const _tracedVowel = -8.0;
 
 /// The throat letters (ء ح خ ع غ ه): the model loses one of them in a right
 /// reading too ("nihim", "wa'ala"), so one not heard is not a letter left
@@ -292,6 +298,10 @@ class RecitationFollowCore {
   /// For the harness: the two rules, each by itself.
   static var checkOmitted = true;
   static var checkAdded = true;
+
+  /// For the harness: a word begun after a stop is not asked for the
+  /// ghunnah of the nun or mim merged into its first letter.
+  static var stopFreesMerged = true;
 
   /// For the harness: what each step's path was.
   void Function(String)? trace;
@@ -597,6 +607,7 @@ class RecitationFollowCore {
                   : previousFrame + 1,
             )
           : null;
+      final frameBefore = previousFrame;
       if (lastFrame >= 0) previousFrame = lastFrame;
       // The first word after silence has no word before it to vouch for
       // it: its first sound must be there.
@@ -712,6 +723,7 @@ class RecitationFollowCore {
         from,
         last,
         lastFrame,
+        frameBefore,
         events,
       );
       next = word + 1;
@@ -989,6 +1001,8 @@ class RecitationFollowCore {
 
   /// What may be said of how a word just taken as read was read: where
   /// its ghunnah or madd was held, a sound that was not the text's.
+  /// [frameBefore]: the frame of the last sound heard of the word before,
+  /// -1 when this step's frames begin after it.
   void _judge(
     int word,
     int begin,
@@ -998,6 +1012,7 @@ class RecitationFollowCore {
     int from,
     int last,
     int lastFrame,
+    int frameBefore,
     List<FollowEvent> events,
   ) {
     final end = passage.wordEnd[word];
@@ -1011,6 +1026,16 @@ class RecitationFollowCore {
       final stop = unit.last + 1 < end
           ? path.frame[unit.last + 1 - path.lo]
           : math.min(last, lastFrame + _settle);
+      // A nun or a mim merged into the word's first letter is held only
+      // when the reading goes on into the word: after a stop the word is
+      // begun with the letter said once ("tibaqa", then "ma"), and that
+      // is no ghunnah left out.
+      if (stopFreesMerged &&
+          unit.kind <= 1 &&
+          unit.first == passage.wordStart[word] &&
+          (fresh || _silent(lp, from, frameBefore, stop))) {
+        continue;
+      }
       if (stop > start) {
         events.add(FollowHeld(unit, first + start, first + stop));
       }
@@ -1034,11 +1059,11 @@ class RecitationFollowCore {
     // The nun that is hidden (ikhfa) or turned into a mim (iqlab).
     final hidden = expected == _ikhfa || expected == _iqlab;
     // A letter must not be heard at all where it is written (the model
-    // half-hears a right one often enough), nor the hidden nun; a short
-    // vowel is either there or not.
+    // half-hears a right one often enough), nor the hidden nun; of a
+    // short vowel no more than a trace.
     if (!(letter || vowel || hidden) ||
         (passage.optional[i] && !strict) ||
-        path.best[i - path.lo] >= (vowel ? _goodSound : _absentSound)) {
+        path.best[i - path.lo] >= (vowel ? _tracedVowel : _absentSound)) {
       return null;
     }
     final at = path.frame[i - path.lo];

@@ -50,6 +50,7 @@ void main(List<String> args) {
   RecitationFollowCore.strictLetters = args.contains('--strict-letters');
   RecitationFollowCore.checkOmitted = !args.contains('--no-omitted');
   RecitationFollowCore.checkAdded = !args.contains('--no-added');
+  RecitationFollowCore.stopFreesMerged = !args.contains('--no-stop-frees');
   final mutate = args
       .where((a) => a.startsWith('--mutate='))
       .map((a) => a.substring(9))
@@ -314,9 +315,21 @@ void main(List<String> args) {
           case ModelPlace(:final word, wrong: false):
             reached.putIfAbsent(word, () => now);
             if (verbose) print('  ${now.toStringAsFixed(2)} on $word');
-          case ModelPlace(:final word, wrong: true):
+          case ModelPlace(
+            :final word,
+            wrong: true,
+            :final why,
+            :final expected,
+            :final heard,
+          ):
             misses.add((word, now));
-            if (verbose) print('  ${now.toStringAsFixed(2)} MISS $word');
+            if (verbose) {
+              print(
+                '  ${now.toStringAsFixed(2)} MISS $word ${why.name}'
+                '${expected > 0 ? ' written ${symbols[expected - 1]}' : ''}'
+                '${heard > 0 ? ' heard ${symbols[heard - 1]}' : ''}',
+              );
+            }
         }
       }
       if (verbose && pipeline.core.debugState != before) {
