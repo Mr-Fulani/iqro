@@ -294,6 +294,13 @@
     line-height: 1.3;
   }
 
+  /* The list must not widen the page (see `select` in globals.css). WebKit builds
+     that draw the list with the system look ignore `overflow` on it; `contain`
+     says the same in the way they do obey. */
+  select {
+    contain: paint;
+  }
+
   .language-switcher-menu select {
     width: 100%;
     min-width: 0;

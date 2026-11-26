@@ -75,8 +75,8 @@ jobs:
           cache-dependency-path: services/web/package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install the browsers
+        run: npx playwright install --with-deps chromium webkit
       - name: Development browser regression tests
         run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
       # Screenshots, videos and page snapshots of failed attempts, also of those that passed on retry.
@@ -109,8 +109,8 @@ jobs:
           cache-dependency-path: services/web/package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install the browsers
+        run: npx playwright install --with-deps chromium webkit
       - name: Production browser regression tests
         run: npm run test:e2e:production -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
       # Screenshots, videos and page snapshots of failed attempts, also of those that passed on retry.
