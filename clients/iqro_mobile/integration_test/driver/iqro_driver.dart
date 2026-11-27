@@ -108,6 +108,7 @@ Future<void> _save(
     await service.callServiceExtension(
       'ext.iqro.screenshotSaved',
       isolateId: isolate,
+      args: <String, String>{'name': name},
     );
   } on Object catch (error) {
     stderr.writeln('IQRO DRIVER could not tell the test: $error');

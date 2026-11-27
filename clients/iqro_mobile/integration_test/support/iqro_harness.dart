@@ -47,6 +47,7 @@ class IqroHarness {
   final _steps = <String>[];
   var _shots = 0;
   Completer<void>? _hostShot;
+  String? _hostShotName;
   // The driver connects a little after the app starts; a request posted
   // before it listens would be lost. It brings the run's settings.
   final _driverReady = Completer<Map<String, String>>();
@@ -228,6 +229,7 @@ class IqroHarness {
     }
     final done = Completer<void>();
     _hostShot = done;
+    _hostShotName = file;
     developer.postEvent('iqro.screenshot', <String, Object?>{'name': file});
     try {
       await done.future.timeout(const Duration(seconds: 45));
@@ -250,7 +252,14 @@ class IqroHarness {
       method,
       params,
     ) async {
-      _hostShot?.complete();
+      // Only the answer for the screenshot asked last: a late answer for one
+      // that timed out must not move the test on early.
+      final shot = _hostShot;
+      if (shot != null &&
+          !shot.isCompleted &&
+          params['name'] == _hostShotName) {
+        shot.complete();
+      }
       return developer.ServiceExtensionResponse.result(
         jsonEncode({'ok': true}),
       );
@@ -269,7 +278,10 @@ class IqroHarness {
     if (render is! RenderRepaintBoundary) {
       throw TestFailure('No repaint boundary above the Mushaf page');
     }
-    final image = await render.toImage();
+    // At the screen's own resolution: at 1x the coloured glyph strokes are
+    // too few pixels for a steady count.
+    final ratio = tester.view.devicePixelRatio;
+    final image = await render.toImage(pixelRatio: ratio);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
     final width = image.width;
     final height = image.height;
@@ -277,11 +289,18 @@ class IqroHarness {
     if (bytes == null) throw TestFailure('The Mushaf page could not be read');
     // Only the page itself: the legend's coloured chips below it must not
     // pass for tajweed drawn by the font.
-    final area = page.localToGlobal(Offset.zero, ancestor: render) & page.size;
-    final left = area.left.floor().clamp(0, width);
-    final right = area.right.ceil().clamp(0, width);
-    final top = area.top.floor().clamp(0, height);
-    final bottom = area.bottom.ceil().clamp(0, height);
+    final area = (page.localToGlobal(Offset.zero, ancestor: render) & page.size)
+        .shift(Offset.zero);
+    final scaled = Rect.fromLTRB(
+      area.left * ratio,
+      area.top * ratio,
+      area.right * ratio,
+      area.bottom * ratio,
+    );
+    final left = scaled.left.floor().clamp(0, width);
+    final right = scaled.right.ceil().clamp(0, width);
+    final top = scaled.top.floor().clamp(0, height);
+    final bottom = scaled.bottom.ceil().clamp(0, height);
     const names = <String>[
       'red',
       'orange',

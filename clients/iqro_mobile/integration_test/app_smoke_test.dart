@@ -258,9 +258,14 @@ Future<void> _prayer(IqroHarness harness) async {
 
 Future<void> _reminders(IqroHarness harness) async {
   harness.router.push('/reminders');
+  final screen = find.byType(RemindersScreen);
+  await harness.waitFor(screen, what: 'the reminders screen');
   await harness.waitFor(
-    find.text(harness.l10n.prayerReminders),
-    what: 'the reminders screen',
+    find.descendant(
+      of: screen,
+      matching: find.text(harness.l10n.prayerReminders),
+    ),
+    what: 'the prayer reminders',
   );
   await harness.waitForLoaded(
     scope: find.byType(RemindersScreen),

@@ -101,11 +101,11 @@ void main() {
       } else {
         harness.router.push('/reader/1');
         await harness.waitFor(
-          find.byKey(const ValueKey('reader-translation-7')),
+          find.byKey(const ValueKey('reader-translation-1')),
           what: 'the translation',
         );
         await harness.waitForLoaded(
-          scope: find.byKey(const ValueKey('reader-translation-7')),
+          scope: find.byKey(const ValueKey('reader-translation-1')),
           what: 'the translations',
         );
         await harness.settle(const Duration(seconds: 2));
@@ -189,12 +189,16 @@ Future<void> _chooseIstanbul(IqroHarness harness) async {
 }
 
 Future<void> _openAnnouncement(IqroHarness harness) async {
+  // Each opening reads the first unread announcement; the bubble goes once
+  // all are read.
   final bubble = find.byKey(const ValueKey('announcement-bubble'));
-  if (bubble.evaluate().isEmpty) return;
-  await harness.tap(bubble, what: 'the announcement bubble');
   final close = find.byKey(const ValueKey('announcement-close'));
-  await harness.tap(close, what: 'the announcement close button');
-  await harness.waitForNone(close, what: 'the announcement closed');
+  for (var i = 0; i < 5 && bubble.evaluate().isNotEmpty; i++) {
+    await harness.tap(bubble, what: 'the announcement bubble');
+    await harness.tap(close, what: 'the announcement close button');
+    await harness.waitForNone(close, what: 'the announcement closed');
+    await harness.settle(const Duration(seconds: 2));
+  }
 }
 
 Future<void> _mushafPage(IqroHarness harness, int number) async {
