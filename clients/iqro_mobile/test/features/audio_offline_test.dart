@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/auth/auth_repository.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
@@ -228,6 +229,47 @@ void main() {
 
     expect((await first).status, AudioDownloadStatus.ready);
     expect(harness.api.downloads, <int>[1, 112]);
+  });
+
+  test('a card made again follows the download to its end', () async {
+    final harness = await _harness();
+    harness.api.manifest = _manifestFixture(
+      surahs: const <int>[1, 112],
+      listeningOnly: true,
+    );
+    final started = Completer<void>();
+    final release = Completer<void>();
+    harness.api.onDownload = (surah) {
+      if (!started.isCompleted) started.complete();
+      return release.future;
+    };
+    const follow = Duration(milliseconds: 5);
+    final first = AudioDownloadController(
+      harness.repository,
+      _recitationId,
+      followInterval: follow,
+    );
+    final download = first.download();
+    await started.future;
+    // Another reciter is chosen: the card and its controller go.
+    first.dispose();
+    final second = AudioDownloadController(
+      harness.repository,
+      _recitationId,
+      followInterval: follow,
+    );
+    addTearDown(second.dispose);
+    await Future<void>.delayed(follow * 4);
+    expect(second.state.status, AudioDownloadStatus.downloading);
+
+    release.complete();
+    await download;
+    for (var i = 0; i < 200; i += 1) {
+      if (second.state.status == AudioDownloadStatus.ready) break;
+      await Future<void>.delayed(follow);
+    }
+    expect(second.state.status, AudioDownloadStatus.ready);
+    expect(second.state.completedTracks, 2);
   });
 
   test('a download still plays after the app folder moves', () async {

@@ -25,6 +25,7 @@ import '../core/network/api_client.dart';
 import '../core/notifications/notification_gateway.dart';
 import '../core/storage/cache_maintenance.dart';
 import '../core/storage/local_database.dart';
+import '../core/storage/offline_download_resume.dart';
 import '../core/storage/preferences_store.dart';
 import '../core/sync/sync_service.dart';
 import '../features/audio/audio_models.dart';
@@ -930,21 +931,47 @@ final memorizationRecitationsProvider = FutureProvider<List<Recitation>>(
 );
 
 class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
-  AudioDownloadController(this._repository, this._recitationId)
-    : super(AudioDownloadSnapshot.empty(_recitationId)) {
+  AudioDownloadController(
+    this._repository,
+    this._recitationId, {
+    this.followInterval = const Duration(seconds: 1),
+  }) : super(AudioDownloadSnapshot.empty(_recitationId)) {
     unawaited(initialize());
   }
 
   final AudioOfflineRepository _repository;
   final String _recitationId;
 
-  /// The stored state first, then whether the recitation gained surahs.
+  /// How often a download started by an earlier card is read again.
+  final Duration followInterval;
+
+  /// This controller's own download runs.
+  var _installing = false;
+
+  /// The stored state first, then whether the recitation gained surahs. The
+  /// card is made again when another reciter is chosen while one downloads:
+  /// the download keeps running and is followed in the database until it
+  /// ends.
   Future<void> initialize() async {
-    state = await _repository.snapshot(_recitationId);
+    var stored = await _repository.snapshot(_recitationId);
+    while (mounted &&
+        !_installing &&
+        liveOfflineDownloads.contains(stored.packageId)) {
+      state = stored;
+      await Future<void>.delayed(followInterval);
+      if (!mounted || _installing) return;
+      stored = await _repository.snapshot(_recitationId);
+    }
+    if (!mounted || _installing) return;
+    state = stored;
     if (state.status != AudioDownloadStatus.ready) return;
     try {
       final latest = await _repository.check(_recitationId);
-      if (mounted && state.status == AudioDownloadStatus.ready) state = latest;
+      if (mounted &&
+          !_installing &&
+          state.status == AudioDownloadStatus.ready) {
+        state = latest;
+      }
     } on Object {
       // Offline the stored package stays as it is.
     }
@@ -952,6 +979,7 @@ class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
 
   Future<void> download({String? quality}) async {
     if (state.status == AudioDownloadStatus.downloading) return;
+    _installing = true;
     final requestedQuality =
         quality ?? (state.quality == 'default' ? null : state.quality);
     state = AudioDownloadSnapshot(
@@ -965,13 +993,18 @@ class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
       totalBytes: state.totalBytes,
     );
     try {
-      state = await _repository.install(
+      // A card that is gone leaves the download running for the next one.
+      final installed = await _repository.install(
         recitationId: _recitationId,
         quality: requestedQuality,
-        onProgress: (progress) => state = progress,
+        onProgress: (progress) {
+          if (mounted) state = progress;
+        },
       );
+      if (mounted) state = installed;
     } on Object catch (error) {
       final persisted = await _repository.snapshot(_recitationId);
+      if (!mounted) return;
       state = AudioDownloadSnapshot(
         status: AudioDownloadStatus.failed,
         recitationId: _recitationId,
@@ -983,6 +1016,8 @@ class AudioDownloadController extends StateNotifier<AudioDownloadSnapshot> {
         totalBytes: persisted.totalBytes,
         error: error.toString(),
       );
+    } finally {
+      _installing = false;
     }
   }
 }
@@ -1469,17 +1504,30 @@ class SalahOfflineController extends StateNotifier<SalahOfflineSnapshot> {
   /// Called when the stored pictures changed.
   final void Function()? onChanged;
 
-  /// The stored state first, then the published size and version.
+  /// How often a download started by an earlier controller is read again.
+  static const followInterval = Duration(seconds: 1);
+
+  /// This controller's own download runs.
+  var _installing = false;
+
+  /// The stored state first, then the published size and version. A download
+  /// started before this controller was made again (the storage screen does
+  /// that) is followed in the database until it ends.
   Future<void> initialize() async {
     try {
-      final stored = await _repository.snapshot(_slug, _language);
-      if (mounted && state.status != SalahOfflineStatus.downloading) {
+      var stored = await _repository.snapshot(_slug, _language);
+      while (mounted &&
+          !_installing &&
+          liveOfflineDownloads.contains(stored.packageId)) {
         state = stored;
+        await Future<void>.delayed(followInterval);
+        if (!mounted || _installing) return;
+        stored = await _repository.snapshot(_slug, _language);
       }
+      if (!mounted || _installing) return;
+      state = stored;
       final latest = await _repository.check(_slug, _language);
-      if (mounted && state.status != SalahOfflineStatus.downloading) {
-        state = latest;
-      }
+      if (mounted && !_installing) state = latest;
     } on Object {
       // Offline the stored state stays; without a manifest there is nothing
       // to offer for download.
@@ -1488,6 +1536,7 @@ class SalahOfflineController extends StateNotifier<SalahOfflineSnapshot> {
 
   Future<void> download() async {
     if (state.status == SalahOfflineStatus.downloading) return;
+    _installing = true;
     final previous = state;
     state = SalahOfflineSnapshot(
       status: SalahOfflineStatus.downloading,
@@ -1517,6 +1566,8 @@ class SalahOfflineController extends StateNotifier<SalahOfflineSnapshot> {
         totalBytes: previous.totalBytes,
         error: error.toString(),
       );
+    } finally {
+      _installing = false;
     }
   }
 
