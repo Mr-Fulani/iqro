@@ -170,7 +170,7 @@ jobs:
         with:
           name: iqro-ios-dsyms
           path: ${{ runner.temp }}/iqro-ios-dsyms.zip
-          retention-days: 30
+          retention-days: 90
       - name: Remove signing material
         if: always()
         working-directory: .
