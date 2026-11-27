@@ -1,5 +1,5 @@
 "CFBundleDisplayName" = "IQRO";
-"NSLocationWhenInUseUsageDescription" = "يستخدم IQRO موقعك فقط أثناء فتح التطبيق لحساب مواقيت الصلاة المحلية بدقة.";
+"NSLocationWhenInUseUsageDescription" = "يستخدم IQRO موقعك فقط أثناء فتح التطبيق لحساب مواقيت الصلاة المحلية واتجاه القبلة بدقة.";
 "NSPhotoLibraryAddUsageDescription" = "يحفظ IQRO صورة الآية أو الدعاء في «الصور» فقط عندما تختار «حفظ الصورة».";
 "NSMicrophoneUsageDescription" = "يستمع IQRO إلى تلاوتك ليُظهر الكلمة التي قرأتها من القرآن.";
 "NSSpeechRecognitionUsageDescription" = "يتعرّف IQRO على الكلمات التي تتلوها ليُظهر موضعك في نص القرآن.";

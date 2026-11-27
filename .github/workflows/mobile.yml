@@ -116,7 +116,7 @@ jobs:
       - name: Verify locked CocoaPods dependencies
         working-directory: clients/iqro_mobile/ios
         run: bundle exec pod install --deployment
-      - name: iPhone and iPad production release compile
+      - name: iPhone production release compile
         run: >-
           bundle exec flutter build ios
           --release
@@ -125,6 +125,20 @@ jobs:
           --dart-define=APP_ENV=production
           --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
           --dart-define-from-file=config/firebase.json
+      - name: Privacy manifests cover every required-reason API
+        run: python3 ios/scripts/check_privacy_manifests.py build/ios/iphoneos/Runner.app
+      - name: Recitation model stays out of the iPhone app
+        run: |
+          # Only Android listens with the model (pubspec.yaml, assets).
+          assets=build/ios/iphoneos/Runner.app/Frameworks/App.framework/flutter_assets/assets/recitation_model
+          ls "$assets"
+          for file in model-int8.onnx expected.json mel_filters.bin; do
+            if [ -e "$assets/$file" ]; then
+              echo "::error::$file is in the iOS app"
+              exit 1
+            fi
+          done
+          du -sh build/ios/iphoneos/Runner.app
       - name: Select an available iPhone simulator
         id: simulator
         run: |

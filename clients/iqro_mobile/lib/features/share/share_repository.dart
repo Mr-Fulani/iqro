@@ -12,6 +12,7 @@ import '../../core/auth/account_scope.dart';
 import '../../core/auth/auth_repository.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
+import '../../core/platform/ios_version.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 
@@ -327,16 +328,14 @@ class ShareRepository {
 
   Future<ShareClientMetadata> _clientMetadata() async {
     try {
-      final deviceInfo = DeviceInfoPlugin();
       if (Platform.isIOS) {
-        final ios = await deviceInfo.iosInfo;
         return ShareClientMetadata(
           platform: 'ios',
-          osMajor: shareOsMajor(ios.systemVersion),
+          osMajor: shareOsMajor(iosVersion()),
         );
       }
       if (Platform.isAndroid) {
-        final android = await deviceInfo.androidInfo;
+        final android = await DeviceInfoPlugin().androidInfo;
         return ShareClientMetadata(
           platform: 'android',
           osMajor: shareOsMajor(android.version.release),

@@ -142,3 +142,9 @@ python3 docs/guides/_tools/render.py docs/guides/<папка>
 ```
 
 Нужны Python, Pillow, Playwright для Python и установленный Google Chrome. `--all` пересобирает все папки.
+
+## iPhone
+
+| Функция | Где | Картинок |
+|---|---|---|
+| [IQRO на iPhone](iphone/README.md) | приложение (iPhone и iPad) | 7 + 14 кадров 9:16 + 2 видео |

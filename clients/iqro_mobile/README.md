@@ -210,6 +210,13 @@ Mobile CI закреплён на Flutter 3.41.4, проверяет lock-фай
 проверяются отдельными release-задачами. Gradle wrapper хранится в Git, а JAR и дистрибутив
 проверяются официальными SHA-256.
 
+iOS-задача Mobile CI ещё проверяет собранный релизный `Runner.app`: все API «с обязательной
+причиной» объявлены в манифестах приватности (`ios/scripts/check_privacy_manifests.py`), а файлов
+модели проверки чтения в нём нет. Workflow «iOS simulators» запускает само приложение на
+симуляторах iPhone и iPad и проходит главные экраны, с видео и снимками в артефактах; «App Store
+screenshots» снимает экраны для App Store на четырёх языках. Как это устроено —
+[integration_test/README.md](integration_test/README.md).
+
 ## Архитектура
 
 - `lib/app` — композиция зависимостей, маршрутизация и глобальные providers;
@@ -822,8 +829,8 @@ Mushaf run on…» в `test/features/reader_swipe_widget_test.dart`.
   собирается Flutter: `abiFilters` в `android/app/build.gradle.kts`).
 - **Замеры и история решений** — `docs/recitation-on-device-spike/README.md`. Стенд на компьютере тем же
   кодом: `tool/recitation_model/harness.dart`; таблицу пересобирает `tool/recitation_model/build_table.py`.
-- **Чего нет**: iOS (там запасной способ без подсказок причин, а файлы модели пока тоже попадают в
-  сборку).
+- **Чего нет**: iOS (там запасной способ без подсказок причин). Файлы модели кладутся только в
+  Android-сборку (`platforms: [android]` в `pubspec.yaml`).
 
 ### Что видит читатель
 

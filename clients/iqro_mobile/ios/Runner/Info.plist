@@ -65,7 +65,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>IQRO uses your location only while open to calculate accurate local prayer times.</string>
+	<string>IQRO uses your location only while the app is open, to calculate local prayer times and the qibla direction.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>IQRO listens to your recitation to show which word of the Quran you have read.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
