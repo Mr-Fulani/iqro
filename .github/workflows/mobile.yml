@@ -10,11 +10,14 @@ on:
     paths:
       - "clients/iqro_mobile/**"
       - ".github/workflows/mobile.yml"
+      # Its tzdata pin must match the app's zone database (prayer_timezone_database_test.dart).
+      - "services/backend/pyproject.toml"
   push:
     branches: [master, main]
     paths:
       - "clients/iqro_mobile/**"
       - ".github/workflows/mobile.yml"
+      - "services/backend/pyproject.toml"
 
 permissions:
   contents: read
