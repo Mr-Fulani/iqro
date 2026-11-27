@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
 import 'package:iqro_mobile/core/auth/auth_repository.dart';
 import 'package:iqro_mobile/core/config/app_config.dart';
@@ -199,6 +201,119 @@ void main() {
     );
   });
 
+  test('a package downloads once at a time', () async {
+    final harness = await _harness();
+    harness.api.manifest = _manifestFixture(
+      surahs: const <int>[1, 112],
+      listeningOnly: true,
+    );
+    final started = Completer<void>();
+    final release = Completer<void>();
+    harness.api.onDownload = (surah) {
+      if (!started.isCompleted) started.complete();
+      return release.future;
+    };
+
+    final first = harness.repository.install(recitationId: _recitationId);
+    await started.future;
+    // A controller made again meanwhile sees the download, not a failure.
+    expect(
+      (await harness.repository.snapshot(_recitationId)).status,
+      AudioDownloadStatus.downloading,
+    );
+    await expectLater(
+      harness.repository.install(recitationId: _recitationId),
+      throwsStateError,
+    );
+    release.complete();
+
+    expect((await first).status, AudioDownloadStatus.ready);
+    expect(harness.api.downloads, <int>[1, 112]);
+  });
+
+  test('a card made again follows the download to its end', () async {
+    final harness = await _harness();
+    harness.api.manifest = _manifestFixture(
+      surahs: const <int>[1, 112],
+      listeningOnly: true,
+    );
+    final started = Completer<void>();
+    final release = Completer<void>();
+    harness.api.onDownload = (surah) {
+      if (!started.isCompleted) started.complete();
+      return release.future;
+    };
+    const follow = Duration(milliseconds: 5);
+    final first = AudioDownloadController(
+      harness.repository,
+      _recitationId,
+      followInterval: follow,
+    );
+    final download = first.download();
+    await started.future;
+    // Another reciter is chosen: the card and its controller go.
+    first.dispose();
+    final second = AudioDownloadController(
+      harness.repository,
+      _recitationId,
+      followInterval: follow,
+    );
+    addTearDown(second.dispose);
+    await Future<void>.delayed(follow * 4);
+    expect(second.state.status, AudioDownloadStatus.downloading);
+
+    release.complete();
+    await download;
+    for (var i = 0; i < 200; i += 1) {
+      if (second.state.status == AudioDownloadStatus.ready) break;
+      await Future<void>.delayed(follow);
+    }
+    expect(second.state.status, AudioDownloadStatus.ready);
+    expect(second.state.completedTracks, 2);
+  });
+
+  test('a download still plays after the app folder moves', () async {
+    final harness = await _harness();
+    harness.api.manifest = _manifestFixture(
+      surahs: const <int>[1, 112],
+      listeningOnly: true,
+    );
+    await harness.repository.install(recitationId: _recitationId);
+    final saved = await harness.database.database.query(
+      'offline_package_items',
+      columns: const <String>['local_path'],
+      where: 'item_number = ?',
+      whereArgs: const <Object?>[1],
+    );
+    final relative = saved.single['local_path']! as String;
+    expect(relative, startsWith('offline_packages/audio/'));
+
+    // An iOS update gives the app a new folder; the files move with it.
+    harness.support = await harness.support.rename(
+      '${harness.support.path}-updated',
+    );
+    final playback = await harness.repository.activePlayback(
+      recitationId: _recitationId,
+      surah: 1,
+    );
+    expect(
+      Uri.parse(playback!.track.url).toFilePath(),
+      '${harness.support.path}/$relative',
+    );
+
+    // A full path saved by an earlier version finds the file too.
+    await harness.database.database.update('offline_package_items', {
+      'local_path': '/old/container/$relative',
+    });
+    expect(
+      await harness.repository.activePlayback(
+        recitationId: _recitationId,
+        surah: 1,
+      ),
+      isNotNull,
+    );
+  });
+
   test('downloaded audio must match signature, size and SHA-256', () async {
     final bytes = _mp3Bytes(1);
     final directory = await Directory.systemTemp.createTemp('iqro-audio-test-');
@@ -363,10 +478,19 @@ const _config = AppConfig(
 );
 
 class _Harness {
-  _Harness(this.repository, this.api);
+  _Harness(this.api, this.database, this.support);
 
-  final AudioOfflineRepository repository;
   final _OfflineAudioApi api;
+  final LocalDatabase database;
+
+  /// The app's support folder; an iOS update can move it.
+  Directory support;
+
+  late final repository = AudioOfflineRepository(
+    api: api,
+    database: database,
+    supportDirectory: () async => support,
+  );
 }
 
 Future<_Harness> _harness() async {
@@ -408,22 +532,18 @@ Future<_Harness> _harness() async {
       PRIMARY KEY (package_id, item_key)
     )
   ''');
-  addTearDown(() async {
-    await raw.close();
-    if (await support.exists()) await support.delete(recursive: true);
-  });
   final accountScope = AccountScope.forTesting('account-a');
   final api = _OfflineAudioApi(
     AuthRepository(config: _config, accountScope: accountScope),
   );
-  return _Harness(
-    AudioOfflineRepository(
-      api: api,
-      database: LocalDatabase.forTesting(raw),
-      supportDirectory: () async => support,
-    ),
-    api,
-  );
+  final harness = _Harness(api, LocalDatabase.forTesting(raw), support);
+  addTearDown(() async {
+    await raw.close();
+    if (await harness.support.exists()) {
+      await harness.support.delete(recursive: true);
+    }
+  });
+  return harness;
 }
 
 class _OfflineAudioApi extends ApiClient {

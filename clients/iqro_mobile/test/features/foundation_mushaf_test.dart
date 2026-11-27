@@ -266,6 +266,9 @@ void main() {
           (await repo.foundationAsset(Uri.parse(url), 'a')).path,
           files.first.path,
         );
+        // File times have millisecond precision: a same-size change within
+        // the millisecond of the download would look unchanged.
+        await Future<void>.delayed(const Duration(milliseconds: 2));
         await files.first.writeAsBytes([9, 9, 9, 9]);
         await expectLater(
           repo.foundationAsset(Uri.parse(url), 'a'),
@@ -281,6 +284,49 @@ void main() {
       );
     },
   );
+
+  test('a cached font is found again after the app folder moves', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'iqro-foundation-moved-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    const channel = MethodChannel('plugins.flutter.io/path_provider');
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (_) async => directory.path,
+    );
+    addTearDown(
+      () => binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    final api = _Api();
+    final cache = _Cache();
+    final uri = Uri.parse(
+      'https://verses.quran.foundation/fonts/quran/hafs/v2/ttf/p1.ttf',
+    );
+    final file = await QuranRepository(
+      api: api,
+      database: cache,
+    ).foundationAsset(uri, 'a');
+    // Saved before an iOS update gave the app a new folder.
+    final key = cache.entries.keys.single;
+    final value = Map<String, Object?>.from(cache.entries[key]!.value! as Map);
+    value['path'] =
+        '/var/mobile/Containers/Data/Application/OLD/Library/'
+        'Application Support/foundation_assets/${file.uri.pathSegments.last}';
+    cache.entries[key] = CachedValue(value: value, updatedAt: DateTime.now());
+    api.offline = true;
+
+    final again = await QuranRepository(
+      api: api,
+      database: cache,
+    ).foundationAsset(uri, 'a');
+
+    expect(again.path, file.path);
+    expect(api.downloads, 1);
+  });
 
   test(
     'juz lookup uses ayah boundaries across different physical pagination',

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:sqflite/sqflite.dart';
 
+import 'offline_package_paths.dart';
+
 // Full 604-page manifests exceed Android's CursorWindow. Status/list queries
 // must not read that blob; per-page metadata lives in offline_package_items.
 const offlinePackageSummaryColumns = <String>[
@@ -53,8 +55,9 @@ Future<Map<String, Object?>> readOfflineAudioSummary(
 /// the head of the manifest, where the server puts the `mushaf` block.
 Future<Map<String, Object?>> readOfflineMushafSummary(
   DatabaseExecutor database,
-  String packageId,
-) async {
+  String packageId, {
+  required String supportPath,
+}) async {
   final rows = await database.rawQuery(
     'SELECT substr(manifest, 1, ?) AS head FROM offline_packages '
     'WHERE package_id = ?',
@@ -79,8 +82,11 @@ Future<Map<String, Object?>> readOfflineMushafSummary(
     orderBy: 'item_number DESC',
     limit: 1,
   );
+  final previewPath = pages.firstOrNull?['local_path'] as String?;
   return <String, Object?>{
     'name': name,
-    'preview_path': pages.firstOrNull?['local_path'],
+    'preview_path': previewPath == null
+        ? null
+        : resolveOfflinePackageItemPath(supportPath, previewPath),
   };
 }

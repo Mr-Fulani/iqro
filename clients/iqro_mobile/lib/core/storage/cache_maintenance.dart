@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../features/quran/quran_models.dart';
 import '../utils/json_helpers.dart';
 import 'local_database.dart';
+import 'offline_package_paths.dart';
 
 typedef CacheDirectoryProvider = Future<Directory> Function();
 
@@ -139,7 +140,7 @@ class CacheMaintenance {
       CacheSweepRequest(
         roots: <String>[pagesRoot, assetsRoot],
         referenced: referenced,
-        protectedPaths: await _offlinePackagePaths(),
+        protectedPaths: await _offlinePackagePaths(support.path),
         limitBytes: fileCacheLimitBytes,
         now: now,
         grace: inFlightGrace,
@@ -363,16 +364,21 @@ class CacheMaintenance {
     return references;
   }
 
-  Future<Set<String>> _offlinePackagePaths() async {
+  Future<Set<String>> _offlinePackagePaths(String supportPath) async {
     final rows = await _database.database.query(
       'offline_package_items',
       columns: const <String>['local_path'],
     );
-    return <String>{
-      for (final row in rows)
-        if ((row['local_path']?.toString() ?? '').isNotEmpty)
-          p.normalize(row['local_path']! as String),
-    };
+    final paths = <String>{};
+    for (final row in rows) {
+      final stored = row['local_path']?.toString() ?? '';
+      if (stored.isEmpty) continue;
+      // An absolute path saved by an earlier version stays protected as is.
+      if (p.isAbsolute(stored)) paths.add(p.normalize(stored));
+      final resolved = resolveOfflinePackageItemPath(supportPath, stored);
+      if (resolved != null) paths.add(resolved);
+    }
+    return paths;
   }
 }
 

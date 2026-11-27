@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/providers.dart';
+import 'package:iqro_mobile/core/platform/backup_exclusion.dart';
 import 'package:iqro_mobile/core/theme/iqro_theme.dart';
 import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/mushaf_edition.dart';
@@ -40,6 +42,27 @@ void main() {
       stored().listSync().map((file) => p.basename(file.path)).toList()..sort();
 
   group('cache', () {
+    test('on iOS the folder stays out of iCloud backups', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      BackupExclusion.resetForTesting();
+      final excluded = <Object?>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(BackupExclusion.channel, (call) async {
+        excluded.add(call.arguments);
+        return null;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(BackupExclusion.channel, null),
+      );
+
+      final cache = await open();
+      await cache.save(_key(), await _picture(120, 207));
+
+      expect(excluded, <Object?>[stored().absolute.path]);
+    });
+
     test('a miss stays a miss until a picture is saved', () async {
       final cache = await open();
       final key = _key();

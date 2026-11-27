@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../auth/account_scope.dart';
+import 'offline_package_paths.dart';
 
 class CachedValue {
   const CachedValue({
@@ -31,7 +32,7 @@ class LocalDatabase {
   LocalDatabase.forTesting(this.database, {AccountScope? accountScope})
     : accountScope = accountScope ?? AccountScope.forTesting();
 
-  static const schemaVersion = 6;
+  static const schemaVersion = 7;
   static const quarantinedLegacyOwner = '__legacy_unscoped__';
   final Database database;
   final AccountScope accountScope;
@@ -84,6 +85,7 @@ class LocalDatabase {
             await _migrateLegacyBookmarkDetails(db);
           }
         }
+        if (oldVersion < 7) await relativizeOfflinePackageItemPaths(db);
       },
     );
     return LocalDatabase._(database, accountScope);
