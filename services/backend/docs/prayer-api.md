@@ -192,6 +192,13 @@ Checksum формально опционален для совместимост
   название.
 - Ответ: `{"results": [{"id", "name", "country_code", "latitude", "longitude", "timezone"}]}`,
   `id` — идентификатор GeoNames. Ответ публичный и кэшируется (`Cache-Control: public`).
+- `timezone` — имя пояса из GeoNames как есть. У 101 пояса базы (около 11,7 тысячи мест) это
+  ссылка IANA: `Asia/Kuwait` → `Asia/Riyadh`, `Asia/Kuala_Lumpur` → `Asia/Singapore`,
+  `Europe/Sarajevo` → `Europe/Belgrade`, `Europe/Amsterdam` → `Europe/Brussels`. Сервер не
+  подменяет ссылку основным поясом: приложение показывает это имя под выбранным городом, сайт —
+  в поле «Часовой пояс (IANA)», и «Asia/Riyadh» у Эль-Кувейта или «Europe/Belgrade» у Сараева
+  выглядели бы ошибкой. Ссылки обязан знать клиент: браузер и `tzdata` знают их сами, приложение
+  загружает полную базу (`package:timezone/data/latest_all.dart`).
 - Ограничение частоты — `QURAN_PRAYER_CITY_SEARCH_RATE` (по умолчанию `120/minute`), ключ —
   HMAC адреса, как у расчёта; при превышении `429` с кодом `prayer_city_search_rate_limited`.
 - Таблица наполняется при выкладке миграцией `0005_load_prayer_cities` из файла

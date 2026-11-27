@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../features/prayer/prayer_repository.dart';
@@ -128,7 +128,9 @@ class NotificationGateway {
   /// cancelling queue behind it.
   Future<void> initialize() {
     // Synchronous: prayer times and widgets use the zone database from the
-    // first frame.
+    // first frame. The full database: phones and the city search name many
+    // places by IANA links (Asia/Kuwait, Asia/Kuala_Lumpur, Europe/Amsterdam),
+    // and the default one leaves the links out.
     tz_data.initializeTimeZones();
     return _serialize(_initialize);
   }
