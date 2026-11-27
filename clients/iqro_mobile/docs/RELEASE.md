@@ -104,16 +104,14 @@ iOS/iPadOS-сборки только из Xcode 26+ с iOS/iPadOS 26 SDK. Лок
 
 ## Подписанный Apple-релиз
 
-В защищённом release-контуре:
+Порядок — в [`docs/release/app-store.md`](../../../docs/release/app-store.md): шаги
+в Apple Developer и App Store Connect (разделы 1–6), значения для GitHub (раздел 7), сборка
+и TestFlight (раздел 8), выпуск вместе с Android (раздел 13), устройство workflow (раздел 14).
+Проверка на iPhone — по [`docs/release/ios-testflight-checklist.md`](../../../docs/release/ios-testflight-checklist.md).
 
-1. зарегистрировать bundle ID `forum.iqro.app` в Apple Developer;
-2. создать App Store Connect app record и distribution signing assets;
-3. открыть `ios/Runner.xcworkspace`, назначить Apple Team и проверить capabilities;
-4. выполнить все проверочные сценарии на реальных iPhone и iPad;
-5. собрать выпуск ручным workflow `iOS release` из чистого commit (порядок — в
-   `docs/release/app-store.md`);
-6. сохранить `.xcarchive`, dSYM и export log рядом с release SHA;
-7. сначала выпустить TestFlight internal testing, затем staged production rollout.
+Xcode на Mac не нужен: ручной workflow `iOS release` из `main` подставляет Team ID из
+переменной `APPLE_TEAM_ID`, подписывает Release вручную и загружает сборку в App Store
+Connect. Сборка из TestFlight и уходит на проверку Apple. dSYM — артефакт запуска на 30 дней.
 
 Signing assets передаются только через protected CI secrets/keychain. Обычный Mobile CI
 никогда не подписывает и не загружает приложение.

@@ -3,7 +3,7 @@
 Тексты для App Store Connect → приложение → версия iOS и App Information. Основной язык —
 русский, локализации — английский (США), арабский, турецкий. Описание то же, что в
 [google-play-listing.md](google-play-listing.md), без «Продолжить с Google»: на iOS этого входа
-нет (см. [app-store.md](app-store.md), раздел 8). Остальные поля — свои для App Store.
+нет (см. [app-store.md](app-store.md), раздел 14). Остальные поля — свои для App Store.
 
 Лимиты App Store Connect: Name и Subtitle — до 30 знаков, Promotional Text — до 170,
 Description — до 4000, Keywords — до 100 (держим до 100 байт в UTF-8 на случай подсчёта
@@ -217,12 +217,14 @@ Metinler ve kayıtlar kaynakları ve lisanslarıyla yayınlanır: https://iqro.f
 ## «What's New»
 
 Для первой версии в App Store поле не заполняется. Тексты для следующих выпусков — из
-`docs/release/notes-<версия>.md`, как для Google Play. Если поле всё же попросят:
+`docs/release/notes-<версия>.md`, как для Google Play, но без того, что есть только на Android
+(например, проверка букв и огласовок: на iPhone проверка чтения сверяет только слова). Если
+поле всё же попросят (первая версия — только для iPhone, решение 27.11.2026):
 
-- ru: Первый выпуск IQRO для iPhone и iPad.
-- en: The first release of IQRO for iPhone and iPad.
-- ar: الإصدار الأول من IQRO لأجهزة iPhone وiPad.
-- tr: IQRO'nun iPhone ve iPad için ilk sürümü.
+- ru: Первый выпуск IQRO для iPhone.
+- en: The first release of IQRO for iPhone.
+- ar: الإصدار الأول من IQRO لأجهزة iPhone.
+- tr: IQRO'nun iPhone için ilk sürümü.
 
 ## URL
 
