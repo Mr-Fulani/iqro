@@ -47,15 +47,21 @@ create() {
   local id
   id="$(xcrun simctl create "IQRO $name" "$type" "$runtime_id")"
   echo "Created $name, iOS $version: $id" >&2
+  start "$id"
+  echo "$id"
+}
+
+# Boots the simulator and sets the same clean status bar as Apple's own
+# screenshots (a reboot clears it).
+start() {
+  local id="$1"
   xcrun simctl boot "$id"
   xcrun simctl bootstatus "$id" -b >&2
-  # The same clean bar as Apple's own screenshots.
   xcrun simctl status_bar "$id" override \
     --time "9:41" \
     --dataNetwork wifi --wifiMode active --wifiBars 3 \
     --cellularMode active --cellularBars 4 \
     --batteryState charged --batteryLevel 100
-  echo "$id"
 }
 
 # One `flutter drive`, its output shown live and kept in test.log. Returns its
@@ -103,9 +109,10 @@ run_test() {
 
   # The driver starts the recording once the app runs (NO_VIDEO=1: none).
   # flutter drive sometimes never sees the app's VM service on a simulator and
-  # waits for ever: give the app 6 minutes to connect, then try once more.
+  # waits for ever: give the app 6 minutes to connect, then reboot the
+  # simulator and try again, three times in all.
   local status=1 attempt
-  for attempt in 1 2; do
+  for attempt in 1 2 3; do
     if drive "$id" "$app" "$target" "$out"; then
       status=0
     else
@@ -113,7 +120,8 @@ run_test() {
     fi
     [ "$status" -ne 124 ] && break
     mv "$out/test.log" "$out/test-stuck-$attempt.log"
-    xcrun simctl terminate "$id" forum.iqro.app 2>/dev/null || true
+    xcrun simctl shutdown "$id" 2>/dev/null || true
+    start "$id" >&2
   done
   if [ "$status" -eq 0 ] && ! grep -q "All tests passed" "$out/test.log"; then
     status=1
