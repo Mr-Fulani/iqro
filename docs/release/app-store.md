@@ -484,14 +484,18 @@ false`), приложение шифрует только соединение H
 
 - **Sign-in required** — отметить. Вход у нас по коду из письма, и Apple требует дать
   проверяющему рабочий вход, который не истекает.
-  - имя пользователя — почта для проверяющего;
-  - пароль — постоянный код для неё;
+  - имя пользователя — адрес для проверяющего;
+  - пароль — шестизначный код для него;
   - этот же код впишите и в **Notes** (строка `Sign-in code` ниже): Apple просит коды
     входа именно там, иначе проверка может ждать звонка 3–5 рабочих дней.
 
-  Почту и код готовит сессия ios-backend-site: письмо на эту почту не уходит, код задаётся
-  на сервере. Значения вы вписываете сами, в чат их не пишут. В этот аккаунт не входите
-  с Android: проверяющий увидит в списке устройств «Android», а это против правила 2.3.10.
+  Вход для проверяющего готовит сессия ios-backend-site: отдельный адрес (не ваш рабочий и
+  не адрес админа) и случайный шестизначный код задаются на сервере, письмо на этот адрес
+  не уходит, тем же кодом подтверждается удаление аккаунта. Как включить — в
+  `docs/app-review-sign-in.md` из её PR; выкладка на сервер — по вашему слову. Адрес и код
+  вы вписываете сами, в чат их не пишут. Те же данные — в **Beta App Review Information**,
+  если будет внешний TestFlight. В этот аккаунт не входите с Android и не храните в нём
+  личного: проверяющий увидит в списке устройств «Android», а это против правила 2.3.10.
 - **Contact** — ваши имя, почта и телефон с «+» и кодом страны.
 - **Notes** — по-английски:
 
@@ -500,8 +504,9 @@ false`), приложение шифрует только соединение H
   >
   > Sign-in is optional. It only syncs bookmarks, notes, the reading plan and course progress
   > between devices. To sign in: More → Personal profile → enter the demo email → Send code →
-  > enter the sign-in code. Sign-in code: <тот же код, что в поле пароля>. Account deletion:
-  > More → Personal profile → Danger zone → Delete account.
+  > type the six-digit code; no email is sent to this address. Sign-in code: <тот же код,
+  > что в поле пароля>. The same code confirms account deletion: More → Personal profile →
+  > Danger zone → Delete account.
   >
   > Microphone and speech recognition: Quran → Text → open a surah → swipe an ayah to the
   > right to open the Arabic text → tap the microphone at the top right. The app follows the
