@@ -308,7 +308,7 @@ const en: Messages = {
   "more.shareHint": "Share a calm way to read and listen to the Quran.",
   "more.soon": "Soon",
   "settings.language": "Language",
-  "settings.privacyHint": "Coordinates are sent to the IQRO server only to calculate prayer times: the server does not store them, and they never go into usage statistics.",
+  "settings.privacyHint": "Coordinates are sent to the IQRO server to calculate prayer times. The server keeps them only if you turn on prayer reminders in the browser; they never go into usage statistics.",
   "settings.accountHint": "Send local changes and receive updates from your other devices.",
   "more.booksQuizzes": "Books · Quizzes",
   "more.back": "Back",
