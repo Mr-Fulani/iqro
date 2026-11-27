@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -333,7 +334,10 @@ class _AccountScreenBodyState extends ConsumerState<_AccountScreenBody> {
           IqroListTile(
             icon: Icons.switch_account_outlined,
             title: context.l10n.accountSwitch,
-            subtitle: context.l10n.accountSwitchHint,
+            // Google sign-in is Android's only (google_sign_in_gateway.dart).
+            subtitle: defaultTargetPlatform == TargetPlatform.iOS
+                ? context.l10n.accountSwitchHintEmail
+                : context.l10n.accountSwitchHint,
             onTap: _switchAccount,
           ),
           const Divider(height: 1),

@@ -96,6 +96,17 @@ void main() {
     },
   );
 
+  test('the question about notifications, once asked, stays asked', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = PreferencesStore(await SharedPreferences.getInstance());
+    expect(store.read().notificationsAsked, isFalse);
+    await store.write(store.read().copyWith(notificationsAsked: true));
+    expect(store.read().notificationsAsked, isTrue);
+    // Other changes keep it.
+    await store.write(store.read().copyWith(readerHaptics: false));
+    expect(store.read().notificationsAsked, isTrue);
+  });
+
   test('page haptics default on and an explicit opt-out persists', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = PreferencesStore(await SharedPreferences.getInstance());

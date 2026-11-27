@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -78,36 +79,41 @@ class MoreScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
-            IqroCard(
-              color: context.iqroColors.sand,
-              borderColor: Colors.transparent,
-              child: Row(
-                children: <Widget>[
-                  IqroIcon(
-                    Icons.auto_stories_outlined,
-                    color: context.iqroColors.gold,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          '${context.l10n.books} · ${context.l10n.quizzes}',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        Text(
-                          context.l10n.soon,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+            // What is still to come is not shown on iOS: App Review takes it
+            // for unfinished content (App Store 2.1).
+            if (defaultTargetPlatform != TargetPlatform.iOS) ...<Widget>[
+              const SizedBox(height: 18),
+              IqroCard(
+                key: const ValueKey('more-soon'),
+                color: context.iqroColors.sand,
+                borderColor: Colors.transparent,
+                child: Row(
+                  children: <Widget>[
+                    IqroIcon(
+                      Icons.auto_stories_outlined,
+                      color: context.iqroColors.gold,
                     ),
-                  ),
-                  Chip(label: Text(context.l10n.soon)),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            '${context.l10n.books} · ${context.l10n.quizzes}',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          Text(
+                            context.l10n.soon,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Chip(label: Text(context.l10n.soon)),
+                  ],
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 20),
             const _AppVersion(),
           ],

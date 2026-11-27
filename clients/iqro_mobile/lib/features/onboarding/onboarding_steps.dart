@@ -911,12 +911,16 @@ class _RemindersStep extends StatelessWidget {
     required this.permission,
     required this.blocked,
     required this.onRemindPrayers,
+    this.onOpenSettings,
   });
 
   final bool remindPrayers;
   final ReminderPermission? permission;
   final bool blocked;
   final ValueChanged<bool> onRemindPrayers;
+
+  /// Opens the system settings where notifications were refused (iOS).
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -1010,6 +1014,10 @@ class _RemindersStep extends StatelessWidget {
                 title: l10n.notificationAccess,
                 message: l10n.onboardingNotificationsBlocked,
                 color: context.iqroColors.sand,
+                actionLabel: onOpenSettings == null
+                    ? null
+                    : l10n.onboardingOpenSettings,
+                onAction: onOpenSettings,
               ),
             ),
           ],

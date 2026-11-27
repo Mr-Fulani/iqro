@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -512,6 +513,22 @@ void _googleTests() {
     expect(google.calls, <String>['signOut', 'choose']);
     expect(controller.signOutCalls, 1);
     expect(controller.googleTokens, <String>['second-account']);
+  });
+
+  testWidgets('switching account names Google on Android alone', (
+    tester,
+  ) async {
+    final (_, l10n) = await _pumpAccount(tester, _session('active'));
+    expect(find.text(l10n.accountSwitchHint), findsOneWidget);
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      await _pumpAccount(tester, _session('active'));
+      expect(find.text(l10n.accountSwitch), findsOneWidget);
+      expect(find.text(l10n.accountSwitchHintEmail), findsOneWidget);
+      expect(find.text(l10n.accountSwitchHint), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('sign out also forgets the chosen Google account', (
