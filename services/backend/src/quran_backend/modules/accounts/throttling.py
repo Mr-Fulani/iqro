@@ -127,6 +127,25 @@ class EmailStartIdentityThrottle(AtomicFixedWindowRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": identity}
 
 
+class EmailStartAppReviewThrottle(AtomicFixedWindowRateThrottle):
+    """One quota for the App Store reviewer's address, whoever asks for it.
+
+    Its code never changes and no email goes out, so the per-account and per-IP
+    limits alone would let many guests keep guessing it.
+    """
+
+    scope = "email_start_app_review"
+
+    def get_cache_key(self, request: Request, view: Any) -> str | None:  # noqa: ARG002
+        email = request.data.get("email")
+        review_email = getattr(settings, "QURAN_APP_REVIEW_EMAIL", "")
+        if not review_email or not isinstance(email, str):
+            return None
+        if email.strip().lower() != review_email:
+            return None
+        return self.cache_format % {"scope": self.scope, "ident": "app-review"}
+
+
 class EmailVerifyChallengeThrottle(AtomicFixedWindowRateThrottle):
     scope = "email_verify_challenge"
 
@@ -203,6 +222,7 @@ class EmailStartThrottle(_ShortCircuitThrottle):
     throttle_classes = (
         EmailStartIPBurstThrottle,
         EmailStartIdentityThrottle,
+        EmailStartAppReviewThrottle,
     )
 
 

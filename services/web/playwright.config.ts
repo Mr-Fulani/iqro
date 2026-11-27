@@ -69,6 +69,8 @@ export default defineConfig({
             WEB_CONTENT_REVALIDATION_SECRET: "test-only-content-revalidation-secret-0001",
             // Switches the Google Play badge on (e2e/google-play-badge.spec.ts).
             NEXT_PUBLIC_ANDROID_PLAY_STORE_URL: "https://play.google.com/store/apps/details?id=forum.iqro.app",
+            // Switches the App Store badge and Safari's banner on (e2e/app-store-badge.spec.ts).
+            NEXT_PUBLIC_IOS_APP_STORE_URL: "https://apps.apple.com/app/iqro/id6740000000",
           },
           reuseExistingServer: !productionMode && !process.env.CI,
           timeout: productionMode ? 180_000 : 120_000,

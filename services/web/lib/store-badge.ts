@@ -10,11 +10,27 @@ const BADGE_SIZES: Record<Locale, { width: number; height: number }> = {
   tr: { width: 646, height: 192 },
 };
 
-export type GooglePlayBadge = { href: string; src: string; width: number; height: number };
+// Apple's own black "Download on the App Store" badges (toolbox.marketingtools.apple.com),
+// one per site language and unchanged; the clear space is added in CSS as for Google's.
+const APP_STORE_BADGE_WIDTHS: Record<Locale, number> = { ru: 120, en: 120, ar: 120, tr: 151 };
+
+export type StoreBadge = { href: string; src: string; width: number; height: number };
 
 /** The badge to show, or null while the store page is not public (no URL set). */
-export function googlePlayBadge(locale: Locale, storeUrl: string | undefined): GooglePlayBadge | null {
+export function googlePlayBadge(locale: Locale, storeUrl: string | undefined): StoreBadge | null {
   const href = storeUrl?.trim();
   if (!href) return null;
   return { href, src: `/images/store/google-play-${locale}.webp`, ...BADGE_SIZES[locale] };
+}
+
+/** The App Store badge, or null until the app is out in the App Store (no URL set). */
+export function appStoreBadge(locale: Locale, storeUrl: string | undefined): StoreBadge | null {
+  const href = storeUrl?.trim();
+  if (!href) return null;
+  return { href, src: `/images/store/app-store-${locale}.svg`, width: APP_STORE_BADGE_WIDTHS[locale], height: 40 };
+}
+
+/** The app's number from its App Store page (…/id1234567890) for Safari's app banner. */
+export function appStoreAppId(storeUrl: string | undefined): string | null {
+  return storeUrl?.trim().match(/^https:\/\/apps\.apple\.com\/(?:[^?#]*\/)?id(\d+)(?:[/?#]|$)/)?.[1] ?? null;
 }

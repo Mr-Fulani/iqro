@@ -108,6 +108,7 @@
 | [Первый запуск приложения](first-launch/README.md) | приложение | 3 |
 | [«Что нового» в IQRO](announcements/README.md) | сайт и приложение | 3 |
 | [IQRO в Google Play](google-play-badge/README.md) | сайт | 2 |
+| [IQRO в App Store](app-store-badge/README.md) — после выхода в App Store | сайт | 2 |
 | [Виджет «План на день»](plan-widget/README.md) | приложение | 1 |
 | [Обновление приложения и номер версии](app-update/README.md) | приложение | 3 |
 | [Статистика: одно напоминание через месяц](analytics-reminder/README.md) | сайт и приложение | 3 |

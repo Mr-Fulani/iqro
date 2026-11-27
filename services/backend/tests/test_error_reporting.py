@@ -31,6 +31,7 @@ def test_reports_carry_no_personal_data_or_request_bodies() -> None:
         "release": "quran-platform-backend@1.2.3",
         "send_default_pii": False,
         "max_request_body_size": "never",
+        "include_local_variables": False,
         "traces_sample_rate": 0.0,
         "before_send": drop_cancelled_requests,
         "before_breadcrumb": drop_telegram_breadcrumb,
