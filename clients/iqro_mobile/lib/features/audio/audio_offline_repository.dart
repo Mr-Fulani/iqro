@@ -462,6 +462,28 @@ class AudioOfflineRepository {
       packageId: manifest.packageId,
       packageBytes: manifest.totalBytes,
     );
+    // Claimed before the package row says downloading: the storage screen
+    // never takes this download for one cut off by closing the app, and a
+    // second download of the package cannot write into the same files.
+    if (!liveOfflineDownloads.add(manifest.packageId)) {
+      throw StateError('The offline package is already downloading');
+    }
+    try {
+      return await _install(
+        manifest,
+        recitationId: recitationId,
+        onProgress: onProgress,
+      );
+    } finally {
+      liveOfflineDownloads.remove(manifest.packageId);
+    }
+  }
+
+  Future<AudioDownloadSnapshot> _install(
+    OfflineAudioManifest manifest, {
+    required String recitationId,
+    void Function(AudioDownloadSnapshot progress)? onProgress,
+  }) async {
     final support = await _supportDirectory();
     final packageDirectory = Directory(
       p.join(support.path, 'offline_packages', 'audio', manifest.packageId),
@@ -476,7 +498,6 @@ class AudioOfflineRepository {
 
     var completedTracks = 0;
     var completedBytes = 0;
-    liveOfflineDownloads.add(manifest.packageId);
     try {
       for (final track in manifest.tracks) {
         final destination = File(
@@ -562,8 +583,6 @@ class AudioOfflineRepository {
     } on Object catch (error) {
       await _markPackageFailed(manifest.packageId, error, keepReady: updating);
       rethrow;
-    } finally {
-      liveOfflineDownloads.remove(manifest.packageId);
     }
   }
 
@@ -886,6 +905,9 @@ class AudioOfflineRepository {
   ) {
     final status = switch (row['status']) {
       'ready' => AudioDownloadStatus.ready,
+      'downloading' when liveOfflineDownloads.contains(row['package_id']) =>
+        AudioDownloadStatus.downloading,
+      // Cut off when the app was closed: it can be resumed.
       'downloading' => AudioDownloadStatus.failed,
       'failed' => AudioDownloadStatus.failed,
       _ => AudioDownloadStatus.notDownloaded,

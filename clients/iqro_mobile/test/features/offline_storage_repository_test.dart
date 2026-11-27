@@ -158,6 +158,31 @@ void main() {
     expect(await harness.database.database.query('offline_packages'), isEmpty);
   });
 
+  test('a running update of a ready package is not deleted', () async {
+    final harness = await _harness();
+    await _insertPackage(
+      harness.database,
+      packageId: 'audio-test',
+      packageType: 'surah_audio',
+      contentKey: 'recitation:00000000-0000-0000-0000-000000000001',
+      status: 'ready',
+      localPath: 'offline_packages/audio/audio-test/surah-001.mp3',
+    );
+    // New surahs download while the package stays ready.
+    liveOfflineDownloads.add('audio-test');
+    addTearDown(() => liveOfflineDownloads.remove('audio-test'));
+
+    expect((await harness.repository.packages()).single.status, 'downloading');
+    await expectLater(
+      harness.repository.deletePackage('audio-test'),
+      throwsStateError,
+    );
+    expect(
+      await harness.database.database.query('offline_packages'),
+      hasLength(1),
+    );
+  });
+
   test('refuses active downloads and unsafe file paths', () async {
     final harness = await _harness();
     final packageDirectory = Directory(

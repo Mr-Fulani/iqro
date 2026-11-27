@@ -1951,6 +1951,9 @@ final audioControllerProvider =
               surahName: await _listeningSurahName(ref, surah),
             );
           },
+          playback: (recitationId, surah) => ref
+              .read(audioRepositoryProvider)
+              .playback(recitationId: recitationId, surah: surah),
         ),
         onPlaybackStarted: (state) => ref
             .read(analyticsProvider.notifier)

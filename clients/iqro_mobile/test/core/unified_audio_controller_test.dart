@@ -1065,37 +1065,46 @@ void main() {
     expect((await store.read())?.playback.track.id, _playback.track.id);
   });
 
-  test(
-    'a saved surah whose downloaded file is gone is asked for again',
-    () async {
-      // Saved while it played from a download; an iOS update has moved the
-      // app's folder since, or the download was deleted.
+  group('a saved surah whose downloaded file is gone', () {
+    // Saved while it played from a download; an iOS update has moved the
+    // app's folder since, or the download was deleted.
+    const goneTrack = AudioTrack(
+      id: 'track-1',
+      recitationId: 'recitation-1',
+      surah: 1,
+      url:
+          'file:///var/mobile/Containers/Data/Application/OLD/Library/'
+          'Application%20Support/offline_packages/audio/pkg/surah-001.mp3',
+      duration: Duration(minutes: 1),
+      offlineDownloadAllowed: true,
+    );
+
+    Future<AudioPlaybackStore> savedStore({
+      List<AudioSegment> segments = const <AudioSegment>[],
+      int? rangeStartAyah,
+      int? rangeEndAyah,
+    }) async {
       final database = await _audioStoreDatabase();
       addTearDown(database.close);
       final store = AudioPlaybackStore(database);
       await store.write(
         AudioPlaybackSnapshot(
-          playback: const SurahPlayback(
-            track: AudioTrack(
-              id: 'track-1',
-              recitationId: 'recitation-1',
-              surah: 1,
-              url:
-                  'file:///var/mobile/Containers/Data/Application/OLD/Library/'
-                  'Application%20Support/offline_packages/audio/pkg/surah-001.mp3',
-              duration: Duration(minutes: 1),
-              offlineDownloadAllowed: true,
-            ),
-            segments: <AudioSegment>[],
-          ),
+          playback: SurahPlayback(track: goneTrack, segments: segments),
           reciter: _reciter,
           surahName: 'Saved Al-Fatiha',
           position: const Duration(seconds: 25),
-          speed: 1,
+          speed: 1.25,
           repeatEnabled: false,
           savedAt: DateTime.utc(2026, 9, 3),
+          rangeStartAyah: rangeStartAyah,
+          rangeEndAyah: rangeEndAyah,
         ),
       );
+      return store;
+    }
+
+    test('is asked for again, without its name', () async {
+      final store = await savedStore();
       final queue = _FakeQueueSource(<int>[1, 2]);
       final engine = _FakeAudioEngine();
       final controller = AudioController(
@@ -1107,14 +1116,67 @@ void main() {
 
       await controller.restore();
 
-      expect(queue.entryRequests, <int>[1]);
+      expect(queue.playbackRequests, <int>[1]);
+      expect(queue.entryRequests, isEmpty);
       expect(
         (engine.sources.single as UriAudioSource).uri.toString(),
         'https://media.example.test/quran/1.mp3',
       );
       expect(controller.state.position, const Duration(seconds: 25));
-    },
-  );
+      expect(controller.state.speed, 1.25);
+    });
+
+    test('never undoes a load made while it is asked for', () async {
+      final store = await savedStore();
+      final queue = _FakeQueueSource(<int>[1, 2])..gate = Completer<void>();
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        playbackStore: store,
+        queueSource: queue.source,
+      );
+      addTearDown(controller.dispose);
+
+      final restore = controller.restore();
+      await queue.playbackAsked.future;
+      await controller.loadPlayback(
+        playback: _secondPlayback,
+        reciter: _reciter,
+        surahName: 'Al-Baqarah',
+        autoplay: false,
+      );
+      controller.setQueueMode(ListeningQueueMode.loop);
+      queue.gate!.complete();
+      await restore;
+
+      expect(controller.state.track?.id, 'track-2');
+      expect(controller.state.queueMode, ListeningQueueMode.loop);
+      expect(controller.state.speed, engine.speed);
+      expect(engine.sources, hasLength(1));
+    });
+
+    test('keeps the saved copy when the new one lacks its range', () async {
+      final store = await savedStore(
+        segments: _rangedPlayback.segments,
+        rangeStartAyah: 2,
+        rangeEndAyah: 3,
+      );
+      // The surah is served now without ayah timings.
+      final queue = _FakeQueueSource(<int>[1, 2]);
+      final controller = AudioController(
+        engine: _FakeAudioEngine(),
+        playbackStore: store,
+        queueSource: queue.source,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.restore();
+
+      expect(queue.playbackRequests, <int>[1]);
+      expect(controller.state.track?.url, goneTrack.url);
+      expect(await store.read(), isNotNull);
+    });
+  });
 
   test('stale same-track restore never seeks a manual load', () async {
     final database = await _audioStoreDatabase();
@@ -2061,9 +2123,23 @@ class _FakeQueueSource {
 
   List<int> held;
   final entryRequests = <int>[];
+  final playbackRequests = <int>[];
+  final playbackAsked = Completer<void>();
 
   /// Holds every surah request until completed.
   Completer<void>? gate;
+
+  SurahPlayback _playback(String recitationId, int surah) => SurahPlayback(
+    track: AudioTrack(
+      id: 'track-$surah',
+      recitationId: recitationId,
+      surah: surah,
+      url: 'https://media.example.test/quran/$surah.mp3',
+      duration: const Duration(minutes: 1),
+      offlineDownloadAllowed: false,
+    ),
+    segments: const <AudioSegment>[],
+  );
 
   late final source = ListeningQueueSource(
     heldSurahs: (_) async => held,
@@ -2071,19 +2147,15 @@ class _FakeQueueSource {
       entryRequests.add(surah);
       await gate?.future;
       return (
-        playback: SurahPlayback(
-          track: AudioTrack(
-            id: 'track-$surah',
-            recitationId: recitationId,
-            surah: surah,
-            url: 'https://media.example.test/quran/$surah.mp3',
-            duration: const Duration(minutes: 1),
-            offlineDownloadAllowed: false,
-          ),
-          segments: const <AudioSegment>[],
-        ),
+        playback: _playback(recitationId, surah),
         surahName: 'Surah $surah',
       );
+    },
+    playback: (recitationId, surah) async {
+      playbackRequests.add(surah);
+      if (!playbackAsked.isCompleted) playbackAsked.complete();
+      await gate?.future;
+      return _playback(recitationId, surah);
     },
   );
 }

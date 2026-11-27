@@ -302,6 +302,23 @@ class MushafOfflineRepository {
       packageId: manifest.packageId,
       packageBytes: manifest.totalBytes,
     );
+    // Claimed before the package row says downloading: the storage screen
+    // never takes this download for one cut off by closing the app, and a
+    // second download of the package cannot write into the same files.
+    if (!liveOfflineDownloads.add(manifest.packageId)) {
+      throw StateError('The offline package is already downloading');
+    }
+    try {
+      return await _install(manifest, onProgress: onProgress);
+    } finally {
+      liveOfflineDownloads.remove(manifest.packageId);
+    }
+  }
+
+  Future<MushafDownloadSnapshot> _install(
+    OfflineMushafManifest manifest, {
+    void Function(MushafDownloadSnapshot progress)? onProgress,
+  }) async {
     final support = await _supportDirectory();
     final packageDirectory = Directory(
       p.join(support.path, 'offline_packages', 'mushaf', manifest.packageId),
@@ -314,7 +331,6 @@ class MushafOfflineRepository {
 
     var completedPages = 0;
     var completedBytes = 0;
-    liveOfflineDownloads.add(manifest.packageId);
     try {
       for (final page in manifest.pages) {
         final destination = File(p.join(packageDirectory.path, page.fileName));
@@ -383,8 +399,6 @@ class MushafOfflineRepository {
     } on Object catch (error) {
       await _markPackageFailed(manifest.packageId, error);
       rethrow;
-    } finally {
-      liveOfflineDownloads.remove(manifest.packageId);
     }
   }
 
@@ -561,6 +575,8 @@ class MushafOfflineRepository {
   MushafDownloadSnapshot _snapshotFromRow(Map<String, Object?> row) {
     final status = switch (row['status']) {
       'ready' => MushafDownloadStatus.ready,
+      'downloading' when liveOfflineDownloads.contains(row['package_id']) =>
+        MushafDownloadStatus.downloading,
       // A persisted download has no live worker after process restart. Expose
       // it as resumable instead of leaving the action disabled forever.
       'downloading' => MushafDownloadStatus.failed,

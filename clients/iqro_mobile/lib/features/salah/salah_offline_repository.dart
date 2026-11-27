@@ -299,6 +299,8 @@ class SalahOfflineRepository {
     return SalahOfflineSnapshot(
       status: switch (row['status']) {
         'ready' => SalahOfflineStatus.ready,
+        'downloading' when liveOfflineDownloads.contains(row['package_id']) =>
+          SalahOfflineStatus.downloading,
         // A persisted download has no live worker after a restart.
         'downloading' => SalahOfflineStatus.failed,
         'failed' => SalahOfflineStatus.failed,
@@ -350,6 +352,23 @@ class SalahOfflineRepository {
       packageId: manifest.packageId,
       packageBytes: manifest.totalBytes,
     );
+    // Claimed before the package row says downloading: the storage screen
+    // never takes this download for one cut off by closing the app, and a
+    // second download of the package cannot write into the same files.
+    if (!liveOfflineDownloads.add(manifest.packageId)) {
+      throw StateError('The offline package is already downloading');
+    }
+    try {
+      return await _install(manifest, onProgress: onProgress);
+    } finally {
+      liveOfflineDownloads.remove(manifest.packageId);
+    }
+  }
+
+  Future<SalahOfflineSnapshot> _install(
+    OfflineSalahManifest manifest, {
+    void Function(SalahOfflineSnapshot progress)? onProgress,
+  }) async {
     final support = await _supportDirectory();
     final packageDirectory = Directory(
       p.join(support.path, 'offline_packages', 'salah', manifest.packageId),
@@ -374,7 +393,6 @@ class SalahOfflineRepository {
 
     var completedItems = 0;
     var completedBytes = 0;
-    liveOfflineDownloads.add(manifest.packageId);
     try {
       for (final image in manifest.images) {
         final destination = File(p.join(packageDirectory.path, image.fileName));
@@ -426,8 +444,6 @@ class SalahOfflineRepository {
     } on Object catch (error) {
       await _markPackageFailed(manifest.packageId, error);
       rethrow;
-    } finally {
-      liveOfflineDownloads.remove(manifest.packageId);
     }
   }
 

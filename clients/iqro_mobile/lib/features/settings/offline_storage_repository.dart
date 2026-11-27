@@ -129,11 +129,12 @@ class OfflineStorageRepository {
           packageId: packageId,
           packageType: packageType,
           contentKey: row['content_key']?.toString() ?? '',
-          // A download cut off when the app was closed can be retried or
+          // A running download shows as one, the update of a ready package
+          // too; one cut off when the app was closed can be retried or
           // deleted like a failed one.
-          status:
-              status == 'downloading' &&
-                  !liveOfflineDownloads.contains(packageId)
+          status: liveOfflineDownloads.contains(packageId)
+              ? 'downloading'
+              : status == 'downloading'
               ? 'failed'
               : status,
           active: row['is_active'] == 1,
@@ -167,8 +168,7 @@ class OfflineStorageRepository {
     if (!_knownPackageTypes.contains(packageType)) {
       throw const FormatException('Offline package type is invalid');
     }
-    if (previousStatus == 'downloading' &&
-        liveOfflineDownloads.contains(packageId)) {
+    if (liveOfflineDownloads.contains(packageId)) {
       throw StateError('An active offline download cannot be deleted');
     }
     final support = await _supportDirectory();
@@ -205,6 +205,16 @@ class OfflineStorageRepository {
     );
     if (claimed != 1) {
       throw StateError('Offline package changed before deletion');
+    }
+    if (liveOfflineDownloads.contains(packageId)) {
+      // A download of the package started meanwhile: it keeps the files.
+      await _database.database.update(
+        'offline_packages',
+        <String, Object?>{'status': previousStatus},
+        where: 'package_id = ? AND status = ?',
+        whereArgs: <Object?>[packageId, 'deleting'],
+      );
+      throw StateError('An active offline download cannot be deleted');
     }
     try {
       await _deleteDirectoryContents(directory);

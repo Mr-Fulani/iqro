@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -197,6 +198,36 @@ void main() {
       await repository.activePlayback(recitationId: _recitationId, surah: 113),
       isNotNull,
     );
+  });
+
+  test('a package downloads once at a time', () async {
+    final harness = await _harness();
+    harness.api.manifest = _manifestFixture(
+      surahs: const <int>[1, 112],
+      listeningOnly: true,
+    );
+    final started = Completer<void>();
+    final release = Completer<void>();
+    harness.api.onDownload = (surah) {
+      if (!started.isCompleted) started.complete();
+      return release.future;
+    };
+
+    final first = harness.repository.install(recitationId: _recitationId);
+    await started.future;
+    // A controller made again meanwhile sees the download, not a failure.
+    expect(
+      (await harness.repository.snapshot(_recitationId)).status,
+      AudioDownloadStatus.downloading,
+    );
+    await expectLater(
+      harness.repository.install(recitationId: _recitationId),
+      throwsStateError,
+    );
+    release.complete();
+
+    expect((await first).status, AudioDownloadStatus.ready);
+    expect(harness.api.downloads, <int>[1, 112]);
   });
 
   test('a download still plays after the app folder moves', () async {

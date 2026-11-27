@@ -12,7 +12,7 @@ final Set<String> liveOfflineDownloads = <String>{};
 /// is away, or after it has been away, is tried again once the app is back on
 /// the screen; the download resumes from the bytes it has, so the package
 /// goes on from that file instead of failing. A failure with the app on the
-/// screen all along is not retried.
+/// screen all along is not retried, so the next try always starts there.
 Future<T> retryOfflineFileAfterBackground<T>(
   Future<T> Function() download,
 ) async {
@@ -20,10 +20,15 @@ Future<T> retryOfflineFileAfterBackground<T>(
   if (presence == null) return download();
   while (true) {
     final awayCount = presence.awayCount;
+    final startedOnScreen = presence.onScreen;
     try {
       return await download();
     } on Object {
-      if (presence.awayCount == awayCount && presence.onScreen) rethrow;
+      if (startedOnScreen &&
+          presence.awayCount == awayCount &&
+          presence.onScreen) {
+        rethrow;
+      }
       await presence.back();
     }
   }

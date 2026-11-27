@@ -1,5 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iqro_mobile/core/auth/account_scope.dart';
+import 'package:iqro_mobile/core/storage/local_database.dart';
 import 'package:iqro_mobile/core/storage/offline_package_paths.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 const _android = '/data/user/0/forum.iqro.app/files';
@@ -60,6 +65,61 @@ void main() {
         );
       }
     });
+  });
+
+  test('opening a version 6 database makes its saved paths relative', () async {
+    final folder = await Directory.systemTemp.createTemp('iqro-database-');
+    addTearDown(() => folder.delete(recursive: true));
+    databaseFactory = databaseFactoryFfi;
+    addTearDown(() => databaseFactoryOrNull = null);
+    await databaseFactory.setDatabasesPath(folder.path);
+    // The offline tables as version 6 (1.0.16) left them.
+    final old = await databaseFactoryFfi.openDatabase(
+      p.join(folder.path, 'iqro_mobile.db'),
+      options: OpenDatabaseOptions(
+        version: 6,
+        onCreate: (db, _) async {
+          await db.execute(
+            'CREATE TABLE offline_packages '
+            '(package_id TEXT PRIMARY KEY, package_type TEXT NOT NULL)',
+          );
+          await db.execute(
+            'CREATE TABLE offline_package_items (package_id TEXT NOT NULL, '
+            'item_key TEXT NOT NULL, file_name TEXT NOT NULL, '
+            'local_path TEXT NOT NULL, PRIMARY KEY (package_id, item_key))',
+          );
+          await db.insert('offline_packages', <String, Object?>{
+            'package_id': 'a1',
+            'package_type': 'surah_audio',
+          });
+          await db.insert('offline_package_items', <String, Object?>{
+            'package_id': 'a1',
+            'item_key': 'surah:1',
+            'file_name': 'surah-001.mp3',
+            'local_path': '$_android/offline_packages/audio/a1/surah-001.mp3',
+          });
+        },
+      ),
+    );
+    await old.close();
+
+    final database = await LocalDatabase.open(
+      accountScope: AccountScope.forTesting(),
+    );
+    addTearDown(database.database.close);
+
+    expect(await database.database.getVersion(), LocalDatabase.schemaVersion);
+    expect(
+      await database.database.query(
+        'offline_package_items',
+        columns: const <String>['local_path'],
+      ),
+      <Map<String, Object?>>[
+        <String, Object?>{
+          'local_path': 'offline_packages/audio/a1/surah-001.mp3',
+        },
+      ],
+    );
   });
 
   test('the migration makes only exact package paths relative', () async {

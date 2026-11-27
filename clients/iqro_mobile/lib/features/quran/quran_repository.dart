@@ -180,6 +180,11 @@ class QuranRepository {
   final MushafIdentity mushaf;
   final String foundationVersion;
 
+  /// The app's support folder, asked for once. On iOS its path changes when
+  /// the app is updated, so files saved there are found again from it.
+  late final Future<String> _supportPath = getApplicationSupportDirectory()
+      .then((directory) => directory.path);
+
   QuranRepository withFoundationVersion(String version) =>
       !mushaf.isFoundation || version == foundationVersion
       ? this
@@ -659,7 +664,15 @@ class QuranRepository {
     final cached = await _database.readCache(key);
     if (cached != null) {
       final value = jsonMap(cached.value);
-      final file = File(value['path'] as String);
+      // By name in today's folder: the saved path may be of a folder that an
+      // iOS update has moved (cache maintenance keeps the file the same way).
+      final file = File(
+        p.join(
+          await _supportPath,
+          foundationAssetsDirectory,
+          p.basename(value['path'] as String),
+        ),
+      );
       final checksum = value['sha256'] as String;
       final bytes = value['bytes'] as int;
       try {
@@ -835,7 +848,7 @@ class QuranRepository {
     if (rows.isEmpty) return null;
     final row = rows.single;
     final path = resolveOfflinePackageItemPath(
-      (await getApplicationSupportDirectory()).path,
+      await _supportPath,
       row['local_path']! as String,
     );
     if (path == null) return null;

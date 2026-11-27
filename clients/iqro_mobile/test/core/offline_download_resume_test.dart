@@ -62,6 +62,25 @@ void main() {
     expect(attempts, 2);
   });
 
+  test('a file started after the app left goes on when it is back', () async {
+    // The phone is locked; the app still runs a few seconds, or longer
+    // while it plays sound, and starts the next file.
+    leaveScreen();
+    var attempts = 0;
+    final result = retryOfflineFileAfterBackground(() async {
+      attempts += 1;
+      if (attempts == 1) {
+        // Back on the screen, the suspended connection turns out closed.
+        returnToScreen();
+        throw const HttpException('Connection closed while receiving data');
+      }
+      return 'done';
+    });
+
+    expect(await result, 'done');
+    expect(attempts, 2);
+  });
+
   test('a failure with the app on the screen is not retried', () async {
     var attempts = 0;
     await expectLater(
