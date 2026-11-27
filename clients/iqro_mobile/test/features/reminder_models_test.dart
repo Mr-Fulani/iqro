@@ -236,6 +236,15 @@ void main() {
       ),
       tz.TZDateTime.utc(2026, 12, 8, 19, 8),
     );
+    // Not a few minutes before an adhan either: Doze would hold it back.
+    expect(
+      prayerPlanEndNoticeTime(
+        tz.TZDateTime.utc(2026, 12, 9, 18, 57),
+        now: now,
+        planned: <tz.TZDateTime>[tz.TZDateTime.utc(2026, 12, 8, 19)],
+      ),
+      tz.TZDateTime.utc(2026, 12, 8, 19, 3),
+    );
     // A plan shorter than a day: after its last reminder.
     final soon = tz.TZDateTime.utc(2026, 11, 27, 22);
     expect(
@@ -264,6 +273,12 @@ void main() {
     expect(
       nextDailyOccurrence(location: location, hour: 20, minute: 0, now: before),
       tz.TZDateTime(location, 2026, 3, 28, 20),
+    );
+    // 02:30 does not exist on the night the clock moves forward: the daily
+    // request starts the day after, keeping 02:30.
+    expect(
+      nextDailyOccurrence(location: location, hour: 2, minute: 30, now: before),
+      tz.TZDateTime(location, 2026, 3, 30, 2, 30),
     );
     expect(reminderRunsEveryDay(127), isTrue);
     expect(reminderRunsEveryDay(127 & ~(1 << 4)), isFalse);

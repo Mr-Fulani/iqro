@@ -866,23 +866,25 @@ final prayerPlanEndNotificationId = reminderNotificationId(
 
 /// A day before the last planned prayer notification, so that a day of
 /// reminders is still left when the note comes; after the last one when the
-/// plan is shorter than that. Kept two minutes from the [planned] ones:
-/// Android plays one sound at a time, so a note at the same minute would cut
-/// an adhan short.
+/// plan is shorter than that. Never in the ten minutes before one of the
+/// [planned] notifications nor the two after it: Android plays one sound at
+/// a time, and in Doze Android 6-11 hold an app's next alarm for nine
+/// minutes after one, so a note just before an adhan would delay it.
 tz.TZDateTime prayerPlanEndNoticeTime(
   tz.TZDateTime lastPrayer, {
   required tz.TZDateTime now,
   Iterable<tz.TZDateTime> planned = const <tz.TZDateTime>[],
 }) {
-  const gap = Duration(minutes: 2);
+  const step = Duration(minutes: 2);
+  bool crowded(tz.TZDateTime notice) => planned.any((time) {
+    final ahead = time.difference(notice);
+    return ahead > const Duration(minutes: -2) &&
+        ahead < const Duration(minutes: 10);
+  });
   final dayBefore = lastPrayer.subtract(const Duration(days: 1));
-  var notice = dayBefore.isAfter(now) ? dayBefore : lastPrayer.add(gap);
-  for (
-    var step = 0;
-    step < 60 && planned.any((time) => time.difference(notice).abs() < gap);
-    step += 1
-  ) {
-    notice = notice.add(gap);
+  var notice = dayBefore.isAfter(now) ? dayBefore : lastPrayer.add(step);
+  for (var moves = 0; moves < 60 && crowded(notice); moves += 1) {
+    notice = notice.add(step);
   }
   return notice;
 }
@@ -898,6 +900,8 @@ bool reminderRunsEveryDay(int weekdaysMask) => <int>[
 ].every((weekday) => reminderRunsOnWeekday(weekdaysMask, weekday));
 
 /// The next time of day after now, keeping the wall-clock time across DST.
+/// The repeating request takes its hour and minute from this date, so a
+/// day on which the time falls in the gap of the spring change is skipped.
 tz.TZDateTime nextDailyOccurrence({
   required tz.Location location,
   required int hour,
@@ -905,24 +909,23 @@ tz.TZDateTime nextDailyOccurrence({
   tz.TZDateTime? now,
 }) {
   final current = now ?? tz.TZDateTime.now(location);
-  final today = tz.TZDateTime(
+  tz.TZDateTime on(int day) => tz.TZDateTime(
     location,
     current.year,
     current.month,
-    current.day,
+    current.day + day,
     hour,
     minute,
   );
-  return today.isAfter(current)
-      ? today
-      : tz.TZDateTime(
-          location,
-          current.year,
-          current.month,
-          current.day + 1,
-          hour,
-          minute,
-        );
+  for (var day = 0; day < 3; day += 1) {
+    final candidate = on(day);
+    if (candidate.isAfter(current) &&
+        candidate.hour == hour &&
+        candidate.minute == minute) {
+      return candidate;
+    }
+  }
+  return on(1);
 }
 
 tz.TZDateTime nextWeeklyOccurrence({
