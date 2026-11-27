@@ -1,5 +1,5 @@
 "CFBundleDisplayName" = "IQRO";
-"NSLocationWhenInUseUsageDescription" = "IQRO uses your location only while the app is open to calculate accurate local prayer times.";
+"NSLocationWhenInUseUsageDescription" = "IQRO uses your location only while the app is open, to calculate local prayer times and the qibla direction.";
 "NSPhotoLibraryAddUsageDescription" = "IQRO saves a picture of an ayah or du'a to Photos only when you choose Save Image.";
 "NSMicrophoneUsageDescription" = "IQRO listens to your recitation to show which word of the Quran you have read.";
 "NSSpeechRecognitionUsageDescription" = "IQRO recognises the words you recite to show your place in the text of the Quran.";

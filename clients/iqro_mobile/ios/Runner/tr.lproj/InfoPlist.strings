@@ -1,5 +1,5 @@
 "CFBundleDisplayName" = "IQRO";
-"NSLocationWhenInUseUsageDescription" = "IQRO, yerel namaz vakitlerini doğru hesaplamak için konumunuzu yalnızca uygulama açıkken kullanır.";
+"NSLocationWhenInUseUsageDescription" = "IQRO, yerel namaz vakitlerini ve kıble yönünü doğru hesaplamak için konumunuzu yalnızca uygulama açıkken kullanır.";
 "NSPhotoLibraryAddUsageDescription" = "IQRO, ayet veya dua görselini yalnızca \"Görüntüyü Kaydet\"i seçtiğinizde Fotoğraflar'a kaydeder.";
 "NSMicrophoneUsageDescription" = "IQRO, Kur'an'da okuduğunuz kelimeyi göstermek için okuyuşunuzu dinler.";
 "NSSpeechRecognitionUsageDescription" = "IQRO, Kur'an metnindeki yerinizi göstermek için okuduğunuz kelimeleri tanır.";

@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/auth/account_scope.dart';
 import '../../core/network/api_client.dart';
+import '../../core/platform/ios_version.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/utils/json_helpers.dart';
 import 'feedback_models.dart';
@@ -158,11 +159,10 @@ class FeedbackRepository {
     final platform = Platform.isIOS ? 'ios' : 'android';
     var osVersion = 'unknown';
     try {
-      final deviceInfo = DeviceInfoPlugin();
       if (Platform.isIOS) {
-        osVersion = (await deviceInfo.iosInfo).systemVersion;
+        osVersion = iosVersion();
       } else if (Platform.isAndroid) {
-        osVersion = (await deviceInfo.androidInfo).version.release;
+        osVersion = (await DeviceInfoPlugin().androidInfo).version.release;
       }
     } on Object {
       // Keep the coarse platform even when device metadata is unavailable.

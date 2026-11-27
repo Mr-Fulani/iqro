@@ -1,0 +1,110 @@
+name: iOS simulators
+
+# The app on an iPhone and an iPad simulator (the app ships for iPhone only; an
+# iPad runs it in compatibility mode, and Apple's reviewers may open it there):
+# from a fresh install through the main screens, against https://iqro.forum, with a screen recording and
+# screenshots in the artifact "iqro-ios-simulators". It stands in for a check
+# on a real iPhone before TestFlight; clients/iqro_mobile/integration_test/README.md
+# says what it covers and what it cannot.
+
+concurrency:
+  group: ios-simulators-${{ github.ref }}
+  cancel-in-progress: true
+
+# Only by hand: there is no staging server, so each run writes to production
+# (guest accounts, announcement impressions; integration_test/README.md).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulators:
+    runs-on: macos-15
+    timeout-minutes: 80
+    defaults:
+      run:
+        working-directory: clients/iqro_mobile
+    env:
+      OUT: ${{ github.workspace }}/simulator-results
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select App Store-compatible Xcode
+        run: sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
+      - name: Set up locked CocoaPods toolchain
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: "4.0.1"
+          working-directory: clients/iqro_mobile
+          bundler-cache: true
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.41.4
+          cache: true
+      - name: Disable CLI analytics
+        run: flutter config --no-analytics
+      - name: Resolve locked Dart dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Verify locked CocoaPods dependencies
+        working-directory: clients/iqro_mobile/ios
+        run: bundle exec pod install --deployment
+      - name: Simulators in this image
+        run: |
+          xcrun simctl list runtimes available
+          xcrun simctl list devicetypes | grep -E "iPhone|iPad"
+      - name: Build the app with the test for the simulator
+        id: build
+        run: >-
+          bundle exec flutter build ios --simulator --debug
+          --target=integration_test/app_smoke_test.dart
+          --dart-define=API_BASE_URL=https://iqro.forum
+          --dart-define=APP_ENV=production
+          --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+      - name: iPhone 6.9″ — main screens
+        id: iphone
+        timeout-minutes: 30
+        env:
+          IQRO_LOCALE: ru
+        run: |
+          id="$(ios/scripts/simulator_run.sh create 'iPhone 17 Pro Max|iPhone 16 Pro Max')"
+          status=0
+          ios/scripts/simulator_run.sh test "$id" build/ios/iphonesimulator/Runner.app \
+            integration_test/app_smoke_test.dart "$OUT/iphone" || status=$?
+          xcrun simctl shutdown "$id" || true
+          exit "$status"
+      - name: iPad 13″ — main screens
+        timeout-minutes: 30
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          IQRO_LOCALE: ru
+        run: |
+          id="$(ios/scripts/simulator_run.sh create 'iPad Pro 13-inch (M5)|iPad Pro 13-inch (M4)')"
+          status=0
+          ios/scripts/simulator_run.sh test "$id" build/ios/iphonesimulator/Runner.app \
+            integration_test/app_smoke_test.dart "$OUT/ipad" || status=$?
+          xcrun simctl shutdown "$id" || true
+          exit "$status"
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          for device in iphone ipad; do
+            [ -d "$OUT/$device" ] || continue
+            {
+              echo "### $device"
+              echo
+              echo "Screenshots: $(ls "$OUT/$device"/*.png 2>/dev/null | wc -l | tr -d ' '), video: $(du -h "$OUT/$device/video.mp4" 2>/dev/null | cut -f1)"
+              echo
+              echo '```'
+              cat "$OUT/$device/steps.txt" 2>/dev/null || echo "no steps recorded"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iqro-ios-simulators
+          path: ${{ env.OUT }}
+          retention-days: 14

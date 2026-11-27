@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'startup_trace.dart';
@@ -118,12 +117,11 @@ class _StartupScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // The colours of the native launch screen, so that Flutter taking over
-    // does not flash: Android's follows the system theme
-    // (res/values*/colors.xml), the iOS one is always light.
+    // does not flash. Both follow the system theme: Android's
+    // res/values*/colors.xml, iOS's LaunchBackground image in Assets.xcassets.
     final dark =
-        defaultTargetPlatform == TargetPlatform.android &&
         WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-            Brightness.dark;
+        Brightness.dark;
     final background = Color(dark ? 0xFF071A16 : 0xFFE6D8BF);
     final accent = Color(dark ? 0xFFE6D8BF : 0xFF073E34);
     return MaterialApp(

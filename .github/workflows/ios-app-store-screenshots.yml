@@ -1,0 +1,87 @@
+name: App Store screenshots
+
+# The eight screens of the Google Play set, from the simulator, in Russian,
+# English, Arabic and Turkish, for iPhone 6.9″ (1320×2868). The app ships for
+# iPhone only, so no iPad set. Raw screens in the artifact; captions and the folder in the repo
+# come from docs/release/app-store-screenshots/make.py.
+
+concurrency:
+  group: ios-app-store-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+# Only by hand: each run writes to production (integration_test/README.md).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    name: iphone-6.9
+    runs-on: macos-15
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: clients/iqro_mobile
+    env:
+      OUT: ${{ github.workspace }}/app-store-screenshots
+      NO_VIDEO: 1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select App Store-compatible Xcode
+        run: sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
+      - name: Set up locked CocoaPods toolchain
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: "4.0.1"
+          working-directory: clients/iqro_mobile
+          bundler-cache: true
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.41.4
+          cache: true
+      - name: Resolve dependencies
+        run: |
+          flutter config --no-analytics
+          flutter pub get --enforce-lockfile
+          (cd ios && bundle exec pod install --deployment)
+      - name: Build the app with the screenshot test
+        run: >-
+          bundle exec flutter build ios --simulator --debug
+          --target=integration_test/store_screenshots_test.dart
+          --dart-define=API_BASE_URL=https://iqro.forum
+          --dart-define=APP_ENV=production
+          --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+      - name: Screenshots in four languages
+        timeout-minutes: 70
+        env:
+          TYPES: "iPhone 17 Pro Max|iPhone 16 Pro Max"
+        run: |
+          id="$(ios/scripts/simulator_run.sh create "$TYPES")"
+          status=0
+          # flutter drive reinstalls the app for every run; only the guest
+          # session (Keychain) and what the server keeps carry over. A first
+          # run opens the active announcement once, so the server marks it read
+          # and Home shows no announcement bubble in the language runs.
+          # It is preparation, not a check: a failure here is only a warning.
+          IQRO_LOCALE=ru IQRO_MODE=setup ios/scripts/simulator_run.sh test "$id" \
+            build/ios/iphonesimulator/Runner.app \
+            integration_test/store_screenshots_test.dart "$OUT/setup" ||
+            echo "::warning::the setup run failed (see setup/test.log); the language runs decide"
+          for locale in ru en ar tr; do
+            IQRO_LOCALE="$locale" ios/scripts/simulator_run.sh test "$id" \
+              build/ios/iphonesimulator/Runner.app \
+              integration_test/store_screenshots_test.dart "$OUT/$locale" || status=$?
+            grep -q "IQRO LOCALE $locale" "$OUT/$locale/test.log" || { echo "::error::$locale run did not use $locale"; status=1; }
+          done
+          xcrun simctl shutdown "$id" || true
+          exit "$status"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-store-screenshots-iphone-6.9
+          path: ${{ env.OUT }}
+          retention-days: 30
