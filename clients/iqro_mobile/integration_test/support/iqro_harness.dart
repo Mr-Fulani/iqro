@@ -289,8 +289,7 @@ class IqroHarness {
     if (bytes == null) throw TestFailure('The Mushaf page could not be read');
     // Only the page itself: the legend's coloured chips below it must not
     // pass for tajweed drawn by the font.
-    final area = (page.localToGlobal(Offset.zero, ancestor: render) & page.size)
-        .shift(Offset.zero);
+    final area = page.localToGlobal(Offset.zero, ancestor: render) & page.size;
     final scaled = Rect.fromLTRB(
       area.left * ratio,
       area.top * ratio,

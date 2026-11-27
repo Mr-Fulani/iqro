@@ -60,8 +60,9 @@ TestFlight.
 There is no staging server, so every run writes a little to production: each simulator is a
 new install with its own guest account (`/auth/guest`), so one `iOS simulators` run makes two
 (iPhone and iPad), and Home counts as an iOS impression of an active announcement. The
-`App Store screenshots` run makes one more guest and opens the active announcement once (a
-read receipt and an iOS "open").
+`App Store screenshots` run makes one more guest, opens the active announcement once (a read
+receipt and an iOS "open") and opens the Names of Allah (a `section_opened` count per
+language). Keeping CI out of these counters needs a build switch in the app; not done yet.
 
 ## Running it
 
