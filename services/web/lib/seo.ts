@@ -78,7 +78,7 @@ export function createRootMetadata(locale: Locale): Metadata {
   const title = translate(locale, "meta.title");
   const description = translate(locale, "meta.description");
   const canonical = localizedPath(locale, "/");
-  // Safari's banner on iPhone and iPad, once the app is out in the App Store.
+  // Safari's banner on iPhone, once the app is out in the App Store.
   const appStoreId = appStoreAppId(process.env.NEXT_PUBLIC_IOS_APP_STORE_URL);
 
   return {
