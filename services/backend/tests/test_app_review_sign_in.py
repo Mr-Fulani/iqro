@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 import uuid
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
@@ -28,6 +32,7 @@ from quran_backend.settings.base import validate_app_review_sign_in
 
 pytestmark = pytest.mark.django_db
 
+SRC = Path(__file__).resolve().parents[1] / "src"
 REVIEW_EMAIL = "review@example.com"
 PASSCODE = "482916"
 review_sign_in = override_settings(
@@ -53,12 +58,13 @@ def _guest(client: APIClient) -> tuple[dict[str, Any], str]:
     return cast(dict[str, Any], response.json()), credential
 
 
-def _start(client: APIClient, access_token: str, email: str) -> Any:
+def _start(client: APIClient, access_token: str, email: str, **extra: str) -> Any:
     return client.post(
         reverse("accounts:email-start"),
         {"email": email},
         format="json",
         HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        **extra,
     )
 
 
@@ -198,9 +204,14 @@ def test_review_address_has_one_quota_shared_by_every_device(
         monkeypatch.setattr(throttle, "THROTTLE_RATES", rates)
     caches["throttling"].clear()
     guests = [_guest(api_client)[0]["access_token"] for _ in range(3)]
+    # Other letter case, spaces and other networks still count against the same quota.
+    spellings = [REVIEW_EMAIL, " Review@Example.COM ", "REVIEW@example.com"]
 
-    review = [_start(api_client, token, REVIEW_EMAIL) for token in guests]
-    reader = _start(api_client, guests[2], "reader@example.com")
+    review = [
+        _start(api_client, token, email, REMOTE_ADDR=f"10.0.0.{index}")
+        for index, (token, email) in enumerate(zip(guests, spellings, strict=True), start=1)
+    ]
+    reader = _start(api_client, guests[2], "reader@example.com", REMOTE_ADDR="10.0.0.3")
     caches["throttling"].clear()
 
     assert [response.status_code for response in review] == [202, 202, 429]
@@ -230,3 +241,27 @@ def test_misconfigured_review_sign_in_stops_the_server(email: str, passcode: str
 @pytest.mark.parametrize(("email", "passcode"), [("", ""), (REVIEW_EMAIL, PASSCODE)])
 def test_review_sign_in_settings_that_start(email: str, passcode: str) -> None:
     validate_app_review_sign_in(email, passcode)
+
+
+def test_server_does_not_start_with_a_guessable_passcode() -> None:
+    def start(passcode: str) -> subprocess.CompletedProcess[str]:
+        # A fresh interpreter, so the module-level settings see this environment only.
+        return subprocess.run(
+            [sys.executable, "-c", "import quran_backend.settings.base"],
+            cwd=SRC,
+            env={
+                **os.environ,
+                "QURAN_APP_REVIEW_EMAIL": REVIEW_EMAIL,
+                "QURAN_APP_REVIEW_PASSCODE": passcode,
+            },
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    guessable = start("123456")
+    random = start(PASSCODE)
+
+    assert guessable.returncode != 0
+    assert "QURAN_APP_REVIEW_PASSCODE" in guessable.stderr
+    assert random.returncode == 0, random.stderr

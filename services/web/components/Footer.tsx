@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import type { SocialProfile } from "../lib/api";
 import { useI18n } from "../lib/i18n-context";
-import { localizedPath } from "../lib/routing";
+import { localizedPath, stripLocalePrefix } from "../lib/routing";
 import { SocialLinks } from "./social/SocialLinks";
 import { MobileDisclosure } from "./MobileDisclosure";
 import { AppStoreBadge } from "./AppStoreBadge";
@@ -16,9 +17,12 @@ type FooterProps = {
 
 export function Footer({ socialProfiles = [] }: FooterProps) {
   const { locale, t } = useI18n();
+  const pathname = usePathname();
   const appDownloadUrl = process.env.NEXT_PUBLIC_ANDROID_APP_DOWNLOAD_URL?.trim();
   const appStoreUrl = process.env.NEXT_PUBLIC_IOS_APP_STORE_URL?.trim();
   const playStoreUrl = process.env.NEXT_PUBLIC_ANDROID_PLAY_STORE_URL?.trim();
+  // Apple asks for one App Store badge per page, and the home page's app card already has it.
+  const storesInHomeCard = Boolean(appStoreUrl) && stripLocalePrefix(pathname) === "/";
   return (
     <footer className="app-footer">
       <MobileDisclosure title={t("footer.aboutLinks")} className="mobile-footer-details">
@@ -28,31 +32,33 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
             <p>
               <strong>IQRO</strong> — {t("footer.description")}
             </p>
-            <section className="footer-mobile-app" aria-labelledby="footer-mobile-app-title">
-              <h2 id="footer-mobile-app-title" className="sr-only">{t("footer.mobileAppTitle")}</h2>
-              <div className="footer-app-stores">
-                {appStoreUrl ? <AppStoreBadge /> : (
-                  <div className="footer-store-badge">
-                    <span>{t("footer.iosSoon")}</span>
-                    <strong>App Store</strong>
-                  </div>
-                )}
-                {playStoreUrl ? <GooglePlayBadge /> : (
-                  <div className="footer-store-badge">
-                    <span>{t("footer.androidSoon")}</span>
-                    <strong>Google Play</strong>
-                  </div>
-                )}
-              </div>
-              {appDownloadUrl && !playStoreUrl ? (
-                <a className="btn btn-primary footer-app-download" href={appDownloadUrl}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5" />
-                  </svg>
-                  {t("footer.mobileAppDownload")}
-                </a>
-              ) : null}
-            </section>
+            {storesInHomeCard ? null : (
+              <section className="footer-mobile-app" aria-labelledby="footer-mobile-app-title">
+                <h2 id="footer-mobile-app-title" className="sr-only">{t("footer.mobileAppTitle")}</h2>
+                <div className="footer-app-stores">
+                  {appStoreUrl ? <AppStoreBadge /> : (
+                    <div className="footer-store-badge">
+                      <span>{t("footer.iosSoon")}</span>
+                      <strong>App Store</strong>
+                    </div>
+                  )}
+                  {playStoreUrl ? <GooglePlayBadge /> : (
+                    <div className="footer-store-badge">
+                      <span>{t("footer.androidSoon")}</span>
+                      <strong>Google Play</strong>
+                    </div>
+                  )}
+                </div>
+                {appDownloadUrl && !playStoreUrl ? (
+                  <a className="btn btn-primary footer-app-download" href={appDownloadUrl}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5" />
+                    </svg>
+                    {t("footer.mobileAppDownload")}
+                  </a>
+                ) : null}
+              </section>
+            )}
           </div>
 
           <div className="footer-links">

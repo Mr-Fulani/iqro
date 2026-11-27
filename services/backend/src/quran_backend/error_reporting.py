@@ -42,8 +42,10 @@ def sentry_options(environ: Mapping[str, str], *, release: str) -> dict[str, Any
     """Sentry client options, or None when no DSN is configured.
 
     Reports carry no personal data: no IP addresses, cookies or user ids
-    (send_default_pii), no request bodies, which can hold emails or tokens, and
-    no trace of requests to Telegram, whose URL holds the bot token.
+    (send_default_pii), no request bodies, which can hold emails or tokens, no
+    local variables of the failing code, which can hold sign-in codes such as the
+    App Store reviewer's fixed one, and no trace of requests to Telegram, whose
+    URL holds the bot token.
     """
     dsn = environ.get("SENTRY_DSN", "").strip()
     if not dsn:
@@ -61,6 +63,7 @@ def sentry_options(environ: Mapping[str, str], *, release: str) -> dict[str, Any
         "release": f"quran-platform-backend@{release}",
         "send_default_pii": False,
         "max_request_body_size": "never",
+        "include_local_variables": False,
         "traces_sample_rate": traces_sample_rate,
         "before_send": drop_cancelled_requests,
         "before_breadcrumb": drop_telegram_breadcrumb,

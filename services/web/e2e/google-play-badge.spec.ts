@@ -12,14 +12,17 @@ const LABELS = {
 
 for (const [locale, label] of Object.entries(LABELS)) {
   test(`Google Play badge on the home page and in the footer: ${locale}`, async ({ page }) => {
-    await page.goto(`/${locale}`);
-    const badges = page.getByTestId("google-play-badge");
-    await expect(badges).toHaveCount(2);
-    for (const badge of await badges.all()) {
-      await expect(badge).toHaveAttribute("href", STORE_URL);
-      await expect(badge).toHaveAttribute("target", "_blank");
-      await expect(badge).toHaveAttribute("rel", /noopener/);
-      const image = badge.getByRole("img", { name: label });
+    test.slow(); // two pages
+    // With the App Store badge on as well, the home page's footer does not repeat the
+    // stores' badges of its app card, so the footer is checked on another page.
+    for (const path of [`/${locale}/dua`, `/${locale}`]) {
+      await page.goto(path);
+      const badges = page.getByTestId("google-play-badge");
+      await expect(badges).toHaveCount(1);
+      await expect(badges).toHaveAttribute("href", STORE_URL);
+      await expect(badges).toHaveAttribute("target", "_blank");
+      await expect(badges).toHaveAttribute("rel", /noopener/);
+      const image = badges.getByRole("img", { name: label });
       await expect(image).toHaveAttribute("src", `/images/store/google-play-${locale}.webp`);
     }
     const homeBadge = page.getByTestId("home-app-card").getByTestId("google-play-badge");
