@@ -1096,7 +1096,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get prayerWidgetManualIos =>
-      'اضغط مطولاً على الشاشة الرئيسية، ثم اضغط +، وابحث عن IQRO وأضف الويدجت.';
+      'المس مطولاً مكاناً فارغاً في الشاشة الرئيسية، ثم اضغط «تعديل» ← «إضافة أداة» (في iOS 17 وما قبله اضغط +). ابحث عن IQRO وأضف الويدجت.';
 
   @override
   String get prayerWidgetNeedsLocation =>
@@ -1104,7 +1104,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get prayerLocationPrivacy =>
-      'تبقى إحداثياتك على هذا الجهاز ولا تُضاف إلى التحليلات.';
+      'تُرسَل الإحداثيات إلى خادم IQRO لحساب أوقات الصلاة فقط: لا يحفظها الخادم، ولا تدخل في إحصاءات الاستخدام.';
 
   @override
   String get useMyLocation => 'استخدم موقعي';
@@ -1125,7 +1125,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get locationPermissionRequiredBody =>
-      'اسمح بالوصول مرة واحدة لحساب أوقات الصلاة. تبقى الإحداثيات على هذا الجهاز.';
+      'اسمح بالوصول مرة واحدة لحساب أوقات الصلاة. لا يحفظ خادم IQRO الإحداثيات.';
 
   @override
   String get locationUnavailable => 'تعذر تحديد الموقع';
@@ -1400,6 +1400,9 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get accountSwitchHint =>
       'سجّل الخروج واختر حساب Google آخر أو بريدًا آخر';
+
+  @override
+  String get accountSwitchHintEmail => 'سجّل الخروج وادخل ببريد آخر';
 
   @override
   String get devices => 'الأجهزة';
@@ -1839,6 +1842,12 @@ class AppLocalizationsAr extends AppLocalizations {
       'سيذكّرك IQRO في الوقت المحدد حتى عند إغلاق التطبيق.';
 
   @override
+  String get notificationsForReminders => 'الإشعارات للتذكيرات';
+
+  @override
+  String get notificationsOff => 'الإشعارات متوقفة';
+
+  @override
   String get allowNotifications => 'السماح بالإشعارات';
 
   @override
@@ -1957,6 +1966,9 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'اهتزاز قصير عند تغيير صفحة المصحف. يجب أيضاً تفعيل اهتزاز اللمس في إعدادات أندرويد.';
+
+  @override
+  String get readerHapticsHintIos => 'اهتزاز قصير عند تغيير صفحة المصحف.';
 
   @override
   String get mushafPageCaching =>
@@ -3339,7 +3351,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboardingPrayerBody =>
-      'لحساب مواقيت الصلاة والقبلة نحتاج إلى مدينتك. تبقى الإحداثيات على هاتفك.';
+      'لحساب مواقيت الصلاة والقبلة نحتاج إلى مدينتك. يتلقى خادم IQRO الإحداثيات للحساب فقط ولا يحفظها.';
 
   @override
   String get onboardingUseLocation => 'تحديد موقعي';
@@ -3718,7 +3730,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get recitationNoticeVoice =>
-      'يتعرّف على صوتك خدمة التعرّف على الكلام في هاتفك (Google أو Apple). في الهواتف القديمة يُرسل الصوت إليها عبر الإنترنت. IQRO لا يحفظ التسجيل ولا يرسله إلى خادمه.';
+      'يتعرّف على صوتك خدمة التعرّف على الكلام من Apple: على الجهاز نفسه، أو عبر الإنترنت إن لم تكن العربية متوفرة فيه. IQRO لا يحفظ التسجيل ولا يرسله إلى خادمه. بعد ذلك سيطلب النظام إذنين: التعرّف على الكلام والميكروفون.';
 
   @override
   String get recitationNoticeLimits =>
@@ -3805,6 +3817,14 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get recitationUnavailable =>
       'التعرّف على الكلام غير متاح: لا توجد خدمة تعرّف في الهاتف أو لم يُسمح باستخدام الميكروفون.';
+
+  @override
+  String get recitationDenied =>
+      'لا يوجد إذن للميكروفون أو للتعرّف على الكلام. فعّلهما من «الإعدادات» ← IQRO.';
+
+  @override
+  String get recitationDictationOff =>
+      'الإملاء متوقف: فعّله من «الإعدادات» ← «عام» ← «لوحة المفاتيح».';
 
   @override
   String get recitationNoArabic =>

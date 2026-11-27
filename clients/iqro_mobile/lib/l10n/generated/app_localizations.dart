@@ -2079,7 +2079,7 @@ abstract class AppLocalizations {
   /// No description provided for @prayerWidgetManualIos.
   ///
   /// In en, this message translates to:
-  /// **'Touch and hold the home screen, tap +, find IQRO, and add the widget.'**
+  /// **'Touch and hold an empty area of the Home Screen, then tap Edit → Add Widget (on iOS 17 and earlier, tap +). Find IQRO and add the widget.'**
   String get prayerWidgetManualIos;
 
   /// No description provided for @prayerWidgetNeedsLocation.
@@ -2091,7 +2091,7 @@ abstract class AppLocalizations {
   /// No description provided for @prayerLocationPrivacy.
   ///
   /// In en, this message translates to:
-  /// **'Your coordinates stay on this device and are never added to analytics.'**
+  /// **'Coordinates are sent to the IQRO server only to calculate prayer times: the server does not store them, and they never go into usage statistics.'**
   String get prayerLocationPrivacy;
 
   /// No description provided for @useMyLocation.
@@ -2127,7 +2127,7 @@ abstract class AppLocalizations {
   /// No description provided for @locationPermissionRequiredBody.
   ///
   /// In en, this message translates to:
-  /// **'Allow access once to calculate prayer times. Coordinates stay on this device.'**
+  /// **'Allow access once to calculate prayer times. The IQRO server does not store your coordinates.'**
   String get locationPermissionRequiredBody;
 
   /// No description provided for @locationUnavailable.
@@ -2639,6 +2639,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign out and choose another Google account or email'**
   String get accountSwitchHint;
+
+  /// No description provided for @accountSwitchHintEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out and sign in with another email'**
+  String get accountSwitchHintEmail;
 
   /// No description provided for @devices.
   ///
@@ -3444,6 +3450,18 @@ abstract class AppLocalizations {
   /// **'IQRO will remind you at the selected time, even when the app is closed.'**
   String get notificationAccessBody;
 
+  /// No description provided for @notificationsForReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for reminders'**
+  String get notificationsForReminders;
+
+  /// No description provided for @notificationsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are off'**
+  String get notificationsOff;
+
   /// No description provided for @allowNotifications.
   ///
   /// In en, this message translates to:
@@ -3677,6 +3695,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.'**
   String get readerHapticsHint;
+
+  /// No description provided for @readerHapticsHintIos.
+  ///
+  /// In en, this message translates to:
+  /// **'A short pulse when the Mushaf page changes.'**
+  String get readerHapticsHintIos;
 
   /// No description provided for @mushafPageCaching.
   ///
@@ -5931,7 +5955,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPrayerBody.
   ///
   /// In en, this message translates to:
-  /// **'To calculate prayer times and the qibla we need your city. Coordinates stay on your phone.'**
+  /// **'To calculate prayer times and the qibla we need your city. The IQRO server gets the coordinates only for the calculation and does not store them.'**
   String get onboardingPrayerBody;
 
   /// No description provided for @onboardingUseLocation.
@@ -6573,7 +6597,7 @@ abstract class AppLocalizations {
   /// No description provided for @recitationNoticeVoice.
   ///
   /// In en, this message translates to:
-  /// **'Your voice is recognised by your phone\'s speech recognition service (Google or Apple). On older phones the sound goes to it over the internet. IQRO does not keep the recording and does not send it to its own server.'**
+  /// **'Your voice is recognised by Apple\'s speech recognition: on the device itself, or over the internet where the device has no Arabic of its own. IQRO does not keep the recording and does not send it to its own server. Next the system will ask for two permissions: speech recognition and the microphone.'**
   String get recitationNoticeVoice;
 
   /// No description provided for @recitationNoticeLimits.
@@ -6725,6 +6749,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.'**
   String get recitationUnavailable;
+
+  /// No description provided for @recitationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'No access to the microphone or speech recognition. Turn them on in Settings → IQRO.'**
+  String get recitationDenied;
+
+  /// No description provided for @recitationDictationOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Dictation is off: turn it on in Settings → General → Keyboard.'**
+  String get recitationDictationOff;
 
   /// No description provided for @recitationNoArabic.
   ///

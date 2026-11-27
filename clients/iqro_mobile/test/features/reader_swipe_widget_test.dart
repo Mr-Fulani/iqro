@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -204,7 +205,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
     await tester.pumpAndSettle();
     expect(notice, findsOneWidget);
-    expect(find.textContaining('Google или Apple'), findsOneWidget);
+    // (The words of iOS: Android's model on the phone has its own.)
+    expect(find.textContaining('служба распознавания речи Apple'), findsOne);
+    expect(find.textContaining('Google'), findsNothing);
     expect(find.textContaining('не таджвид и огласовки'), findsOneWidget);
     await tester.tap(find.text('Отмена'));
     await tester.pumpAndSettle();
@@ -378,6 +381,99 @@ void main() {
     expect(speech.listens, listens);
     // The package waits a moment for a last result.
     await tester.pump(const Duration(seconds: 3));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('on iOS the plain text has a way back of its own, the note '
+      'before the microphone leads on to the system with one button, a '
+      'refusal is told with the way to the settings, and the microphone goes '
+      'off with the app', (tester) async {
+    final speech = _Speech();
+    SpeechToTextPlatform.instance = speech;
+    WakelockPlusPlatformInterface.instance = _Wakelock();
+    const geolocator = MethodChannel('flutter.baseflow.com/geolocator');
+    final opened = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(geolocator, (
+      call,
+    ) async {
+      opened.add(call.method);
+      return true;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        geolocator,
+        null,
+      ),
+    );
+    final app = await _pump(tester, reducedMotion: true);
+    await _swipe(tester, await _card(tester, 3), 220);
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      // The plain text drawn again, as on an iPhone.
+      tester
+          .element(find.byKey(const ValueKey('reader-flow')))
+          .visitAncestorElements((element) {
+            if (element.widget.runtimeType.toString() != '_FlowPage') {
+              return true;
+            }
+            element.markNeedsBuild();
+            return false;
+          });
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('reader-flow-back')), findsOneWidget);
+
+      // The note: no Cancel, and a tap beside it does not close it.
+      final notice = find.byKey(const ValueKey('recitation-notice'));
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pumpAndSettle();
+      expect(notice, findsOneWidget);
+      expect(find.text('Отмена'), findsNothing);
+      await tester.tapAt(const Offset(8, 8));
+      await tester.pumpAndSettle();
+      expect(notice, findsOneWidget);
+      await tester.tap(find.text('Продолжить'));
+      await tester.pumpAndSettle();
+      expect(app.preferences.recitationNoticeSeen, isTrue);
+      expect(speech.listens, 1);
+      expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
+
+      // The app goes to the background: the microphone is off.
+      for (final state in <AppLifecycleState>[
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.mic_rounded), findsNothing);
+      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+      // The package waits a moment for a last result.
+      await tester.pump(const Duration(seconds: 3));
+
+      // Refused in the settings: said so, with the way to them.
+      speech.allowed = false;
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pumpAndSettle();
+      expect(speech.listens, 1);
+      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+      expect(find.textContaining('Нет доступа к микрофону'), findsOneWidget);
+      await tester.tap(find.text('Настройки'));
+      await tester.pumpAndSettle();
+      expect(opened, <String>['openAppSettings']);
+
+      // And back to the cards, by the button.
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.tap(find.byKey(const ValueKey('reader-flow-back')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('reader-flow')), findsNothing);
+      await tester.pump(const Duration(seconds: 5));
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
     expect(tester.takeException(), isNull);
   });
 
@@ -1238,8 +1334,11 @@ class _Engine implements IqroAudioEngine {
 class _Speech extends SpeechToTextPlatform {
   var listens = 0;
 
+  /// The microphone and speech recognition are allowed.
+  var allowed = true;
+
   @override
-  Future<bool> hasPermission() async => true;
+  Future<bool> hasPermission() async => allowed;
 
   @override
   Future<bool> initialize({

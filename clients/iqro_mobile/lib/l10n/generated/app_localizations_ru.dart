@@ -1115,7 +1115,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get prayerWidgetManualIos =>
-      'Нажмите и удерживайте главный экран, нажмите «+», найдите IQRO и добавьте виджет.';
+      'Нажмите и удерживайте пустое место главного экрана, затем «Править» → «Добавить виджет» (в iOS 17 и раньше — «+»). Найдите IQRO и добавьте виджет.';
 
   @override
   String get prayerWidgetNeedsLocation =>
@@ -1123,7 +1123,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get prayerLocationPrivacy =>
-      'Координаты остаются на устройстве и никогда не попадают в аналитику.';
+      'Координаты передаются на сервер IQRO только для расчёта времени намаза: сервер их не сохраняет, а в статистику они не попадают.';
 
   @override
   String get useMyLocation => 'Использовать моё местоположение';
@@ -1144,7 +1144,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get locationPermissionRequiredBody =>
-      'Разрешите доступ для расчёта времени намаза. Координаты останутся на этом устройстве.';
+      'Разрешите доступ для расчёта времени намаза. Сервер IQRO координаты не сохраняет.';
 
   @override
   String get locationUnavailable => 'Не удалось определить местоположение';
@@ -1421,6 +1421,9 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get accountSwitchHint =>
       'Выйти и выбрать другой аккаунт Google или почту';
+
+  @override
+  String get accountSwitchHintEmail => 'Выйти и войти с другой почтой';
 
   @override
   String get devices => 'Устройства';
@@ -1864,6 +1867,12 @@ class AppLocalizationsRu extends AppLocalizations {
       'IQRO напомнит в выбранное время, даже когда приложение закрыто.';
 
   @override
+  String get notificationsForReminders => 'Уведомления для напоминаний';
+
+  @override
+  String get notificationsOff => 'Уведомления выключены';
+
+  @override
   String get allowNotifications => 'Разрешить уведомления';
 
   @override
@@ -1984,6 +1993,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'Короткий отклик при смене страницы Мусхафа. В Android также должна быть включена вибрация касаний.';
+
+  @override
+  String get readerHapticsHintIos =>
+      'Короткий отклик при смене страницы Мусхафа.';
 
   @override
   String get mushafPageCaching =>
@@ -3392,7 +3405,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get onboardingPrayerBody =>
-      'Чтобы считать время намаза и киблу, нужен ваш город. Координаты остаются на телефоне.';
+      'Чтобы считать время намаза и киблу, нужен ваш город. Сервер IQRO получает координаты только для расчёта и не сохраняет их.';
 
   @override
   String get onboardingUseLocation => 'Определить по геолокации';
@@ -3775,7 +3788,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get recitationNoticeVoice =>
-      'Голос распознаёт служба распознавания речи вашего телефона (Google или Apple). На старых телефонах звук идёт к ней через интернет. IQRO запись не хранит и на свой сервер не отправляет.';
+      'Голос распознаёт служба распознавания речи Apple: на самом устройстве, а если на нём нет арабского — через интернет. IQRO запись не хранит и на свой сервер не отправляет. Дальше система спросит два разрешения: на распознавание речи и на микрофон.';
 
   @override
   String get recitationNoticeLimits =>
@@ -3867,6 +3880,14 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get recitationUnavailable =>
       'Распознавание речи недоступно: на телефоне нет службы распознавания или микрофон не разрешён.';
+
+  @override
+  String get recitationDenied =>
+      'Нет доступа к микрофону или распознаванию речи. Включите их: «Настройки» → IQRO.';
+
+  @override
+  String get recitationDictationOff =>
+      'Диктовка выключена: включите её в «Настройки» → «Основные» → «Клавиатура».';
 
   @override
   String get recitationNoArabic =>

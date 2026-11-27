@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -17,6 +18,13 @@ enum RecitationTrouble {
 
   /// No recognition service, or the microphone is not allowed.
   unavailable,
+
+  /// iOS: the microphone or speech recognition is not allowed to the app
+  /// in the system's settings.
+  denied,
+
+  /// iOS: dictation is off, and Apple's recognition with it.
+  dictation,
 
   /// The reader is heard, and what is said is not taken for the word
   /// waited on: not a microphone that hears nothing.
@@ -41,7 +49,9 @@ void _log(String message) {
 /// followed by the next. Where the phone can recognise speech by itself
 /// (iOS, Android 12 and later) it is asked to, as that answers sooner than
 /// the network; if it has no model for Arabic the first listen fails and
-/// the rest go through the network.
+/// the rest go through the network. After an error the next listen waits
+/// longer each time: a recogniser that fails at once (no network, Apple's
+/// limit of requests) is not asked again and again.
 class RecitationListener {
   RecitationListener({required this.onHeard});
 
@@ -61,6 +71,40 @@ class RecitationListener {
   /// has heard a word; for as long as the app runs.
   static var _onDevice = false;
   static var _onDeviceHeard = false;
+
+  /// Whether the phone can recognise speech by itself; a test answers for
+  /// the phone.
+  @visibleForTesting
+  static Future<bool> Function() canAskOnDevice = _canAskOnDevice;
+
+  /// As at a fresh start of the app, for the next test.
+  @visibleForTesting
+  static void resetForTesting() {
+    _onDevice = false;
+    _onDeviceHeard = false;
+    canAskOnDevice = _canAskOnDevice;
+  }
+
+  static bool get _apple => defaultTargetPlatform == TargetPlatform.iOS;
+
+  /// Errors in a row since the last word heard: the pause before the next
+  /// listen grows with them.
+  var _failures = 0;
+
+  /// So many errors in a row on iOS are taken for the network: Apple's
+  /// codes do not say that it is down.
+  static const _failuresTold = 3;
+
+  /// The pause before the next listen, by the errors in a row.
+  static const _againAfter = <Duration>[
+    Duration(milliseconds: 150),
+    Duration(milliseconds: 150),
+    Duration(seconds: 1),
+    Duration(seconds: 3),
+    Duration(seconds: 8),
+    Duration(seconds: 20),
+  ];
+
   var _active = false;
   String? _locale;
   Timer? _again;
@@ -85,6 +129,14 @@ class RecitationListener {
       _log('failed to start: $error');
       return false;
     }
+    if (!identical(_current, this)) return false;
+    // iOS asks for speech recognition and then for the microphone; the
+    // package checks only the first after that, so a microphone refused,
+    // at the question or later in the settings, would be heard as silence.
+    if (_apple && !await _allowed()) {
+      if (identical(_current, this)) _trouble(RecitationTrouble.denied);
+      return false;
+    }
     if (!ready || !identical(_current, this)) return false;
     final locales = await _speech.locales();
     final arabic = locales
@@ -95,7 +147,7 @@ class RecitationListener {
         arabic.where((id) => id.toUpperCase().endsWith('SA')).firstOrNull ??
         arabic.firstOrNull ??
         'ar-SA';
-    if (!_onDeviceHeard) _onDevice = await _canAskOnDevice();
+    if (!_onDeviceHeard) _onDevice = await canAskOnDevice();
     if (!identical(_current, this)) return false;
     _active = true;
     _log(
@@ -160,6 +212,7 @@ class RecitationListener {
               _log('heard: $words');
               if (words.trim().isNotEmpty) {
                 _quiet = Duration.zero;
+                _failures = 0;
                 ear.value = (heard: words, deaf: false, trouble: null);
               }
               onHeard(words);
@@ -172,18 +225,45 @@ class RecitationListener {
               // A reader stops for breath: the listen goes on through it,
               // or the first words after it are lost.
               pauseFor: const Duration(seconds: 60),
+              // iOS keeps the phone still while it records unless told:
+              // the buzz of a word read wrongly is to be felt.
+              enableHapticFeedback: true,
             ),
           )
           .timeout(patience);
       _log('listen started');
       _listening = true;
       _lastSign = DateTime.now();
+    } on ListenFailedException catch (error) {
+      if (_onDevice && !_onDeviceHeard && _noArabicOnPhone(error)) {
+        // iOS with no Arabic of the phone's own: speech_to_text 7.4.0 says
+        // so, then listens all the same, through Apple's server (a request
+        // keeps to the phone only where the phone can). This listen runs;
+        // the next ones are asked of the network.
+        _log('no Arabic on the phone: through the network');
+        _onDevice = false;
+        _listening = true;
+        _lastSign = DateTime.now();
+      } else {
+        _listenFailed(error);
+      }
     } on Object catch (error) {
-      _log('listen failed: $error');
-      if (_active) _trouble(RecitationTrouble.unavailable);
+      _listenFailed(error);
     } finally {
       _starting = false;
     }
+  }
+
+  static bool _noArabicOnPhone(ListenFailedException error) =>
+      error.message?.contains('on device recognition is not supported') ??
+      false;
+
+  void _listenFailed(Object error) {
+    _log('listen failed: $error');
+    if (!_active) return;
+    _trouble(RecitationTrouble.unavailable);
+    _failures += 1;
+    _listenAgain();
   }
 
   /// Starts a listen when none runs, or when the one that should has been
@@ -219,6 +299,12 @@ class RecitationListener {
       _listening = true;
       return;
     }
+    // iOS: Apple's recogniser can no longer be reached; without Arabic on
+    // the phone it is reached over the network.
+    if (status == 'unavailable') {
+      _failures += 1;
+      if (!_onDevice) _trouble(RecitationTrouble.network);
+    }
     _listening = false;
     _listenAgain();
   }
@@ -227,23 +313,54 @@ class RecitationListener {
     if (!_active || _starting) return;
     final code = error.errorMsg;
     _log('error: $code');
-    // Silence is not a fault: the next listen starts.
-    final silence = code == 'error_no_match' || code == 'error_speech_timeout';
-    if (!silence && _onDevice && !_onDeviceHeard) {
+    // Silence is not a fault, nor a listen the app itself ended: the next
+    // listen starts.
+    final silence =
+        code == 'error_no_match' ||
+        code == 'error_speech_timeout' ||
+        code == 'error_request_cancelled';
+    if (!silence) _failures += 1;
+    final trouble = _troubleOf(code);
+    if (!silence &&
+        _onDevice &&
+        !_onDeviceHeard &&
+        trouble != RecitationTrouble.denied &&
+        trouble != RecitationTrouble.dictation) {
       // No model for Arabic on the phone: through the network from here.
       _onDevice = false;
-    } else if (code.contains('network') || code.contains('server')) {
+    } else if (trouble != null) {
+      _trouble(trouble);
+    } else if (_apple && _failures >= _failuresTold) {
       _trouble(RecitationTrouble.network);
-    } else if (code.contains('language')) {
-      _trouble(RecitationTrouble.language);
-    } else if (code.contains('permission') ||
-        code.contains('audio') ||
-        code.contains('not_available')) {
-      _trouble(RecitationTrouble.unavailable);
     }
     _listening = false;
     _listenAgain();
   }
+
+  /// What an error of the recogniser says, in Android's codes and iOS's
+  /// (speech_to_text 7.4.0 names Apple's numbers).
+  static RecitationTrouble? _troubleOf(String code) => switch (code) {
+    // 201: Siri and dictation are off.
+    'error_speech_recognizer_disabled' => RecitationTrouble.dictation,
+    // 1700: the request is not allowed.
+    'error_speech_recognizer_request_not_authorized' =>
+      RecitationTrouble.denied,
+    // 102: the phone's own Arabic is not installed.
+    'error_assets_not_installed' => RecitationTrouble.language,
+    // The microphone gave no sound to listen to.
+    'error_listen_failed' => RecitationTrouble.unavailable,
+    // The internet's own errors, by their negative numbers.
+    _ when code.startsWith('error_unknown (-1') => RecitationTrouble.network,
+    _ when code.contains('network') || code.contains('server') =>
+      RecitationTrouble.network,
+    _ when code.contains('language') => RecitationTrouble.language,
+    _
+        when code.contains('permission') ||
+            code.contains('audio') ||
+            code.contains('not_available') =>
+      RecitationTrouble.unavailable,
+    _ => null,
+  };
 
   void _trouble(RecitationTrouble trouble) {
     ear.value = (
@@ -253,10 +370,24 @@ class RecitationListener {
     );
   }
 
+  /// The microphone and speech recognition are both allowed (iOS).
+  Future<bool> _allowed() async {
+    try {
+      return await _speech.hasPermission;
+    } on Object catch (error) {
+      // Not known: the listen will tell.
+      _log('permission unknown: $error');
+      return true;
+    }
+  }
+
   void _listenAgain() {
     if (!_active) return;
     _again?.cancel();
-    _again = Timer(const Duration(milliseconds: 150), _listen);
+    _again = Timer(
+      _againAfter[math.min(_failures, _againAfter.length - 1)],
+      _listen,
+    );
   }
 }
 

@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../core/design_system/iqro_widgets.dart';
+import '../../core/share/content_share.dart' show iqroPublicSite;
 import 'analytics_consent.dart';
 import 'home_widgets_settings.dart';
 
@@ -69,7 +73,11 @@ class SettingsScreen extends ConsumerWidget {
                     key: const Key('settings-reader-haptics'),
                     icon: Icons.vibration_rounded,
                     title: context.l10n.readerHaptics,
-                    subtitle: context.l10n.readerHapticsHint,
+                    // Android's own switch of touch vibration is named on
+                    // Android alone (App Store 2.3.10).
+                    subtitle: defaultTargetPlatform == TargetPlatform.iOS
+                        ? context.l10n.readerHapticsHintIos
+                        : context.l10n.readerHapticsHint,
                     trailing: Switch.adaptive(
                       value: preferences.readerHaptics,
                       onChanged: ref
@@ -126,10 +134,14 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () => context.push('/settings/offline-storage'),
                   ),
                   const Divider(height: 1),
+                  // The privacy policy, always at hand (App Store 5.1.1(i)).
                   IqroListTile(
+                    key: const Key('settings-privacy'),
                     icon: Icons.privacy_tip_outlined,
                     title: context.l10n.privacy,
                     subtitle: context.l10n.prayerLocationPrivacy,
+                    trailing: const Icon(Icons.open_in_new),
+                    onTap: () => unawaited(_openPrivacyPolicy(context)),
                   ),
                   if (ref.read(analyticsProvider.notifier).available) ...[
                     const Divider(height: 1),
@@ -153,6 +165,15 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The policy on the site, in the app's language.
+Future<void> _openPrivacyPolicy(BuildContext context) async {
+  final locale = Localizations.localeOf(context).languageCode;
+  await launchUrl(
+    Uri.parse('$iqroPublicSite/$locale/privacy'),
+    mode: LaunchMode.externalApplication,
+  );
 }
 
 /// System, light, dark. The icons go when a label would not fit beside its

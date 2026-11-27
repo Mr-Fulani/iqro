@@ -74,6 +74,7 @@ class AppPreferences {
     this.playerHintShownAt,
     this.readerSwipeHintsShown = 0,
     this.recitationNoticeSeen = false,
+    this.notificationsAsked = false,
   });
 
   const AppPreferences.defaults()
@@ -108,7 +109,8 @@ class AppPreferences {
       playerHintsShown = 0,
       playerHintShownAt = null,
       readerSwipeHintsShown = 0,
-      recitationNoticeSeen = false;
+      recitationNoticeSeen = false,
+      notificationsAsked = false;
 
   final bool onboardingComplete;
   final String locale;
@@ -160,6 +162,11 @@ class AppPreferences {
   /// turned its microphone on.
   final bool recitationNoticeSeen;
 
+  /// The app has asked the system for notifications. iOS asks the reader
+  /// once: after an answer it gives the same one without asking, and only
+  /// its settings change it.
+  final bool notificationsAsked;
+
   AppPreferences copyWith({
     bool? onboardingComplete,
     String? locale,
@@ -193,6 +200,7 @@ class AppPreferences {
     DateTime? playerHintShownAt,
     int? readerSwipeHintsShown,
     bool? recitationNoticeSeen,
+    bool? notificationsAsked,
   }) {
     final nextListening =
         listeningRecitationId ??
@@ -238,6 +246,7 @@ class AppPreferences {
       readerSwipeHintsShown:
           readerSwipeHintsShown ?? this.readerSwipeHintsShown,
       recitationNoticeSeen: recitationNoticeSeen ?? this.recitationNoticeSeen,
+      notificationsAsked: notificationsAsked ?? this.notificationsAsked,
     );
   }
 }
@@ -386,6 +395,7 @@ class PreferencesStore {
           _preferences.getInt('reader_swipe_hint_count') ?? 0,
       recitationNoticeSeen:
           _preferences.getBool('recitation_notice_seen') ?? false,
+      notificationsAsked: _preferences.getBool('notifications_asked') ?? false,
       playerHintShownAt: DateTime.tryParse(
         _preferences.getString('player_hint_at') ?? '',
       ),
@@ -418,6 +428,7 @@ class PreferencesStore {
         'recitation_notice_seen',
         value.recitationNoticeSeen,
       ),
+      _preferences.setBool('notifications_asked', value.notificationsAsked),
       _preferences.setBool(
         'dua_show_transliteration',
         value.duaShowTransliteration,

@@ -1111,7 +1111,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get prayerWidgetManualIos =>
-      'Touch and hold the home screen, tap +, find IQRO, and add the widget.';
+      'Touch and hold an empty area of the Home Screen, then tap Edit → Add Widget (on iOS 17 and earlier, tap +). Find IQRO and add the widget.';
 
   @override
   String get prayerWidgetNeedsLocation =>
@@ -1119,7 +1119,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get prayerLocationPrivacy =>
-      'Your coordinates stay on this device and are never added to analytics.';
+      'Coordinates are sent to the IQRO server only to calculate prayer times: the server does not store them, and they never go into usage statistics.';
 
   @override
   String get useMyLocation => 'Use my location';
@@ -1140,7 +1140,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get locationPermissionRequiredBody =>
-      'Allow access once to calculate prayer times. Coordinates stay on this device.';
+      'Allow access once to calculate prayer times. The IQRO server does not store your coordinates.';
 
   @override
   String get locationUnavailable => 'Location could not be determined';
@@ -1417,6 +1417,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get accountSwitchHint =>
       'Sign out and choose another Google account or email';
+
+  @override
+  String get accountSwitchHintEmail =>
+      'Sign out and sign in with another email';
 
   @override
   String get devices => 'Devices';
@@ -1861,6 +1865,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'IQRO will remind you at the selected time, even when the app is closed.';
 
   @override
+  String get notificationsForReminders => 'Notifications for reminders';
+
+  @override
+  String get notificationsOff => 'Notifications are off';
+
+  @override
   String get allowNotifications => 'Allow notifications';
 
   @override
@@ -1981,6 +1991,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'A short pulse when the Mushaf page changes. Android touch feedback must also be enabled.';
+
+  @override
+  String get readerHapticsHintIos =>
+      'A short pulse when the Mushaf page changes.';
 
   @override
   String get mushafPageCaching =>
@@ -3367,7 +3381,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingPrayerBody =>
-      'To calculate prayer times and the qibla we need your city. Coordinates stay on your phone.';
+      'To calculate prayer times and the qibla we need your city. The IQRO server gets the coordinates only for the calculation and does not store them.';
 
   @override
   String get onboardingUseLocation => 'Detect my location';
@@ -3750,7 +3764,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recitationNoticeVoice =>
-      'Your voice is recognised by your phone\'s speech recognition service (Google or Apple). On older phones the sound goes to it over the internet. IQRO does not keep the recording and does not send it to its own server.';
+      'Your voice is recognised by Apple\'s speech recognition: on the device itself, or over the internet where the device has no Arabic of its own. IQRO does not keep the recording and does not send it to its own server. Next the system will ask for two permissions: speech recognition and the microphone.';
 
   @override
   String get recitationNoticeLimits =>
@@ -3844,6 +3858,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recitationUnavailable =>
       'Speech recognition is unavailable: the phone has no recognition service or the microphone is not allowed.';
+
+  @override
+  String get recitationDenied =>
+      'No access to the microphone or speech recognition. Turn them on in Settings → IQRO.';
+
+  @override
+  String get recitationDictationOff =>
+      'Dictation is off: turn it on in Settings → General → Keyboard.';
 
   @override
   String get recitationNoArabic =>

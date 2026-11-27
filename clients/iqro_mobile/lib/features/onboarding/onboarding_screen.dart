@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +41,9 @@ const _tourSlides = 4;
 
 /// First launch, and a replay from Settings. Every permission has "Later":
 /// nothing in the app depends on it, and nothing asks again on its own.
+/// On iOS the step before the system's question about notifications has one
+/// way on, to the question, where the reader can refuse (App Review 5.1.1,
+/// the Human Interface Guidelines on asking for permission).
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({
     super.key,
@@ -126,6 +130,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     unawaited(_load());
   }
 
+  /// iOS, which asks once: what the reader answered stands.
+  bool get _apple => defaultTargetPlatform == TargetPlatform.iOS;
+
   Future<void> _load() async {
     final services = ref.read(onboardingServicesProvider);
     try {
@@ -134,6 +141,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         setState(() {
           _notifications = status.permission;
           _remindersOn = status.prayerReminders;
+          _notificationsBlocked =
+              _apple &&
+              status.permission != ReminderPermission.granted &&
+              ref.read(appPreferencesProvider).notificationsAsked;
         });
       }
     } on Object {
@@ -178,6 +189,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         _step == OnboardingStep.reminderSound) {
       unawaited(_readSound());
     }
+    if (state == AppLifecycleState.resumed &&
+        _step == OnboardingStep.reminders &&
+        _notificationsBlocked) {
+      unawaited(_readNotifications());
+    }
+  }
+
+  /// Back from the settings, where notifications may have been let in.
+  Future<void> _readNotifications() async {
+    final ReminderPermission permission;
+    try {
+      permission = (await ref.read(onboardingServicesProvider).reminderStatus())
+          .permission;
+    } on Object {
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _notifications = permission;
+      _notificationsBlocked = permission != ReminderPermission.granted;
+    });
   }
 
   Future<void> _readSound() async {
@@ -307,13 +339,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   Future<void> _allowNotifications() => _run(() async {
     final services = ref.read(onboardingServicesProvider);
+    unawaited(
+      ref.read(appPreferencesProvider.notifier).markNotificationsAsked(),
+    );
     final permission = await services.requestNotifications();
     if (!mounted) return;
     setState(() {
       _notifications = permission;
       _notificationsBlocked = permission != ReminderPermission.granted;
     });
-    if (permission != ReminderPermission.granted) return;
+    if (permission != ReminderPermission.granted) {
+      // iOS: the answer is given, and the step does not ask again.
+      if (_apple) _advance();
+      return;
+    }
     if (_remindPrayers) {
       try {
         await services.enablePrayerReminders();
@@ -465,6 +504,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       permission: _notifications,
       blocked: _notificationsBlocked,
       onRemindPrayers: (value) => setState(() => _remindPrayers = value),
+      // iOS does not ask again: the way is through its settings.
+      onOpenSettings: _apple
+          ? ref.read(onboardingServicesProvider).openNotificationSettings
+          : null,
     ),
     OnboardingStep.exactReminders => const _ExactRemindersStep(),
     OnboardingStep.reminderSound => _ReminderSoundStep(
@@ -537,17 +580,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       ],
       OnboardingStep.reminders => <Widget>[
         primary(
-          _notifications == ReminderPermission.granted
+          _notifications == ReminderPermission.granted || _apple
               ? l10n.continueLabel
               : l10n.allowNotifications,
           _allowNotifications,
           key: const Key('onboarding-next'),
         ),
-        secondary(
-          l10n.onboardingLater,
-          _advance,
-          key: const Key('onboarding-later'),
-        ),
+        if (!_apple)
+          secondary(
+            l10n.onboardingLater,
+            _advance,
+            key: const Key('onboarding-later'),
+          ),
       ],
       OnboardingStep.exactReminders => <Widget>[
         primary(

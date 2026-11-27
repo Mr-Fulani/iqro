@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' show Geolocator;
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../app/providers.dart';
@@ -144,7 +145,8 @@ const _micOnColor = Color(0xFFB3261E);
 /// The ayah numbers on the paper: the app's gold, apart from the ink.
 const _markerColor = Color(0xFF9A6D22);
 
-class _FlowPageState extends ConsumerState<_FlowPage> {
+class _FlowPageState extends ConsumerState<_FlowPage>
+    with WidgetsBindingObserver {
   final _scrollController = ScrollController();
   final _viewportKey = GlobalKey();
   final _stackKey = GlobalKey();
@@ -205,6 +207,7 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _words = WordRangeController(ref)..addListener(_onWords);
     wordRangePulling.addListener(_onWords);
     _rubMark.addListener(_onRubMark);
@@ -235,8 +238,21 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     );
   }
 
+  // The microphone listens only while the text is in front of the reader:
+  // the app going to the background turns it off. (iOS would go on
+  // recording there, the app being one that may play audio in the
+  // background.)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      unawaited(_stopFollow());
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _markTimer?.cancel();
     _scriptTimer?.cancel();
     _followHintTimer?.cancel();
@@ -570,33 +586,49 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
     }
   }
 
+  /// Turns the microphone off: the plate goes and the screen may dim.
+  Future<void> _stopFollow() async {
+    final listening = _listener;
+    if (listening == null) return;
+    _missTimer?.cancel();
+    setState(() {
+      _listener = null;
+      _followWord = null;
+      _followWrong = false;
+    });
+    unawaited(WakelockPlus.disable());
+    await listening.stop();
+    listening.dispose();
+  }
+
   Future<void> _switchFollow(List<QuranAyah> items) async {
     // The microphone is found: no more hints.
     _followHintTimer?.cancel();
     _followHint = false;
-    final listening = _listener;
-    if (listening != null) {
-      _missTimer?.cancel();
-      setState(() {
-        _listener = null;
-        _followWord = null;
-        _followWrong = false;
-      });
-      unawaited(WakelockPlus.disable());
-      await listening.stop();
-      listening.dispose();
-      return;
-    }
+    if (_listener != null) return _stopFollow();
+    final apple = defaultTargetPlatform == TargetPlatform.iOS;
     // Before the first time: what happens to the voice, and what is and
-    // is not checked.
+    // is not checked. On iOS the system's questions come right after it,
+    // and it leads to them with no way round (App Review 5.1.1, the Human
+    // Interface Guidelines on asking for permission).
     if (!ref.read(appPreferencesProvider).recitationNoticeSeen) {
       final agreed = await showDialog<bool>(
         context: context,
-        builder: (context) => _RecitationNotice(onDevice: recitationByModel),
+        barrierDismissible: !apple,
+        builder: (context) =>
+            _RecitationNotice(onDevice: recitationByModel, single: apple),
       );
       if (agreed != true || !mounted) return;
       unawaited(
         ref.read(appPreferencesProvider.notifier).markRecitationNoticeSeen(),
+      );
+    }
+    // iOS: the microphone takes the app's one audio session, and a reciter
+    // playing would be heard as the reader. What plays pauses, as for a
+    // lesson's video; play sets the session back (ListeningMediaService).
+    if (apple) {
+      unawaited(
+        ref.read(audioControllerProvider.notifier).pauseForLessonVideo(),
       );
     }
     final words = <QuranWord>[];
@@ -646,15 +678,29 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
       on = await spare.start();
     }
     if (on || !mounted || !identical(_listener, listener)) return;
+    // iOS: the microphone or speech recognition was refused; it is let in
+    // again in the system's settings, which the message opens.
+    final denied = listener.ear.value.trouble == RecitationTrouble.denied;
     setState(() {
       _listener = null;
       _followWord = null;
     });
     unawaited(WakelockPlus.disable());
     listener.dispose();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(context.l10n.recitationUnavailable)));
+    final l10n = context.l10n;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          denied ? l10n.recitationDenied : l10n.recitationUnavailable,
+        ),
+        action: denied
+            ? SnackBarAction(
+                label: l10n.settings,
+                onPressed: () => unawaited(Geolocator.openAppSettings()),
+              )
+            : null,
+      ),
+    );
   }
 
   void _onHeard(String transcript) {
@@ -848,6 +894,16 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
         ? null
         : mushafPageOfAyah(versePages, widget.surah, _ayah, current.pages);
     final language = Localizations.localeOf(context).languageCode;
+    final hint = items.isEmpty
+        ? null
+        : IgnorePointer(
+            child: AnimatedOpacity(
+              key: const ValueKey('reader-flow-follow-hint'),
+              opacity: _followHint ? 1 : 0,
+              duration: const Duration(milliseconds: 300),
+              child: RecitationHint(text: context.l10n.recitationHint),
+            ),
+          );
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -867,19 +923,24 @@ class _FlowPageState extends ConsumerState<_FlowPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: <Widget>[
-                      if (items.isNotEmpty)
-                        Flexible(
-                          child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              key: const ValueKey('reader-flow-follow-hint'),
-                              opacity: _followHint ? 1 : 0,
-                              duration: const Duration(milliseconds: 300),
-                              child: RecitationHint(
-                                text: context.l10n.recitationHint,
-                              ),
-                            ),
+                      // iPhone has no system Back: the swipe to the left is
+                      // not the only way out.
+                      if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                        IconButton(
+                          key: const ValueKey('reader-flow-back'),
+                          tooltip: context.l10n.back,
+                          onPressed: _leave,
+                          color: mushafInkColor,
+                          icon: const BackButtonIcon(),
+                        ),
+                        Expanded(
+                          child: Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: hint,
                           ),
                         ),
+                      ] else if (hint != null)
+                        Flexible(child: hint),
                       if (items.isNotEmpty)
                         RecitationMicPulse(
                           key: const ValueKey('reader-flow-follow-pulse'),
@@ -1415,6 +1476,8 @@ class _FollowEar extends StatelessWidget {
             RecitationTrouble.network => l10n.recitationNoNetwork,
             RecitationTrouble.language => l10n.recitationNoArabic,
             RecitationTrouble.unavailable => l10n.recitationUnavailable,
+            RecitationTrouble.denied => l10n.recitationDenied,
+            RecitationTrouble.dictation => l10n.recitationDictationOff,
             _ when reason != null => reason,
             RecitationTrouble.unrecognised => l10n.recitationNotRecognised,
             null when value.deaf =>
@@ -1466,10 +1529,13 @@ class _FollowEar extends StatelessWidget {
 /// What the recitation check does with the voice and what it checks,
 /// before its microphone is turned on for the first time.
 class _RecitationNotice extends StatelessWidget {
-  const _RecitationNotice({required this.onDevice});
+  const _RecitationNotice({required this.onDevice, required this.single});
 
   /// The model on the phone listens, not the phone's speech recognition.
   final bool onDevice;
+
+  /// One way on, to the system's questions (iOS): no Cancel.
+  final bool single;
 
   @override
   Widget build(BuildContext context) {
@@ -1510,14 +1576,15 @@ class _RecitationNotice extends StatelessWidget {
         ),
       ),
       actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.cancel),
-        ),
+        if (!single)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
         FilledButton(
           key: const ValueKey('recitation-notice-start'),
           onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l10n.recitationNoticeStart),
+          child: Text(single ? l10n.continueLabel : l10n.recitationNoticeStart),
         ),
       ],
     );
