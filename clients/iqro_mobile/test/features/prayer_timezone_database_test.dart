@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/auth/account_scope.dart';
@@ -102,6 +105,31 @@ void main() {
     // iPhone rings at this moment.
     expect(monday.toUtc(), DateTime.utc(2026, 11, 30, 20));
   });
+
+  test('the app and the server use the same IANA release', () {
+    // The server pins tzdata YYYY.N, the N-th IANA release of the year:
+    // 2026.5 is 2026e. Mobile CI also runs when that pin changes.
+    final pin = RegExp(r'"tzdata==(\d{4})\.(\d+)"').firstMatch(
+      File('../../services/backend/pyproject.toml').readAsStringSync(),
+    );
+    expect(pin, isNotNull, reason: 'tzdata pin in pyproject.toml');
+    final server =
+        '${pin![1]}${String.fromCharCode(0x60 + int.parse(pin[2]!))}';
+    // flutter_tester cannot resolve package URIs; pub get wrote this file.
+    final config = File('.dart_tool/package_config.json').absolute;
+    final package =
+        ((jsonDecode(config.readAsStringSync()) as Map)['packages'] as List)
+            .cast<Map<String, Object?>>()
+            .firstWhere((item) => item['name'] == 'timezone');
+    final library = config.uri
+        .resolve('${package['rootUri']}/')
+        .resolve('${package['packageUri']}data/latest_all.dart');
+    final app = RegExp(
+      r'Timezone data version: (\w+)',
+    ).firstMatch(File.fromUri(library).readAsStringSync())?[1];
+
+    expect(app, server);
+  });
 }
 
 class _Place {
@@ -153,7 +181,7 @@ final _catalog = <String, Object?>{
     'id': localPrayerEngineId,
     'version': localPrayerEngineVersion,
   },
-  'timezone_database_version': '2026.3',
+  'timezone_database_version': '2026.5',
   'methods': <Object?>[
     <String, Object?>{
       'id': '00000000-0000-4000-8000-000000000001',

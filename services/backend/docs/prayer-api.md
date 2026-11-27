@@ -59,6 +59,11 @@ Karachi, Umm al-Qura, Dubai, Moonsighting Committee, ISNA/North America, Kuwait 
 - источник и его SHA-256;
 - checksum всей нормализованной конфигурации.
 
+Release `2026.2` (миграция `0006_release_tzdb_2026e`) — те же девять методов на `tzdata` 2026.5
+(IANA 2026e). Конфигурации перешли в него со своими ID и checksum, а в `2026.1` остались их
+копии с теми же checksum, поэтому manifest `2026.1` по-прежнему сходится. ID, сохранённые
+приложением, сайтом, профилями и Web Push, не изменились.
+
 Клиент не должен зашивать UUID или параметры метода в код. Он выбирает `id` из актуального
 каталога, кеширует документ целиком и при расчёте передаёт его checksum. Это защищает от
 незаметного использования конфигурации, отличной от той, которую видел пользователь.
@@ -67,14 +72,14 @@ Karachi, Umm al-Qura, Dubai, Moonsighting Committee, ISNA/North America, Kuwait 
 
 ```json
 {
-  "catalog_version": "2026.1",
+  "catalog_version": "2026.2",
   "configuration_schema_version": 1,
   "algorithm": {
     "id": "adhan-js-python-adapter",
     "version": "4.4.4-quran.1-adhanpy.1.0.5",
     "upstream": "a6f1a5c4a00105103f310ef18200b95f7184d2e7"
   },
-  "timezone_database_version": "2026.3",
+  "timezone_database_version": "2026.5",
   "checksum_sha256": "...",
   "methods": []
 }
@@ -139,11 +144,11 @@ Checksum формально опционален для совместимост
 {
   "date": "2026-08-09",
   "timezone": "Etc/UTC",
-  "timezone_database_version": "2026.3",
+  "timezone_database_version": "2026.5",
   "method": {
     "id": "b83b0ed4-5aa5-5ce3-b480-e0b9e2ad8850",
     "code": "muslim-world-league",
-    "catalog_version": "2026.1",
+    "catalog_version": "2026.2",
     "checksum_sha256": "..."
   },
   "algorithm": {
@@ -220,10 +225,11 @@ Checksum формально опционален для совместимост
 Часовые пояса загружаются только из закреплённого Python wheel `tzdata`, а не из базы
 операционной системы. Поэтому результат воспроизводим между контейнерами. Версия tzdb
 возвращается в каталоге и каждом расчёте; локальный движок Flutter обязан использовать ту
-же версию либо считать себя несовместимым. Приложение эту версию пока не сверяет; какая база
-в нём сейчас и чем она отличается от серверной — в `clients/iqro_mobile/README.md`. Offset
-вычисляется для каждого события отдельно, что сохраняет корректность на переходах DST и при
-изменении исторических правил.
+же версию либо считать себя несовместимым. Во время работы приложение версию не сверяет:
+одинаковую версию IANA в пакете `timezone` и в пине `tzdata` проверяет в CI тест
+`clients/iqro_mobile/test/features/prayer_timezone_database_test.dart` (Mobile CI запускается и
+при правке `services/backend/pyproject.toml`). Offset вычисляется для каждого события
+отдельно, что сохраняет корректность на переходах DST и при изменении исторических правил.
 
 ## High latitude и polar circle
 
@@ -303,7 +309,10 @@ Python package `adhanpy==1.0.5` используется только как а�
 методологических решений. Orchestration, high-latitude/polar поведение, округление,
 seasonal twilight и исправление international date line закреплены в локальном движке и
 сравниваются golden-тестами с Adhan JS 4.4.4. Обновлять `adhanpy`, Adhan или tzdata без
-новой версии алгоритма/release и повторной дифференциальной проверки запрещено.
+новой версии алгоритма/release и повторной дифференциальной проверки запрещено. Для tzdata
+новый release делает миграция по образцу `0006_release_tzdb_2026e`: конфигурации переходят в
+него со своими ID, в прежнем release остаются их копии с теми же checksum, а пакет `timezone`
+в приложении обновляется до той же версии IANA в том же выпуске.
 
 ## Ограничения MVP
 
