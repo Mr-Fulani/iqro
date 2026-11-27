@@ -17,7 +17,7 @@ on:
       - "clients/iqro_mobile/**"
       - ".github/workflows/ios-simulators.yml"
   push:
-    branches: [main, claude/ios-native-ci-48c512]  # TEMP: only main once the pull request exists
+    branches: [main]
     paths:
       - "clients/iqro_mobile/**"
       - ".github/workflows/ios-simulators.yml"

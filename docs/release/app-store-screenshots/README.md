@@ -2,7 +2,8 @@
 
 Набор для App Store Connect: те же 8 экранов, что во втором наборе Google Play
 ([play-store-screenshots](../play-store-screenshots/README.md)), но с симулятора iPhone и в размере
-Apple. В App Store Connect ещё не загружались: аккаунта Apple Developer пока нет.
+Apple. Снято 27.11.2026 (workflow `App Store screenshots`, зелёный прогон). В App Store Connect ещё
+не загружались.
 
 ## Набор
 

@@ -17,8 +17,6 @@ on:
         required: false
         type: boolean
         default: false
-  push:  # TEMP before the pull request: remove
-    branches: [claude/ios-native-ci-48c512]
   pull_request:
     paths:
       - "clients/iqro_mobile/integration_test/store_screenshots_test.dart"
