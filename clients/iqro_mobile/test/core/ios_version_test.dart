@@ -18,7 +18,10 @@ void main() {
         .listSync(recursive: true)
         .whereType<File>()
         .where((file) => file.path.endsWith('.dart'))
-        .where((file) => file.readAsStringSync().contains('.iosInfo'))
+        .where((file) {
+          final text = file.readAsStringSync();
+          return text.contains('.iosInfo') || text.contains('.deviceInfo');
+        })
         .map((file) => file.path)
         .toList();
     expect(callers, isEmpty);

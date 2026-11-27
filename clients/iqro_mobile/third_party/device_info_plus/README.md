@@ -19,8 +19,9 @@ app reads the iOS version from `Platform.operatingSystemVersion` instead
 (`lib/core/platform/ios_version.dart`). Android keeps the plugin exactly as before:
 the Android SDK level, the Android version and the emulator check.
 
-`DeviceInfoPlugin().iosInfo` therefore throws `MissingPluginException` on iOS; the app must
-not call it (`test/core/ios_configuration_test.dart` checks this). The CI step
+`DeviceInfoPlugin().iosInfo` (and `deviceInfo`, which returns it on iOS) therefore throws
+`MissingPluginException` on iOS; the app must not call them (`test/core/ios_version_test.dart`
+checks this). The CI step
 `ios/scripts/check_privacy_manifests.py` checks the built `Runner.app` for undeclared
 required-reason APIs.
 
@@ -28,4 +29,5 @@ required-reason APIs.
 
 Copy `lib/`, `android/` and `LICENSE` from the new upstream version, keep this
 `pubspec.yaml` (update its version and dependencies from upstream), then run
-`flutter pub get` and, in `ios/`, `pod install`.
+`flutter pub get`. This package has no iOS pod, so `ios/Podfile.lock` does not change; when
+it must, use the pinned CocoaPods: `cd ios && bundle exec pod install`.

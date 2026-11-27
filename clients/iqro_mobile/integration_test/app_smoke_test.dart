@@ -78,16 +78,13 @@ Future<void> _home(IqroHarness harness) async {
 }
 
 Future<void> _announcement(IqroHarness harness) async {
+  // Only noted, not opened: opening sends an iOS "open" and a read receipt to
+  // the production statistics.
   final bubble = find.byKey(const ValueKey('announcement-bubble'));
-  if (bubble.evaluate().isEmpty) {
-    debugPrint('IQRO STEP announcement skipped: none is active');
-    return;
-  }
-  await harness.tap(bubble, what: 'the announcement bubble');
-  final close = find.byKey(const ValueKey('announcement-close'));
-  await harness.waitFor(close, what: 'the announcement');
-  await harness.step('announcement');
-  await harness.tap(close, what: 'the announcement close button');
+  debugPrint(
+    'IQRO NOTE announcement bubble '
+    '${bubble.evaluate().isEmpty ? 'not shown' : 'shown'}',
+  );
 }
 
 Future<void> _quran(IqroHarness harness) async {

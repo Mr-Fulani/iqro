@@ -227,8 +227,8 @@ void main() {
     expect(await background(TargetPlatform.android), const Color(0xFFE6D8BF));
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-    // Android's launch screen follows the system theme; the iOS one is light.
+    // Both native launch screens follow the system theme.
     expect(await background(TargetPlatform.android), const Color(0xFF071A16));
-    expect(await background(TargetPlatform.iOS), const Color(0xFFE6D8BF));
+    expect(await background(TargetPlatform.iOS), const Color(0xFF071A16));
   });
 }

@@ -2,7 +2,7 @@ name: iOS release
 
 # Signs the iPhone/iPad app for the App Store and uploads it to App Store
 # Connect, where it appears in TestFlight. Started by hand from main only.
-# Setup and secrets: docs/release/app-store.md, section 4.
+# Setup and secrets: docs/release/app-store.md, «Восемь значений в GitHub».
 
 on:
   workflow_dispatch:
@@ -64,7 +64,7 @@ jobs:
             [ -n "${!name}" ] || missing+=("$name")
           done
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::error::Missing signing settings: ${missing[*]} (see docs/release/app-store.md, section 4)"
+            echo "::error::Missing signing settings: ${missing[*]} (see docs/release/app-store.md, «Восемь значений в GitHub»)"
             exit 1
           fi
       - uses: actions/checkout@v4

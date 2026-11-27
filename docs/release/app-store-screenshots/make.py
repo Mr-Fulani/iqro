@@ -39,6 +39,9 @@ FONT = '-apple-system, "SF Pro Display", "SF Arabic", "Geeza Pro", "Helvetica Ne
 def import_screens(artifact: Path) -> None:
     for language in LANGUAGES:
         source = artifact / language
+        log = (source / "test.log").read_text(errors="replace") if (source / "test.log").is_file() else ""
+        if "All tests passed" not in log or f"IQRO LOCALE {language}" not in log:
+            sys.exit(f"{source}: not a passed {language} run (test.log); take a green workflow run")
         shots = sorted(source.glob("[0-9][0-9]-*.png"))
         shots = [shot for shot in shots if "-timeout-" not in shot.name]
         if len(shots) != 8:

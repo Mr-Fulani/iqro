@@ -87,13 +87,16 @@ jobs:
           --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
       - name: Screenshots in four languages
         if: ${{ env.SKIP != 'true' }}
+        timeout-minutes: 70
         env:
           TYPES: ${{ matrix.types }}
         run: |
           id="$(ios/scripts/simulator_run.sh create "$TYPES")"
           status=0
-          # First a run that only chooses the city and opens the active
-          # announcement, so every language below starts from the same Home.
+          # flutter drive reinstalls the app for every run; only the guest
+          # session (Keychain) and what the server keeps carry over. A first
+          # run opens the active announcement once, so the server marks it read
+          # and Home shows no announcement bubble in the language runs.
           IQRO_LOCALE=ru IQRO_MODE=setup ios/scripts/simulator_run.sh test "$id" \
             build/ios/iphonesimulator/Runner.app \
             integration_test/store_screenshots_test.dart "$OUT/setup" || status=$?

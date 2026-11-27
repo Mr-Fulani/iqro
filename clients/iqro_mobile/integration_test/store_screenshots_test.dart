@@ -1,8 +1,9 @@
 // The App Store screenshots: the eight screens of the Google Play set
 // (docs/release/play-store-screenshots/README.md) in one language, on the
 // simulator the "App Store screenshots" workflow starts. The language comes
-// from IQRO_LOCALE; the runs share one install, so the account and the city
-// carry over from one language to the next.
+// from the driver (IQRO_LOCALE). flutter drive reinstalls the app for every
+// run: only the guest session in the Keychain and what the server keeps carry
+// over, so each run chooses the city again.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/app_shell.dart';
@@ -240,5 +241,5 @@ Future<void> _showMushafControls(IqroHarness harness, int number) async {
       return;
     }
   }
-  debugPrint('IQRO NOTE the Mushaf bars did not open');
+  throw TestFailure('The Mushaf bars did not open for screen 8');
 }
