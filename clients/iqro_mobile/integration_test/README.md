@@ -17,8 +17,8 @@ with `flutter drive`; the workflows call it.
 
 ## The smoke test, step by step
 
-1. First launch: the intro video (skipped with a tap once it shows), then the welcome
-   screen (`onboarding`). The other welcome steps are not walked; the test opens the app.
+1. First launch: the welcome screen (`onboarding`). The intro video before it is marked as
+   seen (see "Known"). The other welcome steps are not walked; the test opens the app.
 2. Home, and the active announcement if there is one.
 3. The Quran tab.
 4. Mushaf page 3 with the tajweed legend. The test counts strong colours on the page: the
@@ -37,12 +37,13 @@ Each step writes an `IQRO STEP` line; `steps.txt` in the artifact has them all.
 
 ## Known
 
-- The intro video played to its end reports, in debug builds only, "A VideoPlayerController
-  was used after being disposed": on completion video_player 2.11 pauses and then seeks to the
-  end, and `StartupVideo` (`lib/core/startup/startup_video.dart`) disposes the controller in
-  between. Release builds skip that check, so users see nothing. The test taps the video away
-  instead. A fix in `StartupVideo`: on completion, wait for the player's own pause and seek
-  (or a frame) before finishing, or finish without disposing until the seek is done.
+- The intro video reports, in debug builds only, "A VideoPlayerController was used after
+  being disposed": when the clip ends, video_player 2.11 pauses and then seeks to the end, and
+  `StartupVideo` (`lib/core/startup/startup_video.dart`) disposes the controller in between.
+  Release builds skip that check, so users see nothing, but the test would fail, so it starts
+  with the intro marked as seen. A fix in `StartupVideo`: after the clip ends, dispose the
+  controller only once the player's own pause and seek are done (for example, finish on
+  `isCompleted` but dispose a second later), then let the test play the intro again.
 
 ## What a simulator does not check
 

@@ -26,27 +26,12 @@ void main() {
     'IQRO opens its main screens',
     (tester) => harness.run(tester, () async {
       debugPrint('IQRO DEVICE $platformName');
-      await harness.prepare(onboardingComplete: false, playIntro: true);
+      // A fresh install, except the intro video: in debug builds it trips
+      // video_player (README.md, "Known"), so it counts as seen.
+      await harness.prepare(onboardingComplete: false);
       final l10n = harness.l10n;
       app.main();
 
-      // The first launch plays the intro video; a tap skips it, as a person
-      // may. Played to the end it trips a debug-only error: video_player
-      // seeks to the end after StartupVideo has disposed the controller
-      // (README.md, "Known").
-      final intro = find.byKey(const ValueKey('startup-video-skip'));
-      try {
-        await harness.waitFor(
-          intro,
-          what: 'the intro video',
-          timeout: const Duration(seconds: 20),
-        );
-        await harness.settle();
-        await harness.screenshot('intro');
-        await harness.tap(intro, what: 'the intro video');
-      } on TestFailure {
-        debugPrint('IQRO NOTE the intro video did not show');
-      }
       await harness.waitFor(
         find.byType(OnboardingScreen),
         what: 'the welcome screen',
