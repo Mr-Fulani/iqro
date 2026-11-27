@@ -1,3 +1,4 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/notifications/notification_gateway.dart';
@@ -164,8 +165,7 @@ void main() {
   });
 
   test('prayer horizon respects Android continuity and iOS pending cap', () {
-    expect(prayerSchedulingHorizonDays(isIOS: false), 32);
-    expect(prayerSchedulingHorizonDays(isIOS: true), 8);
+    expect(prayerSchedulingHorizonDays, 32);
 
     final candidates = List<int>.generate(80, (index) => index);
     expect(
@@ -175,6 +175,167 @@ void main() {
     expect(
       limitPendingNotificationPlan(candidates, isIOS: false),
       orderedEquals(candidates),
+    );
+  });
+
+  test(
+    'on iOS weekly reminders keep their places and prayers fill the rest',
+    () {
+      // 160 prayers in time order (0-159) and two weekly reminders whose next
+      // time is late (500, 501): each repeats and takes one place for good.
+      final candidates = <int>[
+        ...List<int>.generate(160, (index) => index),
+        500,
+        501,
+      ];
+      bool weekly(int item) => item >= 500;
+
+      final kept = limitPendingNotificationPlan(
+        candidates,
+        isIOS: true,
+        repeats: weekly,
+        reserved: 1,
+      );
+
+      expect(kept, hasLength(63));
+      expect(kept.where(weekly), <int>[500, 501]);
+      // One place stays for the note that the prayer reminders run out.
+      expect(
+        kept.where((item) => !weekly(item)),
+        List<int>.generate(61, (i) => i),
+      );
+      expect(
+        limitPendingNotificationPlan(
+          candidates,
+          isIOS: false,
+          repeats: weekly,
+          reserved: 1,
+        ),
+        orderedEquals(candidates),
+      );
+    },
+  );
+
+  test('the note that prayer reminders run out comes a day ahead', () {
+    final now = tz.TZDateTime.utc(2026, 11, 27, 10);
+    final last = tz.TZDateTime.utc(2026, 12, 9, 19, 2);
+    expect(
+      prayerPlanEndNoticeTime(last, now: now),
+      tz.TZDateTime.utc(2026, 12, 8, 19, 2),
+    );
+    // Not at the minute of the day before's adhan, nor near another reminder.
+    expect(
+      prayerPlanEndNoticeTime(
+        last,
+        now: now,
+        planned: <tz.TZDateTime>[
+          tz.TZDateTime.utc(2026, 12, 8, 19, 2),
+          tz.TZDateTime.utc(2026, 12, 8, 19, 5),
+          last,
+        ],
+      ),
+      tz.TZDateTime.utc(2026, 12, 8, 19, 8),
+    );
+    // Not a few minutes before an adhan either: Doze would hold it back.
+    expect(
+      prayerPlanEndNoticeTime(
+        tz.TZDateTime.utc(2026, 12, 9, 18, 57),
+        now: now,
+        planned: <tz.TZDateTime>[tz.TZDateTime.utc(2026, 12, 8, 19)],
+      ),
+      tz.TZDateTime.utc(2026, 12, 8, 19, 3),
+    );
+    // A plan shorter than a day: after its last reminder.
+    final soon = tz.TZDateTime.utc(2026, 11, 27, 22);
+    expect(
+      prayerPlanEndNoticeTime(soon, now: now, planned: <tz.TZDateTime>[soon]),
+      tz.TZDateTime.utc(2026, 11, 27, 22, 2),
+    );
+  });
+
+  test('a daily reminder is one request at its next time', () {
+    final location = tz.getLocation('Europe/Berlin');
+    final before = tz.TZDateTime(location, 2026, 3, 28, 9);
+    expect(
+      nextDailyOccurrence(location: location, hour: 8, minute: 15, now: before),
+      tz.TZDateTime(location, 2026, 3, 29, 8, 15),
+    );
+    // The clock moved to summer time that night; the time of day stays.
+    expect(
+      nextDailyOccurrence(
+        location: location,
+        hour: 8,
+        minute: 15,
+        now: before,
+      ).hour,
+      8,
+    );
+    expect(
+      nextDailyOccurrence(location: location, hour: 20, minute: 0, now: before),
+      tz.TZDateTime(location, 2026, 3, 28, 20),
+    );
+    // 02:30 does not exist on the night the clock moves forward: the daily
+    // request starts the day after, keeping 02:30.
+    expect(
+      nextDailyOccurrence(location: location, hour: 2, minute: 30, now: before),
+      tz.TZDateTime(location, 2026, 3, 30, 2, 30),
+    );
+    expect(reminderRunsEveryDay(127), isTrue);
+    expect(reminderRunsEveryDay(127 & ~(1 << 4)), isFalse);
+  });
+
+  test('only the sounding reminder at the prayer time is Time Sensitive', () {
+    ReminderRule rule({
+      ReminderType type = ReminderType.prayer,
+      int offset = 0,
+      ReminderSignal signal = ReminderSignal.sound,
+    }) => ReminderRule(
+      id: '01900000-0000-7000-8000-000000000003',
+      type: type,
+      schedule: ReminderSchedule.prayer(
+        prayerEvent: 'fajr',
+        prayerOffsetMinutes: offset,
+      ),
+      weekdaysMask: 127,
+      timezoneMode: ReminderTimezoneMode.deviceLocal,
+      signal: signal,
+      isEnabled: true,
+      revision: 0,
+      clientUpdatedAt: DateTime.utc(2026, 11, 27),
+    );
+
+    expect(isPrayerCall(rule()), isTrue);
+    expect(isPrayerCall(rule(offset: -10)), isFalse);
+    expect(isPrayerCall(rule(signal: ReminderSignal.vibration)), isFalse);
+    expect(isPrayerCall(rule(signal: ReminderSignal.silent)), isFalse);
+    expect(isPrayerCall(rule(type: ReminderType.quranReview)), isFalse);
+
+    expect(
+      reminderNotificationDetails(
+        ReminderSignal.sound,
+        ReminderAdhan.makkah,
+        timeSensitive: true,
+      ).iOS!.interruptionLevel,
+      InterruptionLevel.timeSensitive,
+    );
+    expect(
+      reminderNotificationDetails(
+        ReminderSignal.sound,
+        ReminderAdhan.none,
+      ).iOS!.interruptionLevel,
+      isNull,
+    );
+  });
+
+  test('the note has copy in every app language', () {
+    for (final locale in <String>['ru', 'en', 'ar', 'tr', 'de']) {
+      final copy = ReminderNotificationCopy.forLocale(locale);
+      expect(copy.planEndTitle, isNotEmpty);
+      expect(copy.planEndBody, contains('IQRO'));
+    }
+    expect(
+      ReminderNotificationCopy.forLocale('ru').planEndBody,
+      'Откройте IQRO, чтобы они приходили дальше.',
     );
   });
 }
