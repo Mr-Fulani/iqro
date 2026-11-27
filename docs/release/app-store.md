@@ -600,9 +600,11 @@ Android. Новые снимки на 4 языках делает сессия i
 1. App Store Connect → IQRO → версия iOS → в **Build** выберите сборку из TestFlight.
 2. Проверьте, что заполнены App Privacy, Age Rating, App Review Information, цена и страны,
    статус трейдера.
-3. **Add for Review** → **Submit to App Review**.
-4. Выпуск — вручную после одобрения (**Manually release this version**): так iPhone и
-   Android выйдут в один день.
+3. В разделе **App Store Version Release** выберите **Manually release this version**: так
+   iPhone и Android выйдут в один день.
+4. **Add for Review** → **Submit for Review**. Статус станет **In Review**.
+5. После одобрения статус — **Pending Developer Release**. В день выпуска: версия →
+   **Release This Version** → подтвердить. В App Store она появится в течение суток.
 
 Apple обычно отвечает за 1–2 дня: половину заявок проверяет меньше чем за сутки, 90 % —
 меньше чем за двое. Заложите один-два круга: первые отказы чаще всего по правилу 2.1
