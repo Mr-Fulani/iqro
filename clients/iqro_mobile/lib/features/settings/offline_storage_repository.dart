@@ -4,6 +4,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_download_resume.dart';
+import '../../core/storage/offline_package_paths.dart';
 import '../../core/storage/offline_package_queries.dart';
 
 const _mushafPackageType = 'mushaf_pages';
@@ -114,18 +116,26 @@ class OfflineStorageRepository {
         _mushafPackageType => await readOfflineMushafSummary(
           _database.database,
           packageId,
+          supportPath: support.path,
         ),
         _ => const <String, Object?>{},
       };
       var usedBytes = 0;
       final directory = _packageDirectory(support, packageType, packageId);
       if (directory != null) usedBytes = await _directoryBytes(directory);
+      final status = row['status']?.toString() ?? 'failed';
       result.add(
         OfflinePackageSummary(
           packageId: packageId,
           packageType: packageType,
           contentKey: row['content_key']?.toString() ?? '',
-          status: row['status']?.toString() ?? 'failed',
+          // A download cut off when the app was closed can be retried or
+          // deleted like a failed one.
+          status:
+              status == 'downloading' &&
+                  !liveOfflineDownloads.contains(packageId)
+              ? 'failed'
+              : status,
           active: row['is_active'] == 1,
           completedItems: (row['completed_items'] as num?)?.toInt() ?? 0,
           totalItems: (row['total_items'] as num?)?.toInt() ?? 0,
@@ -157,7 +167,8 @@ class OfflineStorageRepository {
     if (!_knownPackageTypes.contains(packageType)) {
       throw const FormatException('Offline package type is invalid');
     }
-    if (previousStatus == 'downloading') {
+    if (previousStatus == 'downloading' &&
+        liveOfflineDownloads.contains(packageId)) {
       throw StateError('An active offline download cannot be deleted');
     }
     final support = await _supportDirectory();
@@ -173,9 +184,12 @@ class OfflineStorageRepository {
     );
     final expectedDirectory = p.normalize(directory.absolute.path);
     for (final item in itemRows) {
-      final localPath = p.normalize(item['local_path']?.toString() ?? '');
-      if (localPath.isEmpty ||
-          !p.equals(p.dirname(p.absolute(localPath)), expectedDirectory)) {
+      final localPath = resolveOfflinePackageItemPath(
+        support.path,
+        item['local_path']?.toString() ?? '',
+      );
+      if (localPath == null ||
+          !p.equals(p.dirname(localPath), expectedDirectory)) {
         throw const FormatException('Offline package contains an unsafe path');
       }
     }

@@ -11,7 +11,9 @@ import '../../core/network/api_client.dart';
 import '../../core/network/public_asset_uri.dart';
 import '../../core/platform/backup_exclusion.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_download_resume.dart';
 import '../../core/storage/offline_package_items.dart';
+import '../../core/storage/offline_package_paths.dart';
 import '../../core/storage/offline_package_queries.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
@@ -308,33 +310,36 @@ class MushafOfflineRepository {
     await BackupExclusion.exclude(
       Directory(p.join(support.path, 'offline_packages')),
     );
-    await _preparePackage(manifest, packageDirectory);
+    await _preparePackage(manifest);
 
     var completedPages = 0;
     var completedBytes = 0;
+    liveOfflineDownloads.add(manifest.packageId);
     try {
       for (final page in manifest.pages) {
         final destination = File(p.join(packageDirectory.path, page.fileName));
         if (!await verifyMushafAssetFile(destination, page)) {
           final partial = File('${destination.path}.part');
-          await _api.downloadPublicFile(
-            page.url,
-            partial,
-            allowedHosts: _approvedMushafAssetHosts,
-            expectedBytes: page.bytes,
-            maxBytes: 4 * 1024 * 1024,
-            onProgress: (received, total) {
-              onProgress?.call(
-                MushafDownloadSnapshot(
-                  status: MushafDownloadStatus.downloading,
-                  packageId: manifest.packageId,
-                  completedPages: completedPages,
-                  totalPages: manifest.pages.length,
-                  downloadedBytes: completedBytes + received,
-                  totalBytes: manifest.totalBytes,
-                ),
-              );
-            },
+          await retryOfflineFileAfterBackground(
+            () => _api.downloadPublicFile(
+              page.url,
+              partial,
+              allowedHosts: _approvedMushafAssetHosts,
+              expectedBytes: page.bytes,
+              maxBytes: 4 * 1024 * 1024,
+              onProgress: (received, total) {
+                onProgress?.call(
+                  MushafDownloadSnapshot(
+                    status: MushafDownloadStatus.downloading,
+                    packageId: manifest.packageId,
+                    completedPages: completedPages,
+                    totalPages: manifest.pages.length,
+                    downloadedBytes: completedBytes + received,
+                    totalBytes: manifest.totalBytes,
+                  ),
+                );
+              },
+            ),
           );
           if (!await verifyMushafAssetFile(partial, page)) {
             await partial.writeAsBytes(const <int>[], flush: true);
@@ -378,6 +383,8 @@ class MushafOfflineRepository {
     } on Object catch (error) {
       await _markPackageFailed(manifest.packageId, error);
       rethrow;
+    } finally {
+      liveOfflineDownloads.remove(manifest.packageId);
     }
   }
 
@@ -416,10 +423,7 @@ class MushafOfflineRepository {
     return manifest;
   }
 
-  Future<void> _preparePackage(
-    OfflineMushafManifest manifest,
-    Directory packageDirectory,
-  ) async {
+  Future<void> _preparePackage(OfflineMushafManifest manifest) async {
     final now = DateTime.now().toUtc().toIso8601String();
     await _database.database.transaction((transaction) async {
       await transaction.insert('offline_packages', <String, Object?>{
@@ -453,14 +457,17 @@ class MushafOfflineRepository {
       );
       final items = transaction.batch();
       for (final page in manifest.pages) {
-        final localPath = p.join(packageDirectory.path, page.fileName);
         enqueueOfflinePackageItem(
           items,
           packageId: manifest.packageId,
           itemKey: 'page:${page.number}',
           itemNumber: page.number,
           fileName: page.fileName,
-          localPath: localPath,
+          localPath: offlinePackageItemPath(
+            'mushaf',
+            manifest.packageId,
+            page.fileName,
+          ),
           url: page.url.toString(),
           checksum: page.sha256,
           sizeBytes: page.bytes,

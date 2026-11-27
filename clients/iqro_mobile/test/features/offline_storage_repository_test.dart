@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/storage/local_database.dart';
+import 'package:iqro_mobile/core/storage/offline_download_resume.dart';
 import 'package:iqro_mobile/core/storage/offline_storage_quota.dart';
 import 'package:iqro_mobile/features/settings/offline_storage_repository.dart';
 import 'package:path/path.dart' as p;
@@ -23,7 +24,7 @@ void main() {
           packageType: type,
           contentKey: type,
           status: 'ready',
-          localPath: '/not-used-for-read-only-list',
+          localPath: 'offline_packages/mushaf/$type/page-001.webp',
         );
       }
       await harness.database.database.update(
@@ -43,7 +44,14 @@ void main() {
       // last downloaded page from its own table.
       final mushaf = packages.firstWhere((p) => p.isMushaf);
       expect(mushaf.mushafName, 'QCF V2');
-      expect(mushaf.mushafPreviewPath, '/not-used-for-read-only-list');
+      // The saved path is relative to the support folder.
+      expect(
+        mushaf.mushafPreviewPath,
+        p.join(
+          harness.support.path,
+          'offline_packages/mushaf/mushaf_pages/page-001.webp',
+        ),
+      );
       final audio = packages.firstWhere((p) => p.isAudio);
       expect(audio.quality, 'standard');
       expect(audio.reciterNameFor('ru'), 'Тестовый чтец');
@@ -98,6 +106,58 @@ void main() {
     },
   );
 
+  test('deletes a package saved whole in a folder that has moved', () async {
+    // On iOS an update moves the app's folder; earlier versions saved the
+    // full path of each file.
+    final harness = await _harness();
+    final packageDirectory = Directory(
+      p.join(harness.support.path, 'offline_packages', 'audio', 'audio-test'),
+    );
+    await packageDirectory.create(recursive: true);
+    final surah = File(p.join(packageDirectory.path, 'surah-001.mp3'));
+    await surah.writeAsBytes(const <int>[1, 2, 3]);
+    await _insertPackage(
+      harness.database,
+      packageId: 'audio-test',
+      packageType: 'surah_audio',
+      contentKey: 'recitation:00000000-0000-0000-0000-000000000001',
+      status: 'ready',
+      localPath:
+          '/var/mobile/Containers/Data/Application/OLD/Library/'
+          'Application Support/offline_packages/audio/audio-test/surah-001.mp3',
+    );
+
+    await harness.repository.deletePackage('audio-test');
+
+    expect(await packageDirectory.exists(), isFalse);
+    expect(await harness.database.database.query('offline_packages'), isEmpty);
+  });
+
+  test('a download cut off by closing the app can be deleted', () async {
+    final harness = await _harness();
+    final packageDirectory = Directory(
+      p.join(harness.support.path, 'offline_packages', 'mushaf', 'mushaf-test'),
+    );
+    await packageDirectory.create(recursive: true);
+    final page = File(p.join(packageDirectory.path, 'page-001.webp'));
+    await page.writeAsBytes(const <int>[1, 2, 3]);
+    // Saved as downloading, but no download runs in this app process.
+    await _insertPackage(
+      harness.database,
+      packageId: 'mushaf-test',
+      packageType: 'mushaf_pages',
+      contentKey: 'quran-edition:madani-hafs',
+      status: 'downloading',
+      localPath: 'offline_packages/mushaf/mushaf-test/page-001.webp',
+    );
+
+    expect((await harness.repository.packages()).single.status, 'failed');
+    await harness.repository.deletePackage('mushaf-test');
+
+    expect(await packageDirectory.exists(), isFalse);
+    expect(await harness.database.database.query('offline_packages'), isEmpty);
+  });
+
   test('refuses active downloads and unsafe file paths', () async {
     final harness = await _harness();
     final packageDirectory = Directory(
@@ -115,10 +175,14 @@ void main() {
       localPath: outside.path,
     );
 
+    liveOfflineDownloads.add('audio-test');
+    addTearDown(() => liveOfflineDownloads.remove('audio-test'));
+    expect((await harness.repository.packages()).single.status, 'downloading');
     await expectLater(
       harness.repository.deletePackage('audio-test'),
       throwsStateError,
     );
+    liveOfflineDownloads.remove('audio-test');
     await harness.database.database.update(
       'offline_packages',
       const <String, Object?>{'status': 'failed'},

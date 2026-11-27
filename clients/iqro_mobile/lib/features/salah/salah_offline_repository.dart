@@ -11,7 +11,9 @@ import '../../core/network/api_client.dart';
 import '../../core/network/public_asset_uri.dart';
 import '../../core/platform/backup_exclusion.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_download_resume.dart';
 import '../../core/storage/offline_package_items.dart';
+import '../../core/storage/offline_package_paths.dart';
 import '../../core/storage/offline_package_queries.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
@@ -356,7 +358,7 @@ class SalahOfflineRepository {
     await BackupExclusion.exclude(
       Directory(p.join(support.path, 'offline_packages')),
     );
-    await _preparePackage(manifest, packageDirectory);
+    await _preparePackage(manifest);
 
     SalahOfflineSnapshot progress(int completed, int bytes) =>
         SalahOfflineSnapshot(
@@ -372,17 +374,20 @@ class SalahOfflineRepository {
 
     var completedItems = 0;
     var completedBytes = 0;
+    liveOfflineDownloads.add(manifest.packageId);
     try {
       for (final image in manifest.images) {
         final destination = File(p.join(packageDirectory.path, image.fileName));
         if (!await verifySalahImageFile(destination, image)) {
           final partial = File('${destination.path}.part');
-          await _gateway.download(
-            image.url,
-            partial,
-            expectedBytes: image.bytes,
-            onProgress: (received, total) => onProgress?.call(
-              progress(completedItems, completedBytes + received),
+          await retryOfflineFileAfterBackground(
+            () => _gateway.download(
+              image.url,
+              partial,
+              expectedBytes: image.bytes,
+              onProgress: (received, total) => onProgress?.call(
+                progress(completedItems, completedBytes + received),
+              ),
             ),
           );
           if (!await verifySalahImageFile(partial, image)) {
@@ -421,6 +426,8 @@ class SalahOfflineRepository {
     } on Object catch (error) {
       await _markPackageFailed(manifest.packageId, error);
       rethrow;
+    } finally {
+      liveOfflineDownloads.remove(manifest.packageId);
     }
   }
 
@@ -445,9 +452,15 @@ class SalahOfflineRepository {
       ''',
       <Object?>[salahPackageId(slug, language), salahCoursePackageType],
     );
+    final support = (await _supportDirectory()).path;
     final images = <String, String>{};
     for (final row in rows) {
-      final file = File(row['local_path']! as String);
+      final path = resolveOfflinePackageItemPath(
+        support,
+        row['local_path']! as String,
+      );
+      if (path == null) continue;
+      final file = File(path);
       if (await file.exists() && await file.length() == row['size_bytes']) {
         images[row['checksum_sha256']! as String] = file.path;
       }
@@ -465,10 +478,7 @@ class SalahOfflineRepository {
     );
   }
 
-  Future<void> _preparePackage(
-    OfflineSalahManifest manifest,
-    Directory packageDirectory,
-  ) async {
+  Future<void> _preparePackage(OfflineSalahManifest manifest) async {
     final now = DateTime.now().toUtc().toIso8601String();
     await _database.database.transaction((transaction) async {
       await transaction.insert('offline_packages', <String, Object?>{
@@ -522,7 +532,11 @@ class SalahOfflineRepository {
           itemKey: _itemKey(image),
           itemNumber: index + 1,
           fileName: image.fileName,
-          localPath: p.join(packageDirectory.path, image.fileName),
+          localPath: offlinePackageItemPath(
+            'salah',
+            manifest.packageId,
+            image.fileName,
+          ),
           url: image.url.toString(),
           checksum: image.sha256,
           sizeBytes: image.bytes,

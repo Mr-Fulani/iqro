@@ -15,6 +15,7 @@ import '../../core/network/public_asset_uri.dart';
 import '../../core/platform/backup_exclusion.dart';
 import '../../core/storage/cache_maintenance.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_package_paths.dart';
 import '../../core/utils/json_helpers.dart';
 import 'quran_models.dart';
 import 'mushaf_edition.dart';
@@ -833,7 +834,12 @@ class QuranRepository {
     );
     if (rows.isEmpty) return null;
     final row = rows.single;
-    final file = File(row['local_path']! as String);
+    final path = resolveOfflinePackageItemPath(
+      (await getApplicationSupportDirectory()).path,
+      row['local_path']! as String,
+    );
+    if (path == null) return null;
+    final file = File(path);
     return await _pageAssetVerifier.verify(
           file,
           row['checksum_sha256']! as String,

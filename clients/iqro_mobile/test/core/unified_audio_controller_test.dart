@@ -1065,6 +1065,57 @@ void main() {
     expect((await store.read())?.playback.track.id, _playback.track.id);
   });
 
+  test(
+    'a saved surah whose downloaded file is gone is asked for again',
+    () async {
+      // Saved while it played from a download; an iOS update has moved the
+      // app's folder since, or the download was deleted.
+      final database = await _audioStoreDatabase();
+      addTearDown(database.close);
+      final store = AudioPlaybackStore(database);
+      await store.write(
+        AudioPlaybackSnapshot(
+          playback: const SurahPlayback(
+            track: AudioTrack(
+              id: 'track-1',
+              recitationId: 'recitation-1',
+              surah: 1,
+              url:
+                  'file:///var/mobile/Containers/Data/Application/OLD/Library/'
+                  'Application%20Support/offline_packages/audio/pkg/surah-001.mp3',
+              duration: Duration(minutes: 1),
+              offlineDownloadAllowed: true,
+            ),
+            segments: <AudioSegment>[],
+          ),
+          reciter: _reciter,
+          surahName: 'Saved Al-Fatiha',
+          position: const Duration(seconds: 25),
+          speed: 1,
+          repeatEnabled: false,
+          savedAt: DateTime.utc(2026, 9, 3),
+        ),
+      );
+      final queue = _FakeQueueSource(<int>[1, 2]);
+      final engine = _FakeAudioEngine();
+      final controller = AudioController(
+        engine: engine,
+        playbackStore: store,
+        queueSource: queue.source,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.restore();
+
+      expect(queue.entryRequests, <int>[1]);
+      expect(
+        (engine.sources.single as UriAudioSource).uri.toString(),
+        'https://media.example.test/quran/1.mp3',
+      );
+      expect(controller.state.position, const Duration(seconds: 25));
+    },
+  );
+
   test('stale same-track restore never seeks a manual load', () async {
     final database = await _audioStoreDatabase();
     addTearDown(database.close);

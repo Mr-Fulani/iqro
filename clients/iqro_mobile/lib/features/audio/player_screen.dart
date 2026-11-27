@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -2119,6 +2120,14 @@ class _PlayerBackgroundImage extends StatelessWidget {
   }
 }
 
+/// On Android the silent video mixes, so it never takes the audio focus from
+/// the recitation. On iOS that option would make the app's one audio session
+/// mixable, and iOS then drops the lock screen controls; there the app's own
+/// players mix anyway, and the video has no sound to stop other apps with.
+@visibleForTesting
+VideoPlayerOptions playerBackgroundVideoOptions(TargetPlatform platform) =>
+    VideoPlayerOptions(mixWithOthers: platform != TargetPlatform.iOS);
+
 /// A silent looping video over its poster: bundled, or an admin video that is
 /// downloaded once and then played from the cache. The poster stays while it
 /// loads or if it cannot be decoded; recitation audio keeps its focus.
@@ -2145,7 +2154,7 @@ class _PlayerBackgroundVideoState extends State<_PlayerBackgroundVideo> {
 
   Future<void> _start() async {
     try {
-      final options = VideoPlayerOptions(mixWithOthers: true);
+      final options = playerBackgroundVideoOptions(defaultTargetPlatform);
       final asset = widget.asset;
       final VideoPlayerController controller;
       if (asset != null) {

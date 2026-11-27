@@ -10,7 +10,9 @@ import 'package:sqflite/sqflite.dart';
 import '../../core/network/api_client.dart';
 import '../../core/platform/backup_exclusion.dart';
 import '../../core/storage/local_database.dart';
+import '../../core/storage/offline_download_resume.dart';
 import '../../core/storage/offline_package_items.dart';
+import '../../core/storage/offline_package_paths.dart';
 import '../../core/storage/offline_package_queries.dart';
 import '../../core/storage/offline_storage_quota.dart';
 import '../../core/utils/json_helpers.dart';
@@ -469,11 +471,12 @@ class AudioOfflineRepository {
       Directory(p.join(support.path, 'offline_packages')),
     );
     final updating = await _isReady(manifest.packageId);
-    await _preparePackage(manifest, packageDirectory, updating: updating);
+    await _preparePackage(manifest, updating: updating);
     final readyItems = await _readyItemChecksums(manifest.packageId);
 
     var completedTracks = 0;
     var completedBytes = 0;
+    liveOfflineDownloads.add(manifest.packageId);
     try {
       for (final track in manifest.tracks) {
         final destination = File(
@@ -488,27 +491,29 @@ class AudioOfflineRepository {
           final partial = File(
             '${destination.path}.${track.asset.sha256.substring(0, 12)}.part',
           );
-          await _api.downloadPublicFile(
-            track.asset.url,
-            partial,
-            allowedHosts: _approvedAudioAssetHosts,
-            expectedBytes: track.asset.bytes,
-            expectedEtag: track.asset.etag,
-            maxBytes: 512 * 1024 * 1024,
-            onProgress: (received, total) {
-              onProgress?.call(
-                AudioDownloadSnapshot(
-                  status: AudioDownloadStatus.downloading,
-                  recitationId: recitationId,
-                  packageId: manifest.packageId,
-                  quality: manifest.quality,
-                  completedTracks: completedTracks,
-                  totalTracks: manifest.tracks.length,
-                  downloadedBytes: completedBytes + received,
-                  totalBytes: manifest.totalBytes,
-                ),
-              );
-            },
+          await retryOfflineFileAfterBackground(
+            () => _api.downloadPublicFile(
+              track.asset.url,
+              partial,
+              allowedHosts: _approvedAudioAssetHosts,
+              expectedBytes: track.asset.bytes,
+              expectedEtag: track.asset.etag,
+              maxBytes: 512 * 1024 * 1024,
+              onProgress: (received, total) {
+                onProgress?.call(
+                  AudioDownloadSnapshot(
+                    status: AudioDownloadStatus.downloading,
+                    recitationId: recitationId,
+                    packageId: manifest.packageId,
+                    quality: manifest.quality,
+                    completedTracks: completedTracks,
+                    totalTracks: manifest.tracks.length,
+                    downloadedBytes: completedBytes + received,
+                    totalBytes: manifest.totalBytes,
+                  ),
+                );
+              },
+            ),
           );
           if (!await verifyAudioAssetFile(partial, track.asset)) {
             await partial.writeAsBytes(const <int>[], flush: true);
@@ -557,6 +562,8 @@ class AudioOfflineRepository {
     } on Object catch (error) {
       await _markPackageFailed(manifest.packageId, error, keepReady: updating);
       rethrow;
+    } finally {
+      liveOfflineDownloads.remove(manifest.packageId);
     }
   }
 
@@ -690,7 +697,12 @@ class AudioOfflineRepository {
     );
     if (rows.isEmpty) return null;
     final row = rows.single;
-    final file = File(row['local_path']! as String);
+    final path = resolveOfflinePackageItemPath(
+      (await _supportDirectory()).path,
+      row['local_path']! as String,
+    );
+    if (path == null) return null;
+    final file = File(path);
     if (!await file.exists() || await file.length() != row['size_bytes']) {
       return null;
     }
@@ -726,8 +738,7 @@ class AudioOfflineRepository {
   }
 
   Future<void> _preparePackage(
-    OfflineAudioManifest manifest,
-    Directory packageDirectory, {
+    OfflineAudioManifest manifest, {
     required bool updating,
   }) async {
     final now = DateTime.now().toUtc().toIso8601String();
@@ -766,14 +777,17 @@ class AudioOfflineRepository {
       }
       final items = transaction.batch();
       for (final track in manifest.tracks) {
-        final localPath = p.join(packageDirectory.path, track.asset.fileName);
         enqueueOfflinePackageItem(
           items,
           packageId: manifest.packageId,
           itemKey: 'surah:${track.surah}',
           itemNumber: track.surah,
           fileName: track.asset.fileName,
-          localPath: localPath,
+          localPath: offlinePackageItemPath(
+            'audio',
+            manifest.packageId,
+            track.asset.fileName,
+          ),
           url: track.asset.url.toString(),
           checksum: track.asset.sha256,
           sizeBytes: track.asset.bytes,

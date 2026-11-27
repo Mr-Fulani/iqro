@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:flutter/foundation.dart' show immutable, visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, immutable, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -31,8 +33,16 @@ abstract interface class IqroAudioEngine {
 }
 
 class JustAudioEngine implements IqroAudioEngine {
-  JustAudioEngine([AudioPlayer? player, this._platformStarting])
-    : _player = player ?? AudioPlayer();
+  JustAudioEngine([
+    AudioPlayer? player,
+    this._platformStarting,
+    Future<void> Function()? restoreSession,
+  ]) : _player = player ?? AudioPlayer(),
+       _restoreSession =
+           restoreSession ??
+           (defaultTargetPlatform == TargetPlatform.iOS
+               ? ListeningMediaService.restoreSession
+               : null);
 
   final AudioPlayer _player;
 
@@ -41,6 +51,10 @@ class JustAudioEngine implements IqroAudioEngine {
   /// a stop came meanwhile.
   Future<Object?>? _platformStarting;
   var _playRequest = 0;
+
+  /// Sets the audio session back before each play, on iOS only (see
+  /// [ListeningMediaService.restoreSession]).
+  final Future<void> Function()? _restoreSession;
 
   @override
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
@@ -70,11 +84,18 @@ class JustAudioEngine implements IqroAudioEngine {
   @override
   Future<void> play() async {
     final starting = _platformStarting;
-    if (starting != null) {
+    final restoreSession = _restoreSession;
+    if (starting != null || restoreSession != null) {
       final request = ++_playRequest;
-      await starting;
-      _platformStarting = null;
-      if (request != _playRequest) return;
+      if (starting != null) {
+        await starting;
+        _platformStarting = null;
+        if (request != _playRequest) return;
+      }
+      if (restoreSession != null) {
+        await restoreSession();
+        if (request != _playRequest) return;
+      }
     }
     return _player.play();
   }
@@ -1138,7 +1159,7 @@ class AudioController extends StateNotifier<IqroAudioState> {
               !snapshot.savedAt.isAfter(_restoredSavedAt!))) {
         return;
       }
-      final playback = snapshot.playback.normalized();
+      final playback = (await _withCurrentFile(snapshot.playback)).normalized();
       _lastListeningSnapshot = snapshot;
       final restoredRange = _validatedRestoredRange(snapshot, playback);
       snapshotValidated = true;
@@ -1242,6 +1263,28 @@ class AudioController extends StateNotifier<IqroAudioState> {
       savedAt: DateTime.now().toUtc(),
       queueMode: state.queueMode,
     );
+  }
+
+  /// A surah saved while it played from a download points at that file. An
+  /// iOS update can move the app's folder, and the download may have been
+  /// deleted since: then the surah is asked for again, from its download's
+  /// current place or from the network.
+  Future<SurahPlayback> _withCurrentFile(SurahPlayback playback) async {
+    final uri = Uri.tryParse(playback.track.url);
+    final source = _queueSource;
+    if (uri == null || !uri.isScheme('file') || source == null) {
+      return playback;
+    }
+    try {
+      if (await File.fromUri(uri).exists()) return playback;
+      final entry = await source.entry(
+        playback.track.recitationId,
+        playback.track.surah,
+      );
+      return entry.playback;
+    } on Object {
+      return playback;
+    }
   }
 
   _RestoredPlaybackRange _validatedRestoredRange(
