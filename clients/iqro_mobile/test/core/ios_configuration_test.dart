@@ -28,12 +28,21 @@ void main() {
     );
     expect(plist, contains('<key>NSLocationWhenInUseUsageDescription</key>'));
     expect(plist, isNot(contains('NSLocationAlways')));
-    // The share sheet offers "Save Image"; iOS closes the app without it.
+    // iOS closes the app when it asks for a permission without its text:
+    // "Save Image" in the share sheet, and the microphone and speech
+    // recognition of the recitation check. Debug builds read Info-Debug.plist.
     for (final file in const <String>['Info.plist', 'Info-Debug.plist']) {
-      expect(
-        File('ios/Runner/$file').readAsStringSync(),
-        contains('<key>NSPhotoLibraryAddUsageDescription</key>'),
-      );
+      final copy = File('ios/Runner/$file').readAsStringSync();
+      for (final key in const <String>[
+        'NSPhotoLibraryAddUsageDescription',
+        'NSMicrophoneUsageDescription',
+        'NSSpeechRecognitionUsageDescription',
+        'NSLocationWhenInUseUsageDescription',
+      ]) {
+        expect(copy, contains('<key>$key</key>'), reason: '$file: $key');
+      }
+      // The location also gives the qibla direction, not only prayer times.
+      expect(copy, contains('qibla direction'), reason: file);
     }
 
     final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
@@ -69,6 +78,22 @@ void main() {
       expect(copy, contains('"CFBundleDisplayName" = "IQRO";'));
       expect(copy, contains('"NSLocationWhenInUseUsageDescription"'));
       expect(copy, contains('"NSPhotoLibraryAddUsageDescription"'));
+      expect(copy, contains('"NSMicrophoneUsageDescription"'));
+      expect(copy, contains('"NSSpeechRecognitionUsageDescription"'));
+    }
+    const qibla = <String, String>{
+      'en': 'qibla',
+      'ru': 'Киблы',
+      'ar': 'القبلة',
+      'tr': 'kıble',
+    };
+    for (final MapEntry(key: locale, value: word) in qibla.entries) {
+      final location = File('ios/Runner/$locale.lproj/InfoPlist.strings')
+          .readAsLinesSync()
+          .singleWhere(
+            (line) => line.startsWith('"NSLocationWhenInUseUsageDescription"'),
+          );
+      expect(location, contains(word), reason: locale);
     }
 
     final podfile = File('ios/Podfile').readAsStringSync();

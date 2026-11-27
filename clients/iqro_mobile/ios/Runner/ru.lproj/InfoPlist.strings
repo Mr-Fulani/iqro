@@ -1,5 +1,5 @@
 "CFBundleDisplayName" = "IQRO";
-"NSLocationWhenInUseUsageDescription" = "IQRO использует вашу геопозицию только во время работы приложения, чтобы точно рассчитать местное время намаза.";
+"NSLocationWhenInUseUsageDescription" = "IQRO использует вашу геопозицию только во время работы приложения, чтобы точно рассчитать местное время намаза и направление Киблы.";
 "NSPhotoLibraryAddUsageDescription" = "IQRO сохраняет картинку с аятом или ду'а в «Фото», только когда вы нажимаете «Сохранить изображение».";
 "NSMicrophoneUsageDescription" = "IQRO слушает ваше чтение, чтобы показывать, какое слово Корана вы прочитали.";
 "NSSpeechRecognitionUsageDescription" = "IQRO распознаёт прочитанные вами слова, чтобы показывать ваше место в тексте Корана.";

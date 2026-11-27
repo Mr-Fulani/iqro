@@ -32,6 +32,12 @@ class AuthRepository {
                preferencesKeyPrefix: 'iqro',
                storageNamespace: 'auth',
              ),
+             // Readable after the first unlock, so a token refresh while the
+             // screen is locked (audio keeps the app alive) is not lost; kept
+             // on this iPhone only, never restored from a backup onto another.
+             iOptions: IOSOptions(
+               accessibility: KeychainAccessibility.first_unlock_this_device,
+             ),
            ),
        _dio =
            dio ??

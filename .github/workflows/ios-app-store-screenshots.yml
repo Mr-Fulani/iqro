@@ -1,0 +1,108 @@
+name: App Store screenshots
+
+# The eight screens of the Google Play set, from the simulator, in Russian,
+# English, Arabic and Turkish: iPhone 6.9″ (1320×2868) always, iPad 13″ only
+# when asked. Raw screens in the artifact; captions and the folder in the repo
+# come from docs/release/app-store-screenshots/make.py.
+
+concurrency:
+  group: ios-app-store-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      ipad:
+        description: "Also iPad 13″ (only if the app ships for iPad)"
+        required: false
+        type: boolean
+        default: false
+  push:  # TEMP before the pull request: remove
+    branches: [claude/ios-native-ci-48c512]
+  pull_request:
+    paths:
+      - "clients/iqro_mobile/integration_test/store_screenshots_test.dart"
+      - ".github/workflows/ios-app-store-screenshots.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device: iphone-6.9
+            types: "iPhone 17 Pro Max|iPhone 16 Pro Max"
+          - device: ipad-13
+            types: "iPad Pro 13-inch (M5)|iPad Pro 13-inch (M4)"
+    name: ${{ matrix.device }}
+    runs-on: macos-15
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: clients/iqro_mobile
+    env:
+      OUT: ${{ github.workspace }}/app-store-screenshots
+      NO_VIDEO: 1
+      SKIP: ${{ matrix.device == 'ipad-13' && !inputs.ipad }}
+    steps:
+      - name: iPad not asked for
+        if: ${{ env.SKIP == 'true' }}
+        working-directory: .
+        run: echo "iPad screenshots run only when the workflow is started with iPad on."
+      - uses: actions/checkout@v4
+        if: ${{ env.SKIP != 'true' }}
+      - name: Select App Store-compatible Xcode
+        if: ${{ env.SKIP != 'true' }}
+        run: sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
+      - name: Set up locked CocoaPods toolchain
+        if: ${{ env.SKIP != 'true' }}
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: "4.0.1"
+          working-directory: clients/iqro_mobile
+          bundler-cache: true
+      - name: Set up pinned Flutter
+        if: ${{ env.SKIP != 'true' }}
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.41.4
+          cache: true
+      - name: Resolve dependencies
+        if: ${{ env.SKIP != 'true' }}
+        run: |
+          flutter config --no-analytics
+          flutter pub get --enforce-lockfile
+          (cd ios && bundle exec pod install --deployment)
+      - name: Build the app with the screenshot test
+        if: ${{ env.SKIP != 'true' }}
+        run: >-
+          bundle exec flutter build ios --simulator --debug
+          --target=integration_test/store_screenshots_test.dart
+          --dart-define=API_BASE_URL=https://iqro.forum
+          --dart-define=APP_ENV=production
+          --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
+      - name: Screenshots in four languages
+        if: ${{ env.SKIP != 'true' }}
+        env:
+          TYPES: ${{ matrix.types }}
+        run: |
+          id="$(ios/scripts/simulator_run.sh create "$TYPES")"
+          status=0
+          for locale in ru en ar tr; do
+            IQRO_LOCALE="$locale" ios/scripts/simulator_run.sh test "$id" \
+              build/ios/iphonesimulator/Runner.app \
+              integration_test/store_screenshots_test.dart "$OUT/$locale" || status=$?
+            grep -q "IQRO LOCALE $locale" "$OUT/$locale/test.log" || { echo "::error::$locale run did not use $locale"; status=1; }
+          done
+          xcrun simctl shutdown "$id" || true
+          exit "$status"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && env.SKIP != 'true' }}
+        with:
+          name: app-store-screenshots-${{ matrix.device }}
+          path: ${{ env.OUT }}
+          retention-days: 30

@@ -48,7 +48,10 @@ dependencies:
   flutter_cache_manager: ^3.4.2
   uuid: ^4.6.0
   package_info_plus: ^10.2.1
-  device_info_plus: ^13.2.0
+  # Android only: the iOS code read the disk size, an API Apple wants a
+  # reason for (third_party/device_info_plus/README.md).
+  device_info_plus:
+    path: third_party/device_info_plus
   geolocator: ^14.0.3
   go_router: ^17.5.0
   flutter_riverpod: ^2.6.1
@@ -81,6 +84,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # The app on iPhone and iPad simulators in CI (integration_test/README.md).
+  integration_test:
+    sdk: flutter
+  flutter_driver:
+    sdk: flutter
+  vm_service: ^15.0.0
   sqflite_common_ffi: ^2.3.6
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -131,8 +140,20 @@ flutter:
     - assets/names_audio/tr/
     # The recitation check on the phone: the model Hisnlabs/tajweed-v2
     # (Apache-2.0), the sounds every ayah is expected to have, the mel
-    # filters (assets/recitation_model/README.md).
-    - assets/recitation_model/
+    # filters (assets/recitation_model/README.md). Only Android listens with
+    # the model (recitationByModel); iOS uses Apple's speech recognition, so
+    # these 25 MB stay out of the iPhone app. The licences stay on both for
+    # the Licences page. A new file in the folder must be listed here.
+    - assets/recitation_model/LICENSE-Apache-2.0.txt
+    - assets/recitation_model/LICENSE-onnxruntime.txt
+    - path: assets/recitation_model/README.md
+      platforms: [android]
+    - path: assets/recitation_model/expected.json
+      platforms: [android]
+    - path: assets/recitation_model/mel_filters.bin
+      platforms: [android]
+    - path: assets/recitation_model/model-int8.onnx
+      platforms: [android]
 
   # Amiri Quran 1.003 (SIL OFL 1.1, assets/fonts/AmiriQuran-OFL.txt), subset to
   # Arabic, ASCII digits and punctuation for Uthmani Quran and dua text.

@@ -7,8 +7,12 @@ name: iOS release
 on:
   workflow_dispatch:
     inputs:
+      build_name:
+        description: "Version shown to users, the same as the Android release (e.g. 1.0.17)"
+        required: true
+        type: string
       build_number:
-        description: "Build number (empty: the one in pubspec.yaml)"
+        description: "Build number, higher than every earlier upload of this version (empty: the one in pubspec.yaml)"
         required: false
         type: string
 
@@ -28,6 +32,21 @@ jobs:
       run:
         working-directory: clients/iqro_mobile
     steps:
+      - name: Check the version
+        env:
+          BUILD_NAME: ${{ inputs.build_name }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        working-directory: .
+        run: |
+          # App Store Connect wants three numbers; the build number must be a plain number.
+          if ! [[ "$BUILD_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::build_name must look like 1.0.17, got '$BUILD_NAME'"
+            exit 1
+          fi
+          if [ -n "$BUILD_NUMBER" ] && ! [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "::error::build_number must be a whole number, got '$BUILD_NUMBER'"
+            exit 1
+          fi
       - name: Check signing secrets
         env:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
@@ -102,10 +121,13 @@ jobs:
       - name: Configure the production Flutter build
         env:
           SENTRY_DSN: ${{ secrets.MOBILE_SENTRY_DSN }}
+          BUILD_NAME: ${{ inputs.build_name }}
           BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
+          # The version comes from the run, like the Android release; pubspec.yaml stays as it is.
           args=(
             --release --config-only --no-codesign
+            --build-name="$BUILD_NAME"
             --dart-define=API_BASE_URL=https://iqro.forum
             --dart-define=APP_ENV=production
             --dart-define=APP_DOWNLOAD_URL=https://iqro.forum
@@ -115,6 +137,7 @@ jobs:
           if [ -n "$BUILD_NUMBER" ]; then args+=("--build-number=$BUILD_NUMBER"); fi
           bundle exec flutter build ios "${args[@]}"
           grep -E '^FLUTTER_BUILD_(NAME|NUMBER)=' ios/Flutter/Generated.xcconfig
+          grep -qx "FLUTTER_BUILD_NAME=$BUILD_NAME" ios/Flutter/Generated.xcconfig
       - name: Archive
         env:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
@@ -126,6 +149,8 @@ jobs:
           -destination generic/platform=iOS
           -archivePath "$RUNNER_TEMP/Runner.xcarchive"
           DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+      - name: Privacy manifests cover every required-reason API
+        run: python3 ios/scripts/check_privacy_manifests.py "$RUNNER_TEMP/Runner.xcarchive/Products/Applications/Runner.app"
       - name: Upload to App Store Connect
         env:
           API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
