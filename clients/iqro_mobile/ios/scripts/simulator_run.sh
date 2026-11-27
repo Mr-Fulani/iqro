@@ -10,10 +10,9 @@
 #
 #   ios/scripts/simulator_run.sh test <id> <app> <test file> <output folder>
 #       Installs the built Runner.app on that simulator and runs the test with
-#       `flutter drive`, recording the screen to <output folder>/video.mp4 and
-#       saving screenshots and the log there. Variables named IQRO_* are passed
-#       to the app (SIMCTL_CHILD_*), e.g. IQRO_LOCALE=en; NO_VIDEO=1 skips the
-#       recording.
+#       `flutter drive`; the driver records the screen to <output folder>/video.mp4
+#       and saves screenshots there, next to the log. IQRO_LOCALE=en sets the app's
+#       language (the driver hands it over); NO_VIDEO=1 skips the recording.
 set -euo pipefail
 
 command="${1:-}"
@@ -63,20 +62,9 @@ run_test() {
   local id="$1" app="$2" target="$3" out="$4"
   mkdir -p "$out"
   out="$(cd "$out" && pwd)"
-  # Passed into the app's environment by simctl launch.
-  while IFS='=' read -r name value; do
-    if [[ "$name" == IQRO_* ]]; then export "SIMCTL_CHILD_$name=$value"; fi
-  done < <(env)
-  export SIMCTL_CHILD_IQRO_HOST_SCREENSHOTS=true
+  rm -f "$out/video.pid"
 
-  local recorder=""
-  if [ "${NO_VIDEO:-}" != 1 ]; then
-    xcrun simctl io "$id" recordVideo --codec=h264 --mask=ignored --force "$out/video.mp4" \
-      > "$out/video.log" 2>&1 &
-    recorder=$!
-    sleep 2
-  fi
-
+  # The driver starts the recording once the app runs (NO_VIDEO=1: none).
   local status=0
   IQRO_SIMULATOR="$id" IQRO_SCREENSHOTS="$out" flutter drive \
     --driver=integration_test/driver/iqro_driver.dart \
@@ -89,10 +77,17 @@ run_test() {
     status=1
   fi
 
-  if [ -n "$recorder" ]; then
+  if [ -f "$out/video.pid" ]; then
+    local recorder
+    recorder="$(cat "$out/video.pid")"
     sleep 2
     kill -INT "$recorder" 2>/dev/null || true
-    wait "$recorder" 2>/dev/null || true
+    # SIGINT makes simctl finish the file; wait for it, at most 60 s.
+    for _ in $(seq 60); do
+      kill -0 "$recorder" 2>/dev/null || break
+      sleep 1
+    done
+    rm -f "$out/video.pid"
   fi
   grep -E "IQRO (STEP|ERROR|NOTE|SUMMARY|DEVICE|LOCALE)" "$out/test.log" > "$out/steps.txt" || true
   ls -la "$out" >&2

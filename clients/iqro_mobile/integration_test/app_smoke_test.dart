@@ -19,8 +19,6 @@ import 'package:iqro_mobile/main.dart' as app;
 
 import 'support/iqro_harness.dart';
 
-final _locale = setting('IQRO_LOCALE', fallback: 'ru');
-
 void main() {
   final harness = IqroHarness.initialize();
 
@@ -28,15 +26,27 @@ void main() {
     'IQRO opens its main screens',
     (tester) => harness.run(tester, () async {
       debugPrint('IQRO DEVICE $platformName');
-      await harness.prepare(
-        locale: _locale,
-        onboardingComplete: false,
-        playIntro: true,
-      );
+      await harness.prepare(onboardingComplete: false, playIntro: true);
       final l10n = harness.l10n;
       app.main();
 
-      // The first launch: the intro video, then the welcome screen.
+      // The first launch plays the intro video; a tap skips it, as a person
+      // may. Played to the end it trips a debug-only error: video_player
+      // seeks to the end after StartupVideo has disposed the controller
+      // (README.md, "Known").
+      final intro = find.byKey(const ValueKey('startup-video-skip'));
+      try {
+        await harness.waitFor(
+          intro,
+          what: 'the intro video',
+          timeout: const Duration(seconds: 20),
+        );
+        await harness.settle();
+        await harness.screenshot('intro');
+        await harness.tap(intro, what: 'the intro video');
+      } on TestFailure {
+        debugPrint('IQRO NOTE the intro video did not show');
+      }
       await harness.waitFor(
         find.byType(OnboardingScreen),
         what: 'the welcome screen',

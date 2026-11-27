@@ -17,26 +17,6 @@ import 'package:iqro_mobile/core/design_system/iqro_widgets.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// On in CI (ios/scripts/simulator_run.sh): the driver on the Mac saves the
-/// simulator's screen, with its status bar, whenever the test asks.
-final _hostScreenshots =
-    setting('IQRO_HOST_SCREENSHOTS', fallback: 'false') == 'true';
-
-/// A run setting: from the app's environment (simulator_run.sh passes IQRO_*
-/// variables through `simctl launch`), else a `--dart-define`, else [fallback].
-String setting(String name, {required String fallback}) {
-  final value = Platform.environment[name];
-  if (value != null && value.isNotEmpty) return value;
-  final defined = switch (name) {
-    'IQRO_LOCALE' => const String.fromEnvironment('IQRO_LOCALE'),
-    'IQRO_HOST_SCREENSHOTS' => const String.fromEnvironment(
-      'IQRO_HOST_SCREENSHOTS',
-    ),
-    _ => '',
-  };
-  return defined.isNotEmpty ? defined : fallback;
-}
-
 /// Drives the real app on a simulator: preferences before launch, waiting for
 /// screens, screenshots, and a list of every Dart error the app reported.
 class IqroHarness {
@@ -46,17 +26,26 @@ class IqroHarness {
     final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
     // Frames as on a phone, so the recording shows the app's own motion.
     binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-    return IqroHarness._(binding);
+    return IqroHarness._(binding).._registerExtensions();
   }
 
   final IntegrationTestWidgetsFlutterBinding binding;
   late WidgetTester tester;
   late AppLocalizations l10n;
+
+  /// The interface language: the driver's IQRO_LOCALE, else the default.
+  late String locale;
+
+  /// In CI the driver on the Mac (driver/iqro_driver.dart) saves the
+  /// simulator's screen, with its status bar, whenever the test asks.
+  var _host = false;
   final errors = <String>[];
   final _steps = <String>[];
   var _shots = 0;
   Completer<void>? _hostShot;
-  var _extensionRegistered = false;
+  // The driver connects a little after the app starts; a request posted
+  // before it listens would be lost. It brings the run's settings.
+  final _driverReady = Completer<Map<String, String>>();
 
   /// Runs [body] with every reported error recorded, then prints a summary.
   ///
@@ -87,13 +76,25 @@ class IqroHarness {
     }
   }
 
-  /// Preferences the app reads at launch (lib/core/storage/preferences_store.dart).
+  /// Waits for the driver (none when run with `flutter test`), then sets the
+  /// preferences the app reads at launch (lib/core/storage/preferences_store.dart).
   Future<void> prepare({
-    required String locale,
+    String locale = 'ru',
     bool onboardingComplete = true,
     bool playIntro = false,
     bool quiet = false,
   }) async {
+    try {
+      final settings = await _driverReady.future.timeout(
+        const Duration(seconds: 30),
+      );
+      _host = true;
+      final asked = settings['locale'] ?? '';
+      if (asked.isNotEmpty) locale = asked;
+    } on TimeoutException {
+      debugPrint('IQRO NOTE no driver: screenshots are not saved');
+    }
+    this.locale = locale;
     l10n = lookupAppLocalizations(Locale(locale));
     debugPrint('IQRO LOCALE $locale');
     final preferences = await SharedPreferences.getInstance();
@@ -216,11 +217,10 @@ class IqroHarness {
   Future<void> screenshot(String name) async {
     _shots += 1;
     final file = '${_shots.toString().padLeft(2, '0')}-$name';
-    if (!_hostScreenshots) {
-      debugPrint('IQRO SHOT $file (not saved: no host)');
+    if (!_host) {
+      debugPrint('IQRO SHOT $file (not saved: no driver)');
       return;
     }
-    _registerExtension();
     final done = Completer<void>();
     _hostShot = done;
     developer.postEvent('iqro.screenshot', <String, Object?>{'name': file});
@@ -233,9 +233,14 @@ class IqroHarness {
     }
   }
 
-  void _registerExtension() {
-    if (_extensionRegistered) return;
-    _extensionRegistered = true;
+  /// The driver (driver/iqro_driver.dart) calls these.
+  void _registerExtensions() {
+    developer.registerExtension('ext.iqro.driverReady', (method, params) async {
+      if (!_driverReady.isCompleted) _driverReady.complete(params);
+      return developer.ServiceExtensionResponse.result(
+        jsonEncode({'ok': true}),
+      );
+    });
     developer.registerExtension('ext.iqro.screenshotSaved', (
       method,
       params,
@@ -251,8 +256,8 @@ class IqroHarness {
   /// colours come from the QCF V4 font's own colour layers, so a page drawn
   /// without them is black text only.
   Future<Map<String, int>> colours(Finder finder) async {
-    final element = finder.evaluate().first;
-    var render = element.renderObject;
+    final page = finder.evaluate().first.renderObject! as RenderBox;
+    RenderObject? render = page;
     while (render != null && render is! RenderRepaintBoundary) {
       render = render.parent;
     }
@@ -265,6 +270,13 @@ class IqroHarness {
     final height = image.height;
     image.dispose();
     if (bytes == null) throw TestFailure('The Mushaf page could not be read');
+    // Only the page itself: the legend's coloured chips below it must not
+    // pass for tajweed drawn by the font.
+    final area = page.localToGlobal(Offset.zero, ancestor: render) & page.size;
+    final left = area.left.floor().clamp(0, width);
+    final right = area.right.ceil().clamp(0, width);
+    final top = area.top.floor().clamp(0, height);
+    final bottom = area.bottom.ceil().clamp(0, height);
     const names = <String>[
       'red',
       'orange',
@@ -276,8 +288,8 @@ class IqroHarness {
       'pink',
     ];
     final counts = <String, int>{for (final name in names) name: 0};
-    for (var y = 0; y < height; y += 2) {
-      for (var x = 0; x < width; x += 2) {
+    for (var y = top; y < bottom; y += 2) {
+      for (var x = left; x < right; x += 2) {
         final i = (y * width + x) * 4;
         final r = bytes.getUint8(i) / 255;
         final g = bytes.getUint8(i + 1) / 255;

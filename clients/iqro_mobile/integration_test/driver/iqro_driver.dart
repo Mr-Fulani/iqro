@@ -1,9 +1,11 @@
 // Runs on the Mac during `flutter drive` (ios/scripts/simulator_run.sh).
 //
-// When the test asks for a screenshot (IqroHarness.screenshot posts an
-// `iqro.screenshot` event), this saves the simulator's whole screen, status
-// bar included, with `xcrun simctl io screenshot`, then lets the test go on.
-// At the end it reports the test result like the stock integration driver.
+// Once connected it starts the screen recording (the app is up by then, so the
+// video holds the app, not the install), hands the test its settings, and
+// saves the simulator's whole screen, status bar included, whenever the test
+// asks (IqroHarness.screenshot posts an `iqro.screenshot` event). At the end
+// it reports the result like the stock integration driver. The recording is
+// stopped by simulator_run.sh, after `flutter drive` has exited.
 import 'dart:async';
 import 'dart:io';
 
@@ -12,9 +14,10 @@ import 'package:integration_test/integration_test_driver_extended.dart';
 import 'package:vm_service/vm_service.dart';
 
 Future<void> main() async {
-  final simulator = Platform.environment['IQRO_SIMULATOR'];
+  final environment = Platform.environment;
+  final simulator = environment['IQRO_SIMULATOR'];
   final folder = Directory(
-    Platform.environment['IQRO_SCREENSHOTS'] ?? 'build/simulator-screens',
+    environment['IQRO_SCREENSHOTS'] ?? 'build/simulator-screens',
   );
   await folder.create(recursive: true);
   final driver = await FlutterDriver.connect();
@@ -31,6 +34,37 @@ Future<void> main() async {
     await service.streamListen(EventStreams.kExtension);
   } on RPCError catch (error) {
     if (error.code != RPCErrorKind.kStreamAlreadySubscribed.code) rethrow;
+  }
+
+  if (simulator != null && environment['NO_VIDEO'] != '1') {
+    // Detached: it outlives this process, which integrationDriver ends with
+    // exit(); simulator_run.sh stops it with SIGINT so the file is finished.
+    final recorder = await Process.start('xcrun', <String>[
+      'simctl',
+      'io',
+      simulator,
+      'recordVideo',
+      '--codec=h264',
+      '--mask=ignored',
+      '--force',
+      '${folder.path}/video.mp4',
+    ], mode: ProcessStartMode.detached);
+    await File('${folder.path}/video.pid').writeAsString('${recorder.pid}');
+    // simctl needs a moment before the first frame is captured.
+    await Future<void>.delayed(const Duration(seconds: 2));
+  }
+
+  // The test starts the app once this arrives.
+  try {
+    final locale = environment['IQRO_LOCALE'] ?? '';
+    stdout.writeln('IQRO DRIVER ready, locale "$locale", simulator $simulator');
+    await service.callServiceExtension(
+      'ext.iqro.driverReady',
+      isolateId: isolate,
+      args: <String, String>{'locale': locale},
+    );
+  } on Object catch (error) {
+    stderr.writeln('IQRO DRIVER the test takes no screenshots: $error');
   }
 
   // Prints the result and exits with 0 or 1.

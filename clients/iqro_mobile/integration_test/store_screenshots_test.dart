@@ -20,8 +20,6 @@ import 'package:iqro_mobile/main.dart' as app;
 
 import 'support/iqro_harness.dart';
 
-final _locale = setting('IQRO_LOCALE', fallback: 'ru');
-
 void main() {
   final harness = IqroHarness.initialize();
 
@@ -29,7 +27,7 @@ void main() {
     'App Store screenshots',
     (tester) => harness.run(tester, () async {
       debugPrint('IQRO DEVICE $platformName');
-      await harness.prepare(locale: _locale, quiet: true);
+      await harness.prepare(quiet: true);
       final l10n = harness.l10n;
       app.main();
       await harness.waitFor(
@@ -70,7 +68,7 @@ void main() {
       await harness.screenshot('names-of-allah');
       harness.back();
 
-      if (_locale == 'ar') {
+      if (harness.locale == 'ar') {
         // No translation in the Arabic interface: the Quran tab instead.
         await harness.openTab(l10n.navQuran);
         await harness.waitFor(
@@ -165,7 +163,7 @@ Future<void> _chooseIstanbul(IqroHarness harness) async {
   );
   await harness.tap(choose, what: 'Choose city');
   final istanbul = prayerCities.firstWhere((city) => city.id == 'istanbul');
-  final name = istanbul.names[_locale] ?? istanbul.names['en']!;
+  final name = istanbul.names[harness.locale] ?? istanbul.names['en']!;
   await harness.tap(find.text(name).last, what: name);
   await harness.waitForNone(find.byType(BottomSheet), what: 'the city list');
   await harness.waitFor(find.textContaining(name), what: 'the times for $name');
