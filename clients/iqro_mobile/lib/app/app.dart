@@ -38,11 +38,14 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   var _backgroundWorkRequested = false;
   Timer? _cacheMaintenance;
   Timer? _reminderRenewal;
+  void Function()? _renewReminders;
 
   /// Renewing the reminder plan reschedules every OS notification through
   /// the plugin on Android's main thread, which delays the frame signal and
   /// makes Home's opening animation stutter (about 10 frames a second on a
-  /// Redmi Note 7). It waits until the opening is over.
+  /// Redmi Note 7). It waits until the opening is over, or runs when the app
+  /// leaves the screen sooner: a short visit, such as opening IQRO from the
+  /// note that the prayer reminders run out, renews them too.
   static const _reminderRenewalDelay = Duration(seconds: 8);
 
   @override
@@ -186,7 +189,8 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
     // account mutation is intentionally disabled until it can be fenced
     // safely across isolates.
     _reminderRenewal?.cancel();
-    _reminderRenewal = Timer(_reminderRenewalDelay, () {
+    void renew() {
+      _renewReminders = null;
       if (!mounted || ref.read(activeAccountScopeKeyProvider) != key) return;
       unawaited(
         ref.read(reminderProvider.notifier).replan().catchError((
@@ -202,7 +206,10 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
           );
         }),
       );
-    });
+    }
+
+    _renewReminders = renew;
+    _reminderRenewal = Timer(_reminderRenewalDelay, renew);
     unawaited(
       _maintenance.run(
         key: key,
@@ -243,6 +250,12 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden) {
+      // Leaving before the renewal: there is no opening to keep smooth now,
+      // and iOS gives the app a few seconds before it suspends it.
+      _reminderRenewal?.cancel();
+      _renewReminders?.call();
+    }
     if (state == AppLifecycleState.resumed) {
       _requestMaintenance();
       _checkForAppUpdate();

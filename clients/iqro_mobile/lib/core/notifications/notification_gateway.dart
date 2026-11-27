@@ -13,6 +13,7 @@ import '../../features/prayer/prayer_repository.dart';
 import '../../features/reminders/reminder_models.dart';
 import '../auth/account_scope.dart';
 import '../storage/local_database.dart';
+import 'reminder_sounds.dart';
 
 class ReminderSchedulingResult {
   const ReminderSchedulingResult({
@@ -32,12 +33,16 @@ class _PlannedReminderNotification {
     required this.rule,
     required this.scheduledDate,
     this.matchDateTimeComponents,
+    this.endsPlan = false,
   });
 
   final int id;
   final ReminderRule rule;
   final tz.TZDateTime scheduledDate;
   final DateTimeComponents? matchDateTimeComponents;
+
+  /// The note that the prayer reminders run out unless the app is opened.
+  final bool endsPlan;
 }
 
 class _ManagedNotificationPlan {
@@ -376,7 +381,7 @@ class NotificationGateway {
         .toList(growable: false);
     if (prayerRules.isNotEmpty) {
       final schedules = await prayerRepository.calculateHorizon(
-        days: prayerSchedulingHorizonDays(isIOS: Platform.isIOS),
+        days: prayerSchedulingHorizonDays,
         accountScope: scope,
       );
       _database.ensureCurrent(scope);
@@ -424,10 +429,43 @@ class NotificationGateway {
       (left, right) =>
           left.scheduledDate.toUtc().compareTo(right.scheduledDate.toUtc()),
     );
-    final selected = limitPendingNotificationPlan(
-      candidates,
-      isIOS: Platform.isIOS,
-    );
+    final selected = <_PlannedReminderNotification>[
+      ...limitPendingNotificationPlan(
+        candidates,
+        isIOS: Platform.isIOS,
+        repeats: (item) => item.matchDateTimeComponents != null,
+        reserved: prayerRules.isEmpty ? 0 : 1,
+      ),
+    ];
+    // Prayer notifications are planned ahead only so far, and the plan is
+    // renewed when the app opens: without it they would stop unnoticed.
+    final lastPrayer = selected
+        .where((item) => item.rule.type == ReminderType.prayer)
+        .lastOrNull;
+    if (lastPrayer != null) {
+      final location = lastPrayer.scheduledDate.location;
+      selected.add(
+        _PlannedReminderNotification(
+          id: prayerPlanEndNotificationId,
+          rule: lastPrayer.rule,
+          scheduledDate: prayerPlanEndNoticeTime(
+            lastPrayer.scheduledDate,
+            now: tz.TZDateTime.now(location),
+          ),
+          endsPlan: true,
+        ),
+      );
+    }
+    final vibrationSound =
+        Platform.isIOS &&
+            selected.any(
+              (item) =>
+                  !item.endsPlan &&
+                  item.rule.signal == ReminderSignal.vibration,
+            )
+        ? await installReminderVibrationSound()
+        : null;
+    _database.ensureCurrent(scope);
     final plannedIds = selected.map((item) => item.id).toSet();
     final previousPlan =
         await _managedPlan() ??
@@ -460,13 +498,19 @@ class NotificationGateway {
       _database.ensureCurrent(scope);
       await _plugin.zonedSchedule(
         id: item.id,
-        title: copy.titleFor(item.rule),
-        body: copy.bodyFor(item.rule),
+        title: item.endsPlan ? copy.planEndTitle : copy.titleFor(item.rule),
+        body: item.endsPlan ? copy.planEndBody : copy.bodyFor(item.rule),
         scheduledDate: item.scheduledDate,
-        notificationDetails: _details(
-          item.rule.signal,
-          item.rule.adhanFor(selectedAdhan),
-        ),
+        notificationDetails: item.endsPlan
+            ? reminderNotificationDetails(
+                ReminderSignal.sound,
+                ReminderAdhan.none,
+              )
+            : reminderNotificationDetails(
+                item.rule.signal,
+                item.rule.adhanFor(selectedAdhan),
+                vibrationSound: vibrationSound,
+              ),
         androidScheduleMode: mode,
         matchDateTimeComponents: item.matchDateTimeComponents,
         payload: _payloadFor(
@@ -490,7 +534,7 @@ class NotificationGateway {
       'updated_at': DateTime.now().toUtc().toIso8601String(),
       'prayer_horizon_days': prayerRules.isEmpty
           ? 0
-          : prayerSchedulingHorizonDays(isIOS: Platform.isIOS),
+          : prayerSchedulingHorizonDays,
       'candidate_count': candidates.length,
       'capacity_limit': Platform.isIOS ? iosPendingNotificationLimit : null,
       'timezone': tz.local.name,
@@ -598,47 +642,6 @@ class NotificationGateway {
     }
   }
 
-  NotificationDetails _details(ReminderSignal signal, ReminderAdhan adhan) {
-    final silent = signal == ReminderSignal.silent;
-    final vibrate = signal != ReminderSignal.silent;
-    final sound = signal == ReminderSignal.sound;
-    final called = adhan != ReminderAdhan.none;
-    return NotificationDetails(
-      android: AndroidNotificationDetails(
-        // Android fixes a channel's sound when it is created, so each adhan
-        // needs a channel of its own.
-        called
-            ? 'iqro_reminders_adhan_${adhan.name}'
-            : 'iqro_reminders_${signal.name}',
-        switch ((signal, adhan)) {
-          (_, ReminderAdhan.makkah) => 'IQRO adhan of Makkah',
-          (_, ReminderAdhan.madinah) => 'IQRO adhan of Madinah',
-          (ReminderSignal.sound, _) => 'IQRO reminders with sound',
-          (ReminderSignal.vibration, _) => 'IQRO vibrating reminders',
-          (ReminderSignal.silent, _) => 'IQRO silent reminders',
-        },
-        channelDescription: 'Prayer and Quran reminders',
-        icon: 'iqro_status_icon',
-        importance: Importance.high,
-        priority: Priority.high,
-        category: AndroidNotificationCategory.reminder,
-        playSound: sound,
-        sound: called
-            ? RawResourceAndroidNotificationSound('adhan_${adhan.name}')
-            : null,
-        enableVibration: vibrate,
-        silent: silent,
-        visibility: NotificationVisibility.public,
-      ),
-      iOS: DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: sound,
-        sound: called ? 'adhan_${adhan.name}.caf' : null,
-      ),
-    );
-  }
-
   String _routeFor(ReminderRule rule) => switch (rule.type) {
     ReminderType.prayer => '/prayer',
     ReminderType.quranReading => '/app?tab=1',
@@ -729,21 +732,117 @@ class NotificationGateway {
   }
 }
 
-const iosPendingNotificationLimit = 64;
-
-List<T> limitPendingNotificationPlan<T>(
-  List<T> chronologicallyOrdered, {
-  required bool isIOS,
+/// How a reminder sounds. [vibrationSound] is the silent sound a vibrating
+/// reminder needs on iOS (see [reminderVibrationSound]); without it that
+/// reminder is silent there.
+@visibleForTesting
+NotificationDetails reminderNotificationDetails(
+  ReminderSignal signal,
+  ReminderAdhan adhan, {
+  String? vibrationSound,
 }) {
-  if (!isIOS || chronologicallyOrdered.length <= iosPendingNotificationLimit) {
-    return List<T>.unmodifiable(chronologicallyOrdered);
-  }
-  return List<T>.unmodifiable(
-    chronologicallyOrdered.take(iosPendingNotificationLimit),
+  final silent = signal == ReminderSignal.silent;
+  final vibrate = signal != ReminderSignal.silent;
+  final sound = signal == ReminderSignal.sound;
+  final called = adhan != ReminderAdhan.none;
+  final iosVibration = signal == ReminderSignal.vibration
+      ? vibrationSound
+      : null;
+  return NotificationDetails(
+    android: AndroidNotificationDetails(
+      // Android fixes a channel's sound when it is created, so each adhan
+      // needs a channel of its own.
+      called
+          ? 'iqro_reminders_adhan_${adhan.name}'
+          : 'iqro_reminders_${signal.name}',
+      switch ((signal, adhan)) {
+        (_, ReminderAdhan.makkah) => 'IQRO adhan of Makkah',
+        (_, ReminderAdhan.madinah) => 'IQRO adhan of Madinah',
+        (ReminderSignal.sound, _) => 'IQRO reminders with sound',
+        (ReminderSignal.vibration, _) => 'IQRO vibrating reminders',
+        (ReminderSignal.silent, _) => 'IQRO silent reminders',
+      },
+      channelDescription: 'Prayer and Quran reminders',
+      icon: 'iqro_status_icon',
+      importance: Importance.high,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.reminder,
+      playSound: sound,
+      sound: called
+          ? RawResourceAndroidNotificationSound('adhan_${adhan.name}')
+          : null,
+      enableVibration: vibrate,
+      silent: silent,
+      visibility: NotificationVisibility.public,
+    ),
+    iOS: DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: sound || iosVibration != null,
+      sound: called ? 'adhan_${adhan.name}.caf' : iosVibration,
+    ),
   );
 }
 
-int prayerSchedulingHorizonDays({required bool isIOS}) => isIOS ? 8 : 32;
+const iosPendingNotificationLimit = 64;
+
+/// iOS keeps only the [iosPendingNotificationLimit] nearest pending
+/// notifications of an app. A weekly reminder repeats and so takes one place
+/// for good: those come first. [reserved] places stay free (for the note that
+/// the prayer reminders run out), and the one-off notifications, the prayers,
+/// fill the rest in time order: about 12 days of five prayers. Android keeps
+/// them all.
+List<T> limitPendingNotificationPlan<T>(
+  List<T> chronologicallyOrdered, {
+  required bool isIOS,
+  bool Function(T item)? repeats,
+  int reserved = 0,
+}) {
+  if (!isIOS) return List<T>.unmodifiable(chronologicallyOrdered);
+  bool repeating(T item) => repeats?.call(item) ?? false;
+  var repeatingRoom = iosPendingNotificationLimit;
+  final repeatingCount = chronologicallyOrdered.where(repeating).length;
+  var room =
+      iosPendingNotificationLimit -
+      reserved -
+      (repeatingCount < repeatingRoom ? repeatingCount : repeatingRoom);
+  final kept = <T>[];
+  for (final item in chronologicallyOrdered) {
+    if (repeating(item)) {
+      if (repeatingRoom > 0) {
+        kept.add(item);
+        repeatingRoom -= 1;
+      }
+    } else if (room > 0) {
+      kept.add(item);
+      room -= 1;
+    }
+  }
+  return List<T>.unmodifiable(kept);
+}
+
+/// Days of prayer times the reminders are planned for. On iOS the pending
+/// limit ends the plan sooner (see [limitPendingNotificationPlan]).
+const prayerSchedulingHorizonDays = 32;
+
+/// The note that the prayer reminders run out.
+final prayerPlanEndNotificationId = reminderNotificationId(
+  'iqro-prayer-plan',
+  'end',
+);
+
+/// A day before the last planned prayer notification, so that a day of
+/// reminders is still left when the note comes; right after the last one
+/// when the plan is shorter than that.
+tz.TZDateTime prayerPlanEndNoticeTime(
+  tz.TZDateTime lastPrayer, {
+  required tz.TZDateTime now,
+}) {
+  final dayBefore = lastPrayer.subtract(const Duration(days: 1));
+  return dayBefore.isAfter(now)
+      ? dayBefore
+      : lastPrayer.add(const Duration(minutes: 1));
+}
 
 int reminderNotificationId(String ruleId, String occurrence) {
   final bytes = sha256.convert(utf8.encode('$ruleId|$occurrence')).bytes;
@@ -827,6 +926,20 @@ class ReminderNotificationCopy {
       _ => 'A short reading keeps your daily habit going',
     };
   }
+
+  String get planEndTitle => switch (locale) {
+    'ru' => 'Напоминания о намазе заканчиваются',
+    'ar' => 'تذكيرات الصلاة على وشك الانتهاء',
+    'tr' => 'Namaz hatırlatıcıları bitmek üzere',
+    _ => 'Prayer reminders are running out',
+  };
+
+  String get planEndBody => switch (locale) {
+    'ru' => 'Откройте IQRO, чтобы они приходили дальше.',
+    'ar' => 'افتح IQRO لتستمر التذكيرات.',
+    'tr' => 'Devam etmeleri için IQRO’yu açın.',
+    _ => 'Open IQRO to keep them coming.',
+  };
 
   String _prayerName(String code) {
     const names = <String, Map<String, String>>{
