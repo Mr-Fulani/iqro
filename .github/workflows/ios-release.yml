@@ -115,6 +115,17 @@ jobs:
             printf '%s' "$PROFILE_WIDGET" | base64 --decode > "$dir/iqro-widget-app-store.mobileprovision"
           done
 
+          # The app's entitlements ask for these; a profile without them fails at
+          # archive time with a less clear message.
+          profile="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/iqro-app-store.mobileprovision"
+          granted="$(security cms -D -i "$profile")"
+          for key in com.apple.developer.usernotifications.time-sensitive com.apple.security.application-groups com.apple.developer.associated-domains; do
+            if ! grep -q "<key>$key</key>" <<<"$granted"; then
+              echo "::error::The app profile lacks $key: enable it on the App ID and download the profile again (docs/release/app-store.md)"
+              exit 1
+            fi
+          done
+
           mkdir -p "$RUNNER_TEMP/private_keys"
           printf '%s\n' "$API_KEY_P8" > "$RUNNER_TEMP/private_keys/AuthKey.p8"
           chmod 600 "$RUNNER_TEMP/private_keys/AuthKey.p8"
