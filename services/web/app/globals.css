@@ -7062,8 +7062,9 @@ input:focus, select:focus, textarea:focus {
   line-height: 1.3;
 }
 
-/* Google's badge with the clear space its brand rules require: a quarter of
-   the badge height on every side. */
+/* Apple's and Google's badges with the clear space their brand rules require:
+   a quarter of the badge height on every side. */
+.app-store-badge,
 .google-play-badge {
   display: inline-flex;
   align-self: center;
@@ -7072,6 +7073,7 @@ input:focus, select:focus, textarea:focus {
   border-radius: 12px;
 }
 
+.app-store-badge img,
 .google-play-badge img {
   display: block;
   width: auto;
@@ -7086,8 +7088,12 @@ input:focus, select:focus, textarea:focus {
   gap: 24px;
 }
 
-a.footer-store-badge:hover {
-  border-color: var(--text-secondary);
+/* Apple asks for its badge first when other stores' badges stand beside it. */
+.home-app-stores {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
 .footer-brand .footer-app-availability {

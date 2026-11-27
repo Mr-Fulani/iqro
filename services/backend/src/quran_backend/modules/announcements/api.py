@@ -92,9 +92,9 @@ class AppReleaseView(PublicReadOnlyViewMixin, APIView):
         operation_id="app_release",
         responses=AppReleaseSerializer,
         description=(
-            "The newest app build in the stores, set in the admin once a release is out. "
-            "An Android app with a smaller versionCode offers the update even before "
-            "Google Play reports it. 0 means no check."
+            "The newest Android build in Google Play, set in the admin once a release is "
+            "out. An Android app with a smaller versionCode offers the update even before "
+            "Google Play reports it. 0 means no check. iOS builds do not read it."
         ),
     )
     def get(self, _request: Request) -> Response:

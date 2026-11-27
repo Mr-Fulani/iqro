@@ -27,7 +27,7 @@ The site is available in four languages with the same sections under each prefix
 ## Mobile app
 
 - [IQRO for Android on Google Play](https://play.google.com/store/apps/details?id=forum.iqro.app): the same Quran, audio, courses and prayer times on the phone, with downloaded pages and audio available offline
-- Recitation check (app only): read an ayah aloud and the app follows you word by word and stops on a mistake. It runs on the phone itself and needs no internet connection. It is not available on the website.
+- Recitation check (app only): read an ayah aloud and the app follows you word by word and stops on a mistake. On Android it runs on the phone itself and needs no internet connection. It is not available on the website.
 
 ## Optional
 

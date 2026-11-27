@@ -30,6 +30,9 @@ ARG NEXT_PUBLIC_YANDEX_METRIKA_ID=
 # The app's Google Play page; empty builds the site without the Google Play badge
 # (docs/google-play-badge.md).
 ARG NEXT_PUBLIC_ANDROID_PLAY_STORE_URL=
+# The app's App Store page; empty builds the site without the App Store badge and
+# without Safari's app banner (docs/app-store-badge.md).
+ARG NEXT_PUBLIC_IOS_APP_STORE_URL=
 ENV NODE_ENV=production \
     BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL} \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
@@ -38,7 +41,8 @@ ENV NODE_ENV=production \
     NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION} \
     NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID} \
     NEXT_PUBLIC_YANDEX_METRIKA_ID=${NEXT_PUBLIC_YANDEX_METRIKA_ID} \
-    NEXT_PUBLIC_ANDROID_PLAY_STORE_URL=${NEXT_PUBLIC_ANDROID_PLAY_STORE_URL}
+    NEXT_PUBLIC_ANDROID_PLAY_STORE_URL=${NEXT_PUBLIC_ANDROID_PLAY_STORE_URL} \
+    NEXT_PUBLIC_IOS_APP_STORE_URL=${NEXT_PUBLIC_IOS_APP_STORE_URL}
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p public && npm run build

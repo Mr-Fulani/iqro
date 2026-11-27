@@ -357,6 +357,8 @@ services:
         NEXT_PUBLIC_YANDEX_METRIKA_ID: ${WEB_YANDEX_METRIKA_ID:-}
         # The Google Play badge on the site (docs/google-play-badge.md); empty hides it.
         NEXT_PUBLIC_ANDROID_PLAY_STORE_URL: ${WEB_ANDROID_PLAY_STORE_URL:-}
+        # The App Store badge and Safari's app banner (docs/app-store-badge.md); empty hides them.
+        NEXT_PUBLIC_IOS_APP_STORE_URL: ${WEB_IOS_APP_STORE_URL:-}
     restart: unless-stopped
     environment:
       NODE_ENV: production

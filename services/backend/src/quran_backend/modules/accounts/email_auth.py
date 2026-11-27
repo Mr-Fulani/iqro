@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.views.decorators.debug import sensitive_variables
 
@@ -54,7 +55,7 @@ class EmailVerificationResult:
     replayed: bool
 
 
-@sensitive_variables("code")
+@sensitive_variables("code", "review_code")
 def start_email_challenge(
     *,
     user: User,
@@ -74,8 +75,12 @@ def start_email_challenge(
     )
     if attempts > 10:
         raise AccountLinkUnavailable
+    # The App Store reviewer's address has a fixed code and gets no email.
+    review_code = _app_review_code(normalized_email)
+    if review_code is not None and _staff_owns_email(normalized_email):
+        raise AccountLinkUnavailable
     challenge_id = uuid.uuid7()
-    code = f"{secrets.randbelow(1_000_000):06d}"
+    code = review_code or f"{secrets.randbelow(1_000_000):06d}"
 
     with transaction.atomic():
         locked_user = User.objects.select_for_update().get(id=user.id)
@@ -110,6 +115,8 @@ def start_email_challenge(
             attempts_remaining=attempts,
         )
 
+    if review_code is not None:
+        return EmailChallengeStartResult(challenge=challenge, expires_in=expires_in)
     try:
         # Clients that predate the locale field fall back to the installation's language.
         delivered = send_login_code_email(
@@ -333,6 +340,26 @@ def _replay_consumed_challenge(
         credentials=credentials,
         merged_guest=challenge.requester_id != user.id,
         replayed=True,
+    )
+
+
+def _app_review_code(email: str) -> str | None:
+    """The fixed code when the address is the App Store reviewer's (docs/app-review-sign-in.md)."""
+    review_email = getattr(settings, "QURAN_APP_REVIEW_EMAIL", "")
+    if not review_email or email != review_email:
+        return None
+    return str(settings.QURAN_APP_REVIEW_PASSCODE)
+
+
+def _staff_owns_email(email: str) -> bool:
+    """A fixed code must never open an account that has access to the admin."""
+    return (
+        User.objects.filter(Q(is_staff=True) | Q(is_superuser=True))
+        .filter(
+            Q(email__iexact=email)
+            | Q(identities__provider=IdentityProvider.EMAIL, identities__provider_subject=email)
+        )
+        .exists()
     )
 
 
