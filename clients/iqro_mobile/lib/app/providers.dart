@@ -364,6 +364,9 @@ class AppPreferencesController extends StateNotifier<AppPreferences> {
   Future<void> markRecitationNoticeSeen() =>
       _set(state.copyWith(recitationNoticeSeen: true));
 
+  Future<void> markNotificationsAsked() =>
+      _set(state.copyWith(notificationsAsked: true));
+
   Future<void> setDailyReadingGoal({
     required DailyUnit unit,
     required int target,

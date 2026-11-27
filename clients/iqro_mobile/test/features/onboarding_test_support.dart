@@ -118,12 +118,20 @@ class FakeOnboardingServices implements OnboardingServices {
   @override
   Future<void> openAppSettings() async {}
 
+  /// The permission as the system has it now, once changed in its settings.
+  ReminderPermission? permissionNow;
+  var statusReads = 0;
+
   @override
   Future<({ReminderPermission permission, bool prayerReminders})>
-  reminderStatus() async => (
-    permission: initialPermission,
-    prayerReminders: initialPermission == ReminderPermission.granted,
-  );
+  reminderStatus() async {
+    statusReads++;
+    final permission = permissionNow ?? initialPermission;
+    return (
+      permission: permission,
+      prayerReminders: permission == ReminderPermission.granted,
+    );
+  }
 
   @override
   Future<ReminderPermission> requestNotifications() async {

@@ -139,7 +139,7 @@ class _AppShellState extends ConsumerState<AppShell>
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && backToHome) context.go('/app?tab=0');
       },
-      child: _buildShell(context),
+      child: IqroTabsScope(child: _buildShell(context)),
     );
   }
 

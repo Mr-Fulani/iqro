@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -8,6 +11,7 @@ import '../../app/providers.dart';
 import '../../core/auth/account_scope.dart';
 import '../../core/design_system/iqro_widgets.dart';
 import '../../core/network/api_error_text.dart';
+import '../../core/platform/notification_settings.dart';
 import '../../core/storage/local_database.dart';
 import '../../core/theme/iqro_theme.dart';
 import '../quran/quran_models.dart';
@@ -43,16 +47,20 @@ class RemindersScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               if (state.permission != ReminderPermission.granted)
-                IqroStatusBanner(
-                  icon: Icons.notifications_off_outlined,
-                  title: context.l10n.notificationAccess,
-                  message: context.l10n.notificationAccessBody,
-                  color: context.iqroColors.sand,
-                  actionLabel: context.l10n.allowNotifications,
-                  onAction: state.saving
-                      ? null
-                      : ref.read(reminderProvider.notifier).requestPermission,
-                )
+                defaultTargetPlatform == TargetPlatform.iOS
+                    ? _AppleNotificationBanner(saving: state.saving)
+                    : IqroStatusBanner(
+                        icon: Icons.notifications_off_outlined,
+                        title: context.l10n.notificationAccess,
+                        message: context.l10n.notificationAccessBody,
+                        color: context.iqroColors.sand,
+                        actionLabel: context.l10n.allowNotifications,
+                        onAction: state.saving
+                            ? null
+                            : ref
+                                  .read(reminderProvider.notifier)
+                                  .requestPermission,
+                      )
               else if (!state.exactScheduling)
                 IqroStatusBanner(
                   icon: Icons.schedule_outlined,
@@ -291,6 +299,67 @@ class _PrayerReminderTile extends ConsumerWidget {
               }
             }
           : null,
+    );
+  }
+}
+
+/// Notifications are not allowed, on iOS. It asks once: until then the
+/// banner leads to that question, with one way on (App Review 5.1.1); after
+/// an answer, to the settings, and back from them the reminders are read
+/// again.
+class _AppleNotificationBanner extends ConsumerStatefulWidget {
+  const _AppleNotificationBanner({required this.saving});
+
+  final bool saving;
+
+  @override
+  ConsumerState<_AppleNotificationBanner> createState() =>
+      _AppleNotificationBannerState();
+}
+
+class _AppleNotificationBannerState
+    extends ConsumerState<_AppleNotificationBanner>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(ref.read(reminderProvider.notifier).reload());
+    }
+  }
+
+  Future<void> _ask() async {
+    await ref.read(appPreferencesProvider.notifier).markNotificationsAsked();
+    await ref.read(reminderProvider.notifier).requestPermission();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final asked = ref.watch(
+      appPreferencesProvider.select((value) => value.notificationsAsked),
+    );
+    return IqroStatusBanner(
+      key: const Key('reminders-notification-access'),
+      icon: Icons.notifications_off_outlined,
+      title: asked ? l10n.notificationsOff : l10n.notificationsForReminders,
+      message: l10n.notificationAccessBody,
+      color: context.iqroColors.sand,
+      actionLabel: asked ? l10n.onboardingOpenSettings : l10n.continueLabel,
+      onAction: widget.saving
+          ? null
+          : () => unawaited(asked ? NotificationSettings.open() : _ask()),
     );
   }
 }

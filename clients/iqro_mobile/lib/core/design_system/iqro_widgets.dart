@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'iqro_icon.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -140,6 +142,17 @@ class IqroPage extends StatelessWidget {
   }
 }
 
+/// The screens under the app's tab bar, which leads on from any of them.
+class IqroTabsScope extends InheritedWidget {
+  const IqroTabsScope({required super.child, super.key});
+
+  static bool contains(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<IqroTabsScope>() != null;
+
+  @override
+  bool updateShouldNotify(IqroTabsScope oldWidget) => false;
+}
+
 class IqroTopBar extends StatelessWidget implements PreferredSizeWidget {
   const IqroTopBar({
     required this.title,
@@ -159,11 +172,29 @@ class IqroTopBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => Size.fromHeight(subtitle == null ? 64 : 72);
 
+  /// iPhone has no system Back: a screen opened in place of all the others
+  /// (by a notification, a widget or a link) would have no way out but for
+  /// the tab bar, when it is under one.
+  static bool _stranded(BuildContext context) =>
+      defaultTargetPlatform == TargetPlatform.iOS &&
+      !(ModalRoute.of(context)?.impliesAppBarDismissal ?? true) &&
+      !IqroTabsScope.contains(context);
+
   @override
   Widget build(BuildContext context) {
+    final home = leading == null && _stranded(context);
     return AppBar(
       automaticallyImplyLeading: leading == null,
-      leading: leading,
+      leading:
+          leading ??
+          (home
+              ? IconButton(
+                  key: const ValueKey('iqro-top-bar-home'),
+                  tooltip: context.l10n.navHome,
+                  icon: const Icon(Icons.home_outlined),
+                  onPressed: () => context.go('/app'),
+                )
+              : null),
       centerTitle: centerTitle,
       toolbarHeight: preferredSize.height,
       titleSpacing: leading == null ? 16 : 0,

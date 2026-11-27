@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -192,6 +194,62 @@ void main() {
         tester.element(find.byType(SettingsScreen)),
       );
       expect(container.read(appPreferencesProvider).readerHaptics, isFalse);
+    });
+
+    for (final locale in <String>['ru', 'en', 'ar', 'tr']) {
+      testWidgets('the privacy row opens the policy in the language of the '
+          'app ($locale)', (tester) async {
+        const launcher = MethodChannel('plugins.flutter.io/url_launcher');
+        final opened = <Object?>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          launcher,
+          (call) async {
+            if (call.method == 'launch') {
+              opened.add((call.arguments as Map)['url']);
+            }
+            return true;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            launcher,
+            null,
+          ),
+        );
+        await pump(tester, locale);
+        final row = find.byKey(const Key('settings-privacy'));
+        await tester.ensureVisible(row);
+        await tester.pumpAndSettle();
+        // The coordinates reach the server for the times, and are said to.
+        final l10n = lookupAppLocalizations(Locale(locale));
+        expect(
+          find.descendant(
+            of: row,
+            matching: find.text(l10n.prayerLocationPrivacy),
+          ),
+          findsOneWidget,
+        );
+        expect(l10n.prayerLocationPrivacy, contains('IQRO'));
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+        expect(opened, <Object?>['https://iqro.forum/$locale/privacy']);
+      });
+    }
+
+    testWidgets('the vibration row names Android on Android alone', (
+      tester,
+    ) async {
+      await pump(tester, 'ru');
+      final ru = lookupAppLocalizations(const Locale('ru'));
+      expect(find.text(ru.readerHapticsHint), findsOneWidget);
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        await pump(tester, 'ru');
+        expect(find.text(ru.readerHapticsHintIos), findsOneWidget);
+        expect(find.textContaining('Android'), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
   });
 

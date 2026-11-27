@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -238,6 +239,22 @@ void main() {
       });
     }
   }
+
+  testWidgets('on iOS the More tab shows nothing that is still to come, and '
+      'a tab needs no way home of its own', (tester) async {
+    await _pumpShell(tester, tab: 4, size: const Size(1080, 2340));
+    expect(find.byKey(const ValueKey('more-soon')), findsOneWidget);
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      await _pumpShell(tester, tab: 4, size: const Size(1080, 2340));
+      expect(find.byType(MoreScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('more-soon')), findsNothing);
+      expect(find.byKey(const ValueKey('iqro-top-bar-home')), findsNothing);
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 
   testWidgets('turning the phone keeps the open tab and its scroll', (
     tester,

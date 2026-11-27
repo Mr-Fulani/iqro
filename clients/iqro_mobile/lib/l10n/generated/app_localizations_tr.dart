@@ -1105,7 +1105,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get prayerWidgetManualIos =>
-      'Ana ekrana dokunup basılı tutun, + düğmesine dokunun, IQRO\'yu bulun ve widget\'ı ekleyin.';
+      'Ana ekranda boş bir yere dokunup basılı tutun, ardından Düzenle → Araç Takımı Ekle\'ye dokunun (iOS 17 ve öncesinde + düğmesine). IQRO\'yu bulun ve widget\'ı ekleyin.';
 
   @override
   String get prayerWidgetNeedsLocation =>
@@ -1113,7 +1113,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get prayerLocationPrivacy =>
-      'Koordinatlarınız bu cihazda kalır ve analitiğe eklenmez.';
+      'Koordinatlar yalnızca namaz vakitlerini hesaplamak için IQRO sunucusuna gönderilir. Sunucu bunları saklamaz; koordinatlar kullanım istatistiklerine de girmez.';
 
   @override
   String get useMyLocation => 'Konumumu kullan';
@@ -1134,7 +1134,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get locationPermissionRequiredBody =>
-      'Namaz vakitlerini hesaplamak için bir kez izin verin. Koordinatlar bu cihazda kalır.';
+      'Namaz vakitlerini hesaplamak için bir kez izin verin. IQRO sunucusu koordinatları saklamaz.';
 
   @override
   String get locationUnavailable => 'Konum belirlenemedi';
@@ -1410,6 +1410,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get accountSwitchHint =>
       'Çıkış yapın ve başka bir Google hesabı veya e-posta seçin';
+
+  @override
+  String get accountSwitchHintEmail =>
+      'Çıkış yapın ve başka bir e-postayla giriş yapın';
 
   @override
   String get devices => 'Cihazlar';
@@ -1856,6 +1860,12 @@ class AppLocalizationsTr extends AppLocalizations {
       'IQRO, uygulama kapalıyken bile seçtiğiniz saatte hatırlatır.';
 
   @override
+  String get notificationsForReminders => 'Hatırlatmalar için bildirimler';
+
+  @override
+  String get notificationsOff => 'Bildirimler kapalı';
+
+  @override
   String get allowNotifications => 'Bildirimlere izin ver';
 
   @override
@@ -1975,6 +1985,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get readerHapticsHint =>
       'Mushaf sayfası değiştiğinde kısa titreşim. Android dokunma titreşimi de açık olmalıdır.';
+
+  @override
+  String get readerHapticsHintIos =>
+      'Mushaf sayfası değiştiğinde kısa titreşim.';
 
   @override
   String get mushafPageCaching =>
@@ -3322,7 +3336,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get onboardingPrayerBody =>
-      'Namaz vakitlerini ve kıbleyi hesaplamak için şehrinizi bilmemiz gerekir. Koordinatlar telefonunuzda kalır.';
+      'Namaz vakitlerini ve kıbleyi hesaplamak için şehrinizi bilmemiz gerekir. IQRO sunucusu koordinatları yalnızca hesaplama için alır ve saklamaz.';
 
   @override
   String get onboardingUseLocation => 'Konumumu bul';
@@ -3703,7 +3717,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get recitationNoticeVoice =>
-      'Sesinizi telefonunuzun konuşma tanıma hizmeti (Google veya Apple) tanır. Eski telefonlarda ses bu hizmete internet üzerinden gider. IQRO kaydı saklamaz ve kendi sunucusuna göndermez.';
+      'Sesinizi Apple\'ın konuşma tanıma hizmeti tanır: mümkünse cihazın kendisinde, değilse internet üzerinden. IQRO kaydı saklamaz ve kendi sunucusuna göndermez. Ardından sistem iki izin isteyecek: konuşma tanıma ve mikrofon.';
 
   @override
   String get recitationNoticeLimits =>
@@ -3792,6 +3806,18 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get recitationUnavailable =>
       'Konuşma tanıma kullanılamıyor: telefonda tanıma hizmeti yok veya mikrofona izin verilmedi.';
+
+  @override
+  String get recitationDenied =>
+      'Mikrofona veya konuşma tanımaya iPhone Ayarları\'nda izin verilmemiş.';
+
+  @override
+  String get recitationDictationOff =>
+      'Dikteyi açın: Ayarlar → Genel → Klavye.';
+
+  @override
+  String get recitationMicBusy =>
+      'Mikrofon başka bir uygulamada kullanılıyor veya kullanılamıyor.';
 
   @override
   String get recitationNoArabic =>
