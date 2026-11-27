@@ -49,7 +49,7 @@ Store — ещё через 1,5–3 недели, вместе с исправл
 | Р1 | 🔶 iPad: только iPhone или iPhone и iPad | **только iPhone** — по рекомендации, ответа пока нет. iPad можно добавить позже, убрать нельзя (раздел 10) | до первой сборки |
 | Р2 | 🔶 Самая старая iOS, на которой работает IQRO | **16.0**. Сейчас 15.0, но iOS 15 никто не проверит: TestFlight требует iOS 16 | до первой сборки |
 | Р3 | Азан сквозь «Фокус» и «Сон» (Time Sensitive) | **да** — вам предложено, отмечаем, если не передумали (раздел 3). На Android азан в «Не беспокоить» тоже молчит, так что это сверх Android | до профилей, шаг 4 |
-| Р4 | 🔶 США: оставлять ли витрину | решаете вы, два варианта в разделе 10 | лучше до шага 3: для «оставить», вероятно, нужна ещё одна возможность у App ID |
+| Р4 | 🔶 США: оставлять ли витрину | решаете вы, два варианта в разделе 10 | лучше до шага 4: для «оставить», вероятно, нужна ещё одна возможность у App ID, иначе профили перевыпускать |
 | Р5 | 🔶 ЕС: «трейдер» или «не трейдер» | решаете вы, раздел 10 | до отправки |
 | Р6 | 🔶 Sentry (отчёты об ошибках) | одно решение на iPhone и Android. Без него ошибки внутри приложения не видны; падения видно в TestFlight, если тестировщик отправит отчёт | до первой сборки |
 | Р7 | Номер версии iOS | как у следующего Android | до первой сборки |
@@ -194,7 +194,9 @@ https://developer.apple.com/account/resources/identifiers
    отметьте `group.forum.iqro.app` → **Continue** → **Assign** → **Done** → **Save** (если
    спросит — **Confirm**). То же для `forum.iqro.app.PrayerTimesHomeWidget`.
 
-Больше ничего не включайте: push, «Войти с Apple» и остальное не нужны.
+Больше ничего не включайте: push, «Войти с Apple» и остальное не нужны. Исключение — если
+по Р4 оставляете США с проверкой возраста: тогда спросите в чате до шага 4, какую ещё
+возможность отметить (Declared Age Range).
 
 Любое изменение App ID, в том числе новая возможность, делает его профили из шага 4
 недействительными. Их перевыпускают и заново кладут в GitHub — около 15 минут. Поэтому
@@ -290,18 +292,18 @@ https://appstoreconnect.apple.com → **Apps** → **+** → **New App**:
 ## 7. Восемь значений в GitHub
 
 Workflow сборки сначала проверяет, что все 8 значений есть. Если чего-то нет, он сразу
-останавливается и пишет имена.
+останавливается и пишет короткие имена — они в последнем столбце.
 
-| Имя | Что | Откуда |
-|---|---|---|
-| `APPLE_TEAM_ID` | Team ID, переменная (не секрет) | шаг 2; может задать Claude |
-| `APP_STORE_CONNECT_API_KEY_ID` | Key ID | шаг 5 |
-| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID | шаг 5 |
-| `APP_STORE_CONNECT_API_KEY_P8` | файл `AuthKey_….p8` целиком | шаг 5 |
-| `IOS_DISTRIBUTION_CERT_P12_BASE64` | файл `iqro-distribution.p12`, в base64 | шаг 4 |
-| `IOS_DISTRIBUTION_CERT_PASSWORD` | пароль от `.p12` | шаг 4 |
-| `IOS_PROFILE_APP_BASE64` | профиль `IQRO App Store`, в base64 | шаг 4 |
-| `IOS_PROFILE_WIDGET_BASE64` | профиль `IQRO Widget App Store`, в base64 | шаг 4 |
+| Имя | Что | Откуда | В сообщении об ошибке |
+|---|---|---|---|
+| `APPLE_TEAM_ID` | Team ID, переменная (не секрет) | шаг 2; может задать Claude | `APPLE_TEAM_ID` |
+| `APP_STORE_CONNECT_API_KEY_ID` | Key ID | шаг 5 | `API_KEY_ID` |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID | шаг 5 | `API_ISSUER_ID` |
+| `APP_STORE_CONNECT_API_KEY_P8` | текст файла `AuthKey_….p8` целиком, **не** base64 | шаг 5 | `API_KEY_P8` |
+| `IOS_DISTRIBUTION_CERT_P12_BASE64` | файл `iqro-distribution.p12`, в base64 | шаг 4 | `CERT_P12` |
+| `IOS_DISTRIBUTION_CERT_PASSWORD` | пароль от `.p12` | шаг 4 | `CERT_PASSWORD` |
+| `IOS_PROFILE_APP_BASE64` | профиль `IQRO App Store`, в base64 | шаг 4 | `PROFILE_APP` |
+| `IOS_PROFILE_WIDGET_BASE64` | профиль `IQRO Widget App Store`, в base64 | шаг 4 | `PROFILE_WIDGET` |
 
 Необязательное девятое — `MOBILE_SENTRY_DSN`, только если решите включить Sentry (Р6).
 
@@ -354,8 +356,10 @@ gh variable list --repo Mr-Fulani/iqro
 ```
 
 Можно и через сайт: GitHub → репозиторий → **Settings** → **Secrets and variables** →
-**Actions** → **New repository secret**. Для файлов сначала скопируйте base64 командой вида
-`base64 -i ~/Downloads/IQRO_App_Store.mobileprovision | pbcopy` и вставьте в поле.
+**Actions** → **New repository secret**. Для `.p12` и двух профилей сначала скопируйте
+base64 командой вида `base64 -i ~/Downloads/IQRO_App_Store.mobileprovision | pbcopy` и
+вставьте в поле. Для `.p8` скопируйте сам текст файла, без base64:
+`pbcopy < ~/Downloads/AuthKey_XXXXXXXXXX.p8`.
 
 ## 8. Первая сборка и TestFlight
 
@@ -424,11 +428,11 @@ gh variable list --repo Mr-Fulani/iqro
 | Location → Coarse Location | Analytics | No | только с согласия на статистику: город по IP в Firebase |
 | Identifiers → User ID | App Functionality | Yes | всегда: номер гостевой или полной учётной записи на сервере |
 | Identifiers → Device ID | App Functionality, Analytics | Yes | всегда: ключ установки; с согласия — номер экземпляра Firebase |
-| Usage Data → Product Interaction | Analytics | No | всегда — обезличенные дневные суммы: сколько раз открыты уроки, курсы и объявления, без аккаунта и без данных устройства; с согласия на статистику — ещё события Firebase («открыта сура», «включено аудио») |
+| Usage Data → Product Interaction | Analytics | No | всегда — обезличенные дневные суммы без аккаунта и без данных устройства: показы, открытия, нажатия и закрытия объявлений; открытые темы курсов, намаза, таджвида и имён Аллаха, запуск и досмотр видео, «тема изучена», «Полезно» и «Не очень». С согласия на статистику — ещё события Firebase («открыта сура», «включено аудио») |
 | User Content → Customer Support | App Functionality | Yes | при обращении в поддержку |
 | User Content → Other User Content | App Functionality | Yes | для синхронизации: закладки, заметки, план, прогресс; оценки курсов |
 | Diagnostics → Other Diagnostic Data | App Functionality | Yes | версия приложения и iOS в обращении |
-| Diagnostics → Crash Data, Performance Data | App Functionality | No | **только** если включите Sentry (Р6); иначе не отмечать |
+| Diagnostics → Crash Data | App Functionality | No | **только** если включите Sentry (Р6); иначе не отмечать. Performance Data не отмечать и с Sentry: замеры скорости в нём выключены |
 
 Не отмечать: финансы, здоровье, контакты, фото и видео, история браузера и поиска, покупки,
 чувствительные данные (Sensitive Info, решение Р10), **аудио**. Голос при проверке чтения
@@ -523,7 +527,9 @@ false`), приложение шифрует только соединение H
   > Prayer reminders). Home-screen widgets: prayer times and the daily reading plan.
 
   Если к проверке будет включена кампания приглашений (карточка «Ваши приглашения»
-  в кабинете), скажите — допишем о ней в Notes. На 27.11.2026 кампании нет.
+  в кабинете), скажите заранее. Тогда «Поделиться» отправляет события от аккаунта: допишем
+  о кампании в Notes и поправим App Privacy (у Product Interaction станет Linked: Yes)
+  и манифест приватности. На 27.11.2026 кампании нет.
 
 ### Что пока не нужно
 
@@ -603,10 +609,12 @@ App Store покажет снимки основного языка; мы дел
 если выберете iPad. Снимки Google Play не подходят: другой размер и строка состояния
 Android. Новые снимки на 4 языках делает сессия ios-native на симуляторе, вы утверждаете.
 
-**Тексты.** Описание, ключевые слова и «What's New» — из [app-store-listing.md](app-store-listing.md).
+**Тексты.** Описание и ключевые слова — из [app-store-listing.md](app-store-listing.md).
 Перед отправкой их обновят: в описании нет новых функций, а «статистика — только с вашего
-согласия» неточна (обезличенные суммы уходят всегда, см. App Privacy). Для «What's New»
-заметки Android не годятся: проверку букв и огласовок делает только Android.
+согласия» неточна (обезличенные суммы уходят всегда, см. App Privacy). У первой версии
+«What's New» не заполняется. Для следующих заметки Android берут без того, что есть только
+на Android: например, проверку букв и огласовок делает только Android. Если выпуск только
+для iPhone (Р1), из запасного текста «What's New» убирают «и iPad».
 
 **Отправка:**
 
@@ -644,8 +652,9 @@ Apple обычно отвечает за 1–2 дня: половину заяв
    «Доверять», на Mac откройте «Консоль» (Finder → «Переход» → «Утилиты»), слева выберите
    iPhone → **Начать**. Xcode для этого не нужен.
 
-Символы для расшифровки отчётов сохраняются при каждой сборке, так что по отчёту видно
-место сбоя.
+Символы для расшифровки отчётов каждая сборка отправляет в App Store Connect и кладёт
+артефактом в GitHub, где он хранится 30 дней. Поэтому файл сбоя с iPhone лучше присылать
+сразу.
 
 ## 13. Порядок выпуска
 

@@ -217,7 +217,9 @@ Metinler ve kayıtlar kaynakları ve lisanslarıyla yayınlanır: https://iqro.f
 ## «What's New»
 
 Для первой версии в App Store поле не заполняется. Тексты для следующих выпусков — из
-`docs/release/notes-<версия>.md`, как для Google Play. Если поле всё же попросят:
+`docs/release/notes-<версия>.md`, как для Google Play, но без того, что есть только на Android
+(например, проверка букв и огласовок: на iPhone проверка чтения сверяет только слова). Если
+поле всё же попросят (если выпуск только для iPhone — без «и iPad»):
 
 - ru: Первый выпуск IQRO для iPhone и iPad.
 - en: The first release of IQRO for iPhone and iPad.
