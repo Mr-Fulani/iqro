@@ -106,7 +106,7 @@ jobs:
           xcrun simctl shutdown "$id" || true
           exit "$status"
       - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() && env.SKIP != 'true' }}
+        if: ${{ always() && env.SKIP != 'true' }}
         with:
           name: app-store-screenshots-${{ matrix.device }}
           path: ${{ env.OUT }}

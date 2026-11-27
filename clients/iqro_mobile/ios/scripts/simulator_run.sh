@@ -58,6 +58,43 @@ create() {
   echo "$id"
 }
 
+# One `flutter drive`, its output shown live and kept in test.log. Returns its
+# exit code, or 124 when the app never connected or the run went on too long.
+drive() {
+  local id="$1" app="$2" target="$3" out="$4" log="$4/test.log"
+  : > "$log"
+  IQRO_SIMULATOR="$id" IQRO_SCREENSHOTS="$out" flutter drive \
+    --driver=integration_test/driver/iqro_driver.dart \
+    --target="$target" \
+    --use-application-binary="$app" \
+    -d "$id" > "$log" 2>&1 &
+  local runner=$!
+  tail -n +1 -f "$log" &
+  local shower=$!
+  local started=$SECONDS stuck=0
+  while kill -0 "$runner" 2>/dev/null; do
+    sleep 5
+    local elapsed=$((SECONDS - started))
+    if { [ "$elapsed" -gt 360 ] && ! grep -q "Connecting to Flutter application" "$log"; } ||
+      [ "$elapsed" -gt 1800 ]; then
+      stuck=1
+      echo "::warning::flutter drive stuck after ${elapsed}s; stopping it"
+      pkill -TERM -P "$runner" 2>/dev/null || true
+      kill -TERM "$runner" 2>/dev/null || true
+      sleep 5
+      pkill -KILL -P "$runner" 2>/dev/null || true
+      kill -KILL "$runner" 2>/dev/null || true
+      break
+    fi
+  done
+  local code=0
+  wait "$runner" 2>/dev/null || code=$?
+  sleep 1
+  kill "$shower" 2>/dev/null || true
+  if [ "$stuck" -eq 1 ]; then return 124; fi
+  return "$code"
+}
+
 run_test() {
   local id="$1" app="$2" target="$3" out="$4"
   mkdir -p "$out"
@@ -65,14 +102,19 @@ run_test() {
   rm -f "$out/video.pid"
 
   # The driver starts the recording once the app runs (NO_VIDEO=1: none).
-  local status=0
-  IQRO_SIMULATOR="$id" IQRO_SCREENSHOTS="$out" flutter drive \
-    --driver=integration_test/driver/iqro_driver.dart \
-    --target="$target" \
-    --use-application-binary="$app" \
-    -d "$id" \
-    2>&1 | tee "$out/test.log" || status=$?
-  # tee hides flutter's exit code unless pipefail catches it.
+  # flutter drive sometimes never sees the app's VM service on a simulator and
+  # waits for ever: give the app 6 minutes to connect, then try once more.
+  local status=1 attempt
+  for attempt in 1 2; do
+    if drive "$id" "$app" "$target" "$out"; then
+      status=0
+    else
+      status=$?
+    fi
+    [ "$status" -ne 124 ] && break
+    mv "$out/test.log" "$out/test-stuck-$attempt.log"
+    xcrun simctl terminate "$id" forum.iqro.app 2>/dev/null || true
+  done
   if [ "$status" -eq 0 ] && ! grep -q "All tests passed" "$out/test.log"; then
     status=1
   fi
