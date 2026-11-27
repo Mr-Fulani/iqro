@@ -7,6 +7,8 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../core/platform/backup_exclusion.dart';
+
 /// Directory under application support that keeps drawn miniatures.
 const mushafThumbnailsDirectory = 'mushaf-thumbnails';
 
@@ -162,6 +164,8 @@ class MushafThumbnailCache {
       final bytes = await encoding.toByteData(format: ui.ImageByteFormat.png);
       if (bytes == null) return;
       await directory.create(recursive: true);
+      // Drawn again when missing, so kept out of iCloud backups.
+      await BackupExclusion.exclude(directory);
       final target = File(p.join(directory.path, key.fileName));
       final partial = File('${target.path}.partial');
       await partial.writeAsBytes(

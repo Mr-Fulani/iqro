@@ -63,6 +63,25 @@ class ListeningMediaService extends BaseAudioHandler with SeekHandler {
     return current;
   }
 
+  /// On iOS every plugin shares one audio session and some change it: a video
+  /// that mixes with others makes the app's sound mixable, and iOS then drops
+  /// it from Now Playing and the lock screen; the microphone leaves the
+  /// default mode. So the app sets the session back before each play.
+  static Future<void> restoreSession() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.speech());
+    } on Object catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'IQRO audio session',
+        ),
+      );
+    }
+  }
+
   static Future<void> initialize() async {
     final directory = await getApplicationSupportDirectory();
     final artwork = File('${directory.path}/iqro-reciter-default-v1.webp');
