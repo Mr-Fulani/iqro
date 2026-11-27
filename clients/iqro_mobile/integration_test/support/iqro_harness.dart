@@ -36,6 +36,10 @@ class IqroHarness {
   /// The interface language: the driver's IQRO_LOCALE, else the default.
   late String locale;
 
+  /// The driver's IQRO_MODE: `setup` for a run that only prepares the
+  /// install (store_screenshots_test.dart); empty otherwise.
+  var mode = '';
+
   /// In CI the driver on the Mac (driver/iqro_driver.dart) saves the
   /// simulator's screen, with its status bar, whenever the test asks.
   var _host = false;
@@ -91,6 +95,7 @@ class IqroHarness {
       _host = true;
       final asked = settings['locale'] ?? '';
       if (asked.isNotEmpty) locale = asked;
+      mode = settings['mode'] ?? '';
     } on TimeoutException {
       debugPrint('IQRO NOTE no driver: screenshots are not saved');
     }

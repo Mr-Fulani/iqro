@@ -46,10 +46,24 @@ void main() {
         find.descendant(of: reading, matching: find.text(l10n.loading)),
         what: 'the reading card loaded',
       );
-      await _closeAnnouncement(harness);
+      // An active announcement floats over Home until it has been opened
+      // once and the app restarted: the setup run opens it, so the language
+      // runs after it show Home without it.
+      await _openAnnouncement(harness);
+      if (harness.mode == 'setup') {
+        expect(harness.errors, isEmpty, reason: 'Dart errors were reported');
+        return;
+      }
       await harness.settle(const Duration(seconds: 7));
       await harness.screenshot('home');
 
+      // The Mushaf opens on the page asked for only once the editions are
+      // known (mushaf_screen.dart); the Quran tab loads them.
+      await harness.openTab(l10n.navQuran);
+      await harness.waitFor(
+        find.byType(MushafEditionThumbnail),
+        what: 'the Mushaf editions',
+      );
       await _mushafPage(harness, 3);
       await harness.waitFor(
         find.byKey(const ValueKey('mushaf-tajweed-legend')),
@@ -173,13 +187,13 @@ Future<void> _chooseIstanbul(IqroHarness harness) async {
   );
 }
 
-Future<void> _closeAnnouncement(IqroHarness harness) async {
+Future<void> _openAnnouncement(IqroHarness harness) async {
   final bubble = find.byKey(const ValueKey('announcement-bubble'));
   if (bubble.evaluate().isEmpty) return;
   await harness.tap(bubble, what: 'the announcement bubble');
   final close = find.byKey(const ValueKey('announcement-close'));
   await harness.tap(close, what: 'the announcement close button');
-  await harness.waitForNone(bubble, what: 'the announcement read');
+  await harness.waitForNone(close, what: 'the announcement closed');
 }
 
 Future<void> _mushafPage(IqroHarness harness, int number) async {

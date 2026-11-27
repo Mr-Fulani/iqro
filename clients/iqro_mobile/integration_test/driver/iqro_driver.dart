@@ -61,7 +61,10 @@ Future<void> main() async {
     await service.callServiceExtension(
       'ext.iqro.driverReady',
       isolateId: isolate,
-      args: <String, String>{'locale': locale},
+      args: <String, String>{
+        'locale': locale,
+        'mode': environment['IQRO_MODE'] ?? '',
+      },
     );
   } on Object catch (error) {
     stderr.writeln('IQRO DRIVER the test takes no screenshots: $error');

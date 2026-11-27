@@ -92,6 +92,11 @@ jobs:
         run: |
           id="$(ios/scripts/simulator_run.sh create "$TYPES")"
           status=0
+          # First a run that only chooses the city and opens the active
+          # announcement, so every language below starts from the same Home.
+          IQRO_LOCALE=ru IQRO_MODE=setup ios/scripts/simulator_run.sh test "$id" \
+            build/ios/iphonesimulator/Runner.app \
+            integration_test/store_screenshots_test.dart "$OUT/setup" || status=$?
           for locale in ru en ar tr; do
             IQRO_LOCALE="$locale" ios/scripts/simulator_run.sh test "$id" \
               build/ios/iphonesimulator/Runner.app \
