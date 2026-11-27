@@ -113,7 +113,7 @@ jobs:
       - name: Verify locked CocoaPods dependencies
         working-directory: clients/iqro_mobile/ios
         run: bundle exec pod install --deployment
-      - name: iPhone and iPad production release compile
+      - name: iPhone production release compile
         run: >-
           bundle exec flutter build ios
           --release

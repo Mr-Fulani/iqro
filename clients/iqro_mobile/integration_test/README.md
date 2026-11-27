@@ -7,8 +7,8 @@ screenshots.
 
 | File | What it does | Workflow |
 |---|---|---|
-| `app_smoke_test.dart` | From a fresh install through the main screens (below) on iPhone 6.9″ and iPad 13″, in Russian | `iOS simulators` (`.github/workflows/ios-simulators.yml`), artifact `iqro-ios-simulators` |
-| `store_screenshots_test.dart` | The eight screens of the Google Play set in one language; the workflow runs ru, en, ar, tr, each from a fresh install | `App Store screenshots`, artifact `app-store-screenshots-iphone-6.9` (iPad 13″ only when started with it) |
+| `app_smoke_test.dart` | From a fresh install through the main screens (below) on iPhone 6.9″, and on iPad 13″ where the iPhone-only app runs in compatibility mode (Apple's reviewers may open it there), in Russian | `iOS simulators` (`.github/workflows/ios-simulators.yml`), artifact `iqro-ios-simulators` |
+| `store_screenshots_test.dart` | The eight screens of the Google Play set in one language; the workflow runs ru, en, ar, tr, each from a fresh install | `App Store screenshots`, artifact `app-store-screenshots-iphone-6.9` (iPhone only) |
 | `support/iqro_harness.dart` | Launch with preferences, waiting for screens, screenshots, the list of Dart errors | — |
 | `driver/iqro_driver.dart` | Runs on the Mac: saves the simulator screen (`simctl io screenshot`, status bar 9:41) when the test asks | — |
 

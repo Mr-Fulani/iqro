@@ -1,7 +1,8 @@
 name: iOS simulators
 
-# The app on an iPhone and an iPad simulator: from a fresh install through the
-# main screens, against https://iqro.forum, with a screen recording and
+# The app on an iPhone and an iPad simulator (the app ships for iPhone only; an
+# iPad runs it in compatibility mode, and Apple's reviewers may open it there):
+# from a fresh install through the main screens, against https://iqro.forum, with a screen recording and
 # screenshots in the artifact "iqro-ios-simulators". It stands in for a check
 # on a real iPhone before TestFlight; clients/iqro_mobile/integration_test/README.md
 # says what it covers and what it cannot.

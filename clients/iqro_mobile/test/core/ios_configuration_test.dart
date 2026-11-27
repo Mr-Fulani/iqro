@@ -67,7 +67,20 @@ void main() {
       ).allMatches(project).length,
       3,
     );
-    expect(project, contains('TARGETED_DEVICE_FAMILY = "1,2";'));
+    // iPhone only (the owner's decision of 27.11.2026); on an iPad it runs
+    // in compatibility mode, which the iOS simulators workflow checks.
+    expect(
+      RegExp(r'TARGETED_DEVICE_FAMILY = 1;').allMatches(project).length,
+      6,
+    );
+    expect(project, isNot(contains('TARGETED_DEVICE_FAMILY = "1,2"')));
+    // The adhan may sound in Focus: Time Sensitive notifications.
+    expect(
+      File('ios/Runner/Runner.entitlements').readAsStringSync(),
+      contains(
+        '<key>com.apple.developer.usernotifications.time-sensitive</key>\n\t\t<true/>',
+      ),
+    );
   });
 
   test('iOS permission copy covers every supported locale', () {
