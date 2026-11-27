@@ -8,9 +8,13 @@ import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
 import 'package:iqro_mobile/features/onboarding/onboarding_screen.dart';
 import 'package:iqro_mobile/features/prayer/prayer_places.dart';
+import 'package:iqro_mobile/features/prayer/prayer_screen.dart';
 import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
+import 'package:iqro_mobile/features/quran/mushaf_edition_picker.dart';
 import 'package:iqro_mobile/features/quran/native_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/reader_flow_screen.dart';
+import 'package:iqro_mobile/features/quran/surah_name_art.dart';
+import 'package:iqro_mobile/features/reminders/reminders_screen.dart';
 import 'package:iqro_mobile/main.dart' as app;
 
 import 'support/iqro_harness.dart';
@@ -97,7 +101,12 @@ Future<void> _quran(IqroHarness harness) async {
     find.byType(SegmentedButton<ReaderMode>),
     what: 'the Quran tab',
   );
-  await harness.waitForLoaded(what: 'the surah list');
+  await harness.waitFor(find.byType(SurahNameArt), what: 'the surah list');
+  // The Mushaf must open after the editions are known (mushaf_screen.dart).
+  await harness.waitFor(
+    find.byType(MushafEditionThumbnail),
+    what: 'the Mushaf editions',
+  );
   await harness.step('quran');
 }
 
@@ -119,6 +128,7 @@ Future<void> _mushaf(IqroHarness harness) async {
     find.byKey(const ValueKey('mushaf-tajweed-legend')),
     what: 'the tajweed legend',
   );
+  await harness.waitForLoaded(scope: page, what: 'Mushaf page 3');
   await harness.settle(const Duration(seconds: 2));
   final edition = (page.evaluate().first.widget.key! as ValueKey<String>).value;
   final colours = await harness.colours(canvas);
@@ -141,10 +151,9 @@ Future<void> _reader(IqroHarness harness) async {
     find.byKey(const ValueKey('reader-ayah-1')),
     what: 'Al-Fatiha',
   );
-  await harness.waitFor(
-    find.byKey(const ValueKey('reader-translation-1')),
-    what: 'the translation',
-  );
+  final translation = find.byKey(const ValueKey('reader-translation-1'));
+  await harness.waitFor(translation, what: 'the translation');
+  await harness.waitForLoaded(scope: translation, what: 'the translation');
   await harness.settle(const Duration(seconds: 2));
   await harness.step('reader');
 }
@@ -166,13 +175,10 @@ Future<void> _recitationCheck(IqroHarness harness) async {
       timeout: const Duration(seconds: 10),
     );
   } on TestFailure {
-    debugPrint(
-      'IQRO NOTE the swipe did not open reading aloud; opening it directly',
-    );
-    harness.router.pop();
-    await harness.settle();
-    final navigator = Navigator.of(tester.element(find.byType(AppShell).first));
-    navigator.push(ReaderFlowScreen.route(surah: 1, ayah: 1));
+    debugPrint('IQRO NOTE the swipe did not open reading aloud; opening it');
+    Navigator.of(
+      tester.element(find.byKey(const ValueKey('reader-ayah-1'))),
+    ).push(ReaderFlowScreen.route(surah: 1, ayah: 1));
     await harness.waitFor(flow, what: 'reading aloud');
   }
   final follow = find.byKey(const ValueKey('reader-flow-follow'));
@@ -240,21 +246,22 @@ Future<void> _prayer(IqroHarness harness) async {
   final istanbul = prayerCities.firstWhere((city) => city.id == 'istanbul');
   final name = istanbul.names[harness.l10n.localeName] ?? istanbul.names['en']!;
   await harness.tap(find.text(name).last, what: name);
+  await harness.waitForNone(find.byType(BottomSheet), what: 'the city list');
   await harness.waitFor(find.textContaining(name), what: 'the times for $name');
-  await harness.waitForLoaded(what: 'the prayer times');
+  await harness.waitForLoaded(
+    scope: find.byType(PrayerScreen),
+    what: 'the prayer times',
+  );
   await harness.settle(const Duration(seconds: 2));
   await harness.step('prayer');
 
+  // The same screen opened with the qibla, as from Home's qibla tile.
   harness.router.go('/prayer?qibla=1');
-  await harness.waitFor(
-    find.byKey(const ValueKey('qibla-dial')),
-    what: 'the qibla',
-  );
+  final dial = find.byKey(const ValueKey('qibla-dial'));
+  await harness.waitFor(dial, what: 'the qibla');
   await harness.step('qibla');
-  await Navigator.of(
-    harness.tester.element(find.byKey(const ValueKey('qibla-dial'))),
-  ).maybePop();
-  await harness.settle();
+  await Navigator.of(harness.tester.element(dial)).maybePop();
+  await harness.waitForNone(dial, what: 'the qibla closed');
 }
 
 Future<void> _reminders(IqroHarness harness) async {
@@ -263,7 +270,10 @@ Future<void> _reminders(IqroHarness harness) async {
     find.text(harness.l10n.prayerReminders),
     what: 'the reminders screen',
   );
-  await harness.waitForLoaded(what: 'the reminders');
+  await harness.waitForLoaded(
+    scope: find.byType(RemindersScreen),
+    what: 'the reminders',
+  );
   // Only look: a switch would change the account on the server.
   await harness.step('reminders');
   harness.back();

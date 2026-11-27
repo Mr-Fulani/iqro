@@ -30,7 +30,7 @@ create() {
   )"
   local device
   device="$(
-    WANTED="$wanted" RUNTIME="$runtime" xcrun simctl list devicetypes -j | ruby -rjson -e '
+    xcrun simctl list devicetypes -j | WANTED="$wanted" RUNTIME="$runtime" ruby -rjson -e '
       runtime = JSON.parse(ENV.fetch("RUNTIME"))
       supported = runtime.fetch("supportedDeviceTypes", []).map { |t| t["identifier"] }
       types = JSON.parse(STDIN.read).fetch("devicetypes")

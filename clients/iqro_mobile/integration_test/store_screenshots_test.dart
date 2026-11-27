@@ -8,10 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/app/app_shell.dart';
 import 'package:iqro_mobile/app/providers.dart';
 import 'package:iqro_mobile/core/storage/preferences_store.dart';
+import 'package:iqro_mobile/features/courses/course_catalog_screen.dart';
 import 'package:iqro_mobile/features/prayer/prayer_places.dart';
+import 'package:iqro_mobile/features/prayer/prayer_screen.dart';
 import 'package:iqro_mobile/features/quran/foundation_mushaf_page.dart';
+import 'package:iqro_mobile/features/quran/mushaf_edition_picker.dart';
 import 'package:iqro_mobile/features/quran/native_mushaf_page.dart';
 import 'package:iqro_mobile/features/quran/reader_flow_screen.dart';
+import 'package:iqro_mobile/features/quran/surah_name_art.dart';
 import 'package:iqro_mobile/main.dart' as app;
 
 import 'support/iqro_harness.dart';
@@ -73,7 +77,11 @@ void main() {
           find.byType(SegmentedButton<ReaderMode>),
           what: 'the Quran tab',
         );
-        await harness.waitForLoaded(what: 'the surah list');
+        await harness.waitFor(find.byType(SurahNameArt), what: 'the surahs');
+        await harness.waitFor(
+          find.byType(MushafEditionThumbnail),
+          what: 'the Mushaf editions',
+        );
         await harness.settle(const Duration(seconds: 2));
         await harness.screenshot('quran');
         await harness.openTab(l10n.navHome);
@@ -83,7 +91,10 @@ void main() {
           find.byKey(const ValueKey('reader-translation-7')),
           what: 'the translation',
         );
-        await harness.waitForLoaded(what: 'the translations');
+        await harness.waitForLoaded(
+          scope: find.byKey(const ValueKey('reader-translation-7')),
+          what: 'the translations',
+        );
         await harness.settle(const Duration(seconds: 2));
         await harness.screenshot('reader');
         harness.back();
@@ -105,7 +116,11 @@ void main() {
       await harness.settle();
 
       harness.router.go('/prayer');
-      await harness.waitForLoaded(what: 'the prayer times');
+      await harness.waitFor(find.byType(PrayerScreen), what: 'prayer times');
+      await harness.waitForLoaded(
+        scope: find.byType(PrayerScreen),
+        what: 'the prayer times',
+      );
       await harness.settle(const Duration(seconds: 2));
       await harness.screenshot('prayer-qibla');
 
@@ -115,7 +130,10 @@ void main() {
         find.byKey(const ValueKey('courses-salah')),
         what: 'the courses',
       );
-      await harness.waitForLoaded(what: 'the course covers');
+      await harness.waitForLoaded(
+        scope: find.byType(CourseCatalogScreen),
+        what: 'the course covers',
+      );
       await harness.settle(const Duration(seconds: 2));
       await harness.screenshot('courses');
       harness.back();
@@ -149,8 +167,12 @@ Future<void> _chooseIstanbul(IqroHarness harness) async {
   final istanbul = prayerCities.firstWhere((city) => city.id == 'istanbul');
   final name = istanbul.names[_locale] ?? istanbul.names['en']!;
   await harness.tap(find.text(name).last, what: name);
+  await harness.waitForNone(find.byType(BottomSheet), what: 'the city list');
   await harness.waitFor(find.textContaining(name), what: 'the times for $name');
-  await harness.waitForLoaded(what: 'the prayer times');
+  await harness.waitForLoaded(
+    scope: find.byType(PrayerScreen),
+    what: 'the prayer times',
+  );
 }
 
 Future<void> _closeAnnouncement(IqroHarness harness) async {
@@ -173,6 +195,7 @@ Future<void> _mushafPage(IqroHarness harness, int number) async {
     timeout: const Duration(seconds: 90),
   );
   await harness.waitForLoaded(scope: page, what: 'Mushaf page $number');
+  await harness.settle(const Duration(seconds: 2));
 }
 
 /// A tap on the paper beside the lines shows the Mushaf's bars; a tap on a

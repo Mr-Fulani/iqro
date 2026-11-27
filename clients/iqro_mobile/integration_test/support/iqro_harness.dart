@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -168,15 +169,22 @@ class IqroHarness {
     }
   }
 
-  /// Waits for the loading spinners inside [scope] to go.
+  /// Waits for the loading spinners inside [scope] to go (IqroLoading is
+  /// Cupertino's activity indicator on iOS).
   Future<void> waitForLoaded({
-    Finder? scope,
+    required Finder scope,
     required String what,
     Duration timeout = const Duration(seconds: 60),
   }) => waitForNone(
-    scope == null
-        ? find.byType(IqroLoading)
-        : find.descendant(of: scope, matching: find.byType(IqroLoading)),
+    find.descendant(
+      of: scope,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is IqroLoading ||
+            widget is ProgressIndicator ||
+            widget is CupertinoActivityIndicator,
+      ),
+    ),
     what: '$what loaded',
     timeout: timeout,
   );
