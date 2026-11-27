@@ -3764,7 +3764,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recitationNoticeVoice =>
-      'Your voice is recognised by Apple\'s speech recognition: on the device itself, or over the internet where the device has no Arabic of its own. IQRO does not keep the recording and does not send it to its own server. Next the system will ask for two permissions: speech recognition and the microphone.';
+      'Your voice is recognised by Apple\'s speech recognition: on the device itself where it can, otherwise over the internet. IQRO does not keep the recording and does not send it to its own server. Next the system will ask for two permissions: speech recognition and the microphone.';
 
   @override
   String get recitationNoticeLimits =>
@@ -3861,11 +3861,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recitationDenied =>
-      'No access to the microphone or speech recognition. Turn them on in Settings → IQRO.';
+      'The microphone or speech recognition is not allowed in iPhone Settings.';
 
   @override
   String get recitationDictationOff =>
-      'Dictation is off: turn it on in Settings → General → Keyboard.';
+      'Turn on Dictation: Settings → General → Keyboard.';
+
+  @override
+  String get recitationMicBusy =>
+      'The microphone is busy in another app or unavailable.';
 
   @override
   String get recitationNoArabic =>

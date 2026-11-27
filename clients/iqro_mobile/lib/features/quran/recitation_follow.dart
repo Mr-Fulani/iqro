@@ -26,6 +26,10 @@ enum RecitationTrouble {
   /// iOS: dictation is off, and Apple's recognition with it.
   dictation,
 
+  /// iOS: the microphone gives no sound to listen to: another app or a
+  /// call has it, or it is not there.
+  microphone,
+
   /// The reader is heard, and what is said is not taken for the word
   /// waited on: not a microphone that hears nothing.
   unrecognised,
@@ -64,8 +68,13 @@ class RecitationListener {
     trouble: null,
   ));
 
-  final _speech = SpeechToText();
+  final _speech = recogniser();
   static RecitationListener? _current;
+
+  /// The package's recogniser: one for the app. A test gives each listener
+  /// a fresh one, so no test depends on another's start.
+  @visibleForTesting
+  static SpeechToText Function() recogniser = SpeechToText.new;
 
   /// The phone's own recognition is asked for, until it fails before it
   /// has heard a word; for as long as the app runs.
@@ -83,6 +92,7 @@ class RecitationListener {
     _onDevice = false;
     _onDeviceHeard = false;
     canAskOnDevice = _canAskOnDevice;
+    recogniser = SpeechToText.new;
   }
 
   static bool get _apple => defaultTargetPlatform == TargetPlatform.iOS;
@@ -122,7 +132,7 @@ class RecitationListener {
     final bool ready;
     try {
       ready = await _speech.initialize(
-        onStatus: (status) => _current?._onStatus(status),
+        onStatus: _routeStatus,
         onError: (error) => _current?._onError(error),
       );
     } on Object catch (error) {
@@ -130,14 +140,14 @@ class RecitationListener {
       return false;
     }
     if (!identical(_current, this)) return false;
-    // iOS asks for speech recognition and then for the microphone; the
-    // package checks only the first after that, so a microphone refused,
-    // at the question or later in the settings, would be heard as silence.
-    if (_apple && !await _allowed()) {
-      if (identical(_current, this)) _trouble(RecitationTrouble.denied);
+    if (!ready) {
+      // iOS: speech recognition or the microphone refused, at the system's
+      // questions or since in its settings, which the reader is sent to.
+      if (_apple && !await _allowed() && identical(_current, this)) {
+        _trouble(RecitationTrouble.denied);
+      }
       return false;
     }
-    if (!ready || !identical(_current, this)) return false;
     final locales = await _speech.locales();
     final arabic = locales
         .map((locale) => locale.localeId)
@@ -280,6 +290,10 @@ class RecitationListener {
         deaf: deaf,
         trouble: ear.value.trouble,
       );
+      // iOS asks for the microphone at the first listen, after speech
+      // recognition; refused there or since in the settings, it gives
+      // silence, which is said for what it is.
+      if (deaf && _apple) unawaited(_tellIfDenied());
     }
     if (_again?.isActive ?? false) return;
     if (_listening && now.difference(_lastSign) < const Duration(seconds: 70)) {
@@ -287,6 +301,18 @@ class RecitationListener {
     }
     _listening = false;
     unawaited(_listen());
+  }
+
+  /// The package's statuses go to the listener of the moment. A listen that
+  /// says it has begun after the microphone was turned off (the app going
+  /// to the background as it started) is ended.
+  void _routeStatus(String status) {
+    final current = _current;
+    if (current != null) return current._onStatus(status);
+    if (status == SpeechToText.listeningStatus) {
+      _log('a listen begun after the microphone was off: ended');
+      unawaited(_speech.cancel());
+    }
   }
 
   void _onStatus(String status) {
@@ -319,7 +345,8 @@ class RecitationListener {
         code == 'error_no_match' ||
         code == 'error_speech_timeout' ||
         code == 'error_request_cancelled';
-    if (!silence) _failures += 1;
+    // A recogniser that heard silence works: the pause starts over.
+    _failures = silence ? 0 : _failures + 1;
     final trouble = _troubleOf(code);
     if (!silence &&
         _onDevice &&
@@ -348,7 +375,7 @@ class RecitationListener {
     // 102: the phone's own Arabic is not installed.
     'error_assets_not_installed' => RecitationTrouble.language,
     // The microphone gave no sound to listen to.
-    'error_listen_failed' => RecitationTrouble.unavailable,
+    'error_listen_failed' => RecitationTrouble.microphone,
     // The internet's own errors, by their negative numbers.
     _ when code.startsWith('error_unknown (-1') => RecitationTrouble.network,
     _ when code.contains('network') || code.contains('server') =>
@@ -368,6 +395,11 @@ class RecitationListener {
       deaf: ear.value.deaf,
       trouble: trouble,
     );
+  }
+
+  Future<void> _tellIfDenied() async {
+    if (await _allowed() || !_active) return;
+    _trouble(RecitationTrouble.denied);
   }
 
   /// The microphone and speech recognition are both allowed (iOS).

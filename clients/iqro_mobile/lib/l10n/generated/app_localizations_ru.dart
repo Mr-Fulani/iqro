@@ -1115,7 +1115,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get prayerWidgetManualIos =>
-      'Нажмите и удерживайте пустое место главного экрана, затем «Править» → «Добавить виджет» (в iOS 17 и раньше — «+»). Найдите IQRO и добавьте виджет.';
+      'Нажмите и удерживайте пустое место главного экрана, затем «Изменить» → «Добавить виджет» (в iOS 17 и раньше — «+»). Найдите IQRO и добавьте виджет.';
 
   @override
   String get prayerWidgetNeedsLocation =>
@@ -3788,7 +3788,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get recitationNoticeVoice =>
-      'Голос распознаёт служба распознавания речи Apple: на самом устройстве, а если на нём нет арабского — через интернет. IQRO запись не хранит и на свой сервер не отправляет. Дальше система спросит два разрешения: на распознавание речи и на микрофон.';
+      'Голос распознаёт служба распознавания речи Apple: по возможности на самом устройстве, иначе — через интернет. IQRO запись не хранит и на свой сервер не отправляет. Дальше система спросит два разрешения: на распознавание речи и на микрофон.';
 
   @override
   String get recitationNoticeLimits =>
@@ -3883,11 +3883,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get recitationDenied =>
-      'Нет доступа к микрофону или распознаванию речи. Включите их: «Настройки» → IQRO.';
+      'Микрофон или распознавание речи не разрешены в настройках iPhone.';
 
   @override
   String get recitationDictationOff =>
-      'Диктовка выключена: включите её в «Настройки» → «Основные» → «Клавиатура».';
+      'Включите диктовку: Настройки → Основные → Клавиатура.';
+
+  @override
+  String get recitationMicBusy =>
+      'Микрофон занят другим приложением или недоступен.';
 
   @override
   String get recitationNoArabic =>

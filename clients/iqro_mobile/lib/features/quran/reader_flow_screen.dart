@@ -244,8 +244,15 @@ class _FlowPageState extends ConsumerState<_FlowPage>
   // background.)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.paused) {
+    if (state != AppLifecycleState.hidden &&
+        state != AppLifecycleState.paused) {
+      return;
+    }
+    // A start is not cut short (the model's cannot be): the microphone goes
+    // off once it has started.
+    if (_followStarting) {
+      _followOffWhenStarted = true;
+    } else {
       unawaited(_stopFollow());
     }
   }
@@ -586,6 +593,10 @@ class _FlowPageState extends ConsumerState<_FlowPage>
     }
   }
 
+  /// The listener is starting, and the app went to the background meanwhile.
+  var _followStarting = false;
+  var _followOffWhenStarted = false;
+
   /// Turns the microphone off: the plate goes and the screen may dim.
   Future<void> _stopFollow() async {
     final listening = _listener;
@@ -665,17 +676,26 @@ class _FlowPageState extends ConsumerState<_FlowPage>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _showPlace());
     unawaited(WakelockPlus.enable());
+    _followStarting = true;
     var on = await listener.start();
     if (!on &&
         listener is ModelRecitationListener &&
         mounted &&
-        identical(_listener, listener)) {
+        identical(_listener, listener) &&
+        !_followOffWhenStarted) {
       // The model cannot listen here: the phone's speech recognition does.
       listener.dispose();
       final spare = RecitationListener(onHeard: _onHeard);
       listener = spare;
       setState(() => _listener = spare);
       on = await spare.start();
+    }
+    _followStarting = false;
+    if (_followOffWhenStarted) {
+      // The app went to the background while the microphone started.
+      _followOffWhenStarted = false;
+      if (mounted && identical(_listener, listener)) await _stopFollow();
+      return;
     }
     if (on || !mounted || !identical(_listener, listener)) return;
     // iOS: the microphone or speech recognition was refused; it is let in
@@ -688,19 +708,24 @@ class _FlowPageState extends ConsumerState<_FlowPage>
     unawaited(WakelockPlus.disable());
     listener.dispose();
     final l10n = context.l10n;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          denied ? l10n.recitationDenied : l10n.recitationUnavailable,
+    // Goes by itself, like any other message: the way to the settings is
+    // offered, not pressed on the reader.
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          persist: false,
+          content: Text(
+            denied ? l10n.recitationDenied : l10n.recitationUnavailable,
+          ),
+          action: denied
+              ? SnackBarAction(
+                  label: l10n.settings,
+                  onPressed: () => unawaited(Geolocator.openAppSettings()),
+                )
+              : null,
         ),
-        action: denied
-            ? SnackBarAction(
-                label: l10n.settings,
-                onPressed: () => unawaited(Geolocator.openAppSettings()),
-              )
-            : null,
-      ),
-    );
+      );
   }
 
   void _onHeard(String transcript) {
@@ -1478,6 +1503,7 @@ class _FollowEar extends StatelessWidget {
             RecitationTrouble.unavailable => l10n.recitationUnavailable,
             RecitationTrouble.denied => l10n.recitationDenied,
             RecitationTrouble.dictation => l10n.recitationDictationOff,
+            RecitationTrouble.microphone => l10n.recitationMicBusy,
             _ when reason != null => reason,
             RecitationTrouble.unrecognised => l10n.recitationNotRecognised,
             null when value.deaf =>

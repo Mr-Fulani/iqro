@@ -283,9 +283,47 @@ void main() {
       await tester.pumpAndSettle();
       expect(services.soundSettingsOpened, 1);
       expect(services.notificationRequests, 1);
+
+      // Allowed there: back in the app the step says so, asking nothing.
+      services.permissionNow = ReminderPermission.granted;
+      for (final state in <AppLifecycleState>[
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      await tester.pumpAndSettle();
+      expect(find.text(_ru.onboardingNotificationsOn), findsOneWidget);
+      expect(find.text(_ru.onboardingNotificationsBlocked), findsNothing);
+      expect(services.notificationRequests, 1);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
+  });
+
+  testWidgets('on Android coming back to the reminders step after a refusal '
+      'reads nothing again', (tester) async {
+    final services = FakeOnboardingServices(
+      notificationResult: ReminderPermission.denied,
+    );
+    await pumpOnboarding(
+      tester,
+      services: services,
+      stored: const <String, Object>{'locale': 'ru'},
+      initialStep: OnboardingStep.reminders,
+    );
+    await _tap(tester, 'onboarding-next');
+    expect(find.text(_ru.onboardingNotificationsBlocked), findsOneWidget);
+    final reads = services.statusReads;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(services.statusReads, reads);
+    expect(find.text(_ru.onboardingNotificationsBlocked), findsOneWidget);
   });
 
   testWidgets('on iOS a replay after a refusal shows the way to the settings '

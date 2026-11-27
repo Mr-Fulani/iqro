@@ -1105,7 +1105,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get prayerWidgetManualIos =>
-      'Ana ekranda boş bir yere dokunup basılı tutun, ardından Düzenle → Widget Ekle\'ye dokunun (iOS 17 ve öncesinde + düğmesine). IQRO\'yu bulun ve widget\'ı ekleyin.';
+      'Ana ekranda boş bir yere dokunup basılı tutun, ardından Düzenle → Araç Takımı Ekle\'ye dokunun (iOS 17 ve öncesinde + düğmesine). IQRO\'yu bulun ve widget\'ı ekleyin.';
 
   @override
   String get prayerWidgetNeedsLocation =>
@@ -1113,7 +1113,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get prayerLocationPrivacy =>
-      'Koordinatlar yalnızca namaz vakitlerini hesaplamak için IQRO sunucusuna gönderilir: sunucu bunları saklamaz ve kullanım istatistiklerine girmez.';
+      'Koordinatlar yalnızca namaz vakitlerini hesaplamak için IQRO sunucusuna gönderilir. Sunucu bunları saklamaz; koordinatlar kullanım istatistiklerine de girmez.';
 
   @override
   String get useMyLocation => 'Konumumu kullan';
@@ -3717,7 +3717,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get recitationNoticeVoice =>
-      'Sesinizi Apple\'ın konuşma tanıma hizmeti tanır: cihazın kendisinde ya da cihazda Arapça yoksa internet üzerinden. IQRO kaydı saklamaz ve kendi sunucusuna göndermez. Ardından sistem iki izin isteyecek: konuşma tanıma ve mikrofon.';
+      'Sesinizi Apple\'ın konuşma tanıma hizmeti tanır: mümkünse cihazın kendisinde, değilse internet üzerinden. IQRO kaydı saklamaz ve kendi sunucusuna göndermez. Ardından sistem iki izin isteyecek: konuşma tanıma ve mikrofon.';
 
   @override
   String get recitationNoticeLimits =>
@@ -3809,11 +3809,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get recitationDenied =>
-      'Mikrofona veya konuşma tanımaya erişim yok. Ayarlar → IQRO\'dan açın.';
+      'Mikrofona veya konuşma tanımaya iPhone Ayarları\'nda izin verilmemiş.';
 
   @override
   String get recitationDictationOff =>
-      'Dikte kapalı: Ayarlar → Genel → Klavye\'den açın.';
+      'Dikteyi açın: Ayarlar → Genel → Klavye.';
+
+  @override
+  String get recitationMicBusy =>
+      'Mikrofon başka bir uygulamada kullanılıyor veya kullanılamıyor.';
 
   @override
   String get recitationNoArabic =>

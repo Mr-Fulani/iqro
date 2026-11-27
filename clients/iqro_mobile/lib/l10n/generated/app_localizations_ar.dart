@@ -3730,7 +3730,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get recitationNoticeVoice =>
-      'يتعرّف على صوتك خدمة التعرّف على الكلام من Apple: على الجهاز نفسه، أو عبر الإنترنت إن لم تكن العربية متوفرة فيه. IQRO لا يحفظ التسجيل ولا يرسله إلى خادمه. بعد ذلك سيطلب النظام إذنين: التعرّف على الكلام والميكروفون.';
+      'يتعرّف على صوتك خدمة التعرّف على الكلام من Apple: على الجهاز نفسه حين يمكن، وإلا فعبر الإنترنت. IQRO لا يحفظ التسجيل ولا يرسله إلى خادمه. بعد ذلك سيطلب النظام إذنين: التعرّف على الكلام والميكروفون.';
 
   @override
   String get recitationNoticeLimits =>
@@ -3820,11 +3820,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get recitationDenied =>
-      'لا يوجد إذن للميكروفون أو للتعرّف على الكلام. فعّلهما من «الإعدادات» ← IQRO.';
+      'الميكروفون أو التعرّف على الكلام غير مسموح به في إعدادات iPhone.';
 
   @override
   String get recitationDictationOff =>
-      'الإملاء متوقف: فعّله من «الإعدادات» ← «عام» ← «لوحة المفاتيح».';
+      'فعّل الإملاء: الإعدادات ← عام ← لوحة المفاتيح.';
+
+  @override
+  String get recitationMicBusy => 'الميكروفون مشغول بتطبيق آخر أو غير متاح.';
 
   @override
   String get recitationNoArabic =>

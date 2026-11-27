@@ -189,7 +189,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         _step == OnboardingStep.reminderSound) {
       unawaited(_readSound());
     }
-    if (state == AppLifecycleState.resumed &&
+    // iOS: back from its settings, the only place to change the answer.
+    if (_apple &&
+        state == AppLifecycleState.resumed &&
         _step == OnboardingStep.reminders &&
         _notificationsBlocked) {
       unawaited(_readNotifications());

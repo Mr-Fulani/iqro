@@ -6597,7 +6597,7 @@ abstract class AppLocalizations {
   /// No description provided for @recitationNoticeVoice.
   ///
   /// In en, this message translates to:
-  /// **'Your voice is recognised by Apple\'s speech recognition: on the device itself, or over the internet where the device has no Arabic of its own. IQRO does not keep the recording and does not send it to its own server. Next the system will ask for two permissions: speech recognition and the microphone.'**
+  /// **'Your voice is recognised by Apple\'s speech recognition: on the device itself where it can, otherwise over the internet. IQRO does not keep the recording and does not send it to its own server. Next the system will ask for two permissions: speech recognition and the microphone.'**
   String get recitationNoticeVoice;
 
   /// No description provided for @recitationNoticeLimits.
@@ -6753,14 +6753,20 @@ abstract class AppLocalizations {
   /// No description provided for @recitationDenied.
   ///
   /// In en, this message translates to:
-  /// **'No access to the microphone or speech recognition. Turn them on in Settings → IQRO.'**
+  /// **'The microphone or speech recognition is not allowed in iPhone Settings.'**
   String get recitationDenied;
 
   /// No description provided for @recitationDictationOff.
   ///
   /// In en, this message translates to:
-  /// **'Dictation is off: turn it on in Settings → General → Keyboard.'**
+  /// **'Turn on Dictation: Settings → General → Keyboard.'**
   String get recitationDictationOff;
+
+  /// No description provided for @recitationMicBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'The microphone is busy in another app or unavailable.'**
+  String get recitationMicBusy;
 
   /// No description provided for @recitationNoArabic.
   ///

@@ -31,6 +31,7 @@ import 'package:iqro_mobile/features/quran/word_range.dart';
 import 'package:iqro_mobile/l10n/generated/app_localizations.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text_platform_interface/speech_to_text_platform_interface.dart';
 import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 
@@ -139,6 +140,8 @@ void main() {
   ) async {
     final speech = _Speech();
     SpeechToTextPlatform.instance = speech;
+    RecitationListener.recogniser = SpeechToText.withMethodChannel;
+    addTearDown(RecitationListener.resetForTesting);
     WakelockPlusPlatformInterface.instance = _Wakelock();
     var buzzes = 0;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -386,10 +389,12 @@ void main() {
 
   testWidgets('on iOS the plain text has a way back of its own, the note '
       'before the microphone leads on to the system with one button, a '
-      'refusal is told with the way to the settings, and the microphone goes '
-      'off with the app', (tester) async {
+      'refusal is told with the way to the settings, the sound of the app pauses '
+      'and the microphone goes off with the app', (tester) async {
     final speech = _Speech();
     SpeechToTextPlatform.instance = speech;
+    RecitationListener.recogniser = SpeechToText.withMethodChannel;
+    addTearDown(RecitationListener.resetForTesting);
     WakelockPlusPlatformInterface.instance = _Wakelock();
     const geolocator = MethodChannel('flutter.baseflow.com/geolocator');
     final opened = <String>[];
@@ -405,7 +410,8 @@ void main() {
         null,
       ),
     );
-    final app = await _pump(tester, reducedMotion: true);
+    final audio = _Pauses();
+    final app = await _pump(tester, reducedMotion: true, audio: () => audio);
     await _swipe(tester, await _card(tester, 3), 220);
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     try {
@@ -436,6 +442,8 @@ void main() {
       expect(app.preferences.recitationNoticeSeen, isTrue);
       expect(speech.listens, 1);
       expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
+      // A reciter playing would be heard as the reader.
+      expect(audio.pauses, 1);
 
       // The app goes to the background: the microphone is off.
       for (final state in <AppLifecycleState>[
@@ -454,16 +462,59 @@ void main() {
       // The package waits a moment for a last result.
       await tester.pump(const Duration(seconds: 3));
 
-      // Refused in the settings: said so, with the way to them.
-      speech.allowed = false;
+      // Gone to the background while the microphone was starting: it goes
+      // off once started, and the button still answers.
+      final gate = speech.gate = Completer<void>();
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pump();
+      for (final state in <AppLifecycleState>[
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      speech.gate = null;
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(speech.listens, 2);
+      expect(find.byIcon(Icons.mic_rounded), findsNothing);
+      await tester.pump(const Duration(seconds: 3));
       await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
       await tester.pumpAndSettle();
-      expect(speech.listens, 1);
+      expect(speech.listens, 3);
+      expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
+      // (A press right after the last one is taken for a finger's bounce.)
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 3));
+
+      // Refused at the system's questions: said so, with the way to the
+      // settings; the message goes by itself.
+      speech
+        ..ready = false
+        ..allowed = false;
+      final refused = find.textContaining('не разрешены в настройках iPhone');
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pumpAndSettle();
+      expect(speech.listens, 3);
       expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
-      expect(find.textContaining('Нет доступа к микрофону'), findsOneWidget);
+      expect(refused, findsOneWidget);
       await tester.tap(find.text('Настройки'));
       await tester.pumpAndSettle();
       expect(opened, <String>['openAppSettings']);
+      expect(refused, findsNothing);
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.tap(find.byKey(const ValueKey('reader-flow-follow')));
+      await tester.pumpAndSettle();
+      expect(refused, findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(refused, findsNothing);
 
       // And back to the cards, by the button.
       await tester.pump(const Duration(milliseconds: 600));
@@ -1092,6 +1143,7 @@ Future<_App> _pump(
   Map<String, Object> stored = const <String, Object>{},
   bool reducedMotion = false,
   VoidCallback? eachFrame,
+  AudioController Function()? audio,
 }) async {
   tester.view.devicePixelRatio = pixelRatio;
   tester.view.physicalSize = size;
@@ -1138,7 +1190,7 @@ Future<_App> _pump(
           quranRepositoryProvider.overrideWithValue(quran),
           audioRepositoryProvider.overrideWithValue(_AudioRepository()),
           audioControllerProvider.overrideWith(
-            (ref) => AudioController(engine: _Engine()),
+            (ref) => audio?.call() ?? AudioController(engine: _Engine()),
           ),
           ayahsProvider.overrideWith((ref, surah) async => _ayahs),
           quranRubElHizbProvider.overrideWith((ref) async => rubs),
@@ -1330,12 +1382,28 @@ class _Engine implements IqroAudioEngine {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// The app's audio, counting the pauses the microphone asks for.
+class _Pauses extends AudioController {
+  _Pauses() : super(engine: _Engine());
+
+  var pauses = 0;
+
+  @override
+  Future<void> pauseForLessonVideo() async => pauses++;
+}
+
 /// A phone's speech recognition that hears what the test tells it.
 class _Speech extends SpeechToTextPlatform {
   var listens = 0;
 
   /// The microphone and speech recognition are allowed.
   var allowed = true;
+
+  /// The package's start answers yes: no question refused.
+  var ready = true;
+
+  /// Holds the start until completed, when set.
+  Completer<void>? gate;
 
   @override
   Future<bool> hasPermission() async => allowed;
@@ -1344,7 +1412,10 @@ class _Speech extends SpeechToTextPlatform {
   Future<bool> initialize({
     debugLogging = false,
     List<SpeechConfigOption>? options,
-  }) async => true;
+  }) async {
+    await gate?.future;
+    return ready;
+  }
 
   @override
   Future<List<dynamic>> locales() async => <String>['ar_SA:Arabic'];

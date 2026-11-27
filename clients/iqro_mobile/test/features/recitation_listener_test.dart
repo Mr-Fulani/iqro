@@ -4,14 +4,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/features/quran/recitation_follow.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text_platform_interface/speech_to_text_platform_interface.dart';
 
 void main() {
-  // The package keeps the callbacks of its first start: one recogniser for
-  // the whole file.
   final speech = _Speech();
   setUpAll(() => SpeechToTextPlatform.instance = speech);
-  setUp(speech.reset);
+  setUp(() {
+    speech.reset();
+    // A recogniser of its own for each listener: the app's one keeps the
+    // callbacks of its first start, and no test is to depend on another.
+    RecitationListener.recogniser = SpeechToText.withMethodChannel;
+  });
   tearDown(RecitationListener.resetForTesting);
 
   Future<RecitationListener> listening(
@@ -66,11 +70,13 @@ void main() {
     }
   });
 
-  testWidgets('on iOS a refused microphone is told, not listened to as '
-      'silence', (tester) async {
+  testWidgets('on iOS a refusal at the system\'s questions is told, for the '
+      'way to the settings', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     try {
-      speech.allowed = false;
+      speech
+        ..ready = false
+        ..allowed = false;
       final listener = RecitationListener(onHeard: (_) {});
       expect(await listener.start(), isFalse);
       expect(listener.ear.value.trouble, RecitationTrouble.denied);
@@ -79,6 +85,61 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
+  });
+
+  testWidgets('on iOS a microphone not allowed yet is asked for by the first '
+      'listen (speech recognition came first); refused, its silence is told '
+      'for what it is', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      speech.allowed = false;
+      final listener = await listening(tester);
+      // The listen runs: iOS puts its own question as the microphone opens.
+      expect(speech.listens, 1);
+      expect(listener.ear.value.trouble, isNull);
+      await tester.pump(recitationDeafAfter + const Duration(seconds: 2));
+      expect(listener.ear.value.deaf, isTrue);
+      expect(listener.ear.value.trouble, RecitationTrouble.denied);
+      await off(tester, listener);
+
+      // Allowed at the question: silence is only silence.
+      speech.allowed = true;
+      final allowed = await listening(tester);
+      await tester.pump(recitationDeafAfter + const Duration(seconds: 2));
+      expect(allowed.ear.value.deaf, isTrue);
+      expect(allowed.ear.value.trouble, isNull);
+      await off(tester, allowed);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('on iOS a first error before any word on the phone sends the '
+      'next listen through the network', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final listener = await listening(tester, onDevice: true);
+      expect(speech.options.single.onDevice, isTrue);
+      speech.fail('error_assets_not_installed');
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(speech.listens, 2);
+      expect(speech.options.last.onDevice, isFalse);
+      // Switched quietly: nothing said about Arabic.
+      expect(listener.ear.value.trouble, isNull);
+      await off(tester, listener);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('a listen that says it began after the microphone was turned '
+      'off is ended', (tester) async {
+    final listener = await listening(tester);
+    await off(tester, listener);
+    final cancels = speech.cancels;
+    speech.onStatus!(SpeechToText.listeningStatus);
+    await tester.pump();
+    expect(speech.cancels, cancels + 1);
   });
 
   testWidgets('on Android the system asks for the microphone itself: the '
@@ -114,7 +175,7 @@ void main() {
         RecitationTrouble.language,
       );
       expect(await after('error_unknown (-1009)'), RecitationTrouble.network);
-      expect(await after('error_listen_failed'), RecitationTrouble.unavailable);
+      expect(await after('error_listen_failed'), RecitationTrouble.microphone);
       // Apple's recogniser can no longer be reached.
       speech.hear('بسم');
       await tester.pump();
@@ -176,6 +237,15 @@ void main() {
         expect(speech.listens, listens + 1);
       }
       expect(listener.ear.value.trouble, isNull);
+      // After errors too: a recogniser that heard silence works.
+      for (var time = 0; time < 3; time++) {
+        speech.fail('error_retry');
+        await tester.pump(const Duration(seconds: 25));
+      }
+      final listens = speech.listens;
+      speech.fail('error_no_match');
+      await tester.pump(const Duration(milliseconds: 170));
+      expect(speech.listens, listens + 1);
       await off(tester, listener);
     } finally {
       debugDefaultTargetPlatformOverride = null;
@@ -206,6 +276,11 @@ class _Speech extends SpeechToTextPlatform {
   /// Both the microphone and speech recognition are allowed.
   var allowed = true;
 
+  /// The package's start answers yes: no question refused.
+  var ready = true;
+
+  var cancels = 0;
+
   /// The phone has no Arabic of its own: a listen on the phone is refused
   /// the way speech_to_text 7.4.0 refuses it on iOS, and goes on anyway.
   var refuseOnDevice = false;
@@ -217,8 +292,10 @@ class _Speech extends SpeechToTextPlatform {
 
   void reset() {
     allowed = true;
+    ready = true;
     refuseOnDevice = false;
     options.clear();
+    cancels = 0;
   }
 
   void hear(String words) => onTextRecognition!(
@@ -241,7 +318,7 @@ class _Speech extends SpeechToTextPlatform {
   Future<bool> initialize({
     debugLogging = false,
     List<SpeechConfigOption>? options,
-  }) async => true;
+  }) async => ready;
 
   @override
   Future<List<dynamic>> locales() async => <String>['ar_SA:Arabic'];
@@ -269,5 +346,5 @@ class _Speech extends SpeechToTextPlatform {
   Future<void> stop() async {}
 
   @override
-  Future<void> cancel() async {}
+  Future<void> cancel() async => cancels++;
 }
