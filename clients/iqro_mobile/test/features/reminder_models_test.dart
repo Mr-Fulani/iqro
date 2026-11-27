@@ -1,3 +1,4 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iqro_mobile/core/network/api_exception.dart';
 import 'package:iqro_mobile/core/notifications/notification_gateway.dart';
@@ -217,14 +218,97 @@ void main() {
 
   test('the note that prayer reminders run out comes a day ahead', () {
     final now = tz.TZDateTime.utc(2026, 11, 27, 10);
+    final last = tz.TZDateTime.utc(2026, 12, 9, 19, 2);
     expect(
-      prayerPlanEndNoticeTime(tz.TZDateTime.utc(2026, 12, 9, 19, 2), now: now),
+      prayerPlanEndNoticeTime(last, now: now),
       tz.TZDateTime.utc(2026, 12, 8, 19, 2),
     );
-    // A plan shorter than a day: right after its last reminder.
+    // Not at the minute of the day before's adhan, nor near another reminder.
     expect(
-      prayerPlanEndNoticeTime(tz.TZDateTime.utc(2026, 11, 27, 22), now: now),
-      tz.TZDateTime.utc(2026, 11, 27, 22, 1),
+      prayerPlanEndNoticeTime(
+        last,
+        now: now,
+        planned: <tz.TZDateTime>[
+          tz.TZDateTime.utc(2026, 12, 8, 19, 2),
+          tz.TZDateTime.utc(2026, 12, 8, 19, 5),
+          last,
+        ],
+      ),
+      tz.TZDateTime.utc(2026, 12, 8, 19, 8),
+    );
+    // A plan shorter than a day: after its last reminder.
+    final soon = tz.TZDateTime.utc(2026, 11, 27, 22);
+    expect(
+      prayerPlanEndNoticeTime(soon, now: now, planned: <tz.TZDateTime>[soon]),
+      tz.TZDateTime.utc(2026, 11, 27, 22, 2),
+    );
+  });
+
+  test('a daily reminder is one request at its next time', () {
+    final location = tz.getLocation('Europe/Berlin');
+    final before = tz.TZDateTime(location, 2026, 3, 28, 9);
+    expect(
+      nextDailyOccurrence(location: location, hour: 8, minute: 15, now: before),
+      tz.TZDateTime(location, 2026, 3, 29, 8, 15),
+    );
+    // The clock moved to summer time that night; the time of day stays.
+    expect(
+      nextDailyOccurrence(
+        location: location,
+        hour: 8,
+        minute: 15,
+        now: before,
+      ).hour,
+      8,
+    );
+    expect(
+      nextDailyOccurrence(location: location, hour: 20, minute: 0, now: before),
+      tz.TZDateTime(location, 2026, 3, 28, 20),
+    );
+    expect(reminderRunsEveryDay(127), isTrue);
+    expect(reminderRunsEveryDay(127 & ~(1 << 4)), isFalse);
+  });
+
+  test('only the sounding reminder at the prayer time is Time Sensitive', () {
+    ReminderRule rule({
+      ReminderType type = ReminderType.prayer,
+      int offset = 0,
+      ReminderSignal signal = ReminderSignal.sound,
+    }) => ReminderRule(
+      id: '01900000-0000-7000-8000-000000000003',
+      type: type,
+      schedule: ReminderSchedule.prayer(
+        prayerEvent: 'fajr',
+        prayerOffsetMinutes: offset,
+      ),
+      weekdaysMask: 127,
+      timezoneMode: ReminderTimezoneMode.deviceLocal,
+      signal: signal,
+      isEnabled: true,
+      revision: 0,
+      clientUpdatedAt: DateTime.utc(2026, 11, 27),
+    );
+
+    expect(isPrayerCall(rule()), isTrue);
+    expect(isPrayerCall(rule(offset: -10)), isFalse);
+    expect(isPrayerCall(rule(signal: ReminderSignal.vibration)), isFalse);
+    expect(isPrayerCall(rule(signal: ReminderSignal.silent)), isFalse);
+    expect(isPrayerCall(rule(type: ReminderType.quranReview)), isFalse);
+
+    expect(
+      reminderNotificationDetails(
+        ReminderSignal.sound,
+        ReminderAdhan.makkah,
+        timeSensitive: true,
+      ).iOS!.interruptionLevel,
+      InterruptionLevel.timeSensitive,
+    );
+    expect(
+      reminderNotificationDetails(
+        ReminderSignal.sound,
+        ReminderAdhan.none,
+      ).iOS!.interruptionLevel,
+      isNull,
     );
   });
 

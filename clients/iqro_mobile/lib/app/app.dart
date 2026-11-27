@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -43,9 +44,11 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
   /// Renewing the reminder plan reschedules every OS notification through
   /// the plugin on Android's main thread, which delays the frame signal and
   /// makes Home's opening animation stutter (about 10 frames a second on a
-  /// Redmi Note 7). It waits until the opening is over, or runs when the app
-  /// leaves the screen sooner: a short visit, such as opening IQRO from the
-  /// note that the prayer reminders run out, renews them too.
+  /// Redmi Note 7). It waits until the opening is over. iOS suspends the app
+  /// soon after it leaves the screen, and the timer with it, so there a visit
+  /// shorter than that, such as opening IQRO from the note that the prayer
+  /// reminders run out, renews them as it leaves; on Android the timer runs
+  /// on in the background.
   static const _reminderRenewalDelay = Duration(seconds: 8);
 
   @override
@@ -250,7 +253,8 @@ class _IqroAppState extends ConsumerState<IqroApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.hidden) {
+    if (state == AppLifecycleState.hidden &&
+        defaultTargetPlatform == TargetPlatform.iOS) {
       // Leaving before the renewal: there is no opening to keep smooth now,
       // and iOS gives the app a few seconds before it suspends it.
       _reminderRenewal?.cancel();

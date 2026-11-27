@@ -12,9 +12,10 @@ import 'package:path_provider/path_provider.dart';
 const reminderVibrationSound = 'reminder_vibrate.caf';
 const reminderVibrationAsset = 'assets/sounds/$reminderVibrationSound';
 
-/// Puts the silent sound in Library/Sounds and returns its name. Null when
-/// that fails: iOS plays a sound it cannot find as the default one, so the
-/// reminder then stays silent instead.
+/// Puts the silent sound in Library/Sounds and returns its name; a copy of
+/// another size, from another build, is replaced. Null when that fails: iOS
+/// plays a sound it cannot find as the default one, so the reminder then
+/// stays silent instead.
 Future<String?> installReminderVibrationSound({
   Future<Directory> Function()? libraryDirectory,
   AssetBundle? bundle,
@@ -22,8 +23,8 @@ Future<String?> installReminderVibrationSound({
   try {
     final library = await (libraryDirectory ?? getLibraryDirectory)();
     final file = File(p.join(library.path, 'Sounds', reminderVibrationSound));
-    if (!await file.exists()) {
-      final data = await (bundle ?? rootBundle).load(reminderVibrationAsset);
+    final data = await (bundle ?? rootBundle).load(reminderVibrationAsset);
+    if (!await file.exists() || await file.length() != data.lengthInBytes) {
       await file.parent.create(recursive: true);
       final partial = File('${file.path}.partial');
       await partial.writeAsBytes(

@@ -353,6 +353,24 @@ class NotificationGateway {
           item.active && item.isEnabled && item.type != ReminderType.prayer,
     )) {
       final location = _locationFor(rule);
+      // iOS keeps 64 pending requests at most: a rule for every day takes
+      // one daily request there instead of seven weekly ones.
+      if (Platform.isIOS && reminderRunsEveryDay(rule.weekdaysMask)) {
+        final time = rule.schedule.timeParts;
+        candidates.add(
+          _PlannedReminderNotification(
+            id: reminderNotificationId(rule.id, 'daily'),
+            rule: rule,
+            scheduledDate: nextDailyOccurrence(
+              location: location,
+              hour: time.hour,
+              minute: time.minute,
+            ),
+            matchDateTimeComponents: DateTimeComponents.time,
+          ),
+        );
+        continue;
+      }
       for (var weekday = 1; weekday <= 7; weekday++) {
         if (!reminderRunsOnWeekday(rule.weekdaysMask, weekday)) continue;
         final id = reminderNotificationId(rule.id, 'weekday:$weekday');
@@ -451,6 +469,7 @@ class NotificationGateway {
           scheduledDate: prayerPlanEndNoticeTime(
             lastPrayer.scheduledDate,
             now: tz.TZDateTime.now(location),
+            planned: selected.map((item) => item.scheduledDate),
           ),
           endsPlan: true,
         ),
@@ -458,11 +477,7 @@ class NotificationGateway {
     }
     final vibrationSound =
         Platform.isIOS &&
-            selected.any(
-              (item) =>
-                  !item.endsPlan &&
-                  item.rule.signal == ReminderSignal.vibration,
-            )
+            selected.any((item) => item.rule.signal == ReminderSignal.vibration)
         ? await installReminderVibrationSound()
         : null;
     _database.ensureCurrent(scope);
@@ -496,21 +511,27 @@ class NotificationGateway {
     }
     for (final item in selected) {
       _database.ensureCurrent(scope);
+      if (item.endsPlan) {
+        // Rescheduling keeps a delivered note on screen; cancelling also
+        // takes it from the lock screen and the notification list.
+        await _cancelIds(<int>{item.id}, accountScope: scope);
+        _database.ensureCurrent(scope);
+      }
       await _plugin.zonedSchedule(
         id: item.id,
         title: item.endsPlan ? copy.planEndTitle : copy.titleFor(item.rule),
         body: item.endsPlan ? copy.planEndBody : copy.bodyFor(item.rule),
         scheduledDate: item.scheduledDate,
-        notificationDetails: item.endsPlan
-            ? reminderNotificationDetails(
-                ReminderSignal.sound,
-                ReminderAdhan.none,
-              )
-            : reminderNotificationDetails(
-                item.rule.signal,
-                item.rule.adhanFor(selectedAdhan),
-                vibrationSound: vibrationSound,
-              ),
+        // The note rings, vibrates or stays silent as the prayers do, never
+        // with the adhan and never Time Sensitive.
+        notificationDetails: reminderNotificationDetails(
+          item.rule.signal,
+          item.endsPlan
+              ? ReminderAdhan.none
+              : item.rule.adhanFor(selectedAdhan),
+          vibrationSound: vibrationSound,
+          timeSensitive: !item.endsPlan && isPrayerCall(item.rule),
+        ),
         androidScheduleMode: mode,
         matchDateTimeComponents: item.matchDateTimeComponents,
         payload: _payloadFor(
@@ -732,14 +753,25 @@ class NotificationGateway {
   }
 }
 
+/// The reminder that calls to the prayer at its time with a sound: the
+/// adhan of Makkah or Madinah or the standard sound. Reminders before the
+/// prayer, vibrating or silent ones and Quran reminders are not.
+bool isPrayerCall(ReminderRule rule) =>
+    rule.type == ReminderType.prayer &&
+    rule.signal == ReminderSignal.sound &&
+    rule.schedule.prayerOffsetMinutes == 0;
+
 /// How a reminder sounds. [vibrationSound] is the silent sound a vibrating
 /// reminder needs on iOS (see [reminderVibrationSound]); without it that
-/// reminder is silent there.
+/// reminder is silent there. A [timeSensitive] one comes through a Focus,
+/// such as Sleep for Fajr, on iOS 15 and later; without the app's Time
+/// Sensitive entitlement iOS delivers it as an ordinary one.
 @visibleForTesting
 NotificationDetails reminderNotificationDetails(
   ReminderSignal signal,
   ReminderAdhan adhan, {
   String? vibrationSound,
+  bool timeSensitive = false,
 }) {
   final silent = signal == ReminderSignal.silent;
   final vibrate = signal != ReminderSignal.silent;
@@ -780,6 +812,7 @@ NotificationDetails reminderNotificationDetails(
       presentBadge: true,
       presentSound: sound || iosVibration != null,
       sound: called ? 'adhan_${adhan.name}.caf' : iosVibration,
+      interruptionLevel: timeSensitive ? InterruptionLevel.timeSensitive : null,
     ),
   );
 }
@@ -832,22 +865,64 @@ final prayerPlanEndNotificationId = reminderNotificationId(
 );
 
 /// A day before the last planned prayer notification, so that a day of
-/// reminders is still left when the note comes; right after the last one
-/// when the plan is shorter than that.
+/// reminders is still left when the note comes; after the last one when the
+/// plan is shorter than that. Kept two minutes from the [planned] ones:
+/// Android plays one sound at a time, so a note at the same minute would cut
+/// an adhan short.
 tz.TZDateTime prayerPlanEndNoticeTime(
   tz.TZDateTime lastPrayer, {
   required tz.TZDateTime now,
+  Iterable<tz.TZDateTime> planned = const <tz.TZDateTime>[],
 }) {
+  const gap = Duration(minutes: 2);
   final dayBefore = lastPrayer.subtract(const Duration(days: 1));
-  return dayBefore.isAfter(now)
-      ? dayBefore
-      : lastPrayer.add(const Duration(minutes: 1));
+  var notice = dayBefore.isAfter(now) ? dayBefore : lastPrayer.add(gap);
+  for (
+    var step = 0;
+    step < 60 && planned.any((time) => time.difference(notice).abs() < gap);
+    step += 1
+  ) {
+    notice = notice.add(gap);
+  }
+  return notice;
 }
 
 int reminderNotificationId(String ruleId, String occurrence) {
   final bytes = sha256.convert(utf8.encode('$ruleId|$occurrence')).bytes;
   return ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) &
       0x7fffffff;
+}
+
+bool reminderRunsEveryDay(int weekdaysMask) => <int>[
+  for (var weekday = 1; weekday <= 7; weekday++) weekday,
+].every((weekday) => reminderRunsOnWeekday(weekdaysMask, weekday));
+
+/// The next time of day after now, keeping the wall-clock time across DST.
+tz.TZDateTime nextDailyOccurrence({
+  required tz.Location location,
+  required int hour,
+  required int minute,
+  tz.TZDateTime? now,
+}) {
+  final current = now ?? tz.TZDateTime.now(location);
+  final today = tz.TZDateTime(
+    location,
+    current.year,
+    current.month,
+    current.day,
+    hour,
+    minute,
+  );
+  return today.isAfter(current)
+      ? today
+      : tz.TZDateTime(
+          location,
+          current.year,
+          current.month,
+          current.day + 1,
+          hour,
+          minute,
+        );
 }
 
 tz.TZDateTime nextWeeklyOccurrence({

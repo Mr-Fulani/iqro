@@ -113,27 +113,27 @@ void main() {
     });
     tearDown(() => library.delete(recursive: true));
 
-    test('is copied into Library/Sounds once', () async {
-      final bundle = _Bundle(File(reminderVibrationAsset).readAsBytesSync());
-
-      for (var run = 0; run < 2; run += 1) {
-        expect(
-          await installReminderVibrationSound(
-            libraryDirectory: () async => library,
-            bundle: bundle,
-          ),
-          reminderVibrationSound,
-        );
-      }
-
+    test('is copied into Library/Sounds and kept up to date', () async {
+      final asset = File(reminderVibrationAsset).readAsBytesSync();
+      final bundle = _Bundle(asset);
       final copied = File(
         p.join(library.path, 'Sounds', reminderVibrationSound),
       );
-      expect(
-        copied.readAsBytesSync(),
-        File(reminderVibrationAsset).readAsBytesSync(),
+      Future<String?> install() => installReminderVibrationSound(
+        libraryDirectory: () async => library,
+        bundle: bundle,
       );
-      expect(bundle.loads, 1);
+
+      expect(await install(), reminderVibrationSound);
+      expect(copied.readAsBytesSync(), asset);
+      final copiedAt = copied.lastModifiedSync();
+      expect(await install(), reminderVibrationSound);
+      expect(copied.lastModifiedSync(), copiedAt);
+
+      // A copy left by another build is replaced.
+      copied.writeAsBytesSync(const <int>[1, 2, 3]);
+      expect(await install(), reminderVibrationSound);
+      expect(copied.readAsBytesSync(), asset);
     });
 
     test('that cannot be copied is not used', () async {

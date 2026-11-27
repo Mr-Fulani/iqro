@@ -37,6 +37,10 @@ class ReminderController extends StateNotifier<ReminderState> {
   final AccountScopeSnapshot? _accountScope;
   final String Function() _locale;
 
+  /// Set once the stored rules are in [state]. A plan made before that would
+  /// read an empty list and cancel every reminder, so it reads them itself.
+  var _localRulesLoaded = false;
+
   /// Reads the rules; [renew] also reschedules the OS notifications.
   Future<void> reload({bool renew = true}) async {
     final scope = _accountScope;
@@ -51,6 +55,7 @@ class ReminderController extends StateNotifier<ReminderState> {
         loading: local.isEmpty,
         clearError: true,
       );
+      _localRulesLoaded = true;
       final result = await _repository.refresh(accountScope: scope);
       _database.ensureCurrent(scope);
       state = state.copyWith(
@@ -102,8 +107,12 @@ class ReminderController extends StateNotifier<ReminderState> {
   Future<void> replan() async {
     final scope = _requireScope();
     try {
+      final rules = _localRulesLoaded
+          ? state.rules
+          : await _repository.localRules(accountScope: scope);
+      _database.ensureCurrent(scope);
       final result = await _notifications.reschedule(
-        rules: state.rules,
+        rules: rules,
         prayerRepository: _prayerRepository,
         locale: _locale(),
         accountScope: scope,
