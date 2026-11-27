@@ -111,12 +111,13 @@ void main() {
         await harness.settle(const Duration(seconds: 2));
         await harness.screenshot('reader');
         harness.back();
+        await harness.settle();
       }
 
       // Reading aloud; listening itself needs a microphone the simulator in
       // CI does not have (README.md).
       final navigator = Navigator.of(
-        tester.element(find.byType(AppShell).first),
+        tester.element(find.byType(AppShell, skipOffstage: false).first),
       );
       navigator.push(ReaderFlowScreen.route(surah: 1, ayah: 1));
       await harness.waitFor(
