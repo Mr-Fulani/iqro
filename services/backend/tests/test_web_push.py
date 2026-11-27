@@ -144,7 +144,7 @@ def _review_rule(
 def _prayer_profile(user: User) -> PrayerProfile:
     configuration = PrayerMethodConfig.objects.select_related("release", "method").get(
         method__code="muslim-world-league",
-        release__version="2026.1",
+        release__version="2026.2",
     )
     return PrayerProfile.objects.create(
         user=user,

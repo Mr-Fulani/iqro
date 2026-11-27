@@ -33,7 +33,7 @@ from quran_backend.modules.prayer_times.timezones import TZDB_VERSION
 def prayer_method_config(db: None) -> PrayerMethodConfig:
     return PrayerMethodConfig.objects.select_related("release", "method").get(
         method__code="muslim-world-league",
-        release__version="2026.1",
+        release__version="2026.2",
     )
 
 
@@ -81,7 +81,7 @@ def test_prayer_methods_is_public_versioned_and_conditionally_cacheable(
     )
     assert re.fullmatch(r'W/"[0-9a-f]{64}"', response.headers["ETag"])
     payload = response.json()
-    assert payload["catalog_version"] == "2026.1"
+    assert payload["catalog_version"] == "2026.2"
     assert payload["configuration_schema_version"] == 1
     assert payload["algorithm"] == {
         "id": ENGINE_ID,
@@ -138,7 +138,7 @@ def test_calculate_is_stateless_private_and_never_echoes_coordinates(
     assert payload["method"] == {
         "id": str(prayer_method_config.id),
         "code": "muslim-world-league",
-        "catalog_version": "2026.1",
+        "catalog_version": "2026.2",
         "checksum_sha256": prayer_method_config.checksum_sha256,
     }
     assert set(payload["times"]) == {"fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"}
@@ -229,6 +229,46 @@ def test_calculate_anchors_international_date_line_results_to_requested_civil_da
         datetime.fromisoformat(event["local"]).date().isoformat()
         for event in payload["times"].values()
     } == {"2026-08-09"}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("timezone_name", "location", "expected_fajr"),
+    [
+        # tzdata 2026.5 (IANA 2026e): Manitoba keeps UTC-5 from 2026-11-01;
+        # 2026.3 still put it on UTC-6 and showed 06:21.
+        (
+            "America/Winnipeg",
+            {"latitude": "49.884400", "longitude": "-97.147040"},
+            "2026-12-15T07:21:00-05:00",
+        ),
+        # Morocco stays on UTC+0 from 2026-09-20.
+        (
+            "Africa/Casablanca",
+            {"latitude": "33.588310", "longitude": "-7.611380"},
+            "2026-12-15T05:58:00+00:00",
+        ),
+    ],
+)
+def test_calculate_follows_the_clock_changes_of_2026(
+    prayer_method_config: PrayerMethodConfig,
+    timezone_name: str,
+    location: dict[str, str],
+    expected_fajr: str,
+) -> None:
+    response = APIClient().post(
+        reverse("prayer_times:calculate"),
+        _calculation_payload(
+            prayer_method_config,
+            date="2026-12-15",
+            timezone=timezone_name,
+            location=location,
+        ),
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["times"]["fajr"]["local"] == expected_fajr
 
 
 @pytest.mark.django_db

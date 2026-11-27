@@ -42,7 +42,7 @@ from quran_backend.modules.prayer_times.timezones import TZDB_VERSION
 def prayer_profile_method(db: None) -> PrayerMethodConfig:
     return PrayerMethodConfig.objects.select_related("release", "method").get(
         method__code="muslim-world-league",
-        release__version="2026.1",
+        release__version="2026.2",
     )
 
 
@@ -232,7 +232,7 @@ def test_prayer_profile_create_get_and_device_binding_are_private_and_location_f
     assert body["method_config"] == {
         "id": str(prayer_profile_method.id),
         "code": "muslim-world-league",
-        "catalog_version": "2026.1",
+        "catalog_version": "2026.2",
         "checksum_sha256": prayer_profile_method.checksum_sha256,
     }
     assert body["fixed_timezone"] == "Europe/Istanbul"
