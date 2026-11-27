@@ -73,7 +73,7 @@ jobs:
           IQRO_LOCALE=ru IQRO_MODE=setup ios/scripts/simulator_run.sh test "$id" \
             build/ios/iphonesimulator/Runner.app \
             integration_test/store_screenshots_test.dart "$OUT/setup" ||
-            echo "::warning::the setup run failed (see setup/test.log); the language runs decide
+            echo "::warning::the setup run failed (see setup/test.log); the language runs decide"
           for locale in ru en ar tr; do
             IQRO_LOCALE="$locale" ios/scripts/simulator_run.sh test "$id" \
               build/ios/iphonesimulator/Runner.app \
