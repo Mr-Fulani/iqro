@@ -308,7 +308,7 @@ const tr: Messages = {
   "more.shareHint": "Kur'an'ı okumak ve dinlemek için huzurlu bir yolu paylaşın.",
   "more.soon": "Yakında",
   "settings.language": "Dil",
-  "settings.privacyHint": "Koordinatlarınız bu cihazda kalır ve analitiğe eklenmez.",
+  "settings.privacyHint": "Koordinatlar yalnızca namaz vakitlerini hesaplamak için IQRO sunucusuna gönderilir: sunucu bunları saklamaz ve kullanım istatistiklerine girmez.",
   "settings.accountHint": "Yerel değişiklikleri gönderin ve diğer cihazlardan güncellemeleri alın.",
   "more.booksQuizzes": "Kitaplar · Testler",
   "more.back": "Geri",
