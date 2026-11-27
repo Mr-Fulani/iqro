@@ -48,6 +48,11 @@ Each step writes an `IQRO STEP` line; `steps.txt` in the artifact has them all.
   controller only once the player's own pause and seek are done (for example, finish on
   `isCompleted` but dispose a second later), then let the test play the intro again.
 
+- On a fresh install the reminder renewal 8 s after launch can run before the guest sign-in
+  has finished and report "IQRO reminder renewal: The active account changed while the
+  operation ran" (`lib/app/app.dart`, `replan` in the reminder controller). A real race, seen
+  in CI on 27.11.2026; the smoke test fails when it happens.
+
 ## What a simulator does not check
 
 The microphone and speech recognition, the adhan sound and notifications, the lock screen and

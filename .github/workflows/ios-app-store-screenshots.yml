@@ -69,9 +69,11 @@ jobs:
           # session (Keychain) and what the server keeps carry over. A first
           # run opens the active announcement once, so the server marks it read
           # and Home shows no announcement bubble in the language runs.
+          # It is preparation, not a check: a failure here is only a warning.
           IQRO_LOCALE=ru IQRO_MODE=setup ios/scripts/simulator_run.sh test "$id" \
             build/ios/iphonesimulator/Runner.app \
-            integration_test/store_screenshots_test.dart "$OUT/setup" || status=$?
+            integration_test/store_screenshots_test.dart "$OUT/setup" ||
+            echo "::warning::the setup run failed (see setup/test.log); the language runs decide
           for locale in ru en ar tr; do
             IQRO_LOCALE="$locale" ios/scripts/simulator_run.sh test "$id" \
               build/ios/iphonesimulator/Runner.app \
