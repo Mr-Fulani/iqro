@@ -30,6 +30,7 @@ import { SurahNameArt } from "./SurahNameArt";
 import { AnnouncementBubble } from "./announcements/AnnouncementBubble";
 import { AnnouncementCard } from "./announcements/AnnouncementCard";
 import type { Announcement } from "../lib/announcements";
+import { AppStoreBadge } from "./AppStoreBadge";
 import { GooglePlayBadge } from "./GooglePlayBadge";
 
 const HERO_SLIDES = [
@@ -231,13 +232,16 @@ export default function HomePage({
 
       <HomeSections />
 
-      {process.env.NEXT_PUBLIC_ANDROID_PLAY_STORE_URL?.trim() ? (
+      {process.env.NEXT_PUBLIC_IOS_APP_STORE_URL?.trim() || process.env.NEXT_PUBLIC_ANDROID_PLAY_STORE_URL?.trim() ? (
         <section className="surface home-app-card" data-testid="home-app-card">
           <div>
             <h2 className="surface-title">{t("footer.mobileAppTitle")}</h2>
             <p className="surface-subtitle">{t("footer.mobileAppDescription")}</p>
           </div>
-          <GooglePlayBadge />
+          <div className="home-app-stores">
+            <AppStoreBadge />
+            <GooglePlayBadge />
+          </div>
         </section>
       ) : null}
 

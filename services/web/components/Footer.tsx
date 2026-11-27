@@ -7,6 +7,7 @@ import { useI18n } from "../lib/i18n-context";
 import { localizedPath } from "../lib/routing";
 import { SocialLinks } from "./social/SocialLinks";
 import { MobileDisclosure } from "./MobileDisclosure";
+import { AppStoreBadge } from "./AppStoreBadge";
 import { GooglePlayBadge } from "./GooglePlayBadge";
 
 type FooterProps = {
@@ -18,9 +19,6 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
   const appDownloadUrl = process.env.NEXT_PUBLIC_ANDROID_APP_DOWNLOAD_URL?.trim();
   const appStoreUrl = process.env.NEXT_PUBLIC_IOS_APP_STORE_URL?.trim();
   const playStoreUrl = process.env.NEXT_PUBLIC_ANDROID_PLAY_STORE_URL?.trim();
-  const stores = [
-    { name: "App Store", url: appStoreUrl, soon: t("footer.iosSoon") },
-  ];
   return (
     <footer className="app-footer">
       <MobileDisclosure title={t("footer.aboutLinks")} className="mobile-footer-details">
@@ -33,17 +31,12 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
             <section className="footer-mobile-app" aria-labelledby="footer-mobile-app-title">
               <h2 id="footer-mobile-app-title" className="sr-only">{t("footer.mobileAppTitle")}</h2>
               <div className="footer-app-stores">
-                {stores.map((store) => store.url ? (
-                  <a key={store.name} className="footer-store-badge" href={store.url}>
-                    <span>{t("footer.storeDownload")}</span>
-                    <strong>{store.name}</strong>
-                  </a>
-                ) : (
-                  <div key={store.name} className="footer-store-badge">
-                    <span>{store.soon}</span>
-                    <strong>{store.name}</strong>
+                {appStoreUrl ? <AppStoreBadge /> : (
+                  <div className="footer-store-badge">
+                    <span>{t("footer.iosSoon")}</span>
+                    <strong>App Store</strong>
                   </div>
-                ))}
+                )}
                 {playStoreUrl ? <GooglePlayBadge /> : (
                   <div className="footer-store-badge">
                     <span>{t("footer.androidSoon")}</span>
@@ -116,6 +109,8 @@ export function Footer({ socialProfiles = [] }: FooterProps) {
 
       <div className="footer-bottom">
         <p>{t("footer.copyright")}</p>
+        {/* Apple asks for its credit line wherever its badge is used. */}
+        {appStoreUrl ? <p>{t("footer.appleTrademarks")}</p> : null}
       </div>
     </footer>
   );

@@ -6,6 +6,7 @@ import {
 } from "./i18n";
 import { translate } from "./translate";
 import { localizedAlternates, localizedPath } from "./routing";
+import { appStoreAppId } from "./store-badge";
 
 export const SITE_NAME = "IQRO";
 export const LOCAL_SITE_URL = "http://localhost:3000";
@@ -77,6 +78,8 @@ export function createRootMetadata(locale: Locale): Metadata {
   const title = translate(locale, "meta.title");
   const description = translate(locale, "meta.description");
   const canonical = localizedPath(locale, "/");
+  // Safari's banner on iPhone and iPad, once the app is out in the App Store.
+  const appStoreId = appStoreAppId(process.env.NEXT_PUBLIC_IOS_APP_STORE_URL);
 
   return {
     metadataBase: siteUrl(),
@@ -119,6 +122,7 @@ export function createRootMetadata(locale: Locale): Metadata {
       "p:domain_verify": "e7570247a1ff85e692e4650cf140775b",
     },
     manifest: "/manifest.webmanifest",
+    ...(appStoreId ? { itunes: { appId: appStoreId } } : {}),
     formatDetection: {
       email: false,
       address: false,

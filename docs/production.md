@@ -67,10 +67,16 @@ chmod 600 services/backend/.env.production
 - `WEB_ANDROID_PLAY_STORE_URL` — адрес страницы приложения в Google Play. Тоже встраивается в
   образ web при сборке; пустое значение скрывает плашку Google Play на сайте. Подробно —
   [google-play-badge.md](google-play-badge.md).
+- `WEB_IOS_APP_STORE_URL` — адрес страницы приложения в App Store (`https://apps.apple.com/app/…/id…`).
+  Тоже встраивается в образ web при сборке; пустое значение скрывает значок App Store и баннер
+  Safari. Подробно — [app-store-badge.md](app-store-badge.md).
 - `TELEGRAM_BOT_TOKEN` и `TELEGRAM_ALERT_CHAT_ID` — уведомления админу в Telegram. Пустые
   значения их выключают. Подробно — [alerts.md](alerts.md).
 - `QURAN_GOOGLE_WEB_CLIENT_ID` и `QURAN_GOOGLE_ANDROID_CLIENT_IDS` — вход через Google. Без
   Web client ID кнопка не показывается. Подробно — [google-sign-in.md](google-sign-in.md).
+- `QURAN_APP_REVIEW_EMAIL` и `QURAN_APP_REVIEW_PASSCODE` — вход для проверяющего App Store:
+  один адрес с постоянным кодом из шести цифр, письмо на него не уходит. Оба пустые — вход
+  выключен. Подробно — [app-review-sign-in.md](app-review-sign-in.md).
 
 Production settings и `docker compose config` fail closed без этих значений. Credentials должны
 иметь доступ только к media bucket; их нельзя передавать web/mobile/Mini App или добавлять в URL.

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import os
+import re
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 from corsheaders.defaults import default_headers
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.validators import validate_email
 
 from quran_backend.database_budget import DatabaseBudgetError, DatabaseConnectionBudget
 from quran_backend.error_reporting import init_error_reporting
@@ -76,6 +79,27 @@ def validate_https_base_url(name: str, value: str) -> str:
     return value
 
 
+def validate_app_review_sign_in(email: str, passcode: str) -> None:
+    """Both empty (off), or one address and six digits no one guesses first."""
+    if not email and not passcode:
+        return
+    if not email or not passcode:
+        raise ImproperlyConfigured(
+            "Set both QURAN_APP_REVIEW_EMAIL and QURAN_APP_REVIEW_PASSCODE, or neither"
+        )
+    try:
+        validate_email(email)
+    except ValidationError as exc:
+        raise ImproperlyConfigured("QURAN_APP_REVIEW_EMAIL must be an email address") from exc
+    if not re.fullmatch(r"[0-9]{6}", passcode):
+        raise ImproperlyConfigured("QURAN_APP_REVIEW_PASSCODE must be six digits")
+    steps = {int(after) - int(before) for before, after in pairwise(passcode)}
+    if steps in ({0}, {1}, {-1}):
+        raise ImproperlyConfigured(
+            "QURAN_APP_REVIEW_PASSCODE must be random, not one repeated digit or a run"
+        )
+
+
 APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "unsafe-local-development-key")
 QURAN_ACCESS_TOKEN_TTL_SECONDS = os.getenv("QURAN_ACCESS_TOKEN_TTL_SECONDS", "900")
@@ -86,6 +110,11 @@ QURAN_REFRESH_TOKEN_HASH_KEY = os.getenv("QURAN_REFRESH_TOKEN_HASH_KEY", SECRET_
 QURAN_EMAIL_CODE_HASH_KEY = os.getenv("QURAN_EMAIL_CODE_HASH_KEY", SECRET_KEY)
 QURAN_EMAIL_CODE_TTL_SECONDS = os.getenv("QURAN_EMAIL_CODE_TTL_SECONDS", "600")
 QURAN_EMAIL_CODE_ATTEMPTS = os.getenv("QURAN_EMAIL_CODE_ATTEMPTS", "5")
+# Sign-in for the App Store reviewer (docs/app-review-sign-in.md): one address whose
+# code is fixed and never emailed. Both empty, the default, keep it off.
+QURAN_APP_REVIEW_EMAIL = os.getenv("QURAN_APP_REVIEW_EMAIL", "").strip().lower()
+QURAN_APP_REVIEW_PASSCODE = os.getenv("QURAN_APP_REVIEW_PASSCODE", "").strip()
+validate_app_review_sign_in(QURAN_APP_REVIEW_EMAIL, QURAN_APP_REVIEW_PASSCODE)
 # Google sign-in stays off until the OAuth clients exist. The web client ID is
 # also the server client ID that the Android app requests ID tokens for.
 QURAN_GOOGLE_WEB_CLIENT_ID = os.getenv("QURAN_GOOGLE_WEB_CLIENT_ID", "").strip()
@@ -577,6 +606,11 @@ REST_FRAMEWORK: dict[str, Any] = {
         "email_start_ip_burst": os.getenv(
             "QURAN_EMAIL_START_IP_BURST_RATE",
             "100/hour",
+        ),
+        # Shared by everyone who asks for the App Store reviewer's address.
+        "email_start_app_review": os.getenv(
+            "QURAN_APP_REVIEW_SIGN_IN_RATE",
+            "20/day",
         ),
         "email_verify_challenge": os.getenv(
             "QURAN_EMAIL_VERIFY_CHALLENGE_RATE",
