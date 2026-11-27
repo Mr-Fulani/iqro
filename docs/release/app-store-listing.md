@@ -3,7 +3,7 @@
 Тексты для App Store Connect → приложение → версия iOS и App Information. Основной язык —
 русский, локализации — английский (США), арабский, турецкий. Описание то же, что в
 [google-play-listing.md](google-play-listing.md), без «Продолжить с Google»: на iOS этого входа
-нет (см. [app-store.md](app-store.md), раздел 8). Остальные поля — свои для App Store.
+нет (см. [app-store.md](app-store.md), раздел 14). Остальные поля — свои для App Store.
 
 Лимиты App Store Connect: Name и Subtitle — до 30 знаков, Promotional Text — до 170,
 Description — до 4000, Keywords — до 100 (держим до 100 байт в UTF-8 на случай подсчёта

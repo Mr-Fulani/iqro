@@ -1,194 +1,289 @@
-# Выпуск iOS-приложения в App Store
+# IQRO на iPhone: инструкция владельцу
 
-Пошаговая инструкция для владельца: что сделать один раз, как собрать сборку без Xcode на Mac,
-как пройти TestFlight и что отвечать в App Store Connect. Тексты страницы приложения —
-в [app-store-listing.md](app-store-listing.md). Android — в [google-play.md](google-play.md).
+Что сделать, чтобы IQRO вышло в App Store: вступить в программу Apple, подготовить подпись,
+получить первую сборку на свой iPhone через TestFlight и заполнить анкеты. Xcode на Mac не
+нужен: сборка идёт в GitHub.
 
-Состояние на 06.11.2026 (по коду `main` `40817807` и CI):
+- Что проверить на iPhone — [ios-testflight-checklist.md](ios-testflight-checklist.md).
+- Тексты страницы App Store — [app-store-listing.md](app-store-listing.md).
+- Android — [google-play.md](google-play.md).
 
-- iOS ни разу не собирался с подписью и не запускался на iPhone или iPad. CI (`.github/workflows/mobile.yml`,
-  задача `ios`) на каждом PR собирает релизную сборку **без подписи** на `macos-15` с Xcode 26.3
-  и гоняет нативные тесты `RunnerTests` в симуляторе; на `main` зелёный;
-- аккаунта Apple Developer нет, приложения в App Store Connect нет;
-- bundle ID `forum.iqro.app`, виджеты — `forum.iqro.app.PrayerTimesHomeWidget`, App Group
-  `group.forum.iqro.app`; iOS/iPadOS 15+, iPhone и iPad;
-- версия берётся из `pubspec.yaml` (`1.0.10+11` → «1.0.10», сборка 11), у виджета та же
-  (это проверяет нативный тест);
-- подпись готова в коде (PR #217): Release подписывается вручную сертификатом Apple Distribution
-  и профилями «IQRO App Store» и «IQRO Widget App Store», Team ID подставляет workflow
-  `ios-release.yml` из переменной `APPLE_TEAM_ID`; с настоящей подписью ещё не запускался;
-- файл связи с сайтом `https://iqro.forum/.well-known/apple-app-site-association` отдаётся,
-  но пустой (`"details":[]`): на проде не задан Team ID.
+Сверено 27.11.2026: сайты Apple (developer.apple.com, справка App Store Connect, App Review
+Guidelines в редакции 16.10.2026) и код `main` `a1c7b7ce`.
+
+Как читать:
+
+- **жирным** — кнопки и поля так, как они называются на сайтах Apple по-английски. Если сайт
+  у вас по-русски, названия другие, порядок тот же;
+- 🔶 — нужно ваше решение;
+- «сессии» — сессии Claude, которые сейчас правят код для iPhone.
+
+## Ваши шаги по порядку
+
+| Шаг | Что | Время | Раздел |
+|---|---|---|---|
+| 1 | Вступить в Apple Developer Program, 99 $ в год | 20 мин и ожидание Apple, обычно до суток | [1](#1-вступить-в-apple-developer-program) |
+| 2 | Прислать Team ID в чат | 1 мин | [2](#2-team-id--прислать-в-чат) |
+| 3 | Группа и два App ID с возможностями | 15 мин | [3](#3-группа-и-два-app-id) |
+| 4 | Сертификат и два профиля | 30 мин | [4](#4-сертификат-и-два-профиля) |
+| 5 | Ключ App Store Connect API | 10 мин | [5](#5-ключ-app-store-connect-api) |
+| 6 | Запись приложения в App Store Connect | 10 мин | [6](#6-приложение-в-app-store-connect) |
+| 7 | 8 значений в GitHub | 15 мин | [7](#7-восемь-значений-в-github) |
+| 8 | Первая сборка и TestFlight на iPhone | 30 мин и 1,5–2 ч проверки | [8](#8-первая-сборка-и-testflight) |
+| 9 | Анкеты App Store Connect | около 1 ч | [9](#9-анкеты-app-store-connect) |
+| 10 | Цена, страны и устройства | 10 мин | [10](#10-цена-страны-и-устройства) |
+| 11 | Снимки и отправка на проверку | 30 мин и 1–2 дня Apple | [11](#11-снимки-и-отправка-на-проверку) |
+
+Для TestFlight нужны шаги 1–8. Шаги 9–11 — только для App Store.
+
+Файлы, которые вы скачаете в шагах 4–5 (`.p12` с паролем, два профиля, `.p8`), положите
+в заблокированную заметку «IQRO Apple», как ключ загрузки Google Play. В git и в чат они
+не попадают.
+
+## Ваши решения
+
+| # | Вопрос | Рекомендация | Когда нужно |
+|---|---|---|---|
+| Р1 | 🔶 iPad: только iPhone или iPhone и iPad | **только iPhone** — по рекомендации, ответа пока нет. iPad можно добавить позже, убрать нельзя (раздел 10) | до первой сборки |
+| Р2 | 🔶 Самая старая iOS, на которой работает IQRO | **16.0**. Сейчас 15.0, но iOS 15 никто не проверит: TestFlight требует iOS 16 | до первой сборки |
+| Р3 | Азан сквозь «Фокус» и «Сон» (Time Sensitive) | **да** — вам предложено, отмечаем, если не передумали (раздел 3) | до профилей, шаг 4 |
+| Р4 | 🔶 США: оставлять ли витрину | решаете вы, два варианта в разделе 10 | до отправки |
+| Р5 | 🔶 ЕС: «трейдер» или «не трейдер» | решаете вы, раздел 10 | до отправки |
+| Р6 | 🔶 Sentry (отчёты об ошибках) | одно решение на iPhone и Android. Без него ошибки внутри приложения не видны; падения видно в TestFlight, если тестировщик отправит отчёт | до первой сборки |
+| Р7 | Номер версии iOS | как у следующего Android | до первой сборки |
+| Р8 | Mac и Apple Vision Pro | **не выпускать**: там IQRO не проверяли (раздел 10) | до отправки |
+| Р9 | Объявления в приложении на iPhone | просмотреть ленту в админке, снять отметку iPhone у новостей Android | до раздачи сборки |
 
 ## Что мешает выпуску
 
-| # | Что | Кто | Статус |
-|---|---|---|---|
-| 1 | Apple Developer Program, 99 $ в год (раздел 1) | владелец, платно — только по его решению | не сделано |
-| 2 | iPhone (и желательно iPad) с приложением TestFlight для проверки | владелец, тестировщики | неизвестно, есть ли iPhone у владельца |
-| 3 | Bundle ID, App Group, Associated Domains на портале Apple (раздел 2) | владелец | не сделано |
-| 4 | Приложение в App Store Connect (раздел 3) | владелец | не сделано |
-| 5 | Сертификат, два профиля, ключ App Store Connect API и секреты в GitHub (разделы 2 и 4) | владелец вводит сам | не сделано |
-| 6 | Workflow подписи и загрузки в TestFlight (раздел 4) | Claude | сделано в PR #217, первый запуск — после пункта 5 |
-| 7 | Строка разрешения на сохранение в «Фото» (раздел 9, правка 1) | Claude | сделано в PR #217 |
-| 8 | Team ID на проде для Universal Links: `APPLE_APP_LINK_APPLICATION_IDENTIFIERS` | основная сессия, с «да» владельца | не сделано |
-| 9 | Проверка на iPhone и iPad по [tech-debt 1.4](../tech-debt.md) | владелец и тестировщики через TestFlight | не сделано |
-| 10 | Скриншоты iPhone 6,9″ и iPad 13″ на 4 языках (раздел 7) | Claude делает, владелец утверждает | не сделано |
-| 11 | Анкеты App Store Connect: App Privacy, возраст, права, страны (раздел 6) | владелец по этому документу | не сделано |
-| 12 | Статус «трейдер» в ЕС (DSA) и почтовый адрес, если трейдер | владелец | не решено |
-| 13 | Отчёты о падениях (Sentry) в релизной сборке | владелец | не решено, как и для Android |
+| # | Что | Кто | Нужно для | Статус |
+|---|---|---|---|---|
+| 1 | Вступление в Apple Developer Program | владелец | TestFlight | не сделано: в GitHub нет ни одного значения, сборок не было |
+| 2 | Team ID, группа, два App ID, сертификат, два профиля, ключ API, запись в App Store Connect | владелец | TestFlight | не сделано |
+| 3 | 8 значений в GitHub | владелец; Team ID может задать Claude по вашему «да» | TestFlight | не сделано |
+| 4 | Решения Р1–Р9 | владелец | первая сборка, отправка | Р3 предложено «да», остальные ждут |
+| 5 | Версия в workflow сборки: сейчас iOS ушла бы как 1.0.10 | сессия ios-native | TestFlight | в работе |
+| 6 | Манифест приватности: размер диска (DiskSpace), Coarse Location | сессия ios-native | загрузка | в работе |
+| 7 | Строки разрешений: геопозиция и кибла, микрофон в отладочной сборке | сессия ios-native | App Store | в работе |
+| 8 | Файлы модели проверки чтения (25 МБ) не нужны в сборке iPhone | сессия ios-native | App Store | в работе |
+| 9 | Тёмный экран запуска | сессия ios-native | App Store | в работе |
+| 10 | Автопроверка на симуляторах iPhone и iPad с видео | сессия ios-native | каждая сборка | в работе |
+| 11 | Снимки для App Store на 4 языках, гайд «IQRO на iPhone» | сессия ios-native; утверждаете вы | App Store | в работе |
+| 12 | Право Time Sensitive в проекте и уровень уведомлений азана | сессии ios-native и ios-audio-adhan, после вашего профиля с этой возможностью | App Store | ждёт шага 4 |
+| 13 | Только iPhone и iOS 16 в проекте | сессия ios-native, по Р1 и Р2 | первая сборка | ждёт решения |
+| 14 | Слова «Android» и «Google» на экранах iPhone (правило 2.3.10) | сессия ios-review-ui | App Store | в работе |
+| 15 | Заглушка «Книги · Квизы — Скоро» на вкладке «Ещё» (правило 2.1) | сессия ios-review-ui | App Store | в работе |
+| 16 | Экраны перед запросами уведомлений и микрофона: одна кнопка «Продолжить» (правило 5.1.1) | сессия ios-review-ui | App Store | в работе |
+| 17 | Постоянная ссылка на политику конфиденциальности в настройках (правило 5.1.1(i)) | сессия ios-review-ui | App Store | в работе |
+| 18 | Проверка чтения на iPhone: сообщения и ошибки службы Apple | сессия ios-review-ui | App Store | в работе |
+| 19 | Кнопки экрана блокировки пропадают после видеофона плеера | сессия ios-audio-adhan | App Store | в работе |
+| 20 | Офлайн-загрузки: пути после обновления и загрузка при погашенном экране | сессия ios-audio-adhan | App Store | в работе |
+| 21 | Азан: продление напоминаний после 8 дней, сигнал «Вибрация» | сессия ios-audio-adhan | App Store | в работе |
+| 22 | Вход для проверяющего Apple (правило 2.1(a)): вход у нас только по коду из письма | сессия ios-backend-site; на сервер — по вашему слову | App Store | в работе |
+| 23 | Политика конфиденциальности, раздел 13: на iPhone проверяются только слова | сессия ios-backend-site | App Store | в работе |
+| 24 | Team ID на сервере для ссылок iqro.forum: файл связи сейчас пустой | Claude после шага 2; выкладка — по вашему слову | ссылки iqro.forum | ждёт шага 2 |
+| 25 | Часовые пояса Кувейта, Куала-Лумпура, Сараево и др. (ломают и Android) | сессия session-4 | выпуск | в работе |
+| 26 | Проверка первой сборки на iPhone | владелец, по [списку](ios-testflight-checklist.md) | App Store | после шага 8 |
+| 27 | Анкеты, цена, страны, снимки | владелец по разделам 9–11 | App Store | не сделано |
 
-Для **внутреннего** TestFlight достаточно пунктов 1–7. Пункты 10–12 нужны только для
-отправки на проверку App Store.
+Всё идёт одним выпуском: iPhone вместе со следующим Android (раздел 13).
 
-## Что уже готово в коде
+## Что уже готово
 
 | Что | Состояние |
 |---|---|
-| Значки | полный набор `AppIcon`, значок 1024×1024 без прозрачности (печать IQRO) |
-| Заставка | `LaunchScreen.storyboard`: печать на бежевом фоне |
-| Местоположение | `NSLocationWhenInUseUsageDescription` на 4 языках (`*.lproj/InfoPlist.strings`); «Всегда» не запрашивается, `geolocator` собран с `BYPASS_PERMISSION_LOCATION_ALWAYS` |
-| Микрофон и распознавание речи | `NSMicrophoneUsageDescription` и `NSSpeechRecognitionUsageDescription` на 4 языках — проверка чтения вслух; на iPhone не запускалась |
-| Уведомления | разрешение запрашивается кодом, строка в Info.plist не нужна; учтён предел iOS в 64 запланированных уведомления (горизонт 8 дней) |
-| Фоновая работа | `UIBackgroundModes`: `audio` (чтение Корана с выключенным экраном), `fetch` + `BGTaskSchedulerPermittedIdentifiers` для обслуживания кэша |
-| Шифрование | `ITSAppUsesNonExemptEncryption = false`: только HTTPS и Keychain, вопросы об экспорте при каждой сборке не появятся |
-| Сеть | в релизе исключений ATS нет; `NSAllowsArbitraryLoads` только в `Info-Debug.plist` |
-| Privacy manifests | у приложения и у виджета (`PrivacyInfo.xcprivacy`); у пакетов из списка Apple свои манифесты есть. Без манифеста `audio_service`, `audio_session`, `just_audio`, `home_widget` и Flutter-обёртки Firebase: их нет в списке Apple, нативные Firebase-pods несут свои. Окончательно проверит App Store Connect при первой загрузке: недостающее придёт письмом ITMS-91053/91061 |
-| Виджеты | WidgetKit: время намаза и план чтения с ростом пальмы, оба `systemMedium`; App Group одинаковый в обоих entitlements и в Dart; Swift компилируется в CI, но на устройстве не запускался |
-| Deep links | схема `iqro://`, `FlutterDeepLinkingEnabled`, `applinks:iqro.forum` в entitlements; на сайте маршрут готов (пути `/dua/*`, `/salah` и `/courses`), не хватает только Team ID на проде |
-| Firebase | параметры iOS берутся из `config/firebase.json` (`FIREBASE_IOS_APP_ID`, `FIREBASE_IOS_API_KEY`), `GoogleService-Info.plist` не нужен; сбор выключен до согласия; рекламного идентификатора нет (`$FirebaseAnalyticsWithoutAdIdSupport`), окно App Tracking Transparency не нужно |
-| Вход через Google | на iOS выключен кодом (`google_sign_in_gateway.dart` показывает кнопку только на Android); на iOS — вход по коду из письма. См. раздел 8 |
-| Sentry | пакет `sentry` (чистый Dart) без DSN — выключен; нативные сбои iOS не ловит |
-| Звуки азана | `adhan_makkah.caf` 13,8 с и `adhan_madinah.caf` 20,4 с — короче предела iOS в 30 с, входят в ресурсы `Runner`; на iPhone не звучали |
-| Удаление аккаунта | в приложении есть (требование 5.1.1(v)) |
-| Пожертвования | сбор средств в приложении не показывается, только на сайте (требование 3.2.2) |
+| Сборка в GitHub | обычная проверка собирает iOS без подписи на `macos-15` с Xcode 26.3 (iOS SDK 26.2, Apple сейчас принимает такие) и гоняет 2 нативных теста. Последний прогон на `main` зелёный (26.11). Идёт только при изменениях в приложении |
+| Подпись и загрузка | workflow **iOS release** и ручная подпись Release готовы, но ни разу не запускались: нет значений из шага 7 |
+| Идентификаторы | `forum.iqro.app`, виджеты `forum.iqro.app.PrayerTimesHomeWidget`, группа `group.forum.iqro.app` — в проекте и в коде одинаковые |
+| Значок и заставка | полный набор значков, 1024×1024 без прозрачности; заставка с печатью на бежевом фоне |
+| Разрешения | строки геопозиции («Всегда» не спрашиваем), микрофона, распознавания речи и «Фото» на 4 языках |
+| Уведомления | учтён предел iOS — 64 запланированных уведомления, это около 8 дней вперёд; push не нужен |
+| Звук в фоне | режим `audio`: чтение идёт с погашенным экраном. Режим `fetch` объявлен, но задача пустая — решает сессия ios-audio-adhan |
+| Шифрование | `ITSAppUsesNonExemptEncryption = false`: только HTTPS. В Release нет исключений ATS |
+| Манифесты приватности | у приложения и у виджета; окончательно их проверит первая загрузка (письмо Apple ITMS-91053, если чего-то не хватит) |
+| Виджеты | время намаза и план чтения с пальмой; Swift собирается в CI, на iPhone не запускался |
+| Ссылки | схема `iqro://` и `applinks:iqro.forum` в проекте; на сайте пути `/dua`, `/salah`, `/courses` готовы, не хватает Team ID (пункт 24) |
+| Firebase | включается только с согласия, без рекламного идентификатора: окно «Разрешить отслеживание» (ATT) не нужно |
+| Вход | только по коду из письма; кнопка Google на iPhone скрыта, поэтому «Войти с Apple» не нужен (правило 4.8, раздел 14) |
+| Удаление аккаунта | в приложении, с 7 днями на отмену (правило 5.1.1(v)) |
+| Пожертвования | сбор показывается только на сайте (правило 3.2.2) |
+| Звуки азана | Мекка 13,8 с и Медина 20,4 с — короче предела iOS в 30 с |
+| Будущее требование iOS 27 SDK | переход на сцены (UIScene) уже сделан |
+| Сайт | политика конфиденциальности, контакты и источники на 4 языках |
+| Тексты страницы App Store | в лимитах Apple на 4 языках, без Android и Google; описание отстаёт от приложения (раздел 11) |
 
-Найдено при аудите: не было `NSPhotoLibraryAddUsageDescription`. Картинка аята или ду'а уходит
-в системное меню «Поделиться», там есть «Сохранить изображение», и без этой строки iOS
-закрывает приложение. Исправлено в PR #217 (правка 1 в разделе 9).
+## 1. Вступить в Apple Developer Program
 
-## 1. Аккаунт Apple Developer
+Если ещё не вступили. Проще всего — с iPhone, в приложении Apple Developer.
 
-1. Apple ID с двухфакторной защитой (лучше тот же `fulani.dev@gmail.com`, что в Google Play).
-2. Вступить в Apple Developer Program: https://developer.apple.com/programs/enroll/ — проще всего
-   из приложения **Apple Developer** на iPhone или iPad (там же оплата). Взнос **99 $ в год**,
-   продлевается автоматически; без продления приложение пропадает из App Store.
-3. Тип аккаунта:
-   - **Личный (Individual)** — быстрее, в App Store продавцом будет имя владельца
-     латиницей, как в документе;
-   - **Организация** — нужен номер D-U-N-S (бесплатный, ждать до 2 недель), юрлицо и сайт.
-     Для проекта без юрлица не подходит.
+1. На iPhone поставьте из App Store приложение **Apple Developer**.
+2. Откройте его → вкладка **Account** → войдите своим Apple Account. Нужна двухфакторная
+   защита (на iPhone она обычно уже включена).
+3. **Enroll Now** → тип **Individual** (физлицо).
+4. Имя и фамилия — латиницей, точно как в паспорте. Псевдоним нельзя: это имя будет видно
+   в App Store как продавец.
+5. Адрес — настоящий, без абонентского ящика.
+6. Сфотографируйте паспорт, когда приложение попросит.
+7. Оплатите **99 $ в год** (в местной валюте, где можно). Это подписка, она продлевается
+   сама. Баланс Apple Account и подарочные карты к оплате не принимаются.
+8. Дождитесь письма о вступлении. Обычно в течение суток. Если через 24 часа письма нет —
+   напишите в поддержку Apple, указав номер заявки (Enrollment ID) из письма об оплате.
 
-   Рекомендация — личный.
-4. Проверка личности занимает от часов до нескольких дней. Соглашение программы владелец
-   принимает сам. Для бесплатного приложения договор о платных приложениях, налоги и банк
-   не нужны.
-5. После одобрения: https://developer.apple.com/account → Membership details → **Team ID**
-   (10 знаков). Он не секретный: его можно прислать в чат, он нужен для CI и Universal Links.
+Если подписку не продлить, IQRO пропадёт из App Store. У тех, кто уже поставил, приложение
+продолжит работать. После продления бесплатное приложение вернётся в течение суток.
 
-## 2. Идентификаторы, сертификат, профили и ключ API
+## 2. Team ID — прислать в чат
 
-На https://developer.apple.com/account/resources:
+1. https://developer.apple.com/account → **Membership details**.
+2. **Team ID** — 10 знаков, латиница и цифры.
+3. Пришлите его в чат. Он не секретный.
 
-1. **Identifiers → App Groups → +**: `group.forum.iqro.app`, описание «IQRO widgets».
-2. **Identifiers → App IDs → +** (тип App):
-   - `forum.iqro.app`, описание «IQRO». Возможности (Capabilities): **App Groups** (выбрать
-     `group.forum.iqro.app`) и **Associated Domains**. Push Notifications и Sign in with Apple
-     не включать;
-   - `forum.iqro.app.PrayerTimesHomeWidget`, описание «IQRO widgets». Возможность: **App Groups**
-     (тот же `group.forum.iqro.app`).
-3. **Сертификат Apple Distribution** (Xcode не нужен, только «Связка ключей» на Mac):
-   1. «Связка ключей» → меню «Связка ключей» → «Ассистент сертификации» → «Запросить сертификат
-      у бюро сертификации»: почта `fulani.dev@gmail.com`, имя «IQRO», «Сохранён на диске».
-   2. **Certificates → +** → Apple Distribution → загрузить этот файл `.certSigningRequest` →
-      скачать `distribution.cer` и открыть двойным щелчком (сертификат встанет в «Связку ключей»).
-   3. «Связка ключей» → «Мои сертификаты» → «Apple Distribution: <имя> (<Team ID>)» → правый
-      щелчок → «Экспортировать» → формат `.p12`, придумать пароль. Файл и пароль — в
-      заблокированную заметку («IQRO сертификат Apple»), как ключ загрузки Play.
-4. **Profiles → +** → Distribution → **App Store Connect**, по одному на каждый App ID, с этим
-   сертификатом. Имена ровно такие — по ним их ищет проект Xcode:
-   - для `forum.iqro.app` — `IQRO App Store`;
-   - для `forum.iqro.app.PrayerTimesHomeWidget` — `IQRO Widget App Store`.
+По нему Claude по вашему «да» задаст в GitHub переменную `APPLE_TEAM_ID` и подготовит файл
+связи сайта с приложением: тогда ссылки iqro.forum будут открывать IQRO. Выкладка на
+сервер — по вашему слову.
 
-   Скачать оба файла `.mobileprovision`.
+## 3. Группа и два App ID
 
-Сертификат и профили действуют год. Перед истечением их создают заново и обновляют секреты
-(раздел 4). Профили приходится пересоздавать и при новой возможности (capability) у App ID.
+https://developer.apple.com/account/resources/identifiers
 
-**Ключ App Store Connect API** (https://appstoreconnect.apple.com → Users and Access →
-Integrations → App Store Connect API):
+1. **+** → **App Groups** → **Continue**.
+   - Description: `IQRO widgets`
+   - Identifier: `group.forum.iqro.app`
 
-1. При первом входе Account Holder нажимает «Request Access» и принимает условия (делает владелец).
-2. **Team Keys → +**: имя `IQRO CI`, роль **App Manager**: её хватает, чтобы загружать сборки.
-   Admin не нужен — сертификат и профили создаются вручную (выше).
-3. Скачать файл `AuthKey_<KEY_ID>.p8` — **скачивается один раз**. Записать **Key ID** и
-   **Issuer ID** (вверху страницы).
-4. Копия `.p8` — в заблокированную заметку («IQRO ключ App Store Connect»), как ключ загрузки Play.
-   Ни в git, ни в чат файл не попадает.
+   **Continue** → **Register**.
+2. **+** → **App IDs** → **Continue** → **App** → **Continue**.
+   - Description: `IQRO`
+   - Bundle ID: **Explicit**, `forum.iqro.app`
+   - В **Capabilities** отметьте три:
+     - **App Groups** — виджеты берут данные у приложения;
+     - **Associated Domains** — ссылки iqro.forum открывают приложение;
+     - **Time Sensitive Notifications** — азан проходит сквозь «Фокус» и «Сон» (но не
+       сквозь беззвучный режим). Вам предложено «да»; отметьте, если не передумали.
 
-## 3. Приложение в App Store Connect
+   **Continue** → **Register**.
+3. **+** → **App IDs** → **Continue** → **App** → **Continue**.
+   - Description: `IQRO widgets`
+   - Bundle ID: **Explicit**, `forum.iqro.app.PrayerTimesHomeWidget`
+   - В **Capabilities** — только **App Groups**.
 
-https://appstoreconnect.apple.com → Apps → **+ → New App**:
+   **Continue** → **Register**.
+4. Привяжите группу к обоим App ID. В списке нажмите `forum.iqro.app` → у **App Groups**
+   кнопка **Configure** → отметьте `group.forum.iqro.app` → **Continue** → **Save**. То же
+   для `forum.iqro.app.PrayerTimesHomeWidget`.
 
-| Поле | Значение |
+Больше ничего не включайте: push, «Войти с Apple» и остальное не нужны.
+
+Если позже включить новую возможность, профили из шага 4 станут недействительными. Их
+перевыпускают и заново кладут в GitHub — около 15 минут. Поэтому Time Sensitive лучше
+решить сейчас.
+
+## 4. Сертификат и два профиля
+
+Сертификат делается на Mac, в «Связке ключей». Xcode не нужен.
+
+**Запрос сертификата**
+
+1. ⌘ + пробел → «Связка ключей» → Enter.
+2. Меню **Связка ключей** → **Ассистент сертификации** → **Запросить сертификат у бюро
+   сертификации…**
+3. Почта — от вашего Apple Account, общее имя — `IQRO`, почту бюро оставьте пустой,
+   отметьте **Сохранён на диске** → **Продолжить** → сохраните на Рабочий стол.
+
+**Сертификат**
+
+4. https://developer.apple.com/account/resources/certificates → **+** → **Apple
+   Distribution** → **Continue** → **Choose File** → файл с Рабочего стола → **Continue** →
+   **Download**.
+5. Дважды щёлкните скачанный `distribution.cer`: он встанет в «Связку ключей».
+6. «Связка ключей» → слева **вход** → вверху **Мои сертификаты** → правый щелчок по
+   «Apple Distribution: <ваше имя> (<Team ID>)» → **Экспортировать…** → имя
+   `iqro-distribution`, место — Рабочий стол, формат **Обмен личной информацией (.p12)** →
+   **Сохранить** → придумайте пароль. Mac может спросить свой пароль — это нормально.
+   Файл и пароль — в заметку «IQRO Apple».
+
+**Два профиля**
+
+7. https://developer.apple.com/account/resources/profiles → **+** → в разделе
+   **Distribution** выберите **App Store Connect** → **Continue** → App ID `forum.iqro.app` →
+   **Continue** → ваш сертификат → **Continue** → Provisioning Profile Name:
+   `IQRO App Store` → **Generate** → **Download**.
+8. Ещё раз то же для `forum.iqro.app.PrayerTimesHomeWidget`, имя `IQRO Widget App Store`.
+
+Имена профилей вводите точно так, с пробелами: по ним их ищет проект.
+
+Сертификат и профили действуют год. За месяц до конца их перевыпускают и обновляют значения
+в GitHub. Приложение в App Store от этого не страдает, но без нового сертификата не загрузить
+новую сборку.
+
+## 5. Ключ App Store Connect API
+
+С ним GitHub загружает сборку в App Store Connect.
+
+1. https://appstoreconnect.apple.com → **Users and Access** → вкладка **Integrations** →
+   **App Store Connect API**.
+2. В первый раз — **Request Access**, примите условия.
+3. **Team Keys** → **+** (**Generate API Key**).
+   - Name: `IQRO CI`
+   - Access: **Admin**
+
+   **Generate**.
+4. **Download API Key** — файл `AuthKey_<Key ID>.p8`. Скачать можно **только один раз**.
+   Сразу в заметку «IQRO Apple».
+5. Запишите **Key ID** (в строке ключа) и **Issuer ID** (над таблицей).
+
+Почему Admin. В таблице ролей Apple загрузка сборок есть у Admin без оговорок. У App Manager —
+только с доступом к сертификатам, а у физлица такой доступ есть лишь у владельца аккаунта.
+При этом справка «Upload builds» App Manager разрешает: страницы Apple противоречат друг другу.
+Admin загрузит точно. Ключ хранится только в секретах GitHub. Если он утечёт, нажмите
+**Revoke** у ключа — он сразу перестанет работать, и сделайте новый.
+
+## 6. Приложение в App Store Connect
+
+https://appstoreconnect.apple.com → **Apps** → **+** → **New App**:
+
+| Поле | Что вписать |
 |---|---|
-| Platforms | iOS |
-| Name | `IQRO — Коран, аудио и намаз` (имя должно быть свободно во всём App Store; если занято — `IQRO: Коран, аудио и намаз`) |
-| Primary Language | Russian |
-| Bundle ID | `forum.iqro.app` |
+| Platforms | **iOS** |
+| Name | `IQRO — Коран, аудио и намаз` (если занято — `IQRO: Коран, аудио и намаз`) |
+| Primary Language | **Russian** |
+| Bundle ID | `forum.iqro.app` из списка |
 | SKU | `iqro-ios` |
-| User Access | Full Access |
+| User Access | **Full Access** |
 
-Затем разделы из раздела 6: App Privacy, Age Rating, Pricing and Availability, App Information.
+**Create**.
 
-## 4. Сборка и загрузка без Xcode на Mac
+## 7. Восемь значений в GitHub
 
-Xcode на Mac ставить не нужно. Сборка, подпись и загрузка выполняются в GitHub Actions на
-`macos-15` с Xcode 26.3, тем же, что в обычном CI. Репозиторий публичный, минуты macOS бесплатны.
+Workflow сборки сначала проверяет, что все 8 значений есть. Если чего-то нет, он сразу
+останавливается и пишет имена.
 
-Workflow [`.github/workflows/ios-release.yml`](../../.github/workflows/ios-release.yml) запускается
-только вручную и только из `main`: GitHub → Actions → **iOS release** → Run workflow. Что он делает:
-
-1. проверяет, что все секреты и `APPLE_TEAM_ID` заданы, иначе сразу останавливается и пишет, каких
-   не хватает;
-2. ставит Ruby и CocoaPods из `Gemfile.lock`, Flutter 3.41.4, зависимости по lock-файлам;
-3. кладёт сертификат во временную связку ключей раннера, профили — в папку Xcode, ключ API —
-   во временный файл. В конце (и при ошибке) всё это удаляется;
-4. `flutter build ios --release --config-only` с `APP_ENV=production`,
-   `API_BASE_URL=https://iqro.forum`, `config/firebase.json` и, если задан секрет, `SENTRY_DSN`;
-5. `xcodebuild archive` с `DEVELOPMENT_TEAM` из `APPLE_TEAM_ID`; проект подписывает Release
-   вручную: `Apple Distribution` и профили `IQRO App Store` / `IQRO Widget App Store`;
-6. `xcodebuild -exportArchive` с [`ios/ExportOptions.plist`](../../clients/iqro_mobile/ios/ExportOptions.plist)
-   (`app-store-connect`, `destination = upload`) и ключом API: сборка сразу уходит в App Store
-   Connect, символы отладки — тоже;
-7. dSYM складываются артефактом запуска `iqro-ios-dsyms` на 30 дней (для Sentry, если его включат).
-
-Номер сборки берётся из `pubspec.yaml`. Поле запуска `build_number` нужно, если App Store Connect
-уже видел такой номер: внутри одной версии номер сборки должен расти. Номера iOS и Android
-независимы, но проще держать их одинаковыми.
-
-Отладочная сборка (`make mobile-ios-run`, конфигурация Debug) по-прежнему подписывается
-автоматически; ручная подпись касается только Release. Обычный CI собирает Release без подписи
-и профилей не требует.
-
-**Секреты GitHub** (Settings → Secrets and variables → Actions). Значения вводит только владелец:
-
-| Имя | Что | Тип |
+| Имя | Что | Откуда |
 |---|---|---|
-| `APPLE_TEAM_ID` | Team ID | variable (не секрет) |
-| `APP_STORE_CONNECT_API_KEY_ID` | Key ID ключа API | secret |
-| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID | secret |
-| `APP_STORE_CONNECT_API_KEY_P8` | содержимое файла `AuthKey_<KEY_ID>.p8` целиком | secret |
-| `IOS_DISTRIBUTION_CERT_P12_BASE64` | файл `.p12` сертификата в base64 | secret |
-| `IOS_DISTRIBUTION_CERT_PASSWORD` | пароль от `.p12` | secret |
-| `IOS_PROFILE_APP_BASE64` | профиль `IQRO App Store` в base64 | secret |
-| `IOS_PROFILE_WIDGET_BASE64` | профиль `IQRO Widget App Store` в base64 | secret |
-| `MOBILE_SENTRY_DSN` | DSN проекта `mobile`, только если включаем Sentry | secret, необязательный |
+| `APPLE_TEAM_ID` | Team ID, переменная (не секрет) | шаг 2; может задать Claude |
+| `APP_STORE_CONNECT_API_KEY_ID` | Key ID | шаг 5 |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID | шаг 5 |
+| `APP_STORE_CONNECT_API_KEY_P8` | файл `AuthKey_….p8` целиком | шаг 5 |
+| `IOS_DISTRIBUTION_CERT_P12_BASE64` | файл `iqro-distribution.p12`, в base64 | шаг 4 |
+| `IOS_DISTRIBUTION_CERT_PASSWORD` | пароль от `.p12` | шаг 4 |
+| `IOS_PROFILE_APP_BASE64` | профиль `IQRO App Store`, в base64 | шаг 4 |
+| `IOS_PROFILE_WIDGET_BASE64` | профиль `IQRO Widget App Store`, в base64 | шаг 4 |
 
-Из Терминала на Mac, значения на экран не выводятся (имена файлов поправить под свои):
+Необязательное девятое — `MOBILE_SENTRY_DSN`, только если решите включить Sentry (Р6).
+
+Команды для Терминала на Mac (⌘ + пробел → «Терминал»): `gh` на этом Mac уже вошёл в ваш
+GitHub. Значения на экран не выводятся. Имена файлов поправьте под свои — посмотрите их
+в «Загрузках»: в именах профилей обычно подчёркивания вместо пробелов.
 
 ```bash
 gh variable set APPLE_TEAM_ID --repo Mr-Fulani/iqro --body ABCDE12345
+```
+
+```bash
+gh secret set APP_STORE_CONNECT_API_KEY_ID --repo Mr-Fulani/iqro
+```
+
+```bash
+gh secret set APP_STORE_CONNECT_API_ISSUER_ID --repo Mr-Fulani/iqro
 ```
 
 ```bash
@@ -196,7 +291,11 @@ gh secret set APP_STORE_CONNECT_API_KEY_P8 --repo Mr-Fulani/iqro < ~/Downloads/A
 ```
 
 ```bash
-base64 -i ~/Downloads/iqro-distribution.p12 | gh secret set IOS_DISTRIBUTION_CERT_P12_BASE64 --repo Mr-Fulani/iqro
+base64 -i ~/Desktop/iqro-distribution.p12 | gh secret set IOS_DISTRIBUTION_CERT_P12_BASE64 --repo Mr-Fulani/iqro
+```
+
+```bash
+gh secret set IOS_DISTRIBUTION_CERT_PASSWORD --repo Mr-Fulani/iqro
 ```
 
 ```bash
@@ -207,178 +306,303 @@ base64 -i ~/Downloads/IQRO_App_Store.mobileprovision | gh secret set IOS_PROFILE
 base64 -i ~/Downloads/IQRO_Widget_App_Store.mobileprovision | gh secret set IOS_PROFILE_WIDGET_BASE64 --repo Mr-Fulani/iqro
 ```
 
-Key ID, Issuer ID и пароль `.p12` — командой без значения, `gh` попросит вставить его:
-`gh secret set APP_STORE_CONNECT_API_KEY_ID --repo Mr-Fulani/iqro`, так же
-`APP_STORE_CONNECT_API_ISSUER_ID` и `IOS_DISTRIBUTION_CERT_PASSWORD`.
+Команды без файла (Key ID, Issuer ID, пароль) попросят вставить значение — вставьте и
+нажмите Enter. Проверка — должно быть 7 имён и одна переменная:
 
-Почему ручная подпись, а не облачная (`-allowProvisioningUpdates` при архивации): облачной нужен
-ключ с ролью Admin, а автоматическая подпись при архивации берёт профиль разработки, которому
-нужно хотя бы одно зарегистрированное устройство. Ручная подпись предсказуема и обходится ролью
-App Manager. fastlane не нужен: хватает `xcodebuild`.
+```bash
+gh secret list --repo Mr-Fulani/iqro
+```
 
-Если первый запуск упадёт, лог шага покажет причину; чаще всего это имя профиля, не совпадающее
-с `IQRO App Store` / `IQRO Widget App Store`, или профиль, созданный не с тем сертификатом.
+```bash
+gh variable list --repo Mr-Fulani/iqro
+```
 
-## 5. TestFlight
+Можно и через сайт: GitHub → репозиторий → **Settings** → **Secrets and variables** →
+**Actions** → **New repository secret**. Для файлов сначала скопируйте base64 командой вида
+`base64 -i ~/Downloads/IQRO_App_Store.mobileprovision | pbcopy` и вставьте в поле.
 
-После загрузки App Store Connect обрабатывает сборку 10–30 минут, затем она видна в TestFlight.
-Сборка живёт 90 дней.
+## 8. Первая сборка и TestFlight
 
-1. **Внутреннее тестирование** — до 100 человек из команды App Store Connect (Users and Access),
-   **без проверки Apple**. Владелец добавляет себя в группу, ставит приложение **TestFlight** на
-   iPhone, принимает приглашение и устанавливает IQRO.
-2. **Внешнее тестирование** — до 10 000 человек по почте или публичной ссылке. Первая сборка
-   каждой версии проходит **Beta App Review** (обычно до суток). Нужно заполнить Test Information:
-   - Beta App Description: «Приложение для чтения и изучения Корана: Мусхаф, чтецы, время
-     намаза, курсы, ду'а. Работает без аккаунта.»;
-   - Feedback Email: `fulani.dev@gmail.com`;
-   - Beta App Review Information: контакт владельца, **Sign-in required — нет**;
-   - Privacy Policy URL: `https://iqro.forum/ru/privacy`.
-3. Публичную ссылку внешнего теста можно отправить в группу `iqro-testers` для тех, у кого iPhone.
+Сборку запускают, когда в `main` слиты все правки для iPhone и вы сказали «собирай».
+Обычно запускает Claude по вашему слову; можно и самому:
 
-Что проверить на устройстве — список [tech-debt 1.4](../tech-debt.md): виджеты после Иша, азан
-в напоминаниях, кнопки плеера на экране блокировки после интро, Мусхаф, свайпы, Universal Links.
-Плюс: «Поделиться» картинкой → «Сохранить изображение», вход по коду из письма, удаление
-аккаунта, офлайн-режим, iPad в альбомной ориентации.
+1. GitHub → **Actions** → **iOS release** → **Run workflow** → ветка `main`. Номер версии
+   и сборки подскажет Claude: версия как у следующего Android (Р7). → **Run workflow**.
+2. Сборка идёт 15–25 минут. Если она упала, пришлите в чат ссылку на запуск.
+3. App Store Connect → **Apps** → IQRO → вкладка **TestFlight**. Сначала у сборки статус
+   **Processing**, потом Apple пришлёт письмо, что сборка готова. Сроков Apple не называет.
+4. Добавьте себя во внутреннее тестирование: **TestFlight** → **Internal Testing** → **+** →
+   имя группы `IQRO` → отметьте себя → **Create**. Проверка Apple не нужна. В группе может
+   быть до 100 человек из вашей команды App Store Connect.
+5. На iPhone: iOS 16 или новее. Поставьте из App Store приложение **TestFlight**, войдите
+   тем же Apple Account. IQRO появится там → **Установить**.
+6. Пройдите [список проверки](ios-testflight-checklist.md).
 
-## 6. Ответы в App Store Connect
+Сборка в TestFlight живёт 90 дней. Это та же сборка, что уйдёт на проверку в App Store:
+пересобирать её после проверки не нужно.
+
+## 9. Анкеты App Store Connect
+
+Все анкеты — в App Store Connect → **Apps** → IQRO.
 
 ### App Information
 
-| Поле | Значение |
+| Поле | Что выбрать |
 |---|---|
-| Subtitle и тексты | [app-store-listing.md](app-store-listing.md) |
-| Category | Primary **Reference** (Справочники), Secondary **Education** (Образование) |
-| Content Rights | «Contains, shows, or accesses third-party content» — **Yes**, «have the necessary rights» — **Yes** |
-| Privacy Policy URL | `https://iqro.forum/ru/privacy` (на 4 языках: `/en/`, `/ar/`, `/tr/`) |
-| Support URL | `https://iqro.forum/ru/contacts` |
-| Marketing URL | `https://iqro.forum` |
-| Copyright | `2026 Mr.Fulani (Iqro-Forum project)` |
+| Category | Primary **Reference**, Secondary **Education** |
+| Content Rights | приложение показывает чужой контент — **Yes**, права есть — **Yes** |
+| Age Rating | анкета ниже |
 
-### Цена и страны
-
-Бесплатно. Все страны, **кроме материкового Китая**: там для новых приложений нужен номер ICP,
-которого у проекта нет.
-
-**ЕС (Digital Services Act).** Apple требует указать, является ли разработчик трейдером.
-Трейдер публикует на странице приложения адрес, телефон и почту. Бесплатное приложение без
-доходов обычно отмечают «не трейдер», и оно всё равно доступно в ЕС. Решает владелец.
+Категорию **Kids** не выбирайте: там нельзя стороннюю аналитику, а требования остаются даже
+после смены категории.
 
 ### App Privacy
 
-Общие ответы:
+**Privacy Policy URL**: `https://iqro.forum/ru/privacy`. Вопрос «собираете ли данные» — **Yes**.
+Отслеживание (Tracking) — **No** у всех типов: рекламы и рекламного идентификатора нет.
 
-- Собираете ли данные: **Yes**.
-- Tracking (передача рекламным сетям, брокерам данных): **No** ни для одного типа.
-  Рекламы и IDFA нет.
-
-Типы данных (сверено с `ios/Runner/PrivacyInfo.xcprivacy` и с ответами для Google Play):
-
-| Тип Apple | Назначение | Связан с пользователем | Когда |
+| Тип данных Apple | Зачем (Purpose) | Связаны с человеком (Linked) | Когда |
 |---|---|---|---|
-| Contact Info → Email Address | App Functionality | Yes | только при входе и в обращении в поддержку |
-| Location → Precise Location | App Functionality | No | по разрешению: координаты уходят на `/prayer/calculate` для времени намаза |
-| Location → Coarse Location | Analytics | No | только с согласия на статистику: город по IP в Firebase Analytics |
-| Identifiers → User ID | App Functionality | Yes | всегда: серверный ID гостевой или полной учётной записи |
-| Identifiers → Device ID | App Functionality, Analytics | Yes | всегда: ключ установки; с согласия — ID экземпляра Firebase |
-| Usage Data → Product Interaction | Analytics | No | только с согласия: события «открыта сура», «включено аудио» и т. п. |
-| User Content → Customer Support | App Functionality | Yes | при обращении |
-| User Content → Other User Content | App Functionality | Yes | при входе: закладки, заметки, план, прогресс |
+| Contact Info → Email Address | App Functionality | Yes | при входе и в обращении в поддержку |
+| Location → Precise Location | App Functionality | No | по разрешению: координаты уходят на сервер только для расчёта времени намаза |
+| Location → Coarse Location | Analytics | No | только с согласия на статистику: город по IP в Firebase |
+| Identifiers → User ID | App Functionality | Yes | всегда: номер гостевой или полной учётной записи на сервере |
+| Identifiers → Device ID | App Functionality, Analytics | Yes | всегда: ключ установки; с согласия — номер экземпляра Firebase |
+| Usage Data → Product Interaction | Analytics | No | всегда — обезличенные дневные суммы: сколько раз открыты уроки, курсы и объявления, без аккаунта и без данных устройства; с согласия на статистику — ещё события Firebase («открыта сура», «включено аудио») |
+| User Content → Customer Support | App Functionality | Yes | при обращении в поддержку |
+| User Content → Other User Content | App Functionality | Yes | после входа: закладки, заметки, план, прогресс |
 | Diagnostics → Other Diagnostic Data | App Functionality | Yes | версия приложения и iOS в обращении |
-| Diagnostics → Crash Data, Performance Data | App Functionality | No | **только** если сборка с `SENTRY_DSN`; иначе не отмечать |
+| Diagnostics → Crash Data, Performance Data | App Functionality | No | **только** если включите Sentry (Р6); иначе не отмечать |
 
-Не собираются: финансы, здоровье, контакты, фото и видео, аудио, история браузера и поиска,
-покупки, чувствительные данные.
+Не отмечать: финансы, здоровье, контакты, фото и видео, история браузера и поиска, покупки,
+чувствительные данные, **аудио**. Голос при проверке чтения на iPhone распознаёт служба
+Apple, на сервер IQRO он не уходит. Apple: «You are not responsible for disclosing data
+collected by Apple».
 
-### Возрастной рейтинг
+### Age Rating
 
-Анкета (новая система Apple 4+/9+/13+/16+/18+): на все вопросы о насилии, страхе, азартных играх,
-алкоголе, сексуальном контенте, нецензурной лексике, медицине — **None**. Unrestricted Web Access
-— **No** (встроенный WebView показывает только 3D-сцены нашего сайта). User-Generated Content,
-Messaging — **No** (заметки личные, обращения видит только поддержка). Advertising — **No**.
-Ожидаемый рейтинг **4+**.
+С 2026 года у Apple рейтинги 4+, 9+, 13+, 16+ и 18+ и новые вопросы. Ответы для IQRO:
 
-### Экспортный контроль
+| Вопрос | Ответ |
+|---|---|
+| Parental Controls | **No** |
+| Age Assurance | **No** |
+| Unrestricted Web Access | **No**: встроенный браузер открывает только 3D-сцену из самого приложения |
+| User-Generated Content | **No**: заметки личные, оценки курсов видит только админ |
+| Messaging and Chat | **No**: обращения видит только поддержка |
+| Social Media | **No** |
+| Shared Location | **No**: координаты никому не показываются |
+| Dating and Relationships | **No** |
+| Advertising | **No** |
+| Health or Wellness Topics, Medical or Treatment Information | **None** |
+| Насилие, оружие, страх, алкоголь и табак, нецензурная лексика, откровенные темы | **None** везде |
+| Gambling, Simulated Gambling, Loot Boxes | **None** / **No** |
+| Contests | **None** |
 
-`ITSAppUsesNonExemptEncryption = false` уже в Info.plist: App Store Connect не будет спрашивать
-о шифровании при каждой сборке. Если спросит при первой версии: используется только
-шифрование ОС (HTTPS, Keychain) — **освобождено**, документы не нужны.
+Ожидаемый рейтинг — **4+**.
+
+### Шифрование (экспорт)
+
+Ответ уже записан в сборке: несвободного шифрования нет (`ITSAppUsesNonExemptEncryption =
+false`), приложение шифрует только соединение HTTPS. Поэтому App Store Connect не спрашивает
+о шифровании ни при первой сборке, ни потом. Документы не нужны.
 
 ### App Review Information
 
-- Sign-in required: **нет**. Всё работает без входа (гостевой режим), вход нужен только для
-  синхронизации между устройствами.
-- Notes (по-английски):
+На странице версии, внизу.
 
-  > IQRO works without an account. Sign-in by an emailed code is optional and only syncs
-  > bookmarks, notes and reading progress between devices. Background audio: the user starts
-  > a Quran recitation and keeps listening with the screen locked; lock-screen controls are
-  > shown. Location (when in use) is used only to calculate local prayer times; a city can be
-  > chosen manually instead. Home-screen widgets: prayer times and the daily reading plan.
+- **Sign-in required** — отметить. Вход у нас по коду из письма, и Apple требует дать
+  проверяющему рабочий вход.
+  - **User name** — почта для проверяющего;
+  - **Password** — постоянный код для неё.
 
-- Если Apple всё же попросит демо-аккаунт: вход только по коду из письма, проверяющий код не
-  получит. Тогда нужна правка 6 из раздела 9.
+  Их готовит сессия ios-backend-site: письмо на эту почту не уходит, код задаётся на
+  сервере. Значения вы вписываете сами, в чат их не пишут. В этот аккаунт не входите
+  с Android: проверяющий увидит в списке устройств «Android», а это против правила 2.3.10.
+- **Contact Information** — ваши имя, телефон и почта для связи с проверяющим.
+- **Notes** — по-английски:
 
-## 7. Скриншоты
+  > IQRO is a free Quran app: Mushaf, recitations, prayer times, courses and du'a. There are
+  > no purchases and no ads.
+  >
+  > Sign-in is optional. It only syncs bookmarks, notes, the reading plan and course progress
+  > between devices. To sign in: More → Personal profile → enter the demo email → Send code →
+  > enter the code from the Password field. Account deletion: More → Personal profile →
+  > Danger zone → Delete account.
+  >
+  > Microphone and speech recognition: Quran → Text → open a surah → swipe an ayah to the
+  > right to open the Arabic text → tap the microphone at the top right. The app follows the
+  > user's recitation and highlights the word being read. Speech is recognised by Apple's
+  > speech recognition service; IQRO does not store recordings or send audio to its servers.
+  >
+  > Location (only while the app is in use) calculates local prayer times and the qibla
+  > direction. A city can be chosen manually instead.
+  >
+  > Background audio: start a recitation (Audio → reciter → surah) and lock the screen.
+  > Playback continues with lock-screen controls.
+  >
+  > Notifications: optional prayer reminders with a short adhan (Home → prayer card →
+  > Reminders). Home-screen widgets: prayer times and the daily reading plan.
 
-| Устройство | Размер, портрет | Нужно |
-|---|---|---|
-| iPhone 6,9″ | 1320×2868 (или 1290×2796) | обязательно, 1–10 на язык |
-| iPhone 6,5″ | 1284×2778 (или 1242×2688) | необязательно: App Store уменьшает 6,9″ сам |
-| iPad 13″ | 2064×2752 (или 2048×2732) | **обязательно**: приложение поддерживает iPad |
+### Что пока не нужно
 
-Значок для страницы берётся из сборки (1024×1024 в `AppIcon`), отдельно не загружается.
+- **Accessibility** (метки доступности) — Apple пока не требует. Новому приложению их можно
+  опубликовать только после выхода первой версии. Позже отметим только то, что проверено
+  на iPhone.
 
-Без Xcode на Mac снимки делаются в CI: интеграционный тест открывает нужные экраны в
-симуляторах iPhone 17 Pro Max и iPad Pro 13″ на 4 языках и сохраняет снимки артефактом
-(правка 5 в разделе 9). Набор экранов как для Google Play: Мусхаф с подсветкой, плеер, время
-намаза, план с пальмой, курс намаза, ду'а. Снимки с текстами, а не только интерфейс —
-по желанию владельца.
+## 10. Цена, страны и устройства
 
-## 8. Вход через Google и правило 4.8
+**Pricing and Availability**:
 
-Правило App Store 4.8: если приложение даёт вход через сторонний сервис (Google), оно должно
-предложить и равноценный вход, который собирает только имя и почту, позволяет скрыть почту
-и не отслеживает пользователя. На практике это «Войти с Apple». Вход по коду из письма это
-требование не закрывает: почту скрыть нельзя.
+1. Цена — **Free** (бесплатно).
+2. Страны — все, **кроме материкового Китая**: там новому приложению нужен номер ICP,
+   которого у проекта нет.
+3. 🔶 **США** — решаете вы:
+   - **оставить**. В Техасе с 04.06.2026 действует закон о проверке возраста (SB 2420):
+     разработчик должен проверять возрастную группу пользователя по данным App Store и
+     спрашивать согласие родителей при значимых изменениях. Apple пишет, что в таких
+     регионах вы обязаны проверять возраст, и советует спросить юриста. Для этого нужен код
+     (Declared Age Range от Apple): около 3–4 дней на iPhone и 1–2 дня на Android, чтобы
+     было одинаково. В 2027 году к Техасу добавятся Юта, Луизиана, Калифорния и Алабама
+     (по сведениям юристов). Если выпустить без кода — правовой риск. Android 1.0.16 в
+     Google Play уже в том же положении, поэтому решать лучше сразу для обеих платформ;
+   - **убрать**. Кода не нужно: снимите United States в списке стран. Вернуть можно в любой
+     момент, новая сборка не нужна. Минус: человек с американским Apple Account не сможет
+     поставить IQRO. Начать без США проще, чем убрать их потом: кто успел поставить, тот
+     продолжит получать обновления.
+4. 🔶 **ЕС, статус трейдера (DSA)**. Apple спросит его при первой отправке, даже если ЕС
+   убрать.
+   - **Не трейдер** (not a trader). Адрес и телефон не публикуются. Покупателям в ЕС сообщат,
+     что права потребителя на договор с вами не распространяются. Apple пишет, что тот, кто
+     делает приложение не ради заработка, может не считаться трейдером, но решает сам
+     разработчик. Если позже появятся доходы от приложения, статус меняют.
+   - **Трейдер** (trader). На странице IQRO в ЕС будут видны ваши адрес, телефон и почта.
+     Apple проверит телефон и почту кодом и попросит документ с именем и адресом. Можно
+     указать абонентский ящик, если приложить документ о нём.
 
-Сейчас на iOS кнопки Google нет (код показывает её только на Android), а вход по коду из письма —
-собственная система аккаунтов IQRO. Поэтому **правило 4.8 к первой версии не применяется,
-«Войти с Apple» не нужен**.
+   Если не указать статус, IQRO не появится в App Store в ЕС.
+5. **Mac и Apple Vision Pro** — снимите отметки **Make this app available** в разделах
+   о Mac с Apple silicon и об Apple Vision Pro. Иначе Apple сама выпустит IQRO и там, а там
+   его никто не проверял. Вернуть можно позже.
+6. **iPad** — 🔶 по рекомендации **только iPhone** (вы пока не ответили, Р1). Это не
+   переключатель в App Store Connect: семейство устройств задаётся в сборке, его меняет
+   сессия ios-native.
+   - iPad можно добавить позже, а **убрать нельзя**: Apple не примет обновление, которое
+     работает на меньшем числе устройств.
+   - Приложение «только для iPhone» всё равно ставится на iPad в увеличенном окне iPhone,
+     и проверяющий может открыть его там. Проверка на iPad нужна в любом случае, но с
+     «только iPhone» не нужны снимки iPad 13″ и подстройка под окна любой ширины.
+   - Если выберете iPad: нужны снимки iPad 13″ и проверка на настоящем iPad. Есть ли iPad
+     у вас или у тестировщиков?
 
-Если позже включать Google на iOS, понадобится сразу три вещи: iOS-клиент OAuth в Google Cloud,
-`GIDClientID` и URL-схема в Info.plist, и «Войти с Apple» на iOS (а для паритета — и на сайте
-и Android) с проверкой токена Apple на бэкенде. Оценка — 2–4 дня. Пока это расхождение
-iOS с Android и сайтом.
+## 11. Снимки и отправка на проверку
 
-## 9. Правки в коде до первой сборки TestFlight
+**Снимки.** Нужен хотя бы один снимок iPhone, можно до 10. Если для языка своих снимков нет,
+App Store покажет снимки основного языка; мы делаем на всех четырёх. Apple сейчас называет
+обязательным размер «iPhone с Dynamic Island» (1206×2622); снимки 6,9″ (1320×2868) она тоже
+принимает и уменьшает сама — это проверим при загрузке. Снимки iPad
+13″ нужны, только если выберете iPad. Снимки Google Play не подходят: другой размер и
+строка состояния Android. Новые снимки на 4 языках делает сессия ios-native на симуляторе,
+вы утверждаете.
 
-Правки 1 и 2 согласованы владельцем и сделаны в PR #217. Правки 3–6 — по необходимости, каждую отдельно согласовать.
+**Тексты.** Описание, ключевые слова и «What's New» — из [app-store-listing.md](app-store-listing.md).
+Перед отправкой их обновят: в описании нет новых функций, а «статистика — только с вашего
+согласия» неточна (обезличенные суммы уходят всегда, см. App Privacy). Для «What's New»
+заметки Android не годятся: проверку букв и огласовок делает только Android.
 
-| # | Правка | Зачем | Нужна для | Оценка |
-|---|---|---|---|---|
-| 1 | `NSPhotoLibraryAddUsageDescription` в `Info.plist`, `Info-Debug.plist` и 4 `InfoPlist.strings` + проверка в `ios_configuration_test.dart` | иначе «Сохранить изображение» из «Поделиться» закрывает приложение | TestFlight | **сделано** |
-| 2 | `.github/workflows/ios-release.yml`, `ios/ExportOptions.plist`, ручная подпись Release в `project.pbxproj` (раздел 4) | подпись и загрузка в TestFlight без Xcode на Mac | TestFlight | **сделано**; первый настоящий запуск — после секретов, возможны 1–2 исправления |
-| 3 | `NSPrivacyCollectedDataTypeCoarseLocation` (Analytics) в `PrivacyInfo.xcprivacy` | манифест совпадёт с ответами App Privacy | желательно | 15 мин |
-| 4 | Аудиосессия после интро (аудит 4.7, tech-debt 1.4) | кнопки плеера на экране блокировки | только если ошибка видна в TestFlight | 1–2 ч |
-| 5 | Снимки экрана в CI на симуляторах iPhone 6,9″ и iPad 13″, 4 языка | страница App Store | App Store, не TestFlight | ~1 день |
-| 6 | Вход для проверяющего Apple (почта и постоянный код только для одного адреса из env) | если Apple попросит демо-аккаунт | по запросу Apple | 0,5 дня, бэкенд |
+**Отправка:**
 
-Не правка кода, а настройка сервера, тоже до проверки Universal Links: в `services/backend/.env.production`
-на проде `APPLE_APP_LINK_APPLICATION_IDENTIFIERS=<TEAM_ID>.forum.iqro.app`, затем перезапуск
-контейнера `web` (значение читается при запросе, пересобирать образ не нужно). Проверка:
-`curl -s https://iqro.forum/.well-known/apple-app-site-association` — в `details` появится `appID`.
-Apple забирает файл через свой CDN, обновление доходит до суток.
+1. App Store Connect → IQRO → версия iOS → в **Build** выберите сборку из TestFlight.
+2. Проверьте, что заполнены App Privacy, Age Rating, App Review Information, цена и страны,
+   статус трейдера.
+3. **Add for Review** → **Submit to App Review**.
+4. Выпуск — вручную после одобрения (**Manually release this version**): так iPhone и
+   Android выйдут в один день.
 
-Сейчас не нужны: «Войти с Apple», Google на iOS, замена `sentry` на `sentry_flutter`
-(tech-debt 1.1), push-уведомления.
+Apple обычно отвечает за 1–2 дня: половину заявок проверяет меньше чем за сутки, 90 % —
+меньше чем за двое. Заложите один-два круга: первые отказы чаще всего по правилу 2.1
+(сбои, заглушки, нет входа для проверяющего) и по приватности.
 
-До первой сборки во внутреннем TestFlight остались только шаги владельца: разделы 1–3 и секреты из раздела 4.
+## 12. Отчёт о сбое без Xcode
 
-## 10. Перед каждым следующим выпуском
+Если IQRO на iPhone закрылось само:
 
-1. Поднять номер сборки в `pubspec.yaml` (общий с Android).
-2. Запустить workflow iOS release из `main`, дождаться сборки в TestFlight.
-3. Проверить на iPhone во внутреннем тестировании.
-4. В App Store Connect: новая версия → выбрать сборку → «What's New» на 4 языках → отправить на
-   проверку. Выпуск — вручную после одобрения или поэтапно (Phased Release, 7 дней).
+1. **Сразу в TestFlight.** После сбоя TestFlight предлагает отправить отчёт. Нажмите
+   **Поделиться** (Share) и напишите, что делали. Отчёт придёт в App Store Connect →
+   IQRO → **TestFlight** → **Feedback** → **Crashes**. Его можно скачать архивом
+   в течение 120 дней — пришлите архив в чат.
+2. **Если окна не было** — отчёт лежит на самом iPhone: **Настройки** →
+   **Конфиденциальность и безопасность** → **Аналитика и улучшения** → **Данные аналитики**.
+   Найдите файл, который начинается с `Runner` и датой сбоя (так в сборке называется IQRO),
+   откройте → значок **Поделиться** → AirDrop на Mac или «Сохранить в Файлы». Пришлите файл
+   в чат.
+3. **Зависло, но не закрылось** — отчёта не будет. Сделайте снимок экрана и отправьте отзыв
+   из TestFlight: снимок → миниатюра → **Поделиться** → **Поделиться бета-отзывом**.
+
+Отчёты о сбоях Claude читает сам: символы для расшифровки сохраняются при каждой сборке.
+
+## 13. Порядок выпуска
+
+Один выпуск, без промежуточных сборок.
+
+1. Сессии доделывают правки для iPhone. Каждую проверяет автопроверка на симуляторах
+   iPhone и iPad в GitHub — с видео.
+2. Слияние в `main` — по вашему слову. Workflow сборки запускается только из `main`.
+3. Вы говорите «собирай»: одна сборка в TestFlight, номер версии как у следующего Android.
+4. Вы проходите [список проверки](ios-testflight-checklist.md) и проверку чтения вслух.
+5. Если что-то видно только на iPhone — один круг исправлений и одна новая сборка.
+6. «Всё хорошо» — эта же сборка уходит на проверку Apple, а Android — в Google Play.
+7. После одобрения обеих — выпуск в один день.
+
+Если нужна правка после проверки Apple, это новая сборка с новым номером.
+
+## 14. Для разработчика
+
+**Как устроена сборка.** [`.github/workflows/ios-release.yml`](../../.github/workflows/ios-release.yml):
+только вручную и только из `main`, `macos-15`, Xcode 26.3, Flutter 3.41.4, CocoaPods из
+`Gemfile.lock`.
+
+1. Проверяет переменную `APPLE_TEAM_ID` и 7 секретов, иначе останавливается.
+2. Кладёт сертификат во временную связку ключей, профили — в папку Xcode, ключ API — во
+   временный файл; в конце всё удаляет, даже при ошибке.
+3. `flutter build ios --release --config-only` с `APP_ENV=production`,
+   `API_BASE_URL=https://iqro.forum`, `config/firebase.json` и, если задан, `SENTRY_DSN`.
+4. `xcodebuild archive` с `DEVELOPMENT_TEAM` из `APPLE_TEAM_ID`; Release подписывается
+   вручную: `Apple Distribution`, профили `IQRO App Store` и `IQRO Widget App Store`.
+5. `xcodebuild -exportArchive` с [`ios/ExportOptions.plist`](../../clients/iqro_mobile/ios/ExportOptions.plist)
+   (`app-store-connect`, `destination = upload`) и ключом API: сборка сразу уходит в App Store
+   Connect вместе с символами отладки.
+6. dSYM — артефактом `iqro-ios-dsyms` на 30 дней.
+
+Сейчас у workflow одно поле — `build_number`; версию он берёт из `pubspec.yaml` (`1.0.10`).
+Поле `build_name` добавляет сессия ios-native. Внутри одной версии номер сборки должен расти.
+Отладочная конфигурация подписывается автоматически, обычный CI собирает Release без подписи.
+
+**Почему ручная подпись.** Облачной подписи нужен ключ Admin и согласие на автоматическое
+управление сертификатами, а автоматическая подпись при архивации берёт профиль разработки,
+которому нужно зарегистрированное устройство. Ручная подпись предсказуема. fastlane не нужен.
+Если первый запуск упадёт, чаще всего виновато имя профиля или профиль, созданный с другим
+сертификатом.
+
+**Time Sensitive.** Ключ `com.apple.developer.usernotifications.time-sensitive` в
+`Runner.entitlements` добавляют только после того, как профиль с этой возможностью окажется
+в секретах: иначе подписанная сборка упадёт. Уровень уведомлений (`interruptionLevel`) задаёт
+ios-audio-adhan.
+
+**Вход через Google и правило 4.8.** На iPhone кнопки Google нет, вход — только
+собственный, по коду из письма. Правило 4.8 делает исключение для приложений, которые
+«exclusively uses your company's own account setup and sign-in systems», поэтому «Войти
+с Apple» не нужен. Если включать Google на iOS, понадобятся сразу «Войти с Apple» (сервер,
+приложение, сайт), iOS-клиент OAuth в Google Cloud и `GIDClientID` в Info.plist — 3–5 дней
+работы плюс шаги владельца у App ID. Кто вошёл через Google на Android или сайте, на iPhone
+войдёт кодом на ту же почту и попадёт в тот же аккаунт.
+
+**После первого выпуска.**
+
+- С апреля 2027 Apple принимает только сборки с iOS 27 SDK. Xcode 27 работает на macOS
+  26.6+, поэтому CI переходит на образ `xcode-27`. Flutter при этом, судя по его списку
+  изменений, придётся поднять минимум до 3.44.8 — это затронет и Android.
+- Сборкам с iOS 27.1 SDK и новее с апреля 2027 нужны и снимки iPhone Duo.
+- CocoaPods trunk с 02.12.2026 не принимает новые pod; опубликованные остаются, сборки
+  не ломаются. Firebase закреплён поэтому.
+- Подсказка об обновлении на iPhone и значок App Store на сайте — после выхода.
