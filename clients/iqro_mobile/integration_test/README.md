@@ -67,13 +67,14 @@ new install with its own guest account (`/auth/guest`), so one `iOS simulators` 
 (iPhone and iPad), and Home counts as an iOS impression of an active announcement. The
 `App Store screenshots` run makes one more guest, opens the active announcement once (a read
 receipt and an iOS "open") and opens the Names of Allah (a `section_opened` count per
-language). Keeping CI out of these counters needs a build switch in the app; not done yet.
+language). So both workflows run only by hand (Run workflow), never on a pull request or a
+push. Keeping these runs out of the counters needs a build switch in the app; not done yet.
 
 ## Running it
 
-In GitHub: Actions → `iOS simulators` → Run workflow, on any branch. It also runs on every
-pull request and every push to `main` that changes the app. Before starting `iOS release`,
-check that the last `iOS simulators` run on `main` is green and watch its videos.
+In GitHub: Actions → `iOS simulators` → Run workflow, on any branch; it does not start by
+itself. Before starting `iOS release`, run it on `main` and check that it is green and watch
+its videos.
 
 On a Mac with Xcode, from `clients/iqro_mobile`:
 

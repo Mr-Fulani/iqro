@@ -9,12 +9,9 @@ concurrency:
   group: ios-app-store-screenshots-${{ github.ref }}
   cancel-in-progress: true
 
+# Only by hand: each run writes to production (integration_test/README.md).
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "clients/iqro_mobile/integration_test/store_screenshots_test.dart"
-      - ".github/workflows/ios-app-store-screenshots.yml"
 
 permissions:
   contents: read

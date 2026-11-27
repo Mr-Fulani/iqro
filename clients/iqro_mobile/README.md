@@ -195,7 +195,8 @@ iOS-задача Mobile CI ещё проверяет собранный рели
 причиной» объявлены в манифестах приватности (`ios/scripts/check_privacy_manifests.py`), а файлов
 модели проверки чтения в нём нет. Workflow «iOS simulators» запускает само приложение на
 симуляторах iPhone и iPad и проходит главные экраны, с видео и снимками в артефактах; «App Store
-screenshots» снимает экраны для App Store на четырёх языках. Как это устроено —
+screenshots» снимает экраны для App Store на четырёх языках. Оба запускаются только вручную
+(Actions → Run workflow): тестового сервера нет, и каждый прогон пишет в продакшен. Как это устроено —
 [integration_test/README.md](integration_test/README.md).
 
 ## Архитектура
