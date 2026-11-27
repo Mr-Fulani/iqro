@@ -124,6 +124,9 @@ flutter:
     - assets/salah3d/
     # The click of the Names of Allah wheel, generated for the app (45 ms).
     - assets/sounds/names_tick.wav
+    # Half a second of silence: a vibrating reminder on iOS needs a sound to
+    # vibrate (lib/core/notifications/reminder_sounds.dart).
+    - assets/sounds/reminder_vibrate.caf
     # The names said aloud, cut from the owner's recordings (docs/names-of-allah).
     - assets/names_audio/ar/
     - assets/names_audio/ru/
