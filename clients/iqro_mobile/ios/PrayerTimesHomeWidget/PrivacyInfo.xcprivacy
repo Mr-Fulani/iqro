@@ -8,7 +8,7 @@
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- Widget reads snapshots from UserDefaults(suiteName: "group.forum.iqro.app"). -->
+		<!-- Widget reads snapshots from UserDefaults(suiteName: "group.forum.iqro.app.widgets"). -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>

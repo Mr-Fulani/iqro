@@ -93,7 +93,7 @@ void main() {
       runnerEntitlements,
       widgetEntitlements,
     ]) {
-      expect(entitlements, contains('group.forum.iqro.app'));
+      expect(entitlements, contains('group.forum.iqro.app.widgets'));
     }
     expect(widget, contains('.supportedFamilies([.systemMedium])'));
     expect(widget, contains('iqro://open/prayer?homeWidget'));

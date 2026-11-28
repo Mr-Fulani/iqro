@@ -100,7 +100,7 @@ Store — ещё через 1,5–3 недели, вместе с исправл
 |---|---|
 | Сборка в GitHub | обычная проверка собирает iOS без подписи на `macos-15` с Xcode 26.3 (iOS SDK 26.2, Apple сейчас принимает такие) и гоняет 2 нативных теста. Последний прогон на `main` зелёный (26.11). Идёт только при изменениях в приложении |
 | Подпись и загрузка | workflow **iOS release** и ручная подпись Release готовы, но ни разу не запускались: нет значений из шага 7 |
-| Идентификаторы | `forum.iqro.app`, виджеты `forum.iqro.app.PrayerTimesHomeWidget`, группа `group.forum.iqro.app` — в проекте и в коде одинаковые |
+| Идентификаторы | `forum.iqro.app`, виджеты `forum.iqro.app.PrayerTimesHomeWidget`, группа `group.forum.iqro.app.widgets` — в проекте и в коде одинаковые |
 | Значок и заставка | полный набор значков, 1024×1024 без прозрачности; заставка с печатью на бежевом фоне |
 | Разрешения | строки геопозиции («Всегда» не спрашиваем), микрофона, распознавания речи и «Фото» на 4 языках |
 | Уведомления | учтён предел iOS — 64 запланированных уведомления, это около 8 дней вперёд; push не нужен |
@@ -171,9 +171,13 @@ https://developer.apple.com/account или в App Store Connect → **Business**
 
 https://developer.apple.com/account/resources/identifiers
 
+Имя `group.forum.iqro.app` у Apple оказалось недоступно, поэтому группа называется
+`group.forum.iqro.app.widgets` (зарегистрирована 28.11.2026).
+
 1. **+** → **App Groups** → **Continue**.
    - Description: `IQRO widgets`
-   - Identifier: `group.forum.iqro.app`
+   - Identifier: `group.forum.iqro.app.widgets` — приставку `group.` поле подставляет само,
+     вводить нужно только `forum.iqro.app.widgets`
 
    **Continue** → **Register**.
 2. **+** → **App IDs** → **Continue** → **App** → **Continue**.
@@ -195,8 +199,8 @@ https://developer.apple.com/account/resources/identifiers
    **Continue** → **Register**.
 4. Привяжите группу к обоим App ID — это можно только после регистрации. В списке
    **Identifiers** нажмите `forum.iqro.app` → у **App Groups** кнопка **Configure** →
-   отметьте `group.forum.iqro.app` → **Continue** → **Assign** → **Done** → **Save** (если
-   спросит — **Confirm**). То же для `forum.iqro.app.PrayerTimesHomeWidget`.
+   отметьте `group.forum.iqro.app.widgets` → **Continue** → **Assign** → **Done** → **Save**
+   (если спросит — **Confirm**). То же для `forum.iqro.app.PrayerTimesHomeWidget`.
 
 Больше ничего не включайте: push, «Войти с Apple» и остальное не нужны. Исключение — если
 по Р4 оставляете США с проверкой возраста: тогда спросите в чате до шага 4, какую ещё

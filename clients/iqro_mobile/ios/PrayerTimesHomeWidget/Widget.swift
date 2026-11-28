@@ -2,7 +2,7 @@
 //
 // Placeholder SwiftUI widget.
 //
-// App Group ID used here: group.forum.iqro.app
+// App Group ID used here: group.forum.iqro.app.widgets
 
 import SwiftUI
 import WidgetKit
@@ -13,7 +13,7 @@ struct Provider: TimelineProvider {
   }
 
   func getSnapshot(in context: Context, completion: @escaping (PrayerTimesHomeWidgetEntry) -> Void) {
-    let prefs = UserDefaults(suiteName: "group.forum.iqro.app")
+    let prefs = UserDefaults(suiteName: "group.forum.iqro.app.widgets")
     let data = PrayerTimesData.fromUserDefaults(prefs)
 
     completion(PrayerTimesHomeWidgetEntry(date: Date(), data: data))
@@ -21,7 +21,7 @@ struct Provider: TimelineProvider {
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
-    let prefs = UserDefaults(suiteName: "group.forum.iqro.app")
+    let prefs = UserDefaults(suiteName: "group.forum.iqro.app.widgets")
     let timedEntries = PrayerTimesData.loadTimedEntries(prefs)
     let now = Date()
     var entries: [PrayerTimesHomeWidgetEntry] = [
@@ -336,7 +336,7 @@ private struct ReadingPlanData {
     return ReadingPlanData(values: merged)
   }
   static func load() -> ReadingPlanData {
-    let prefs = UserDefaults(suiteName: "group.forum.iqro.app")
+    let prefs = UserDefaults(suiteName: "group.forum.iqro.app.widgets")
     guard let raw = prefs?.string(forKey: "home_widget.ReadingPlan.snapshot"),
       let data = raw.data(using: .utf8),
       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]

@@ -15,7 +15,7 @@ import 'palm_growth.dart';
 import 'plan_repository.dart';
 
 const planWidgetDataKey = 'home_widget.ReadingPlan.snapshot';
-const planWidgetGroup = 'group.forum.iqro.app';
+const planWidgetGroup = 'group.forum.iqro.app.widgets';
 // The receiver keeps its package when the build adds an application id suffix
 // (forum.iqro.app.test), so the plugin must not derive it from the app id.
 const planWidgetReceiver = 'forum.iqro.app.ReadingPlanHomeWidgetReceiver';

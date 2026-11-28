@@ -21,7 +21,7 @@ private struct ReadingPlanData {
     return ReadingPlanData(values: merged)
   }
   static func load() -> ReadingPlanData {
-    let prefs = UserDefaults(suiteName: "group.forum.iqro.app")
+    let prefs = UserDefaults(suiteName: "group.forum.iqro.app.widgets")
     guard let raw = prefs?.string(forKey: "home_widget.ReadingPlan.snapshot"),
       let data = raw.data(using: .utf8),
       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
