@@ -625,7 +625,7 @@ Android-разметка: `res/layout/reading_plan_widget.xml`; Swift-шабло
 `home_widget/native/reading_plan_view.swift`. Общая маршрутизация проверяет только известные
 ссылки виджетов; выбранная вкладка синхронизируется с адресом для повторных нажатий.
 
-Для подписанной iOS-сборки App Group `group.forum.iqro.app` должен быть зарегистрирован в
+Для подписанной iOS-сборки App Group `group.forum.iqro.app.widgets` должен быть зарегистрирован в
 Apple Developer и включён в provisioning profiles приложения и WidgetKit extension.
 
 Подробный порядок подписанной публикации описан в

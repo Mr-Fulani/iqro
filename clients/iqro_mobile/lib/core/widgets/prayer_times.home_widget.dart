@@ -11,7 +11,7 @@ import 'package:home_widget/home_widget.dart';
 class PrayerTimesHomeWidget {
   const PrayerTimesHomeWidget._();
 
-  static const String _$appGroupId = 'group.forum.iqro.app';
+  static const String _$appGroupId = 'group.forum.iqro.app.widgets';
 
   static const String _$paramPrefix = 'home_widget.PrayerTimes';
 

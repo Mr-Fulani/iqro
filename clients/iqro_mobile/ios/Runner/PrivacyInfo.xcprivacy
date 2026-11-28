@@ -8,7 +8,7 @@
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- shared_preferences and app settings; home_widget writes the group.forum.iqro.app suite. -->
+		<!-- shared_preferences and app settings; home_widget writes the group.forum.iqro.app.widgets suite. -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>

@@ -34,7 +34,7 @@ import 'package:home_widget_generator/home_widget_generator.dart';
     backgroundColor: HWColor.fixed(0xFF090909),
   ),
   iOS: HomeWidgetIOSConfiguration(
-    groupId: 'group.forum.iqro.app',
+    groupId: 'group.forum.iqro.app.widgets',
     supportedFamilies: [HWWidgetFamily.systemMedium],
     backgroundColor: HWColor.fixed(0xFF090909),
   ),
